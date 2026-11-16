@@ -336,9 +336,8 @@ impl Allocations<'_> {
     /// **A store and a library copy alike** (#1006), the other half of what
     /// one write marks written beside [`Self::blocks_written`] (ADR-0063). The
     /// copy spelled this again in its own arm; where the two differ is a
-    /// `match` on `kind` with no wildcard. `copied` and `lands_in_no_block` are
-    /// a copy's facts, its constant length and whether its landing names no
-    /// block, and are not read for a store, whose width is its type's.
+    /// `match` on `kind` with no wildcard. `copied` is a copy's constant
+    /// length, not read for a store, whose width is its type's.
     pub(super) fn locals_written(
         &self,
         function: &Function,
@@ -346,7 +345,6 @@ impl Allocations<'_> {
         place: &Place,
         kind: StoreKind,
         copied: Option<u64>,
-        lands_in_no_block: bool,
     ) {
         let unit = self.unit;
         let written_ty = unit.place_ty(function, place);
@@ -418,18 +416,18 @@ impl Allocations<'_> {
             .indices()
             .filter(|&local| lands[local] && may_hold[local])
             .collect();
-        // **A copy writes its one local for certain only where it lands in no
-        // block and covers the local exactly**: a length this check cannot read
+        // **A copy writes its one local for certain only where it covers the
+        // local exactly**: a length this check cannot read
         // may be zero, and a shorter one leaves part of the local as it was, so
         // `memcpy(&p, &src, n); return p;` returned a pointer nothing may have
         // written in silence (#942). A longer one is the bounds rule's to report.
-        // See ADR-0095.
+        // See ADR-0095. That it lands in no block beside the local is
+        // `written_alone`'s own condition, for either kind: the copy asked it
+        // again in its arm, and dropping that second asking moved nothing.
         let alone =
             written_alone(value, place.local, derefs(place), &landing).filter(|at| match kind {
                 StoreKind::Direct | StoreKind::Through { .. } => true,
-                StoreKind::Copy => {
-                    lands_in_no_block && self.covers_exactly(function, at.local(), copied)
-                }
+                StoreKind::Copy => self.covers_exactly(function, at.local(), copied),
             });
         // **Put back as a may-write only for a store** (#721, the comment
         // above): a copy's `write_effects` already answers which elements of an
@@ -587,7 +585,7 @@ impl Allocations<'_> {
                     }
                 }
                 if !place.projection.is_empty() && landing.strong(value).is_none() {
-                    self.locals_written(function, value, place, landing.kind, None, false);
+                    self.locals_written(function, value, place, landing.kind, None);
                     for target in past_end {
                         self.written_past_its_end(function, value, target, unwritten_before);
                     }
@@ -958,14 +956,7 @@ impl Allocations<'_> {
                     // (#1006), for the place `*dest`, with the copy's own arms.
                     let mut place = (*dest).clone();
                     place.projection.push(Projection::Deref);
-                    self.locals_written(
-                        function,
-                        value,
-                        &place,
-                        StoreKind::Copy,
-                        bytes,
-                        lands_in_no_block,
-                    );
+                    self.locals_written(function, value, &place, StoreKind::Copy, bytes);
                 } else {
                     // A destination that is no place of dereferences may land
                     // anywhere, as a call's argument may.

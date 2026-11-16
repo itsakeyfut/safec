@@ -1513,7 +1513,7 @@ impl Allocations<'_> {
             }
             // And an escaped local it may land in, as an unplaced store
             // does. See `Known::written`.
-            self.locals_written(function, value, place, StoreKind::Direct, None, false);
+            self.locals_written(function, value, place, StoreKind::Direct, None);
             return;
         };
         // The call's result writes the local it lands in. See
