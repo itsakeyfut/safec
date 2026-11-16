@@ -662,13 +662,13 @@ pub(super) fn used(
         // it names one: below it the pointer gone through was loaded from
         // memory, and `free(*pp); return **pp;` is about what `pp`'s
         // allocation held rather than about `pp`.
-        let Some((verdict, local)) = verdict(
+        let Some((verdict, local, level)) = verdict(
             sources,
             Kind::UseAfterFree,
             known.reached_by(place.local),
             known,
         )
-        .map(|verdict| (verdict, Some(place.local)))
+        .map(|verdict| (verdict, Some(place.local), 0))
         .or_else(|| {
             (1..derefs(place)).find_map(|depth| {
                 verdict(
@@ -677,17 +677,33 @@ pub(super) fn used(
                     known.reached_below(place.local, depth),
                     known,
                 )
-                .map(|verdict| (verdict, None))
+                .map(|verdict| (verdict, None, depth))
             })
         }) else {
             continue;
+        };
+        // **Keyed by the place read through the level that was freed**, not
+        // by the whole place: one freed pointer read at one caret is one
+        // report however deep the place it was read through goes. A library
+        // copy's argument `*t` and its store `**t` both read the freed `t`,
+        // and keyed whole they were two `SC0402` at the copy (#987). Where
+        // two merge, a proof still stands over a doubt ([`supersedes`]). The
+        // C frontend builds places of dereferences alone, so the prefix is
+        // the place read through that level.
+        //
+        // Mutation: key by the whole place again, and
+        // `a_copy_through_a_freed_pointers_dereference_reports_the_use_once`
+        // gains a second `SC0402`.
+        let key = Place {
+            local: place.local,
+            projection: place.projection[..=level].to_vec(),
         };
 
         say(
             sources,
             findings,
             said,
-            place,
+            &key,
             Finding {
                 function,
                 kind: Kind::UseAfterFree,

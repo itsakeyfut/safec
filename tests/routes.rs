@@ -5470,6 +5470,11 @@ const COPY_DOUBTS_MORE: &str =
 /// A row of [`COPY_DIFFERS`]: a doubt a store over the same program raises
 /// and the copy does not (#926).
 const TWIN_DOUBTS_MORE: &str = "a store over the same program doubts what the copy does not (#926)";
+/// A row of [`COPY_DIFFERS`]: a store over a copy's program reads the
+/// freed pointer on two lines that both align to the put, the address it
+/// takes and the store, `dt_ = &**m;` and `*dt_ = ...`, where the copy reads
+/// it on one, and one freed pointer at one caret is one report (#987).
+const TWIN_READS_IT_ON_TWO_LINES: &str = "a store over a copy's program reads the freed pointer at the address it takes and at the store, two lines aligned to the put, where the copy reads it once (#987)";
 /// A row of [`COPY_DIFFERS`]: a copy carries bytes nothing wrote without
 /// reading them as a pointer, since it copies characters (C17 7.24.2.1),
 /// so the slot is reported where it is read, where a store reads the
@@ -5607,6 +5612,29 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("width_memcpy_d2_one", &[WIDTH_ASKED_APART]),
     ("width_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("width_memmove_d2_one", &[WIDTH_ASKED_APART]),
+    (
+        "stored_out_memcpy_block_d2_both",
+        &[TWIN_READS_IT_ON_TWO_LINES],
+    ),
+    (
+        "stored_out_memcpy_block_d2_one",
+        &[TWIN_READS_IT_ON_TWO_LINES],
+    ),
+    ("stored_freed_memcpy_d2_both", &[TWIN_READS_IT_ON_TWO_LINES]),
+    (
+        "stored_freed_memmove_d2_both",
+        &[TWIN_READS_IT_ON_TWO_LINES],
+    ),
+    ("stored_freed_memcpy_d2_one", &[TWIN_READS_IT_ON_TWO_LINES]),
+    ("stored_freed_memmove_d2_one", &[TWIN_READS_IT_ON_TWO_LINES]),
+    (
+        "stored_freed_memcpy_block_d2_both",
+        &[TWIN_READS_IT_ON_TWO_LINES],
+    ),
+    (
+        "stored_freed_memcpy_block_d2_one",
+        &[TWIN_READS_IT_ON_TWO_LINES],
+    ),
 ];
 
 /// [`aligned`] places a report on a line both programs share before the
