@@ -3,8 +3,8 @@
 // handed on, `SC0407` at `use2(&s)`, and not at the copy itself, as a store
 // over the same program is asked at its own door alone (#969, #979).
 //
-// Mutation: ask what a copy's source points at in `handed` again. An
-// `SC0407` at the copy comes back.
+// Mutation: in `handed`, drop both the return for a copy and the skip of
+// what `copied_through` asks; an `SC0407` at the copy comes back.
 void *malloc(int n);
 void free(void *p);
 void *memcpy(void *d, void *s, int n);
