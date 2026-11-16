@@ -5612,46 +5612,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("stale_memcpy_d2_one", &[WIDTH_ASKED_APART]),
     ("stale_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("stale_memmove_d2_one", &[WIDTH_ASKED_APART]),
-    (
-        "stored_freed_memcpy_block_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memcpy_block_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_freed_memcpy_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memcpy_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memcpy_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_freed_memmove_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_freed_memmove_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_freed_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    (
-        "stored_out_memcpy_block_d1_both",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    (
-        "stored_out_memcpy_block_d1_one",
-        &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
-    ),
-    ("stored_out_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
-    ("stored_out_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d0_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memcpy_d0_one", &[TWIN_DOUBTS_MORE]),
     (

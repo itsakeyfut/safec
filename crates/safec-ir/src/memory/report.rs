@@ -2463,6 +2463,49 @@ pub(super) fn handed_stored_out(
     );
 }
 
+/// Report a library copy's destination or source pointer where the
+/// allocation it points at may have been freed, **as a store over the same
+/// program asks them**: `memcpy(d, s, n)` writes `*d` and reads `*s`, which
+/// is what `*d = *s;` dereferences, so each is asked as [`used`] asks a
+/// dereference, `SC0402`, at the store door (`Allocations::store_at`)
+/// rather than at the copy's arguments, where [`handed`] would make it
+/// `SC0407` (#979). A copy that makes no store, its destination or source
+/// no place, is left to [`handed`].
+pub(super) fn copied_through(
+    sources: &SourceMap,
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+    function: FuncId,
+) {
+    let Some(store) = analysis.store_at(terminator, known) else {
+        return;
+    };
+    let from = match (store.kind, &store.from) {
+        (StoreKind::Copy, Written::Bytes(from)) => {
+            let mut from = (*from).clone();
+            from.projection.push(Projection::Deref);
+            from
+        }
+        // `store_at` makes a copy alone; listed so that a kind added
+        // answers here.
+        (StoreKind::Copy, Written::Value(_))
+        | (StoreKind::Direct | StoreKind::Through { .. }, _) => {
+            return;
+        }
+    };
+    used(
+        sources,
+        findings,
+        said,
+        Some((store.at, vec![&store.into, &from])),
+        known,
+        function,
+    );
+}
+
 /// Report a pointer handed to a call where the allocation it points at may
 /// have been freed.
 ///
@@ -2512,7 +2555,24 @@ pub(super) fn handed(
     // its own right keeps its own words: in `give(tab, *tab)`, `*tab` is a
     // freed pointer passed, which says more than what `tab` holds behind it.
     let mut silent: Vec<&Place> = Vec::new();
+    // A copy's destination and source, which [`copied_through`] asks at the
+    // store door where the copy makes a store.
+    let at_the_store_door: Vec<&Place> = if analysis.store_at(terminator, known).is_some() {
+        arguments
+            .iter()
+            .take(2)
+            .filter_map(|argument| match argument {
+                Operand::Copy(place) => Some(place),
+                Operand::Constant(_) => None,
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     for place in handed_places(analysis, function, *callee, arguments) {
+        if at_the_store_door.contains(&place) {
+            continue;
+        }
         // **A copy's source [`copied_away`] has said is still asked itself,
         // and not what it points at**, which is what that said: the one
         // report about it (#652). Skipped whole, `memcpy(*t, b, 8)` with `b`
