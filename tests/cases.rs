@@ -2537,6 +2537,12 @@ cases! {
         // second reports `b[1]` though the copy covered it.
         a_copy_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The store spelling of the copy two levels down above: `**box = *x;`
+        // wrote one slot of `b`, placed by `box`'s own element (#1009).
+        // Mutation: ask `place.local`'s `site_element` whatever the depth in
+        // the store's arm of `Allocations::blocks_written`; the doubt at the
+        // read of `b[1]` goes.
+        a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
