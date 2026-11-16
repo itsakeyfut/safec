@@ -687,13 +687,23 @@ pub(super) fn used(
         // report however deep the place it was read through goes. A library
         // copy's argument `*t` and its store `**t` both read the freed `t`,
         // and keyed whole they were two `SC0402` at the copy (#987). Where
-        // two merge, a proof still stands over a doubt ([`supersedes`]). The
-        // C frontend builds places of dereferences alone, so the prefix is
-        // the place read through that level.
+        // two merge, a proof still stands over a doubt ([`supersedes`]). A
+        // place read through is of dereferences alone, `derefs` saying how
+        // many (an index is built only under an address, which no read
+        // takes), so the prefix is the place read through that level.
+        //
+        // **Another door's question at the same caret is its own**: keyed
+        // whole, this shared `**t` with the argument `h(**t)` hands on, and
+        // the doubt that the value handed may point to a freed allocation
+        // was hidden behind the read's proof; it is said now.
         //
         // Mutation: key by the whole place again, and
         // `a_copy_through_a_freed_pointers_dereference_reports_the_use_once`
-        // gains a second `SC0402`.
+        // gains a second `SC0402` and
+        // `a_freed_pointer_read_two_levels_down_and_handed_on_is_asked_as_both`
+        // loses its `SC0407`; key by the first level, and
+        // `a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports`
+        // loses its `SC0407`.
         let key = Place {
             local: place.local,
             projection: place.projection[..=level].to_vec(),
