@@ -2647,13 +2647,15 @@ impl Known {
     /// escaped local wherever a report is made, measured: removing it breaks
     /// nothing today. What it would cost if the escape stopped covering it is
     /// a proof about a pointer this write may have replaced.
+    ///
+    /// **The whole position joins, the row with it** (#996): joining the byte
+    /// position alone left the row the target walked before the write beside
+    /// a position joined with one in another row. See
+    /// [`Position::joined`](super::parts::Position::joined).
     pub(super) fn target_union(&mut self, target: LocalIdx, written: &Held) {
-        let at = self.points_to[target]
-            .position
-            .at
-            .joined(written.position.at);
+        let position = self.points_to[target].position_joined(written);
         self.points_to[target].accumulated(written);
-        self.points_to[target].position.at = at;
+        self.points_to[target].position = position;
         self.points_to[target].freed = None;
     }
 
@@ -3242,4 +3244,71 @@ pub(super) struct PendingWrite {
     local: LocalIdx,
     write: ArrayWrite,
     written: PlaceInit,
+}
+
+#[cfg(test)]
+mod position {
+    use crate::dataflow::Analysis;
+    use crate::index::LocalIdx;
+    use crate::ir::{Function, TranslationUnit, Ty};
+    use crate::source::{SourceMap, Span};
+    use crate::target::Target;
+
+    use super::super::parts::{At, Position, Row};
+
+    /// A pointer written over one that walks another row of what each
+    /// names leaves no position counted against either, as a join of two
+    /// paths does (#996).
+    ///
+    /// Mutation: have `Known::target_union` join `position.at` alone and
+    /// keep the target's row, as it did. This fails.
+    #[test]
+    fn a_write_of_a_pointer_walking_another_row_leaves_no_position_counted() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "f");
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let ptr = unit.push_type(Ty::Pointer(int));
+        let function = Function::new(Span::new(file, 0, 1), int, [ptr, ptr, ptr]);
+        let mut parameters = function.parameters();
+        let target = LocalIdx::of(parameters.next().expect("three parameters"));
+        let first = LocalIdx::of(parameters.next().expect("three parameters"));
+        let second = LocalIdx::of(parameters.next().expect("three parameters"));
+        let mut function = function;
+        let block = function.reserve_block();
+        function.fill_block(
+            block,
+            crate::ir::Block {
+                elements: vec![],
+                terminator: crate::ir::Terminator::Return,
+            },
+        );
+        let func = unit.push_function(function);
+        let analysis = crate::memory::analysis(&sources, &unit, func);
+        let mut value = analysis.on_entry();
+
+        let mut written = value.points_to[target].clone();
+        value.points_to[target].clear();
+        value.points_to[target].name_local(first);
+        value.points_to[target].position = Position {
+            at: At::Bytes(0),
+            row: Some(Row { start: 0, len: 4 }),
+        };
+        written.clear();
+        written.name_local(second);
+        written.position = Position {
+            at: At::Bytes(4),
+            row: Some(Row { start: 4, len: 4 }),
+        };
+        value.target_union(target, &written);
+        assert_eq!(
+            value.points_to[target].position,
+            Position {
+                at: At::Unknown,
+                row: None,
+            }
+        );
+    }
 }
