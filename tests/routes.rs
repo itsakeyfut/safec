@@ -534,6 +534,155 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
 ];
 
+/// Every field of `Held`, the value one local or one argument holds, each a
+/// belief the matrix writes or an exemption, with the start `Held::none`
+/// gives it, as [`KNOWN_FIELDS`] holds `Known`'s (#998). ADR-0091 rule 3
+/// asks that a new field start at the value that doubts, and nothing but
+/// review held it for `Held`: `row` was added starting at `None`, the whole
+/// object, the quiet value, two days after the record was accepted
+/// (7179e6fc).
+const HELD_FIELDS: &[(&str, Field, Start)] = &[
+    (
+        "names",
+        Field::Belief(&[Belief::Lost, Belief::Stale, Belief::Reborn, Belief::Caller]),
+        Start::Quiet(
+            "a value names only what a door gave it, and at its start it was given nothing; a value naming nothing is asked at no use (ADR-0017)",
+        ),
+    ),
+    (
+        "freed",
+        Field::Belief(&[Belief::Stale, Belief::StoredFreed]),
+        Start::Quiet("no free has acted on the value at its start"),
+    ),
+    (
+        "writes_elsewhere",
+        Field::Exempt(
+            "whether a write through the value may land where its edges do not say: it decides whether a store replaces a local (ADR-0028), and the routes reach it only through that",
+        ),
+        Start::Doubt,
+    ),
+    (
+        "offset",
+        Field::Belief(&[Belief::Width]),
+        Start::Quiet(
+            "at the start of what it names until a move says otherwise; a door that cannot place it gives `At::Unknown`",
+        ),
+    ),
+    (
+        "row",
+        Field::Belief(&[Belief::Width]),
+        Start::Quiet("no door makes a value inside a row; a conversion does (#947)"),
+    ),
+    (
+        "named_at_read",
+        Field::Exempt(
+            "the locals code this check cannot read could name where the value was read out of memory or written by such code; only such a read or write sets it, and no belief's rows name it apart",
+        ),
+        Start::Quiet(
+            "the value was neither read out of memory nor written by code this check cannot read at its start",
+        ),
+    ),
+    (
+        "returned_by",
+        Field::Exempt(
+            "the site an allocation or `realloc` returned, read only by a branch on that result (ADR-0080), which no route takes",
+        ),
+        Start::Quiet("no call returned the value at its start"),
+    ),
+    (
+        "fresh_read",
+        Field::Belief(&[Belief::Fresh]),
+        Start::Quiet(
+            "it decides no report, only drops a doubt beside an `SC0411` already said, and nothing was read at the start",
+        ),
+    ),
+    ("widths", Field::Belief(&[Belief::Width]), Start::Doubt),
+    (
+        "arrived_holds_pointer",
+        Field::Belief(&[Belief::HeldPointers]),
+        Start::Quiet(
+            "set from the type a value arrives as, and at its start it arrived as nothing",
+        ),
+    ),
+    (
+        "inner_address",
+        Field::Exempt(
+            "whether an edge may be the address of something inside the local it names, set by `&*pp` alone, which no route writes",
+        ),
+        Start::Quiet("the value names no local at its start"),
+    ),
+    (
+        "element",
+        Field::Belief(&[Belief::PartLocal]),
+        Start::Quiet(
+            "which element of a local array is known only where a door counts it, and the value names no array at its start",
+        ),
+    ),
+    (
+        "site_element",
+        Field::Exempt(
+            "which element of a heap block the value points at, where a constant says so (#873); held by the corpus, since no belief's rows write a block in part",
+        ),
+        Start::Quiet("the value holds no site at its start"),
+    ),
+    (
+        "array_edge",
+        Field::Exempt(
+            "whether an edge survives only by the rule that keeps it through a known move (#639, #647); held by the corpus, since no route moves a pointer",
+        ),
+        Start::Quiet("no move has acted on the value at its start"),
+    ),
+    (
+        "stored_through",
+        Field::Exempt(
+            "whether a store through the value has written what it points at, which keeps the lowering's read of an assignment's value undoubted (#667); held by the corpus",
+        ),
+        Start::Quiet("no store went through the value at its start"),
+    ),
+    (
+        "may_be_null",
+        Field::Exempt(
+            "whether the value may be null on some path, read where a null test refines a call's result (#931); the nullability check owns null",
+        ),
+        Start::Quiet("a local nothing was assigned holds nothing, nor null"),
+    ),
+];
+
+/// The fields of `Held`, read off its declaration, comments skipped.
+fn held_fields() -> Vec<String> {
+    let source = include_str!("../crates/safec-ir/src/memory/parts.rs");
+    let start = source
+        .find("pub(super) struct Held {")
+        .expect("`Held` is declared in parts.rs");
+    let body = &source[start..];
+    let end = body
+        .find(
+            "
+}",
+        )
+        .expect("`Held`'s declaration ends");
+    body[..end]
+        .lines()
+        .skip(1)
+        .map(str::trim)
+        .filter(|line| !line.starts_with("//"))
+        .map(|line| line.strip_prefix("pub(super) ").unwrap_or(line))
+        .filter_map(|line| line.split_once(':').map(|(name, _)| name.trim().to_owned()))
+        .filter(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '_'))
+        .collect()
+}
+
+/// Every field of `Held` has a row in [`HELD_FIELDS`], and every row names a
+/// field, under the rules [`KNOWN_FIELDS`] is held to.
+///
+/// Mutation: drop `row`'s line from [`HELD_FIELDS`]; this fails naming
+/// `row`. A field added to `Held` fails to compile first in `Held`'s
+/// destructures, then here until it has a row.
+#[test]
+fn every_field_of_a_held_value_is_a_belief_or_an_exemption() {
+    check_fields("Held", &held_fields(), HELD_FIELDS);
+}
+
 /// The fields of `Known`, read off its declaration.
 fn known_fields() -> Vec<String> {
     let source = include_str!("../crates/safec-ir/src/memory/known.rs");
@@ -571,8 +720,14 @@ fn known_fields() -> Vec<String> {
 /// `PENDING` again; this fails, since it starts quiet.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
-    let declared = known_fields();
-    let listed: Vec<&str> = KNOWN_FIELDS.iter().map(|(name, _, _)| *name).collect();
+    check_fields("Known", &known_fields(), KNOWN_FIELDS);
+}
+
+/// The rules a table of a value's fields is held to, `Known`'s and `Held`'s
+/// alike: a field with no row, a row for no field, a belief the matrix does
+/// not ask, an exemption with no reason, and a quiet start with none.
+fn check_fields(value: &str, declared: &[String], table: &[(&str, Field, Start)]) {
+    let listed: Vec<&str> = table.iter().map(|(name, _, _)| *name).collect();
     let missing: Vec<&String> = declared
         .iter()
         .filter(|field| !listed.contains(&field.as_str()))
@@ -583,9 +738,9 @@ fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
         .collect();
     assert!(
         missing.is_empty() && stale.is_empty(),
-        "fields of `Known` with no row in KNOWN_FIELDS: {missing:?}; rows for no field: {stale:?}"
+        "fields of `{value}` with no row in its table: {missing:?}; rows for no field: {stale:?}"
     );
-    for (name, field, start) in KNOWN_FIELDS {
+    for (name, field, start) in table {
         match field {
             Field::Belief(beliefs) => assert!(
                 !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
