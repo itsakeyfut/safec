@@ -2559,14 +2559,17 @@ pub(super) fn handed(
     // allocations already freed are asked, and those are reported there.
     // See ADR-0042.
     //
-    // **Not a library copy's destination**, which `memcpy` and `memmove`
-    // write and do not read (C17 7.24.2.1, 7.24.2.2): what it held before is
-    // not handed on, and a later read of what the copy left there is asked
-    // where it is read. Asked, a destination block that once held a freed
+    // **Not what a library copy is handed**: `memcpy` and `memmove` copy
+    // bytes (C17 7.24.2.1, 7.24.2.2), so a freed pointer copied is not used
+    // until what the copy left is read, which is asked where it is read, as
+    // a store over the same program is asked at its own door alone (#979).
+    // Its destination it writes and does not read, so what it held before is
+    // not handed on: asked, a destination block that once held a freed
     // pointer was `SC0407` where the same copy into a local was silent
-    // (#791).
+    // (#791). The pointers the copy is handed are still asked above, since
+    // it reads and writes through them.
     // A `match` rather than a `matches!`, so that a kind of callee added
-    // later answers here whether it writes a destination it does not read.
+    // later answers here whether it is a copy.
     let copies = match analysis.callee(*callee) {
         Callee::Copies => true,
         Callee::Frees
@@ -2577,14 +2580,10 @@ pub(super) fn handed(
         | Callee::Reads
         | Callee::Opaque => false,
     };
-    let destination = match arguments.first() {
-        Some(Operand::Copy(place)) if copies => Some(place),
-        Some(_) | None => None,
-    };
+    if copies {
+        return;
+    }
     for place in silent {
-        if Some(place) == destination {
-            continue;
-        }
         freed_behind(
             findings,
             said,

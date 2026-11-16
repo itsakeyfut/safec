@@ -5568,8 +5568,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
         "reborn_memcpy_block_d0_one",
         &[ASKED_AT_ITS_ARGUMENTS, WIDTH_ASKED_APART],
     ),
-    ("reborn_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("reborn_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
     ("reborn_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
     ("reborn_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
     ("reborn_memcpy_d2_both", &[WIDTH_ASKED_APART]),
@@ -5615,14 +5613,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("stale_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("stale_memmove_d2_one", &[WIDTH_ASKED_APART]),
     (
-        "stored_freed_memcpy_block_d0_both",
-        &[ASKED_AT_ITS_ARGUMENTS],
-    ),
-    (
-        "stored_freed_memcpy_block_d0_one",
-        &[ASKED_AT_ITS_ARGUMENTS],
-    ),
-    (
         "stored_freed_memcpy_block_d1_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
     ),
@@ -5632,8 +5622,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ),
     ("stored_freed_memcpy_block_d2_both", &[TWIN_DOUBTS_MORE]),
     ("stored_freed_memcpy_block_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("stored_freed_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
     (
         "stored_freed_memcpy_d1_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
@@ -5644,8 +5632,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ),
     ("stored_freed_memcpy_d2_both", &[TWIN_DOUBTS_MORE]),
     ("stored_freed_memcpy_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("stored_freed_memmove_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("stored_freed_memmove_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
     (
         "stored_freed_memmove_d1_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
@@ -5690,10 +5676,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ),
     ("stored_out_memmove_d2_both", &[TWIN_DOUBTS_MORE]),
     ("stored_out_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
-    ("unreplaced_memcpy_block_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_block_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
     (
         "unreplaced_memcpy_block_d2_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
@@ -5702,10 +5684,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
         "unreplaced_memcpy_block_d2_one",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
     ),
-    ("unreplaced_memcpy_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memcpy_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
     (
         "unreplaced_memcpy_d2_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
@@ -5714,10 +5692,6 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
         "unreplaced_memcpy_d2_one",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
     ),
-    ("unreplaced_memmove_d0_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d0_one", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d1_both", &[ASKED_AT_ITS_ARGUMENTS]),
-    ("unreplaced_memmove_d1_one", &[ASKED_AT_ITS_ARGUMENTS]),
     (
         "unreplaced_memmove_d2_both",
         &[ASKED_AT_ITS_ARGUMENTS, TWIN_DOUBTS_MORE],
