@@ -364,12 +364,30 @@ impl PartialDoor {
     /// `ever`, measured**, nor the exit's `Known::stored_out` doing so: a
     /// site made again in a loop meets the turn that wrote it at the loop's
     /// head, so `now` still holds the write wherever the block leaves.
+    ///
+    /// **A read asks the write state too** (#1019): the record names the
+    /// place and the state is the belief, so a whole pointer written over
+    /// the part since ends the report. A state that says part with no place
+    /// recorded is #940's to report.
+    ///
+    /// **Where it leaves, the record alone**, as before: `ever` covers every
+    /// block the site made, and the state only the one it names now. Asked
+    /// there too, a list built in a loop, each block written in part and the
+    /// newest written whole after it, left with its older blocks holding
+    /// part in silence, found by review.
+    ///
+    /// Mutation: a read takes every recorded block as holding part;
+    /// `a_whole_pointer_stored_over_part_of_one_before_it_is_read_back_is_not_reported`
+    /// is reported. Mutation: where it leaves, ask the state as a read does;
+    /// `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole`
+    /// goes silent.
     fn record(self, known: &Known, at: Storage) -> Option<Span> {
+        let record = known.part_written[at];
         match self {
-            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
-                known.part_written[at].ever()
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => record.ever(),
+            PartialDoor::Load | PartialDoor::CopyOut => {
+                record.now().filter(|_| known.written[at].may_hold_part())
             }
-            PartialDoor::Load | PartialDoor::CopyOut => known.part_written[at].now(),
         }
     }
 
@@ -921,7 +939,7 @@ pub(super) fn loaded_indeterminate(
         // reach two such storages has no one source to name (#752).
         let mut origins = blocks_read(&place, known)
             .into_iter()
-            .filter(|&at| known.written[at].whole() != Init::Written)
+            .filter(|&at| !matches!(known.written[at].whole(), Init::Written(_)))
             .map(|at| known.written[at].carried());
         let carried = origins
             .next()
@@ -1038,7 +1056,7 @@ pub(super) fn unwritten_read(
         // that holds a pointer**: every local starts unwritten, and an
         // integer read as itself is not followed (ADR-0073 rule 2).
         let init = known.written[local].whole();
-        let partly = init == Init::Maybe;
+        let partly = matches!(init, Init::Maybe(_));
         // **A local whose address is never taken is asked here only for the
         // doubt**, and only where `memory::assigned`, which runs first and
         // proves or doubts it by name, said nothing at this caret: one rule
@@ -1058,7 +1076,7 @@ pub(super) fn unwritten_read(
                 || findings
                     .iter()
                     .any(|said| said.at == at && said.local == Some(local) && by_assigned(said))))
-            || init == Init::Written
+            || matches!(init, Init::Written(_))
             || stored_pointer(analysis.unit, function.local(local)).is_none()
         {
             continue;

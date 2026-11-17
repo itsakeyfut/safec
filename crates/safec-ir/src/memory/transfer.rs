@@ -21,7 +21,7 @@ use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
     At, Cell, Earliest, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit,
-    Position, Reached, Row, SiteState, Width, earlier, joined_carried,
+    Position, Reached, Row, SiteState, Whole, Width, earlier, joined_carried,
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Library};
@@ -126,6 +126,61 @@ impl Allocations<'_> {
     /// old ones (#717), or from four and four nothing wrote (#745).
     pub(super) fn copied_pointers(&self, callee: FuncId, arguments: &[Operand]) -> CopiedPointers {
         self.pointers_covered(callee, arguments, 2)
+    }
+
+    /// What a library copy or fill is believed to write where it lands,
+    /// asked before it writes (#1019): [`Whole::Other`] where its length
+    /// ends part way through a pointer, which `note_less_than_a_pointer`
+    /// notes, or where it copies out of memory that may hold part of one,
+    /// which `Known::carry_part_written` carries; [`Whole::Pointer`]
+    /// otherwise, today's belief, which #940 narrows. The two notes run
+    /// before the copy's own write, so the write has to say it too, or a
+    /// copy that covers a slot whole would clear what they said.
+    ///
+    /// The source only of a row that copies, and only where the copy door
+    /// places it, as the carry does: a fill's second argument is a byte.
+    ///
+    /// Mutation: the source is not asked; five cases of a partial pointer
+    /// copied on whole go silent,
+    /// `a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported`
+    /// among them. **No case holds the length's answer**, measured: the
+    /// slot a copy ends part way through is one it does not cover, so the
+    /// note's part survives it, and a copy of 12 bytes covering a block of
+    /// 12 is still reported.
+    pub(super) fn copy_writes(
+        &self,
+        callee: FuncId,
+        kind: Callee,
+        arguments: &[Operand],
+        value: &Known,
+    ) -> Whole {
+        if !matches!(
+            self.copied_pointers(callee, arguments),
+            CopiedPointers::Whole
+        ) {
+            return Whole::Other;
+        }
+        let copies = matches!(kind, Callee::Copies);
+        let from_part = match arguments {
+            [Operand::Copy(dest), Operand::Copy(source), ..] if copies => {
+                let placed = (dest.projection.is_empty() || derefs(dest) > 0)
+                    && (source.projection.is_empty() || derefs(source) > 0);
+                let (sites, locals) = value.levels_below(source.local, derefs(source));
+                placed
+                    && (sites
+                        .iter()
+                        .any(|&site| value.written[site].may_hold_part())
+                        || locals
+                            .iter()
+                            .any(|&local| value.written[local].may_hold_part()))
+            }
+            _ => false,
+        };
+        if from_part {
+            Whole::Other
+        } else {
+            Whole::Pointer
+        }
     }
 
     /// How the length handed as argument `length` covers the pointers a
@@ -309,7 +364,7 @@ impl Allocations<'_> {
                     Some(length) if length <= ELEMENTS_KEPT && unwritten[local.index()] => {
                         Inits::unwritten(usize::try_from(length).unwrap_or(0))
                     }
-                    _ => Inits::written(0),
+                    _ => Inits::spread(Init::Written(Whole::Pointer), 0),
                 }
             })
             .collect()
@@ -1039,8 +1094,8 @@ impl Allocations<'_> {
         let stored: Vec<Site> = value.closure(carried.clone()).into_iter().collect();
         value.expose(self.sources, carried, span);
         for &site in containers {
-            if before[site].whole() == Init::Maybe {
-                value.written[site].set(Init::Maybe);
+            if let Init::Maybe(whole) = before[site].whole() {
+                value.written[site].set(Init::Maybe(whole));
             }
         }
         for &site in &stored {
@@ -1723,7 +1778,7 @@ impl Allocations<'_> {
         // in a loop keeps the test, since an earlier turn's block may be
         // what another holder names. See ADR-0082.
         if self.made_once[returned.local()] || !rest.held_sites()[returned] {
-            value.written[returned].set(Init::Written);
+            value.written[returned].set(Init::Written(Whole::Pointer));
         }
         value.clear(local);
     }
@@ -2128,8 +2183,11 @@ impl Allocations<'_> {
 /// that #733 changes no answer. See `Allocations::joined` and ADR-0048.
 fn named_beside_unheld(named: Init, unheld: Init) -> Init {
     match unheld {
-        Init::Maybe if named == Init::Written => Init::Maybe,
-        Init::Unwritten | Init::Maybe | Init::Written => named,
+        Init::Maybe(_) => match named {
+            Init::Written(whole) => Init::Maybe(whole),
+            Init::Unwritten(_) | Init::Maybe(_) => named,
+        },
+        Init::Unwritten(_) | Init::Written(_) => named,
     }
 }
 
@@ -2385,17 +2443,19 @@ impl Analysis for Allocations<'_> {
             // (`Self::elements_at_entry`), and whole for every other place.
             written: {
                 let unwritten = self.unwritten_at_entry();
+                // **Holding whole pointers**, as what code this check cannot
+                // read writes is believed to (#940's decision).
                 let mut written: Table<Storage, PlaceInit> = Table::filled(
-                    PlaceInit::whole_of(Init::Written),
+                    PlaceInit::whole_of(Init::Written(Whole::Pointer)),
                     Storage::count(self.locals),
                 );
                 for (local, slots) in written.locals().zip(self.elements_at_entry()) {
                     written[local] = if slots.len() > 0 {
                         PlaceInit::slots_of(slots)
                     } else if unwritten[local.index()] {
-                        PlaceInit::whole_of(Init::Unwritten)
+                        PlaceInit::whole_of(Init::Unwritten(Whole::Pointer))
                     } else {
-                        PlaceInit::whole_of(Init::Written)
+                        PlaceInit::whole_of(Init::Written(Whole::Pointer))
                     };
                 }
                 written
@@ -2731,8 +2791,10 @@ impl Analysis for Allocations<'_> {
 
                 // An assignment to a local writes it, whatever it writes. See
                 // `Known::written`.
+                // Believed whole, today's belief (#1019): an assignment to a
+                // local is no write of part of a pointer this check notes.
                 if let Some(at) = Strong::assigned(&operation.place) {
-                    value.written_local(at.into());
+                    value.written_local(at.into(), Whole::Pointer);
                 }
 
                 // **This check follows a write through exactly one `Deref` and

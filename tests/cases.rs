@@ -1940,6 +1940,20 @@ cases! {
         a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_partial_pointer_copied_into_a_block_handed_to_a_pointer_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_partial_pointer_copied_into_a_block_stored_as_a_pointer_slot_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read asks the write state, and the record names the place
+        // (#1019): a whole pointer stored over the part ends the report;
+        // stored before it, or into another slot, it does not. Mutation: a
+        // read takes every recorded block as holding part; the first is
+        // reported. Mutation: a whole store at one slot writes the block
+        // whole; the third goes silent.
+        a_whole_pointer_stored_over_part_of_one_before_it_is_read_back_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        part_of_a_pointer_in_a_slot_no_whole_one_was_stored_over_is_reported_where_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Where a block leaves, the record alone: the state is of the block
+        // the site names now, and older blocks a loop made still hold part.
+        // Found by review of #1019. Mutation: where it leaves, ask the state
+        // as a read does; this goes silent.
+        part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Never held as pointers. Mutation: ask every block with the record,
         // whether or not it left; this is reported.
         a_partial_pointer_copied_into_a_block_that_never_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

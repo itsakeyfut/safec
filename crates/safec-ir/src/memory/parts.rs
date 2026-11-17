@@ -318,6 +318,34 @@ impl Extent {
     }
 }
 
+/// What a write wrote into a slot: **a whole pointer, or anything else**
+/// (#1019). Every writer of the write state says which, so a write route
+/// added later cannot leave it unsaid. **Each says what is believed
+/// today**: `Other` where a write of part of a pointer is noted, a narrow
+/// store, a partial copy or fill, or a copy or `realloc` out of memory that
+/// may hold part of one, and `Pointer` everywhere else. #940 narrows that to
+/// the writes that write a whole pointer; what code this check cannot read
+/// writes, and the state a function starts in, are #941's. See ADR-0097.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Whole {
+    /// A whole pointer, written by a write that wrote one.
+    Pointer,
+    /// Anything else.
+    Other,
+}
+
+impl Whole {
+    /// Where two paths meet: a whole pointer only where both wrote one.
+    pub(super) fn joined(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::Pointer, Self::Pointer) => Self::Pointer,
+            (Self::Pointer | Self::Other, Self::Other) | (Self::Other, Self::Pointer) => {
+                Self::Other
+            }
+        }
+    }
+}
+
 /// Whether an object may still hold what nothing wrote: an allocation
 /// `malloc` or `aligned_alloc` made (C17 7.22.3.1 p2, 7.22.3.4 p2), or a
 /// local whose address is taken (C17 6.2.4 p6). A pointer read out of one
@@ -328,12 +356,17 @@ impl Extent {
 /// a writer cannot clear one half and leave the other (#721, #724, #733).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Init {
-    /// Nothing has written it, on every path.
-    Unwritten,
-    /// Nothing may have written it, on some path.
-    Maybe,
-    /// Something has written it, on every path.
-    Written,
+    /// Nothing has written it, on every path; and whether part of a
+    /// pointer landed in it all the same, a copy or a fill shorter than one
+    /// that left it unwritten (#1019): [`Whole::Pointer`] where nothing did.
+    Unwritten(Whole),
+    /// Nothing may have written it, on some path; and what a write that
+    /// may have landed wrote, a whole pointer only where every one did, so
+    /// a write of part of a pointer on one path is still asked after it
+    /// meets a path that wrote nothing.
+    Maybe(Whole),
+    /// Something has written it, on every path, and what.
+    Written(Whole),
 }
 
 impl Init {
@@ -345,19 +378,39 @@ impl Init {
     /// #670, #721). Any other loop may run zero times and leave what it fills
     /// unwritten, so at its back edge they meet as `Maybe` (#783). A doubt
     /// either side already held is kept there too. See ADR-0064.
+    ///
+    /// **What was written is a whole pointer only where it is on both
+    /// sides**, a side that wrote nothing taking no part (#940).
     pub(super) fn joined(self, other: Self, back: bool) -> Self {
+        let whole = self.wrote().joined(other.wrote());
         match (self, other) {
-            (Self::Unwritten, Self::Unwritten) => Self::Unwritten,
-            (Self::Written, Self::Written) => Self::Written,
-            (Self::Maybe, _) | (_, Self::Maybe) => Self::Maybe,
-            (Self::Unwritten, Self::Written) | (Self::Written, Self::Unwritten) => {
+            (Self::Unwritten(_), Self::Unwritten(_)) => Self::Unwritten(whole),
+            (Self::Written(_), Self::Written(_)) => Self::Written(whole),
+            (Self::Maybe(_), _) | (_, Self::Maybe(_)) => Self::Maybe(whole),
+            (Self::Unwritten(_), Self::Written(_)) | (Self::Written(_), Self::Unwritten(_)) => {
                 if back {
-                    Self::Written
+                    Self::Written(whole)
                 } else {
-                    Self::Maybe
+                    Self::Maybe(whole)
                 }
             }
         }
+    }
+
+    /// What every write that may have landed wrote: [`Whole::Pointer`]
+    /// where none did, so that a side that wrote nothing takes no part in a
+    /// join.
+    fn wrote(self) -> Whole {
+        match self {
+            Self::Unwritten(whole) | Self::Maybe(whole) | Self::Written(whole) => whole,
+        }
+    }
+
+    /// Whether a write of something other than a whole pointer may have
+    /// landed here: what a pointer read out of it, or let leave as one, is
+    /// asked (#940). See ADR-0097.
+    pub(super) fn may_hold_part(self) -> bool {
+        self.wrote() == Whole::Other
     }
 
     /// What a loop's back edge leaves of `self`, the join already made, where
@@ -371,79 +424,86 @@ impl Init {
     /// block nothing wrote, read `*m` after it in silence (#760).
     pub(super) fn unwritten_again(self, before: Self, back: Self) -> Self {
         match (before, back) {
-            (Self::Written, Self::Unwritten) => Self::Maybe,
-            (Self::Unwritten | Self::Maybe | Self::Written, _) => self,
+            (Self::Written(_), Self::Unwritten(_)) => Self::Maybe(self.wrote()),
+            (Self::Unwritten(_) | Self::Maybe(_) | Self::Written(_), _) => self,
         }
     }
 
-    /// What a write that may have missed it leaves: a proof that nothing
-    /// wrote it ends, and a doubt stays. `Written` stays `Written`: this is
-    /// a write, not a reason to doubt.
-    pub(super) fn may_write(&mut self) {
-        if *self == Self::Unwritten {
-            *self = Self::Maybe;
-        }
+    /// What a write of `whole` that may have missed it leaves: a proof that
+    /// nothing wrote it ends, and a doubt stays. `Written` stays `Written`:
+    /// this is a write, not a reason to doubt. **What was written is a whole
+    /// pointer only where this write and what was there both are**, since
+    /// which of the two the slot holds is not known (#940).
+    pub(super) fn may_write(&mut self, whole: Whole) {
+        *self = match *self {
+            Self::Unwritten(was) => Self::Maybe(was.joined(whole)),
+            Self::Maybe(was) => Self::Maybe(was.joined(whole)),
+            Self::Written(was) => Self::Written(was.joined(whole)),
+        };
+    }
+
+    /// What a write of part of a pointer that may have landed leaves, where
+    /// it writes nothing else into this record: `Other`, written or not.
+    fn may_write_part(&mut self) {
+        let (Self::Unwritten(whole) | Self::Maybe(whole) | Self::Written(whole)) = self;
+        *whole = Whole::Other;
     }
 
     /// What a write that may have left it unwritten leaves, beside what it
     /// was: `Written` becomes `Maybe`, and a proof that nothing wrote it
     /// stays, since this is no write of it.
     pub(super) fn doubt(&mut self) {
-        if *self == Self::Written {
-            *self = Self::Maybe;
+        if let Self::Written(whole) = *self {
+            *self = Self::Maybe(whole);
         }
     }
 
     /// Whether nothing has written it, on every path.
     pub(super) fn is_unwritten(self) -> bool {
-        self == Self::Unwritten
+        matches!(self, Self::Unwritten(_))
     }
 
     /// Whether nothing may have written it, on some path.
     pub(super) fn may_be_unwritten(self) -> bool {
-        self != Self::Written
+        !matches!(self, Self::Written(_))
     }
 }
 
 /// An [`Init`] per element of a local array of at most `ELEMENTS_KEPT`
 /// innermost elements, or of none for every other local.
 ///
-/// **Two sets of bits behind one value**, so that it takes no more than the
-/// record it replaced and `memory::per_block` counts the same: `proved`, the
-/// elements [`Init::Unwritten`], and `doubted`, the elements that are not
-/// [`Init::Written`], a superset of `proved`. Nothing outside reads the bits,
-/// so the superset is this type's to keep (#733).
+/// **Three sets of bits behind one value**: `proved`, the elements
+/// [`Init::Unwritten`], and `doubted`, the elements that are not
+/// [`Init::Written`], a superset of `proved`, which take no more than the
+/// record they replaced (#733); and `whole`, what each element's writes
+/// wrote (#1019), which `memory::per_block` counts by its size. Nothing
+/// outside reads the bits, so the superset is this type's to keep.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Inits {
     proved: Bits<usize>,
     doubted: Bits<usize>,
+    /// The elements whose writes all wrote a whole pointer, or where
+    /// nothing landed, [`Whole::Pointer`].
+    whole: Bits<usize>,
 }
 
 impl Inits {
-    /// `len` elements, each [`Init::Written`]. A local kept whole has none.
-    pub(super) fn written(len: usize) -> Self {
-        Self {
-            proved: Bits::new(len),
-            doubted: Bits::new(len),
-        }
-    }
-
     /// `len` elements, each `init`.
     pub(super) fn spread(init: Init, len: usize) -> Self {
-        let mut inits = Self::written(len);
-        match init {
-            Init::Unwritten => inits.unwrite_all(),
-            Init::Maybe => inits.doubt_all(),
-            Init::Written => {}
+        let mut inits = Self {
+            proved: Bits::new(len),
+            doubted: Bits::new(len),
+            whole: Bits::new(len),
+        };
+        for element in 0..len {
+            inits.set(element, init);
         }
         inits
     }
 
     /// `len` elements, each [`Init::Unwritten`].
     pub(super) fn unwritten(len: usize) -> Self {
-        let mut inits = Self::written(len);
-        inits.unwrite_all();
-        inits
+        Self::spread(Init::Unwritten(Whole::Pointer), len)
     }
 
     /// How many elements it keeps: none for a local kept whole.
@@ -453,43 +513,61 @@ impl Inits {
 
     /// What `element` is.
     pub(super) fn get(&self, element: usize) -> Init {
-        if self.proved.get(element) {
-            Init::Unwritten
-        } else if self.doubted.get(element) {
-            Init::Maybe
+        let whole = if self.whole.get(element) {
+            Whole::Pointer
         } else {
-            Init::Written
+            Whole::Other
+        };
+        if self.proved.get(element) {
+            Init::Unwritten(whole)
+        } else if self.doubted.get(element) {
+            Init::Maybe(whole)
+        } else {
+            Init::Written(whole)
         }
     }
 
     /// Make `element` what `init` says.
     pub(super) fn set(&mut self, element: usize, init: Init) {
         match init {
-            Init::Unwritten => {
+            Init::Unwritten(whole) => {
                 self.proved.set(element);
                 self.doubted.set(element);
+                self.set_whole(element, whole);
             }
-            Init::Maybe => {
+            Init::Maybe(whole) => {
                 self.proved.remove(element);
                 self.doubted.set(element);
+                self.set_whole(element, whole);
             }
-            Init::Written => {
+            Init::Written(whole) => {
                 self.proved.remove(element);
                 self.doubted.remove(element);
+                self.set_whole(element, whole);
             }
         }
     }
 
-    /// Every element as [`Init::may_write`] leaves it.
-    pub(super) fn may_write_all(&mut self) {
-        self.proved.clear_all();
+    fn set_whole(&mut self, element: usize, whole: Whole) {
+        match whole {
+            Whole::Pointer => self.whole.set(element),
+            Whole::Other => self.whole.remove(element),
+        }
     }
 
-    /// Every element [`Init::Unwritten`], as a new object's are.
-    pub(super) fn unwrite_all(&mut self) {
+    /// Every element as [`Init::may_write`] of `whole` leaves it.
+    pub(super) fn may_write_all(&mut self, whole: Whole) {
         for element in 0..self.len() {
-            self.set(element, Init::Unwritten);
+            let mut init = self.get(element);
+            init.may_write(whole);
+            self.set(element, init);
         }
+    }
+
+    /// Whether a write of something other than a whole pointer may have
+    /// landed in some element. See [`Init::may_hold_part`].
+    pub(super) fn any_may_hold_part(&self) -> bool {
+        (0..self.len()).any(|element| self.get(element).may_hold_part())
     }
 
     /// Whether every element is [`Init::Unwritten`].
@@ -531,13 +609,21 @@ impl Inits {
 
     /// One `Init` for them all: `Written` where every element is, `Unwritten`
     /// where every element is, and `Maybe` otherwise.
+    ///
+    /// What was written is a whole pointer only where it is in every element
+    /// written (#940).
     pub(super) fn summary(&self) -> Init {
-        if self.doubted.ones().next().is_none() {
-            Init::Written
-        } else if self.all_unwritten() {
-            Init::Unwritten
+        let whole = if self.any_may_hold_part() {
+            Whole::Other
         } else {
-            Init::Maybe
+            Whole::Pointer
+        };
+        if self.doubted.ones().next().is_none() {
+            Init::Written(whole)
+        } else if self.all_unwritten() {
+            Init::Unwritten(whole)
+        } else {
+            Init::Maybe(whole)
         }
     }
 }
@@ -557,7 +643,7 @@ impl Inits {
 /// **And where its unwritten bytes came from**, [`Self::carried`]: a copy
 /// or a `realloc` that carried bytes nothing wrote into it, or nothing for
 /// bytes an allocation or a local's lifetime left so. Kept beside the
-/// record rather than in each slot, since the slots are two sets of bits.
+/// record rather than in each slot, since the slots are three sets of bits.
 /// It decides no conclusion, only what the report about a read says
 /// (#752).
 #[derive(Clone, PartialEq, Eq)]
@@ -692,11 +778,54 @@ impl PlaceInit {
         }
     }
 
-    /// As [`Init::may_write`] leaves it, every slot of it.
-    pub(super) fn may_write(&mut self) {
+    /// As [`Init::may_write`] of `whole` leaves it, every slot of it.
+    pub(super) fn may_write(&mut self, whole: Whole) {
         match &mut self.kept {
-            Kept::Whole(whole) => whole.may_write(),
-            Kept::Slots(slots) => slots.may_write_all(),
+            Kept::Whole(init) => init.may_write(whole),
+            Kept::Slots(slots) => slots.may_write_all(whole),
+        }
+    }
+
+    /// Whether a write of something other than a whole pointer may have
+    /// landed anywhere in it: what a pointer read out of it, or let leave as
+    /// one, is asked. See [`Init::may_hold_part`].
+    pub(super) fn may_hold_part(&self) -> bool {
+        self.whole().may_hold_part()
+    }
+
+    /// Written everywhere, by code this check cannot read, which is believed
+    /// to write whole pointers (#940's decision) and may not have written
+    /// over what was there: each slot keeps what was written in it before,
+    /// part of a pointer included (#1019). Set whole, a block stored out
+    /// before a call lost the copy of part of a pointer into it.
+    pub(super) fn written_by_unknown_code(&mut self) {
+        match &mut self.kept {
+            Kept::Whole(init) => *init = Init::Written(init.wrote()),
+            Kept::Slots(slots) => {
+                for element in 0..slots.len() {
+                    let init = slots.get(element);
+                    slots.set(element, Init::Written(init.wrote()));
+                }
+            }
+        }
+        self.carried = None;
+    }
+
+    /// Say that a write of part of a pointer may have landed in it, without
+    /// saying whether it was written: every slot that may be written takes
+    /// [`Whole::Other`], and one nothing wrote stays so, since what is read
+    /// of it is reported as unwritten already. The one way a write that
+    /// writes nothing else into this record reaches it, a fill (#1019).
+    pub(super) fn wrote_part(&mut self) {
+        match &mut self.kept {
+            Kept::Whole(init) => init.may_write_part(),
+            Kept::Slots(slots) => {
+                for element in 0..slots.len() {
+                    let mut init = slots.get(element);
+                    init.may_write_part();
+                    slots.set(element, init);
+                }
+            }
         }
     }
 
@@ -2973,13 +3102,29 @@ impl Beyond {
 
 #[cfg(test)]
 mod tests {
-    const INITS: [Init; 3] = [Init::Unwritten, Init::Maybe, Init::Written];
+    const INITS: [Init; 6] = [
+        Init::Unwritten(Whole::Pointer),
+        Init::Unwritten(Whole::Other),
+        Init::Maybe(Whole::Pointer),
+        Init::Maybe(Whole::Other),
+        Init::Written(Whole::Pointer),
+        Init::Written(Whole::Other),
+    ];
 
     /// Whether `a` is at or below `b` in the order a join of each kind climbs:
     /// at a forward join `Unwritten` and `Written` are apart, below `Maybe`;
-    /// at a back edge `Unwritten` is below `Written`, below `Maybe`.
+    /// at a back edge `Unwritten` is below `Written`, below `Maybe`. **And
+    /// what was written climbs from a whole pointer to anything else**, a
+    /// side that wrote nothing at the bottom (#1019).
     fn below(a: Init, b: Init, back: bool) -> bool {
-        a == b || b == Init::Maybe || (back && a == Init::Unwritten && b == Init::Written)
+        let kind = |init: Init| match init {
+            Init::Unwritten(_) => 0,
+            Init::Maybe(_) => 1,
+            Init::Written(_) => 2,
+        };
+        let state = kind(a) == kind(b) || kind(b) == 1 || (back && kind(a) == 0 && kind(b) == 2);
+        let wrote = a.wrote() == b.wrote() || b.wrote() == Whole::Other;
+        state && wrote
     }
 
     /// The laws a dataflow join has to keep for the walk to end on one
@@ -3027,32 +3172,80 @@ mod tests {
 
     #[test]
     fn a_forward_join_of_an_unwritten_and_a_written_object_may_be_unwritten() {
-        assert_eq!(Init::Unwritten.joined(Init::Written, false), Init::Maybe);
-        assert_eq!(Init::Unwritten.joined(Init::Written, true), Init::Written);
+        let written = Init::Written(Whole::Pointer);
+        assert_eq!(
+            Init::Unwritten(Whole::Pointer).joined(written, false),
+            Init::Maybe(Whole::Pointer)
+        );
+        assert_eq!(
+            Init::Unwritten(Whole::Pointer).joined(written, true),
+            written
+        );
+    }
+
+    /// Part of a pointer written on one path is still there where it meets a
+    /// path that wrote a whole one, or one that wrote nothing. Mutation:
+    /// `Whole::joined` answers `Pointer` for a mixed pair; the first fails.
+    /// Mutation: `Init::joined` answers `Maybe(Whole::Pointer)` for any
+    /// `Maybe`; the last fails.
+    #[test]
+    fn a_join_holds_a_whole_pointer_only_where_every_path_that_wrote_wrote_one() {
+        for back in [false, true] {
+            assert_eq!(
+                Init::Written(Whole::Pointer).joined(Init::Written(Whole::Other), back),
+                Init::Written(Whole::Other)
+            );
+            assert!(
+                Init::Unwritten(Whole::Pointer)
+                    .joined(Init::Written(Whole::Other), false)
+                    .may_hold_part()
+            );
+            assert!(!Init::Unwritten(Whole::Pointer).may_hold_part());
+            assert!(
+                Init::Maybe(Whole::Other)
+                    .joined(Init::Written(Whole::Pointer), back)
+                    .may_hold_part()
+            );
+        }
     }
 
     #[test]
     fn a_write_that_may_miss_ends_a_proof_and_never_a_doubt() {
-        let mut init = Init::Unwritten;
-        init.may_write();
-        assert_eq!(init, Init::Maybe);
-        init.may_write();
-        assert_eq!(init, Init::Maybe);
-        let mut written = Init::Written;
-        written.may_write();
-        assert_eq!(written, Init::Written);
+        let mut init = Init::Unwritten(Whole::Pointer);
+        init.may_write(Whole::Pointer);
+        assert_eq!(init, Init::Maybe(Whole::Pointer));
+        init.may_write(Whole::Pointer);
+        assert_eq!(init, Init::Maybe(Whole::Pointer));
+        let mut written = Init::Written(Whole::Pointer);
+        written.may_write(Whole::Pointer);
+        assert_eq!(written, Init::Written(Whole::Pointer));
+    }
+
+    /// A write that may have missed a slot leaves what it wrote beside what
+    /// was there, which is a whole pointer only where both are. Mutation:
+    /// `Init::may_write` keeps what was there; this fails.
+    #[test]
+    fn a_write_that_may_miss_leaves_part_of_a_pointer_where_either_wrote_one() {
+        let mut written = Init::Written(Whole::Pointer);
+        written.may_write(Whole::Other);
+        assert_eq!(written, Init::Written(Whole::Other));
+        let mut part = Init::Maybe(Whole::Other);
+        part.may_write(Whole::Pointer);
+        assert_eq!(part, Init::Maybe(Whole::Other));
     }
 
     /// Every element of an `Inits` is the `Init` it was set to, joins as
     /// `Init::joined` says, and a write that may be of any element leaves
     /// each as `Init::may_write` does. Mutation: let `Inits::set` leave the
-    /// doubt bit alone for `Written`; the first assertion fails.
+    /// doubt bit alone for `Written`; the first assertion fails. Mutation:
+    /// let it leave the whole bit alone; the first fails too.
     #[test]
     fn inits_keep_an_init_per_element_and_join_each_as_one() {
+        let written = Init::Written(Whole::Pointer);
         for back in [false, true] {
             for a in INITS {
                 for b in INITS {
-                    let mut here = Inits::written(2);
+                    let mut here = Inits::spread(written, 2);
                     here.set(0, a);
                     here.set(1, b);
                     assert_eq!(
@@ -3060,23 +3253,41 @@ mod tests {
                         (a, b),
                         "set then get: {a:?} {b:?}"
                     );
-                    let mut there = Inits::written(2);
+                    let mut there = Inits::spread(written, 2);
                     there.set(0, b);
                     there.set(1, a);
                     here.join(&there, back);
                     assert_eq!(here.get(0), a.joined(b, back), "join: {a:?} {b:?}");
                     assert_eq!(here.get(1), b.joined(a, back), "join: {b:?} {a:?}");
                 }
-                let mut all = Inits::written(1);
-                all.set(0, a);
-                all.may_write_all();
-                let mut one = a;
-                one.may_write();
-                assert_eq!(all.get(0), one, "may_write_all: {a:?}");
+                for whole in [Whole::Pointer, Whole::Other] {
+                    let mut all = Inits::spread(written, 1);
+                    all.set(0, a);
+                    all.may_write_all(whole);
+                    let mut one = a;
+                    one.may_write(whole);
+                    assert_eq!(all.get(0), one, "may_write_all: {a:?} {whole:?}");
+                }
             }
         }
         assert!(Inits::unwritten(3).all_unwritten());
-        assert!(!Inits::written(3).any_may_be_unwritten());
+        assert!(!Inits::spread(written, 3).any_may_be_unwritten());
+    }
+
+    /// A slot part of a pointer may have landed in says so, written or not,
+    /// and one nothing wrote whole stays unwritten. Mutation:
+    /// `PlaceInit::wrote_part` leaves a written slot whole; the first fails.
+    /// Mutation: it leaves an unwritten slot as it was, or makes it `Maybe`;
+    /// the second fails.
+    #[test]
+    fn a_write_of_part_of_a_pointer_marks_what_may_be_written_and_leaves_what_is_not() {
+        let mut slots = Inits::unwritten(2);
+        slots.set(0, Init::Written(Whole::Pointer));
+        let mut place = PlaceInit::slots_of(slots);
+        place.wrote_part();
+        assert_eq!(place.at(Some(0)), Init::Written(Whole::Other));
+        assert_eq!(place.at(Some(1)), Init::Unwritten(Whole::Other));
+        assert!(place.may_hold_part());
     }
 
     /// A place written before a loop and unwritten again along its back
@@ -3087,8 +3298,10 @@ mod tests {
         for joined in INITS {
             for before in INITS {
                 for back in INITS {
-                    let expected = if before == Init::Written && back == Init::Unwritten {
-                        Init::Maybe
+                    let expected = if matches!(before, Init::Written(_))
+                        && matches!(back, Init::Unwritten(_))
+                    {
+                        Init::Maybe(joined.wrote())
                     } else {
                         joined
                     };
@@ -3104,17 +3317,17 @@ mod tests {
 
     #[test]
     fn a_doubt_leaves_a_proof_and_reopens_a_write() {
-        let mut init = Init::Unwritten;
+        let mut init = Init::Unwritten(Whole::Pointer);
         init.doubt();
-        assert_eq!(init, Init::Unwritten);
-        let mut written = Init::Written;
+        assert_eq!(init, Init::Unwritten(Whole::Pointer));
+        let mut written = Init::Written(Whole::Other);
         written.doubt();
-        assert_eq!(written, Init::Maybe);
+        assert_eq!(written, Init::Maybe(Whole::Other));
     }
 
     use super::{
-        At, Extent, Freeing, Held, Init, Inits, Levels, Position, Row, SiteState, Why, Width,
-        earlier,
+        At, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Position, Row, SiteState, Whole,
+        Why, Width, earlier,
     };
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
