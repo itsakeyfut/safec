@@ -18,7 +18,7 @@ use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
 use super::parts::{
     At, Cell, Extent, Freeing, Held, Init, Inits, Levels, Marks, PlaceInit, Position, Read,
-    Realloced, SiteState, Width,
+    Realloced, SiteState, Whole, Width,
 };
 use super::store::{Landing, StoreKind, Strong};
 use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
@@ -585,6 +585,9 @@ impl Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst | Callee::Copies => {
+                // **What it writes, asked before anything it does changes
+                // what its source holds** (#1019): see `Self::copy_writes`.
+                let whole = self.copy_writes(*callee, kind, arguments, value);
                 // **The copy door's answer for every field, never `..`**, so
                 // a field added to `Known` answers here for what a library
                 // copy does with it. See ADR-0091.
@@ -1076,6 +1079,7 @@ impl Allocations<'_> {
                         byte_for_byte: self
                             .library(*callee)
                             .is_some_and(Library::writes_byte_for_byte),
+                        whole,
                     },
                 );
             }
@@ -1281,7 +1285,9 @@ impl Allocations<'_> {
                     |local| may_write[local],
                     WrittenBy::Call { beside: &beside },
                 );
-                value.array_writes_after(pending);
+                // Believed whole, as what such code writes is (#940's
+                // decision).
+                value.array_writes_after(pending, Whole::Pointer);
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
                 // local reached as a `void *` takes a `void *` store, asked
@@ -1520,16 +1526,24 @@ impl Allocations<'_> {
             // store transfer clears for. It is here for a frontend that
             // does not.
             if derefs(place) > 0 {
-                value.may_write_all_sites();
+                value.may_write_all_sites(Whole::Pointer);
             }
             // And an escaped local it may land in, as an unplaced store
             // does. See `Known::written`.
-            self.locals_written(function, value, place, StoreKind::Direct, None);
+            self.locals_written(
+                function,
+                value,
+                place,
+                StoreKind::Direct,
+                None,
+                Whole::Pointer,
+            );
             return;
         };
         // The call's result writes the local it lands in. See
-        // `Known::written`.
-        value.written_local(at.into());
+        // `Known::written`. What a call returns is believed whole, as what
+        // such code writes is (#940's decision).
+        value.written_local(at.into(), Whole::Pointer);
 
         match kind {
             Callee::Ends => {
@@ -1847,7 +1861,7 @@ impl Allocations<'_> {
             (Some(Leaves::TheOld | Leaves::Indeterminate | Leaves::ZeroBits) | None, _) => None,
         };
         if fresh {
-            value.written[site].set(Init::Unwritten);
+            value.written[site].set(Init::Unwritten(Whole::Pointer));
             if let Some(carried) = carried {
                 value.written[site].carried_by(carried);
             }
@@ -2402,14 +2416,20 @@ impl Allocations<'_> {
             [old] => value.written[*old].clone(),
             _ => value.written[site].clone(),
         };
-        let past = if exact { Init::Unwritten } else { Init::Maybe };
+        // What it writes past the old size is no pointer anyone wrote in
+        // part: believed whole, as today (#1019).
+        let past = if exact {
+            Init::Unwritten(Whole::Pointer)
+        } else {
+            Init::Maybe(Whole::Pointer)
+        };
         let whole_slots = usize::try_from(least / pointer).unwrap_or(usize::MAX);
         let mut inits = Inits::spread(past, len);
         for slot in 0..len.min(whole_slots) {
             inits.set(slot, before.at(u64::try_from(slot).ok()));
         }
         if whole_slots < len && least % pointer != 0 {
-            inits.set(whole_slots, Init::Maybe);
+            inits.set(whole_slots, Init::Maybe(Whole::Pointer));
         }
         value.written[site] = PlaceInit::slots_of(inits);
         // **Where its bytes came from is this call**, below the old size

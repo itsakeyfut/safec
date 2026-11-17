@@ -15,7 +15,7 @@ use super::allocations::{Allocations, innermost_element};
 use super::built::write_effects;
 use super::index::{LocalIdx, Site, Storage, Table};
 use super::known::{Known, WrittenBy};
-use super::parts::{At, Held, Init, PlaceInit};
+use super::parts::{At, Held, Init, PlaceInit, Whole};
 use super::store::{Landing, StoreKind, Strong, written_alone};
 use super::transfer::CopiedPointers;
 use super::{Carried, Carrier};
@@ -48,6 +48,8 @@ pub(super) enum Wrote<'a> {
         bytes: Option<u64>,
         source: Option<&'a Operand>,
         byte_for_byte: bool,
+        /// What it is believed to write ([`Allocations::copy_writes`]).
+        whole: Whole,
     },
 }
 
@@ -102,6 +104,7 @@ impl Allocations<'_> {
         place: &Place,
         landing: &Landing,
         width: Option<u64>,
+        whole: Whole,
     ) -> bool {
         let pointer = place.local;
         let one_step = landing.one_step;
@@ -131,8 +134,9 @@ impl Allocations<'_> {
                 Some(at) => {
                     match landing.kind {
                         StoreKind::Direct | StoreKind::Through { .. } => {
-                            let at_element = site_element
-                                .is_some_and(|element| value.certainly_written_at(&at, element));
+                            let at_element = site_element.is_some_and(|element| {
+                                value.certainly_written_at(&at, element, whole)
+                            });
                             // **At an element not known, a may-write of
                             // a block kept per slot**: it may have
                             // missed every slot (#893, ADR-0094 rule 3).
@@ -146,17 +150,17 @@ impl Allocations<'_> {
                                 !covers_block(value, at.site())
                             };
                             if may_have_missed {
-                                value.written[at.site()].may_write();
+                                value.written[at.site()].may_write(whole);
                             } else if !at_element {
-                                value.certainly_written(at);
+                                value.certainly_written(at, whole);
                             }
                         }
-                        StoreKind::Copy => self.copied_into(value, at.site(), offset, width),
+                        StoreKind::Copy => self.copied_into(value, at.site(), offset, width, whole),
                     }
                 }
                 None => {
                     for &site in &sites {
-                        value.written[site].may_write();
+                        value.written[site].may_write(whole);
                     }
                 }
             }
@@ -200,7 +204,7 @@ impl Allocations<'_> {
             // `*m` read in silence where it was `SC0411` without
             // the store (#778).
             for site in may_land {
-                value.written[site].may_write();
+                value.written[site].may_write(whole);
             }
             let certain = landing.certain();
             let mut uncertain = certain.is_none();
@@ -235,17 +239,17 @@ impl Allocations<'_> {
                                     width,
                                 ));
                         if unplaced {
-                            value.written[at.site()].may_write();
+                            value.written[at.site()].may_write(whole);
                             uncertain = true;
                         } else {
-                            value.certainly_written(at);
+                            value.certainly_written(at, whole);
                         }
                     }
                     // Its position counted only where `*dest` is one step
                     // below a local, whose position it is.
                     StoreKind::Copy => {
                         let at_dest = if one_step { offset } else { At::Unknown };
-                        self.copied_into(value, at.site(), at_dest, width);
+                        self.copied_into(value, at.site(), at_dest, width, whole);
                     }
                 }
             }
@@ -269,11 +273,11 @@ impl Allocations<'_> {
     /// and `memcpy(m2, v2, 16)` into a block of two slots wrote only the
     /// first, reporting a correct program (the route row
     /// `fresh_memcpy_part_d1_both`).
-    fn copied_into(&self, value: &mut Known, site: Site, at: At, width: Option<u64>) {
+    fn copied_into(&self, value: &mut Known, site: Site, at: At, width: Option<u64>, whole: Whole) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
         if value.covers_whole(Storage::Heap(site), at, width) {
-            value.written[site].set(Init::Written);
+            value.written[site].set(Init::Written(whole));
             return;
         }
         let covered = match (at, width) {
@@ -288,12 +292,12 @@ impl Allocations<'_> {
                 for slot in first..end {
                     if let Ok(slot) = usize::try_from(slot) {
                         if slot < slots.len() {
-                            slots.set(slot, Init::Written);
+                            slots.set(slot, Init::Written(whole));
                         }
                     }
                 }
             }
-            (Some(_) | None, _) => place.may_write(),
+            (Some(_) | None, _) => place.may_write(whole),
         }
     }
 
@@ -344,6 +348,7 @@ impl Allocations<'_> {
         place: &Place,
         kind: StoreKind,
         copied: Option<u64>,
+        whole: Whole,
     ) {
         let unit = self.unit;
         let written_ty = unit.place_ty(function, place);
@@ -455,14 +460,14 @@ impl Allocations<'_> {
         value.replaced(
             |local| may_hold[local],
             |local| may_hold[local] && lands[local],
-            WrittenBy::StoreOrCopy,
+            WrittenBy::StoreOrCopy(whole),
         );
         if let Some(at) = alone {
-            value.written_local(at);
+            value.written_local(at, whole);
         }
-        value.array_writes_after(pending);
+        value.array_writes_after(pending, whole);
         for (local, mut written) in before {
-            written.may_write();
+            written.may_write(whole);
             value.written[local] = written;
         }
     }
@@ -498,6 +503,10 @@ impl Allocations<'_> {
                 unwritten_before,
                 width,
             } => {
+                // **A whole pointer, as today's belief has it** (#1019): a
+                // store narrower than one says it wrote part of one after
+                // this, through `note_narrow_store`, which runs after it.
+                let whole = Whole::Pointer;
                 let pointer = place.local;
                 let one_step = landing.one_step;
                 // **And a local it may write past the end of**, at every depth:
@@ -538,7 +547,7 @@ impl Allocations<'_> {
                     // The locals it may land in, taken before the blocks are
                     // marked, as they were.
                     let edges: Vec<LocalIdx> = held.locals().collect();
-                    let uncertain = self.blocks_written(value, place, landing, width);
+                    let uncertain = self.blocks_written(value, place, landing, width, whole);
                     if placed {
                         // **Through a pointer moved off an array, an element
                         // of it**, which may not be the one read later. See
@@ -564,11 +573,11 @@ impl Allocations<'_> {
                         // See ADR-0074.
                         if let Some(at) = written_alone(value, pointer, 1, &edges) {
                             let pending = value.array_writes_before(writes);
-                            value.written_local(at);
-                            value.array_writes_after(pending);
+                            value.written_local(at, whole);
+                            value.array_writes_after(pending, whole);
                         } else {
                             for local in edges {
-                                value.written[local].may_write();
+                                value.written[local].may_write(whole);
                             }
                         }
                         // And what it points at is written now, whichever
@@ -588,7 +597,7 @@ impl Allocations<'_> {
                     }
                 }
                 if !place.projection.is_empty() && landing.strong(value).is_none() {
-                    self.locals_written(function, value, place, landing.kind, None);
+                    self.locals_written(function, value, place, landing.kind, None, whole);
                     for target in past_end {
                         self.written_past_its_end(function, value, target, unwritten_before);
                     }
@@ -601,6 +610,7 @@ impl Allocations<'_> {
                 bytes,
                 source,
                 byte_for_byte,
+                whole,
             } => {
                 // **And a local it may write past the end of**, as a store
                 // through the same pointer marks it: lost, and in doubt where
@@ -823,7 +833,7 @@ impl Allocations<'_> {
                     // `SC0411` (#925). A copy that writes no pointer whole
                     // writes none of them.
                     if !unwritten {
-                        self.blocks_written(value, &place, &landing, bytes);
+                        self.blocks_written(value, &place, &landing, bytes, whole);
                     }
                     for site in before.sites() {
                         let was = &before[site];
@@ -843,7 +853,7 @@ impl Allocations<'_> {
                                 && covers
                                 && matches!(length, CopiedPointers::Whole)
                             {
-                                value.written[site].set(Init::Unwritten);
+                                value.written[site].set(Init::Unwritten(whole));
                                 value.written[site].carried_by(copied);
                                 carried = true;
                             } else if source_maybe {
@@ -938,18 +948,18 @@ impl Allocations<'_> {
                     // 8)` doubted `*s` where `s = v;` did not (#769).
                     // It wrote that local, which is what `replaced` would have said
                     // of it.
-                    value.written_local(at.into());
-                    value.array_writes_after(pending);
+                    value.written_local(at.into(), whole);
+                    value.array_writes_after(pending, whole);
                 } else if let (Some(Operand::Copy(dest)), Some(_)) = (dest, &written) {
                     // **The locals it may land in are the store's to answer**
                     // (#1006), for the place `*dest`, with the copy's own arms.
                     let mut place = (*dest).clone();
                     place.projection.push(Projection::Deref);
-                    self.locals_written(function, value, &place, StoreKind::Copy, bytes);
+                    self.locals_written(function, value, &place, StoreKind::Copy, bytes, whole);
                 } else {
                     // A destination that is no place of dereferences may land
                     // anywhere, as a call's argument may.
-                    value.replaced(|_| true, |_| true, WrittenBy::StoreOrCopy);
+                    value.replaced(|_| true, |_| true, WrittenBy::StoreOrCopy(whole));
                 }
                 // **What it carries into a local it writes**, as into a block
                 // above (#724): `memcpy(a, m, 8); r = a[0];` with `m` nothing
@@ -979,7 +989,7 @@ impl Allocations<'_> {
                             && covers
                             && matches!(length, CopiedPointers::Whole)
                         {
-                            value.written[local].set(Init::Unwritten);
+                            value.written[local].set(Init::Unwritten(whole));
                             value.written[local].carried_by(copied);
                         } else if source_maybe {
                             value.written[local].doubt();

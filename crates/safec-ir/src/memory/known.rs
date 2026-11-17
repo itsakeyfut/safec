@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
 use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
-    ReadKey, Realloced, SiteState, Width, read_key,
+    ReadKey, Realloced, SiteState, Whole, Width, read_key,
 };
 use super::store::{Certain, Landing, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -494,6 +494,14 @@ pub(super) struct Known {
     /// Asked by the kept one, a loop that allocated, read a whole pointer,
     /// and only then copied part of one into the block was doubted at the
     /// copy every turn, found by review. One value for the two (#934).
+    ///
+    /// **It names the place; the write state decides** (#1019): a door asks
+    /// whether part of a pointer may be in the block of `Self::written`
+    /// (`PlaceInit::may_hold_part`), and reports at the copy this records,
+    /// so a whole pointer written over the part since ends the report. Where
+    /// the block leaves after the site was made again, `now` is gone and
+    /// `ever` answers alone, since the state is of the block made since. See
+    /// ADR-0097.
     pub(super) part_written: Table<Storage, Earliest>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
@@ -540,8 +548,12 @@ impl Known {
     /// pointer into it, keeping the earlier of what was there: one body for
     /// the copy that writes it and the copy and `realloc` that carry it, so
     /// the three join it alike. See [`Self::part_written`] and ADR-0088.
+    ///
+    /// **And the write state says it** (#1019), which is what a read asks:
+    /// [`PlaceInit::wrote_part`]. The record names the place.
     pub(super) fn note_part_written(&mut self, sources: &SourceMap, storage: Storage, copy: Span) {
         self.part_written[storage].note(sources, copy);
+        self.written[storage].wrote_part();
     }
 
     /// What was stored through a pointer naming any of `storages` is no longer
@@ -574,8 +586,15 @@ impl Known {
         for &block in from {
             carried.join(sources, self.part_written[block]);
         }
+        // **And the write state, from the state of what it copies** (#1019).
+        let part = from
+            .iter()
+            .any(|&block| self.written[block].may_hold_part());
         for &site in to {
             self.part_written[site].join(sources, carried);
+            if part {
+                self.written[site].wrote_part();
+            }
         }
     }
 
@@ -685,7 +704,7 @@ impl Known {
         // copied what the new object never had. Found by review.
         // Every slot of it, with nothing written in part and nothing handed
         // over. See `Known::written`.
-        written[local].set(Init::Unwritten);
+        written[local].set(Init::Unwritten(Whole::Pointer));
         exposed_in_part[local] = false;
         stored_in_part[local] = false;
         // **And no call holds its address yet**: one kept from an
@@ -2300,7 +2319,7 @@ impl Known {
         // now belongs to a new allocation, and the branch that would have
         // settled the old fact is about another. See ADR-0039.
         realloced[site] = None;
-        written[site] = PlaceInit::whole_of(Init::Written);
+        written[site] = PlaceInit::whole_of(Init::Written(Whole::Pointer));
         for fact in realloced.iter_mut() {
             if fact
                 .as_ref()
@@ -2459,8 +2478,11 @@ impl Known {
     /// a landing this check proved, so it does not take a
     /// [`Certain`] and is named apart from
     /// [`Self::certainly_written`], by the author's decision (#778).
+    ///
+    /// **And believed to hold whole pointers**, as the state a function
+    /// starts in is (#940's decision): what such code wrote is not read.
     fn believed_written_by_unknown_code(&mut self, site: Site) {
-        self.written[site].set(Init::Written);
+        self.written[site].written_by_unknown_code();
     }
 
     /// Whether `local` holds a pointer read out of fresh memory that nothing
@@ -2541,7 +2563,12 @@ impl Known {
     /// say. `false`, and nothing written, where the block is not
     /// kept per element or the element is past it; the caller writes the
     /// block whole then. See [`Self::written`].
-    pub(super) fn certainly_written_at(&mut self, at: &Certain, element: u64) -> bool {
+    pub(super) fn certainly_written_at(
+        &mut self,
+        at: &Certain,
+        element: u64,
+        whole: Whole,
+    ) -> bool {
         let Some(slots) = self.written[at.site()].slots_mut() else {
             return false;
         };
@@ -2551,7 +2578,7 @@ impl Known {
         if element >= slots.len() {
             return false;
         }
-        slots.set(element, Init::Written);
+        slots.set(element, Init::Written(whole));
         true
     }
 
@@ -2579,16 +2606,16 @@ impl Known {
     /// A write landed in this one allocation, so its contents are not
     /// indeterminate on this path. Only a landing that proves one place can
     /// ask, which is what [`Certain`] is. See [`Self::written`].
-    pub(super) fn certainly_written(&mut self, at: Certain) {
-        self.written[at.site()].set(Init::Written);
+    pub(super) fn certainly_written(&mut self, at: Certain, whole: Whole) {
+        self.written[at.site()].set(Init::Written(whole));
     }
 
     /// Something may have written any allocation: a write this check cannot
     /// place, or a library call it reads only by name. A may-write, since
     /// no landing says which (ADR-0074 rule 5). See [`Self::written`].
-    pub(super) fn may_write_all_sites(&mut self) {
+    pub(super) fn may_write_all_sites(&mut self, whole: Whole) {
         for site in self.written.sites() {
-            self.written[site].may_write();
+            self.written[site].may_write(whole);
         }
     }
 
@@ -2607,9 +2634,9 @@ impl Known {
     /// `at` wrote its local whole, on every path that reaches here: what only
     /// a [`WrittenLocal`] says. A write that may have missed it is
     /// `Init::may_write` instead. See [`Self::written`] and ADR-0074.
-    pub(super) fn written_local(&mut self, at: WrittenLocal) {
+    pub(super) fn written_local(&mut self, at: WrittenLocal, whole: Whole) {
         let local = at.local();
-        self.written[local].set(Init::Written);
+        self.written[local].set(Init::Written(whole));
     }
 
     /// What a call this check cannot read is believed to have done to a local
@@ -2618,7 +2645,7 @@ impl Known {
     /// a site, and asked by [`Self::replaced`] for [`WrittenBy::Call`] alone. See
     /// ADR-0074 rule 3.
     fn believed_written_local_by_unknown_code(&mut self, local: LocalIdx) {
-        self.written[local].set(Init::Written);
+        self.written[local].written_by_unknown_code();
     }
 
     /// What a write that may land in `target` leaves there: a union of what
@@ -2679,7 +2706,10 @@ impl Known {
     /// Put back what `pending` saved and write it as each says: one element,
     /// or an element that may be any of them. See
     /// [`Self::written`].
-    pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>) {
+    ///
+    /// `whole` is what the write wrote: an element written where the local is
+    /// kept whole meets it with what the rest hold (#1019).
+    pub(super) fn array_writes_after(&mut self, pending: Vec<PendingWrite>, whole: Whole) {
         for write in pending {
             let mut written = write.written;
             match (&mut written.kept, write.write) {
@@ -2688,14 +2718,15 @@ impl Known {
                 // rest.
                 (Kept::Whole(init), ArrayWrite::Element(_) | ArrayWrite::Covered(_)) => {
                     *init = match *init {
-                        Init::Maybe => Init::Maybe,
-                        Init::Unwritten | Init::Written => Init::Written,
+                        Init::Maybe(was) => Init::Maybe(was.joined(whole)),
+                        Init::Unwritten(was) => Init::Written(was.joined(whole)),
+                        Init::Written(was) => Init::Written(was.joined(whole)),
                     };
                 }
                 (Kept::Slots(slots), ArrayWrite::Element(element)) => {
                     if let Ok(element) = usize::try_from(element) {
                         if element < slots.len() {
-                            slots.set(element, Init::Written);
+                            slots.set(element, Init::Written(whole));
                         }
                     }
                 }
@@ -2704,12 +2735,12 @@ impl Known {
                 (Kept::Slots(slots), ArrayWrite::Covered(count)) => {
                     let count = usize::try_from(count).unwrap_or(usize::MAX);
                     for element in 0..count.min(slots.len()) {
-                        slots.set(element, Init::Written);
+                        slots.set(element, Init::Written(whole));
                     }
                 }
                 // No element is certainly unwritten once one nobody can name
                 // may have been written, and each may still be.
-                (_, ArrayWrite::Maybe) => written.may_write(),
+                (_, ArrayWrite::Maybe) => written.may_write(whole),
             }
             self.written[write.local] = written;
         }
@@ -2749,7 +2780,7 @@ impl Known {
         at_start: bool,
     ) -> bool {
         let Some(elements) = self.written[local].slots() else {
-            return self.written[local].whole() == Init::Maybe && at_start;
+            return matches!(self.written[local].whole(), Init::Maybe(_)) && at_start;
         };
         match element.and_then(|element| usize::try_from(element).ok()) {
             Some(element) if element < elements.len() => elements.get(element).may_be_unwritten(),
@@ -3182,13 +3213,13 @@ impl Known {
             if may_write(local) && self.escaped[local] {
                 match writer {
                     WrittenBy::Call { beside } if beside.contains(&local) => {
-                        self.written[local].may_write();
+                        self.written[local].may_write(Whole::Pointer);
                     }
                     WrittenBy::Call { beside: _ } => {
                         self.believed_written_local_by_unknown_code(local);
                     }
-                    WrittenBy::StoreOrCopy => {
-                        self.written[local].may_write();
+                    WrittenBy::StoreOrCopy(whole) => {
+                        self.written[local].may_write(whole);
                     }
                 }
             }
@@ -3213,8 +3244,9 @@ pub(super) enum WrittenBy<'a> {
     /// [`Known::reached_only_beside_another`].
     Call { beside: &'a BTreeSet<LocalIdx> },
     /// A store or a library copy this check could not prove one local for,
-    /// which may have missed each it may reach. See ADR-0074.
-    StoreOrCopy,
+    /// which may have missed each it may reach, and what it wrote. See
+    /// ADR-0074.
+    StoreOrCopy(Whole),
 }
 
 /// How many innermost elements a local array may have and still be kept
