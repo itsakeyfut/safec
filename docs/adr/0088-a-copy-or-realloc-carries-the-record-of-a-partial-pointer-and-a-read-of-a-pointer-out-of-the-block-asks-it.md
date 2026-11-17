@@ -1,5 +1,5 @@
 ---
-status: "accepted (rules 3 and 4 partly superseded by ADR-0089; its open silence about a local array closed by ADR-0090; the record names the place and the write state decides, ADR-0097)"
+status: "accepted (rules 3 and 4 partly superseded by ADR-0089; its open silence about a local array closed by ADR-0090; the record names the place and the write state decides, ADR-0097; its belief that a slot no partial write was recorded in is whole replaced by ADR-0098)"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---

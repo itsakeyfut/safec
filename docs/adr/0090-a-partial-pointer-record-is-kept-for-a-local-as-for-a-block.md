@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its belief that a slot no partial write was recorded in is whole replaced by ADR-0098)"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---

@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (what each write says narrowed by ADR-0098)"
 date: 2026-11-17
 decision-makers: itsakeyfut
 ---
