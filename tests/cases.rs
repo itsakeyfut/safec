@@ -5932,6 +5932,26 @@ cases! {
         a_pointer_read_back_after_a_fill_of_part_of_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_back_after_a_fill_of_zeros_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_back_after_a_byte_written_over_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Found by review, each a rule of ADR-0100 no case above reaches. A
+        // load through two dereferences is not vouched for. Mutation: drop
+        // `depth == 1` in `Known::load_into`; the read past `a` goes silent.
+        a_pointer_read_back_through_two_dereferences_is_not_measured_from_the_outer_record: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The record keeps the row its pointer walks. Mutation: record the
+        // position with no row in `Cell::poured`; the read past the row goes
+        // silent, where its local spelling is doubted.
+        a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A record a loop stores a moving pointer into widens at the back
+        // edge. Mutation: pass `false` for `widen` in the join's
+        // `Cell::absorb`; the solver panics that it did not converge.
+        a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block holding only a null takes no part in the join of what a
+        // load reads. Mutation: have `Known::vouches` say every side names
+        // storage; the read past the end is only doubted.
+        a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two stores into one block keep the range between them, a store
+        // being no loop. Mutation: widen in `Known::pour`; the read inside
+        // `a` is doubted.
+        a_pointer_stored_into_two_slots_and_read_back_from_one_is_measured_from_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer a library copy reads out of a block is bytes, which prove
         // nothing of what they name (ADR-0046), so it is not vouched for and
         // stays doubted on a program that is defined. Mutation: vouch for a
