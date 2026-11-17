@@ -4870,8 +4870,10 @@ cases! {
         a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Exposed on one arm and holding the pointer on the other: the closure
         // over contents has to run over every exposed allocation, not only the
-        // ones a call has just marked.
-        a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ones a call has just marked. The arm that exposed did it with
+        // `memset`, which exposes nothing it is handed since #1014 (ADR-0096),
+        // so this reports nothing and no longer holds that closure (#1016).
+        a_pointer_in_a_table_memset_was_handed_on_the_other_arm_is_not_freed_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The callee had what it returned, and may have kept it.
         what_a_call_returned_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `memset` frees nothing and exposes nothing it was handed: it
@@ -6783,23 +6785,23 @@ cases! {
         // What the read's own call exposes is not reachable to a sibling call
         // before the read, since C orders a call's arguments before its body,
         // and nor is what a call enclosing that one exposes, which runs later
-        // still. The third does report, about `keep`'s own argument, which
-        // `memset` made reachable before `keep` ran; what it holds is that
-        // `memset`'s argument is not told what `keep` exposes. Mutation: tell
-        // every pending read in `Known::noticed`, owned or not; each of the
-        // three gains a report. Mutation: own a read only by `inside`; the
-        // same, through the pointer each call was handed. Mutation: own it only
-        // by `entry.at == by`; the third alone gains one. The dereference in
+        // still. The third, `keep(memset(a, 0, 4))`, reported `keep`'s own
+        // argument until `memset` stopped exposing what it is handed (#1014,
+        // ADR-0096), and reports nothing now. Mutation: tell every pending read
+        // in `Known::noticed`, owned or not; the first two gain a report.
+        // Mutation: own a read only by `inside`; each of the three gains one.
+        // Owning it only by `entry.at == by` fails no case since #1014 (#1016).
+        // The dereference in
         // the second is ordered before `keep2` by
         // `Element::ArgumentsEvaluated`, so it is not pending there.
         a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A read is told what an event makes reachable, not everything exposed
-        // by then, which after `keep(a)` includes `a`. Mutation: in
-        // `Known::expose`, tell it `reachable_now` once the new sites are
-        // marked rather than the closure of those sites; `memset(b, ..)` tells
-        // `keep`'s read about `a`, and this reports.
+        // by then, which after `keep(a)` includes `a`. The exposure it was
+        // written against, `memset(b, ..)`, exposes nothing since #1014
+        // (ADR-0096), so telling a read `reachable_now` in `Known::expose`
+        // rather than the closure is not held here (#1016).
         a_call_exposing_another_allocation_does_not_make_the_read_s_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `release(tab)` reaches `a` through what `tab` holds, whatever exposed
         // it. Mutation: drop `own_reach` from the filter in `used_before`; this
@@ -6813,31 +6815,32 @@ cases! {
         a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Something other than the read exposes `a` between it and the later
-        // call, and C may run that and the later call first. `memset`'s own
-        // argument is not reported, because only `memset` itself makes `a`
-        // reachable to `release_all`. Mutation: drop the `noticed` in
-        // `Known::expose`; the first goes silent. Mutation: drop the one after
+        // call, and C may run that and the later call first. The first exposes
+        // with `memset`, which exposes nothing it is handed since #1014
+        // (ADR-0096), and reports nothing; dropping the `noticed` in
+        // `Known::expose` is not held here (#1016). Mutation: drop the one after
         // a store into a reachable allocation in `Allocations::element`; the
         // second loses its report at `a[0]`, keeping the one at the write
         // through `t`.
-        a_read_is_asked_about_what_another_call_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_is_not_asked_about_what_memset_in_the_expression_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_is_asked_about_what_a_store_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What an event makes reachable is closed over what it holds: `memset`
-        // exposes `tab`, and so `a` stored in it; storing `tab` into `box`,
-        // which an earlier call exposed, does the same. The first is not asked
-        // by `memset` itself, which frees nothing. Mutation: tell a read
-        // `sites` rather than their closure in `Known::expose`; the first goes
-        // silent. Mutation: the same for the store in `Allocations::element`;
-        // the second loses its report at `a[0]`.
-        a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What an event makes reachable is closed over what it holds: storing
+        // `tab` into `box`, which an earlier call exposed, makes `a` stored in
+        // `tab` reachable. Mutation: tell a read `sites` rather than their
+        // closure for the store in `Allocations::element`; the second loses its
+        // report at `a[0]`. The first, `memset(tab, ..)`, exposes nothing since
+        // #1014 (ADR-0096) and reports nothing; the closure in `Known::expose`
+        // is not held here (#1016).
+        a_read_is_not_asked_about_what_memset_is_handed_through_a_table: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store into an allocation nothing reaches makes nothing reachable.
         // Mutation: notice after every placed store in `Allocations::element`,
         // whatever its container; this reports.
         a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The exposure is on one arm. Mutation: keep one arm's `reachable` in
-        // `Allocations`'s `join`; this goes silent.
-        an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memset` on one arm exposes nothing it is handed since #1014
+        // (ADR-0096), so this reports nothing; keeping one arm's `reachable` in
+        // `Allocations`'s `join` is not held here (#1016).
+        an_allocation_memset_was_handed_on_one_arm_is_not_reachable_to_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A hatch may free anything, as the forward walk already says after
         // one. Mutation: drop `anything` from the filter in `used_before`; this
         // goes silent.
@@ -6845,21 +6848,23 @@ cases! {
         // A call this check cannot read is carried forwards as a read is, so an
         // exposure walked after it asks a read walked before it: C may run the
         // exposure, then the call, then the read. A store into an escaped
-        // local, a library call that exposes what it is handed, a write into an
-        // escaped target, and a read walked first. Mutation: record no call in
-        // `Allocations::call`; all four go silent. Mutation: no notice
+        // local, a library call, a write into an escaped target, and a read
+        // walked first. The library call, `memset`, exposes nothing it is
+        // handed since #1014 (ADR-0096), and reports nothing. Mutation: record
+        // no call in `Allocations::call`; the other three go silent. Mutation: no notice
         // where an escaped local is assigned in `Allocations::element`; the
         // first and fourth go silent. Mutation: no notice for `targets` there;
         // the third goes silent.
         a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_library_call_after_a_call_exposes_nothing_to_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_before_a_call_and_an_exposure_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The other side. An exposure of another allocation asks nothing; a
         // read the exposing call owns, or the pending call owns, is ordered
-        // before it. Mutation: do not leave `by`'s own read out in
-        // `Known::noticed`; the first two report. Mutation: do not leave the
-        // pending call's own read out; the third reports.
+        // before it. The first two expose with `memset`, which exposes nothing
+        // since #1014 (ADR-0096), so leaving `by`'s own read in
+        // `Known::noticed` is not held by them (#1016). Mutation: do not leave
+        // the pending call's own read out; the third reports.
         an_exposure_of_another_allocation_after_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_an_exposing_call_owns_is_not_asked_about_a_call_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_a_pending_call_owns_is_not_asked_about_an_exposure_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -6872,17 +6877,20 @@ cases! {
         a_call_on_the_first_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_on_the_second_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call in the exposing call's arguments runs before it, so it cannot
-        // free what that call exposes. Mutation: do not leave a call inside
-        // `by`'s span out in `Known::noticed`; this reports.
+        // free what that call exposes. The exposing call here is `memset`,
+        // which exposes nothing since #1014 (ADR-0096), so leaving a call inside
+        // `by`'s span in `Known::noticed` is not held here (#1016).
         a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A read the walk meets after both the call and the event: the event
         // records what it made reachable while a call was pending, and the read
-        // asks that when it is met. A write into an escaped target, and the
-        // one-line `release_all() + use(memset(a, 0, 4))`. Mutation: record
-        // nothing in `Known::exposed_after_call`; both go silent. Mutation: do
-        // not ask it in `Known::meeting`; both go silent.
+        // asks that when it is met. A write into an escaped target; the one-line
+        // `release_all() + use(memset(a, 0, 4))` beside it reports nothing,
+        // since `memset` exposes nothing it is handed (#1014, ADR-0096).
+        // Mutation: record nothing in `Known::exposed_after_call`; the first
+        // goes silent. Mutation: do not ask it in `Known::meeting`; the first
+        // goes silent.
         a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_library_call_exposing_inside_a_call_after_another_is_asked_of_its_result: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_library_call_inside_a_call_after_another_exposes_nothing_to_its_result: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What C orders is not paired. A read and a call on exclusive arms of a
         // `?:` meet only at the join, and an escaped local's notice there would
         // pair them. Mutation: notice in `Known::unproved` rather than at the
@@ -6892,24 +6900,26 @@ cases! {
         a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_in_a_store_s_own_operands_is_not_asked_about_the_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Reported where the marker clears what is pending, so a free in the
-        // same expression reports first, with `freed here`, and an exposure by
-        // a call is reported though the next block starts by clearing the
-        // reads. Mutation: report after every element instead; the first loses
-        // its label. Mutation: report at no `ArgumentsEvaluated`; the second
-        // goes silent.
+        // same expression reports first, with `freed here`. Mutation: report
+        // after every element instead; the first loses its label. The second,
+        // `memset` as a call's argument, reported though the next block starts
+        // by clearing the reads until `memset` stopped exposing what it is
+        // handed (#1014, ADR-0096); it reports nothing now, and reporting at no
+        // `ArgumentsEvaluated` is not held here (#1016).
         a_free_in_the_same_expression_keeps_its_label_over_a_pending_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What was made reachable while a call was pending may be freed by the
         // time the expression ends, so a read in the next statement is asked.
-        // Mutation: leave those sites as they were at `Element::Sequenced`; the
-        // first goes silent. On one arm only, it survives the join. Mutation:
-        // keep one arm's set at the join; the second goes silent, and the third
-        // is the other order. Taking a local's address is an exposure too.
+        // The first three expose with `memset`, on both arms, one and the
+        // other, which exposes nothing it is handed since #1014 (ADR-0096); they
+        // report nothing, and leaving those sites at `Element::Sequenced` or
+        // keeping one arm's set at the join is not held here (#1016). Taking a
+        // local's address is an exposure too.
         // Mutation: no notice at the address taken; the fourth loses its report
         // at the read, keeping the one the escape makes.
-        a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_exposure_on_one_arm_after_a_call_is_asked_of_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_exposure_on_the_other_arm_after_a_call_is_asked_of_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_in_the_next_statement_after_memset_and_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        memset_on_the_other_arm_after_a_call_is_not_asked_of_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_taken_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call in a write's own operands is ordered before the write by C17
         // 6.5.16 p3. Mutation: give the notice for a write into an escaped

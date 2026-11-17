@@ -1,11 +1,9 @@
 void *malloc(int n);
 void free(void *p);
-void *memcpy(void *d, void *s, int n);
-void **slot(void);
+void *memset(void *s, int c, int n);
 void forget(void);
 
 int f(int c) {
-    void **out_ = slot();
     int **tab = malloc(8);
     if (tab == 0) {
         return 0;
@@ -15,7 +13,7 @@ int f(int c) {
         return 0;
     }
     if (c) {
-        memcpy(out_, &tab, 8);
+        memset(tab, 0, 8);
     } else {
         *tab = p;
     }

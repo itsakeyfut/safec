@@ -412,14 +412,14 @@ otherwise.
   `a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling`
   alone.
 * Dropping the notice in `Known::expose` fails
-  `a_read_is_asked_about_what_another_call_in_the_expression_exposed`,
-  `a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed` and
-  `an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join`.
+  `a_read_is_not_asked_about_what_memset_in_the_expression_was_handed`,
+  `a_read_is_not_asked_about_what_memset_is_handed_through_a_table` and
+  `an_allocation_memset_was_handed_on_one_arm_is_not_reachable_to_a_read_after_the_join`.
   Telling a read there everything reachable once the new sites are marked,
   rather than the closure of the sites exposed, fails
   `a_call_exposing_another_allocation_does_not_make_the_read_s_reachable`
   alone; telling it the sites without their closure fails
-  `a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed` alone.
+  `a_read_is_not_asked_about_what_memset_is_handed_through_a_table` alone.
 * Dropping the notice after a store into a reachable allocation fails
   `a_read_is_asked_about_what_a_store_in_the_expression_exposed` and
   `a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries`;
@@ -428,7 +428,7 @@ otherwise.
   is reachable, fails
   `a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable` alone.
 * Keeping one arm's `reachable` at the join fails
-  `an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join`
+  `an_allocation_memset_was_handed_on_one_arm_is_not_reachable_to_a_read_after_the_join`
   alone.
 * Counting every site as taken fails, among others,
   `a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call`
@@ -444,9 +444,9 @@ otherwise.
 | Mutation | Fails | Effect |
 |---|---|---|
 | recording no pending call in `Allocations::terminator` | every case #275 added that expects a report, among them `a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it` and `a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked` | they go silent |
-| recording nothing in `Known::exposed_after_call` | among others, `a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked` and `a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked` | they go silent |
+| recording nothing in `Known::exposed_after_call` | among others, `a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked` and `a_read_in_the_next_statement_after_memset_and_a_call_is_not_asked` | they go silent |
 | not asking it in `Known::meeting` | the first of those, and not the second | silent |
-| leaving the sites as they were at `Element::Sequenced` | `a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked` alone | silent |
+| leaving the sites as they were at `Element::Sequenced` | `a_read_in_the_next_statement_after_memset_and_a_call_is_not_asked` alone | silent |
 | no notice where an escaped local is assigned | among others, `a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it` and `a_read_before_a_call_and_an_exposure_is_asked` | silent |
 | the same in `Known::unproved`, which `settle` runs at a join | `a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join`, which pairs one arm's read with the other's call | reports |
 | no notice for a write's `targets` | `a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it` and the read-met-after case | silent |
@@ -457,9 +457,9 @@ otherwise.
 | not leaving out a call inside the event's span | that case's two neighbours above and `a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it` | they report |
 | keeping one arm at the join: of `after_call` | `an_exposure_on_one_arm_after_a_call_is_asked` | fails |
 | keeping one arm at the join: of the calls | `a_call_on_the_first_arm_is_pending_after_the_join` | fails |
-| keeping one arm at the join: of `exposed_after_call` | `an_exposure_on_one_arm_after_a_call_is_asked_of_a_read_after_the_join` | fails |
+| keeping one arm at the join: of `exposed_after_call` | `memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join` | fails |
 | reporting after every element | `a_free_in_the_same_expression_keeps_its_label_over_a_pending_call` alone | loses `freed here` |
-| reporting at no `ArgumentsEvaluated` | `an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported` alone | silent |
+| reporting at no `ArgumentsEvaluated` | `memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing` alone | silent |
 
 * **Held by nothing.** Three lines fail nothing when removed:
   * clearing `Known::exposed_after_call` at `Element::Sequenced`, whose sites were just made unknown;

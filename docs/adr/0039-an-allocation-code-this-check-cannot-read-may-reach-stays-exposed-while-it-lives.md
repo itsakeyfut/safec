@@ -184,7 +184,7 @@ case. A closure that stops after one step fails
 `a_pointer_two_tables_deep_is_reached_through_both` alone, and recording into
 only the first allocation a pointer may hold fails
 `a_pointer_stored_through_either_of_two_tables_is_inside_both` alone. Closing only from the sites a call has just marked fails
-`a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call` alone,
+`a_pointer_in_a_table_memset_was_handed_on_the_other_arm_is_not_freed_by_a_later_call` alone,
 which is the join, where an invariant applied only at the writes is missed, and
 which mutating the first version of this change found as a silence. An
 unplaced write exposing nothing fails

@@ -1,15 +1,14 @@
 void *malloc(int n);
-void *memcpy(void *d, void *s, int n);
-void **slot(void);
+void free(void *p);
+void *memset(void *s, int c, int n);
 int release_all(void);
 void stash(int **pp);
-int keep(int *p);
+void g(int v, void *p);
+
 int f(void) {
-    void **out_ = slot();
     int x;
     int r;
     int *a;
-    int *b;
     int *holder;
     holder = 0;
     stash(&holder);
@@ -17,12 +16,8 @@ int f(void) {
     if (a == 0) {
         return 0;
     }
-    b = malloc(4);
-    if (b == 0) {
-        return 0;
-    }
     a[0] = 1;
-    r = release_all() + (memcpy(out_, &a, 8) != 0);
-    r = r + a[0];
+    g(release_all() + (x = a[0]), memset(a, 0, 4));
+    r = 0;
     return r;
 }

@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (rule 6's exposure of what a library copy is handed superseded by ADR-0096)"
 date: 2026-11-06
 decision-makers: itsakeyfut
 ---
@@ -42,12 +42,12 @@ Chosen: one record per question. The rules, in [`crates/safec-ir/src/memory/`](.
 
 Each mutation below, applied alone to the memory check, fails the test named; the cases are in `tests/cases.rs`, the route row in `tests/routes.rs`.
 
-1. `Known::expose` closing only from the sites just marked: `a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call`. `Known::reborn` keeping the mark: `an_allocation_made_again_at_a_site_is_not_the_one_exposed_before`, by a false report.
+1. `Known::expose` closing only from the sites just marked: held by no case since ADR-0096, when `memset` stopped exposing what it is handed and `a_pointer_in_a_table_memset_was_handed_on_the_other_arm_is_not_freed_by_a_later_call`, which held it, stopped reporting; #1016 holds it again. `Known::reborn` keeping the mark: `an_allocation_made_again_at_a_site_is_not_the_one_exposed_before`, by a false report.
 2. `Known::reach_of` leaving out what escaped locals hold: `a_call_handed_an_address_may_return_what_is_behind_it`.
 3. `unproved_exposed` doing nothing: `an_allocation_a_parameter_holds_is_unproven_after_any_call`. Doing it to a freed site too: `a_free_proved_before_a_call_stays_proved_after_it`.
 4. The result holding no other exposed site: `a_call_may_return_what_an_earlier_call_was_handed`. No escaped local's address: `a_call_handed_a_locals_address_may_return_it`. Not exposed itself: `what_a_call_returned_is_unproven_after_a_later_call`. A reborn exposed site left live: `a_call_in_a_loop_may_hand_back_what_was_freed_last_turn`.
 5. A placed store exposing what it carries: `a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is`.
-6. The library copies exposing nothing: `what_memset_was_handed_is_not_freed_by_a_later_call`. Returning nothing: `what_memset_returns_is_the_allocation_it_was_handed`. `realloc` pouring nothing: `a_table_realloc_grew_still_holds_what_it_held`.
+6. The library copies' exposure of what they are handed is superseded by ADR-0096, whose Confirmation holds it. Returning nothing: `what_memset_returns_is_the_allocation_it_was_handed`. `realloc` pouring nothing: `a_table_realloc_grew_still_holds_what_it_held`.
 7. The null arm restoring nothing: `a_free_on_reallocs_failure_branch_builds`. Any size read: `a_free_on_reallocs_failure_branch_with_size_zero_is_not_proved`.
 8. No parameter exposed: `an_allocation_a_parameter_holds_is_unproven_after_any_call`. `main`'s exposed: `the_arguments_the_host_hands_main_are_not_exposed`.
 9. A parameter's cell unmarked: `a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted`. A result's cell unmarked: `a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted`. A call not making `from_caller` lost: `a_pointer_read_out_of_a_parameter_is_doubted_after_a_call`. `Cell::absorb` dropping the mark: `caller_store_d1_both`. The free's rule never firing: `a_read_through_one_parameter_after_another_is_freed_is_doubted`; firing for any free: `a_free_of_this_functions_own_allocation_leaves_a_parameter_alone`.

@@ -1,10 +1,8 @@
 void *malloc(int n);
-void *memcpy(void *d, void *s, int n);
-void **slot(void);
+void *memset(void *s, int c, int n);
 int release_all(void);
 
 int f(int c) {
-    void **out_ = slot();
     int x;
     int r;
     int *a = malloc(4);
@@ -12,6 +10,6 @@ int f(int c) {
         return 0;
     }
     a[0] = 1;
-    r = (x = a[0]) + (c ? (memcpy(out_, &a, 8) != 0) : 0) + release_all();
+    r = (x = a[0]) + (c ? (memset(a, 0, 4) != 0) : 0) + release_all();
     return r;
 }
