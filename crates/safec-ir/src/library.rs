@@ -232,8 +232,8 @@ pub(crate) enum Leaves {
     /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
     /// (7.22.3.1 p2). The allocation is unwritten, `Known::written`. See ADR-0057.
     Indeterminate,
-    /// Zero bits, which is a null pointer on every target here: `calloc`
-    /// (7.22.3.2 p2).
+    /// Zero bits: `calloc` (7.22.3.2 p2). A null pointer on every target
+    /// here, but not one C17 promises, so no whole pointer (#940, ADR-0098).
     ZeroBits,
     /// What the object it was handed held, up to the lesser of the two
     /// sizes (7.22.3.5 p2), and indeterminate bytes where it was handed a

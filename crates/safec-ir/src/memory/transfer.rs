@@ -182,12 +182,11 @@ impl Allocations<'_> {
                     && (source.projection.is_empty() || derefs(source) > 0);
                 let (sites, locals) = value.levels_below(source.local, derefs(source));
                 placed
-                    && (sites
-                        .iter()
-                        .any(|&site| value.written[site].may_hold_part())
-                        || locals
-                            .iter()
-                            .any(|&local| value.written[local].may_hold_part()))
+                    && (sites.iter().any(|&site| {
+                        value.written[site].may_hold_part() || value.part_before[site]
+                    }) || locals.iter().any(|&local| {
+                        value.written[local].may_hold_part() || value.part_before[local]
+                    }))
             }
             _ => false,
         };
@@ -598,8 +597,7 @@ impl Allocations<'_> {
     /// block read half of `x` in silence, found while measuring #917.
     ///
     /// **A value that is not a pointer, at least a pointer wide**, is noted
-    /// the same way in its own record, `Known::other_written`, and leaves
-    /// what was stored through a pointer there as the store set it (#940).
+    /// the same way in its own record, `Known::other_written` (#940).
     pub(super) fn note_written(
         &self,
         storages: impl IntoIterator<Item = Storage>,
@@ -625,6 +623,12 @@ impl Allocations<'_> {
                 for &written in &storages {
                     value.note_other_written(self.sources, written, at);
                 }
+                // As a part does: left set, a fill over a slot a pointer was
+                // stored through read the fill back as that pointer, in
+                // silence, found by review. Mutation: leave it set;
+                // `a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows`
+                // loses two reports.
+                value.written_over(&storages);
             }
         }
     }
@@ -2820,10 +2824,13 @@ impl Analysis for Allocations<'_> {
                 // **A whole pointer only where its type is a pointer**: any
                 // other store, an aggregate that holds one included, leaves
                 // the slot not believed to hold one (#940). See ADR-0098.
-                // **Held by no case, measured**: a store of another type is
-                // narrower than a pointer in what this frontend reads, an
-                // `int` or a `char`, and `note_narrow_store` says it wrote
-                // part of one after this; `long` and structs are `SC0207`.
+                // **Held by no case, measured**: on a target whose pointers
+                // are wider than an `int`, a store of another type is
+                // narrower than a pointer in what this frontend reads, and
+                // `note_narrow_store` says it wrote part of one after this;
+                // `long` and structs are `SC0207`. On one where they are not,
+                // `i686` or `wasm32`, an `int` store as wide is held by no
+                // case either.
                 let whole = if place_ty.is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Pointer(_)))
                 {
                     Whole::Pointer
@@ -2873,8 +2880,7 @@ impl Analysis for Allocations<'_> {
                 // one**, as a store through a pointer (#940); one that is not
                 // is noted where it was written, for a copy of its bytes read
                 // as a pointer. **Held by no case, measured**, for the reason
-                // the store's is: a local of another type is narrower than a
-                // pointer, which the doors do not ask.
+                // the store's is.
                 if let Some(at) = Strong::assigned(&operation.place) {
                     value.written_local(at.into(), whole);
                     if whole == Whole::Other {

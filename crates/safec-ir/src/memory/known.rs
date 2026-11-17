@@ -605,16 +605,27 @@ impl Known {
         from: &[Storage],
         to: &[Storage],
     ) {
+        // **And the write state, from the state of what it copies** (#1019),
+        // **or of what a block its site made before held** (#940): what the
+        // copy moves may point at those blocks, and the record it carries
+        // says so, which the doors where a block leaves read no longer.
+        // Asked of the newest block alone, a list built in a loop, its older
+        // blocks holding part, copied or `realloc`ed whole and let leave was
+        // silent where `main` reported it, found by review.
+        let holds_part = |known: &Self, block: Storage| {
+            known.written[block].may_hold_part() || known.part_before[block]
+        };
+        let part = from.iter().any(|&block| holds_part(self, block));
+        // **The records of the blocks that may hold part, and only those**
+        // (#940): one whose part a whole pointer was written over since
+        // names a write that is no longer there, and named the wrong
+        // `calloc` where two were copied, found by review.
         let mut carried = Earliest::none();
         let mut other = Earliest::none();
-        for &block in from {
+        for &block in from.iter().filter(|&&block| holds_part(self, block)) {
             carried.join(sources, self.part_written[block]);
             other.join(sources, self.other_written[block]);
         }
-        // **And the write state, from the state of what it copies** (#1019).
-        let part = from
-            .iter()
-            .any(|&block| self.written[block].may_hold_part());
         for &site in to {
             self.part_written[site].join(sources, carried);
             self.other_written[site].join(sources, other);

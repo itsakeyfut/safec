@@ -1,9 +1,9 @@
 warning[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
-   ╭─[ a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free.c:8:15 ]
+   ╭─[ a_pointer_rebuilt_by_strcpy_is_doubted_after_its_free.c:8:39 ]
    │
  8 │     int **a = calloc(1, 8); int **b = calloc(1, 8);
-   │               ──────┬─────  
-   │                     ╰─────── written here
+   │                                       ──────┬─────  
+   │                                             ╰─────── written here
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

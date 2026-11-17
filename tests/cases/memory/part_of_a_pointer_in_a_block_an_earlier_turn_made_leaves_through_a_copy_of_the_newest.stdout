@@ -1,0 +1,250 @@
+Target "x86_64-pc-windows-msvc"
+Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:1:67 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "out"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int *" parameter _Nonnull "y"
+  Local "_4" "int"
+  Local "_5" "void **" "q"
+  Local "_6" "void **" "prev"
+  Local "_7" "int" "i"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "void **"
+  Local "_11" "int"
+  Local "_12" "void *"
+  Local "_13" "void **"
+  Local "_14" "void *"
+  Local "_15" "void **"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "void *"
+  Local "_20" "void **" "d"
+  Local "_21" "void *"
+  Local "_22" "int"
+  Local "_23" "void *"
+  Local "_24" "void **"
+  Block "bb0" entry
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:3:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:4:12 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:4:16 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:5:12 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:5:19 generated
+    StorageLive part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:10 generated "_7"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:14 written
+      Destination "_7"
+      Use
+        Constant 0
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:18 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:21 written
+      Destination "_8"
+      Binary "Lt"
+        Copy "_7"
+        Copy "_2"
+    Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:21 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:21 generated
+    ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:7:13 generated
+    Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:7:13 written "malloc" "bb7"
+      Destination "_9"
+      Constant 16
+  Block "bb6"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:21 generated
+    StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:12:5 generated "_7"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:9 written
+      Destination "_18"
+      Unary "Not"
+        Copy "_5"
+    Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:9 written "bb15" "bb16"
+      Copy "_18"
+  Block "bb7"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:7:9 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:7:9 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:13 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_5"
+    Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:13 written "bb8" "bb9"
+      Copy "_11"
+  Block "bb8"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:13 generated
+    Goto "bb11"
+  Block "bb9"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:13 generated
+    Goto "bb10"
+  Block "bb10"
+    ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:9:9 generated
+    Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:9:9 written "memset" "bb14"
+      Destination "_12"
+      Copy "_5"
+      Constant 1
+      Constant 4
+  Block "bb11"
+    Goto "bb12"
+  Block "bb12"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:26 generated
+    Goto "bb11"
+  Block "bb13"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:8:26 generated
+    Goto "bb10"
+  Block "bb14"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:9:9 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:10:9 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:10:9 written
+      Destination "_13"
+        Deref
+      Use
+        Copy "_6"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:10:9 written
+      Destination "_14"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:10:9 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:11:9 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:11:9 written
+      Destination "_15"
+      Use
+        Copy "_6"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:11:9 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:28 written
+      Destination "_16"
+      Use
+        Copy "_7"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:28 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:28 written
+      Destination "_7"
+      Use
+        Copy "_17"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:6:28 generated
+    Goto "bb4"
+  Block "bb15"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:9 generated
+    Goto "bb18"
+  Block "bb16"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:9 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:14:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:14:5 written
+      Destination "_19"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:14:5 generated
+    ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:15:16 generated
+    Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:15:16 written "malloc" "bb21"
+      Destination "_21"
+      Constant 16
+  Block "bb18"
+    Goto "bb19"
+  Block "bb19"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:22 generated
+    Goto "bb18"
+  Block "bb20"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:13:22 generated
+    Goto "bb17"
+  Block "bb21"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:15:12 written
+      Destination "_20"
+      Use
+        Copy "_21"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:15:16 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:9 written
+      Destination "_22"
+      Unary "Not"
+        Copy "_20"
+    Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:9 written "bb22" "bb23"
+      Copy "_22"
+  Block "bb22"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:9 generated
+    Goto "bb25"
+  Block "bb23"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:9 generated
+    Goto "bb24"
+  Block "bb24"
+    ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:17:5 generated
+    Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:17:5 written "memcpy" "bb28"
+      Destination "_23"
+      Copy "_20"
+      Copy "_5"
+      Constant 16
+  Block "bb25"
+    Goto "bb26"
+  Block "bb26"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:22 generated
+    Goto "bb25"
+  Block "bb27"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:16:22 generated
+    Goto "bb24"
+  Block "bb28"
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:17:5 generated
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:18:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_20"
+    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:18:5 written
+      Destination "_24"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest.c:18:5 generated
+    Return

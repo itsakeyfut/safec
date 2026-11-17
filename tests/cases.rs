@@ -1957,16 +1957,28 @@ cases! {
         part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A slot is whole only where a whole pointer was written (#940):
         // `calloc`'s zero bytes are no pointer, said at the `calloc` where a
-        // copy carries them into memory read back as pointers. Mutation: the
-        // copy's write ignores what its source holds; this goes silent.
-        // Mutation: the copy carries no record of where; this is said at the
-        // read, in the words of a write nobody recorded.
+        // copy carries them into memory read back as pointers. Held twice,
+        // where the copy reads them and where its bytes are read back.
+        // Mutation: the copy door asks nothing and the copy's write ignores
+        // what its source holds; this goes silent, and either alone leaves
+        // it reported. Mutation: the copy carries no record of where; the
+        // read back gains a second report, in the words of a write nobody
+        // recorded.
         a_block_calloc_made_copied_whole_and_read_back_is_reported_at_the_calloc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And where a block leaves, what a block the site made before held,
         // kept where the site is made again (`Known::part_before`). Mutation:
         // `Known::reborn` keeps nothing of it; this goes silent. Mutation:
         // the join keeps it only where both paths do; this goes silent.
         zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where what a block holds points at the blocks its site made
+        // before, a copy or a `realloc` of it carries what those held: the
+        // newest is written whole, the older still hold part, and the copy
+        // leaves. Found by review of #940, where both were silent and `main`
+        // reported them. Mutation: the carry asks the newest block's state
+        // alone; the first goes silent. Mutation: the copy's write asks it
+        // alone; the second goes silent.
+        part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Never held as pointers. Mutation: ask every block with the record,
         // whether or not it left; this is reported.
         a_partial_pointer_copied_into_a_block_that_never_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

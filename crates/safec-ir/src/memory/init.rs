@@ -207,16 +207,23 @@ impl Allocations<'_> {
             // `*m` read in silence where it was `SC0411` without
             // the store (#778).
             //
-            // **What it wrote is said only of the blocks its landing
+            // **What a store wrote is said only of the blocks its landing
             // names** (#940): what code this check cannot read can name
             // beside them keeps what it held. A store of a value that is
             // not a pointer landing in memory of pointers is undefined
             // itself (C17 6.5p7), so a defined program never makes it hold
             // one, and saying it did doubted every pointer read out of
             // such memory after an `int` stored through a parameter, by the
-            // owner's decision. See ADR-0098.
+            // owner's decision. **Not a library copy's or a fill's**, whose
+            // bytes C17 6.5p6 lets set what allocated memory holds, so the
+            // later read is what is undefined. **Held by no case,
+            // measured**: answering as a store does fails nothing, and no
+            // program built for it by review reached it without other
+            // reports about the pointer it went through.
+            // See ADR-0098.
             for site in may_land {
-                let wrote = if landing.containers.contains(&site) {
+                let copy = matches!(landing.kind, StoreKind::Copy);
+                let wrote = if copy || landing.containers.contains(&site) {
                     whole
                 } else {
                     Whole::Pointer
