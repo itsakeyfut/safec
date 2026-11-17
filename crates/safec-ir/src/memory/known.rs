@@ -2646,6 +2646,9 @@ impl Known {
         match self.extent[at] {
             Some(Extent::Exactly(size)) => {
                 // A range may be off the start, so no whole write (#944).
+                // **Held by no case, measured**: a write as wide as a block
+                // kept whole, from a range, runs past the block from the
+                // range's far end, which the bounds rule doubts.
                 !matches!(offset, At::Moved | At::Bytes(1..) | At::Within { .. })
                     && width.is_some_and(|width| width >= size)
             }

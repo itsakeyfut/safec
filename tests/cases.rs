@@ -259,13 +259,21 @@ cases! {
         // the near one, and a free is off the start only where the near end
         // is. Mutation: join two counted positions as `Moved`; the first is
         // reported. Mutation: answer outside from the far end alone; the
-        // second is proved outside. Mutation: join the null's start in; the
-        // third is reported. Mutation: a free reads the far end; the fourth
-        // is proved. See ADR-0099.
+        // second is proved outside. Mutation: a free reads the far end; the
+        // fourth is proved. The third holds the range alone: with the null's
+        // start joined in it is a range from the start, still inside, so the
+        // null's being no part of the join is held by
+        // `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`
+        // and a unit test in `memory::parts`. See ADR-0099.
         a_pointer_at_one_of_two_counted_positions_is_counted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_at_one_of_two_positions_reaching_past_the_end_from_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_null_on_one_arm_and_moved_on_the_other_is_counted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a range walking a row is asked at both ends against the row,
+        // which is narrower than the object: past it from the far end is a
+        // doubt (#944, #947). Mutation: take a range as inside its row; this
+        // goes silent.
+        a_pointer_at_one_of_two_positions_in_a_row_reaching_past_the_row_from_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.

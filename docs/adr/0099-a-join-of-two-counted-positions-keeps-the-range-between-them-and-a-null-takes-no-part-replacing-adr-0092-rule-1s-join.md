@@ -64,8 +64,16 @@ Measured on #944's branch by applying each change and restoring it:
   `a_pointer_at_one_of_two_positions_reaching_past_the_end_from_one_is_doubted`
   outside.
 * The null's start joined in fails
-  `a_null_joined_with_a_counted_pointer_keeps_its_position` and reports
-  `a_pointer_null_on_one_arm_and_moved_on_the_other_is_counted_where_read`.
+  `a_null_joined_with_a_counted_pointer_keeps_its_position` and
+  `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`;
+  `a_pointer_null_on_one_arm_and_moved_on_the_other_is_counted_where_read`
+  is held by the range alone, since the start joined in leaves a range
+  that is still inside.
+* A range walking a row taken as inside it silences
+  `a_pointer_at_one_of_two_positions_in_a_row_reaching_past_the_row_from_one_is_doubted`.
+* **Held by nothing**: a range never covers a block kept whole
+  (`Known::covers_whole`), since a write as wide as the block from a range
+  runs past it from the range's far end.
 * A free reading the far end proves
   `a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed`.
 * `widen` ignored fails

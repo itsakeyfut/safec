@@ -3605,7 +3605,7 @@ mod tests {
     /// wherever it names anything.
     ///
     /// Mutation: join the null's `Bytes(0)` in; this fails, and so does
-    /// `a_pointer_null_on_one_arm_and_moved_on_the_other_is_counted_where_read`.
+    /// `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`.
     #[test]
     fn a_null_joined_with_a_counted_pointer_keeps_its_position() {
         let moved = Position {
