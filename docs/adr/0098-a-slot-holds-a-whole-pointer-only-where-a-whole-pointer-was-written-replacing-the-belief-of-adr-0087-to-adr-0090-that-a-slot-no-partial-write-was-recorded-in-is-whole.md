@@ -44,11 +44,15 @@ owner's decision on #940.
    landing names.** What code this check cannot read names beside them keeps
    what it held: a value that is not a pointer landing in memory of pointers is
    undefined at the store (C17 6.5p7), so a defined program never makes such
-   memory hold one.
+   memory hold one. Not a library copy or a fill, whose bytes may set what
+   allocated memory holds (C17 6.5p6), so the later read is what is undefined.
 3. **Where a block leaves, what a block the site made before held**:
    `Known::part_before`, set where the site is made again from the state of
    the block it named, joined by `||`. The state is of the newest block, and a
-   loop's older blocks may still hold part (#1019's review).
+   loop's older blocks may still hold part (#1019's review). A copy or a
+   `realloc` asks it of its source beside the state, since what it moves may
+   point at those blocks, and carries the record of where only from a source
+   that may hold part.
 4. **The report says what was written**: `WrittenAs::LessThanAPointer` in the
    words it had, `WrittenAs::NotAPointer` in words of its own at the write,
    whose place `Known::other_written` records, and `WrittenAs::Unplaced` at the
@@ -68,12 +72,19 @@ Measured on #940's branch by applying each change and restoring it:
   among them.
 * `calloc` writing a whole pointer silences
   `a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate`
-  among nine.
+  among eight.
 * The copy's write ignoring its source silences
   `a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported`
-  among five; `other_written` not carried moves
+  among five; `other_written` not carried gives
   `a_block_calloc_made_copied_whole_and_read_back_is_reported_at_the_calloc`
-  to the read.
+  a second report, at the read, in the words of a write nobody recorded.
+* A copy or `realloc` asking the newest block of its source alone, and not
+  what the site made before, silences
+  `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest`
+  and its `realloc` twin; a fill over a slot a pointer was stored through
+  leaving that pointer believed read back silences two reports in
+  `a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows`.
+  Each was found by review.
 * `part_before` joined as `&&` silences the same two, under `||` joined as `&&`.
 * A fill writing a whole pointer, or a whole one not noted, silences
   `a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer`
@@ -84,8 +95,10 @@ Measured on #940's branch by applying each change and restoring it:
 * A store it cannot place saying `Other` of what code outside reaches reports
   `an_integer_stored_through_a_load_lands_nowhere` among six.
 * **Held by nothing**: a store of a type that is not a pointer, and an
-  assignment to a local of one, saying `Other` themselves, since every such
-  type this frontend reads is narrower than a pointer and noted so; and the
+  assignment to a local of one, saying `Other` themselves, since on the
+  targets the corpus runs every such type this frontend reads is narrower
+  than a pointer and noted so; a copy or fill this check cannot place keeping
+  what code outside reaches as it was, as a store does; and the
   words of `WrittenAs::Unplaced`, which no program reaches now that every
   write saying `Other` records where. Each says so where it is.
 
@@ -93,9 +106,12 @@ Measured on #940's branch by applying each change and restoring it:
 
 * Good, because a write route added later that does not say what it wrote is
   doubted where a pointer is read out of what it wrote.
-* Bad, because nineteen reports are new on correct programs, each at a
-  `calloc` or a fill whose bytes a pointer is later read out of or leaves as,
-  by the two decisions in rule 1. None is lost.
+* Bad, because twenty one reports are new over the corpus and the route
+  matrix as they stood, seventeen cases and four route rows, each at a
+  `calloc` or a fill whose bytes a pointer is later read out of or leaves
+  as, by the two decisions in rule 1: one over #1018's bar of twenty, and
+  most on programs correct on every real target, `calloc` and return among
+  them. None is lost.
 
 ## Pros and Cons of the Options
 
