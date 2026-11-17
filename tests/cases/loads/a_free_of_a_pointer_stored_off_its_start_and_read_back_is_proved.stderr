@@ -1,0 +1,33 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:11:5 ]
+    │
+ 11 │     *box = m + 1;
+    │     ──────┬─────  
+    │           ╰─────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0401]: this frees `t`, which this check stopped following
+    ╭─[ a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:13:5 ]
+    │
+ 13 │     free(t);
+    │     ───┬───  
+    │        ╰───── this was read out of memory, which this check does not follow
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+error[SC0404]: this frees `t`, which is not the start of an allocation
+    ╭─[ a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:13:5 ]
+    │
+  4 │     int *m = malloc(8);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 13 │     free(t);
+    │     ───┬───  
+    │        ╰───── not the start of the allocation
+────╯
+  = note: this check belongs to safety level 1
+  = help: free the pointer the allocation was made with, and keep the offset in a variable of its own

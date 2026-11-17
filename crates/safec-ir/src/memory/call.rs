@@ -67,6 +67,7 @@ impl Allocations<'_> {
                 array_edge: false,
                 stored_through: false,
                 may_be_null: false,
+                vouched: false,
             },
         );
         let poured = Cell::poured(
@@ -1592,6 +1593,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 );
@@ -1650,6 +1652,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 };
@@ -1699,6 +1702,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 };
@@ -1769,6 +1773,7 @@ impl Allocations<'_> {
                     // **And may be null**, an allocation's result as much as an opaque
                     // call's, unless its callee promises otherwise (#931).
                     may_be_null: self.unit.function(*callee).promised().is_none(),
+                    vouched: false,
                 },
             ),
         );

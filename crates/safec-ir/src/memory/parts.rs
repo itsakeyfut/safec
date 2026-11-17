@@ -1452,6 +1452,13 @@ pub(super) struct Held {
     /// none of it, since a null's own level of [`Self::widths`] is the
     /// identity there ([`Held::null`]).
     pub(super) may_be_null: bool,
+    /// **Whether its position was read out of memory a record vouched
+    /// for**, so the bounds rule and the interior-free rule measure a
+    /// loaded value from it. Set by `Known::load_into` alone, kept by a
+    /// counted move with no load among its operands (`built::built_from`),
+    /// and joined as both sides, so a path that read nothing vouched for
+    /// takes it away. See ADR-0100.
+    pub(super) vouched: bool,
 }
 
 /// How many bytes the pointers at one level are believed to point at, at
@@ -1962,6 +1969,7 @@ impl Held {
                 // indeterminate, and handing one to `realloc` is undefined
                 // already. The identity of a join's union, too.
                 may_be_null: false,
+                vouched: false,
             },
         )
     }
@@ -1993,6 +2001,7 @@ impl Held {
             array_edge,
             stored_through,
             may_be_null,
+            vouched,
         } = marks;
         let mut held = Held {
             names: Bits::new(Referent::count(sites)),
@@ -2010,6 +2019,7 @@ impl Held {
             array_edge,
             stored_through,
             may_be_null,
+            vouched,
         };
         for (marked, why) in [
             (lost, Why::Lost),
@@ -2120,8 +2130,10 @@ impl Held {
             array_edge,
             stored_through,
             may_be_null,
+            vouched,
         } = self;
         *may_be_null = false;
+        *vouched = false;
         names.clear_all();
         *fresh_read = false;
         *widths = Levels::new(vec![Width::Nothing]);
@@ -2188,10 +2200,13 @@ impl Held {
             array_edge,
             stored_through,
             may_be_null,
+            vouched,
         } = self;
         *position = joined_position;
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
+        // Vouched for only where every path read it so (ADR-0100).
+        *vouched = *vouched && other.vouched;
         *inner_address = *inner_address || other.inner_address;
         // **The lower of two at every level**, level 0 the proof
         // `believed` is and the rest bounds: a null on one path is the
@@ -2277,6 +2292,7 @@ impl Held {
             // **Not taken from an operand**: a value built from operands is
             // arithmetic on them, and a null moved is no null.
             may_be_null: _,
+            vouched: _,
         } = self;
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held,
@@ -2601,7 +2617,7 @@ pub(super) struct Cell {
     /// **Where in what it names a pointer stored there points**, joined over
     /// every store as the rest of the record is, `None` where nothing was
     /// stored: the identity of [`Cell::absorb`]. Read by a load only where
-    /// the load is vouched for. See ADR-0100.
+    /// the load is vouched for ([`Held::vouched`]). See ADR-0100.
     position: Option<Position>,
 }
 
@@ -2625,6 +2641,18 @@ impl Cell {
     /// Every local whose address a pointer stored there may be.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
         self.names.ones().filter_map(Referent::local)
+    }
+
+    /// Where a pointer stored there points, `None` where nothing was stored.
+    /// See ADR-0100.
+    pub(super) fn stored_position(&self) -> Option<Position> {
+        self.position
+    }
+
+    /// Whether everything a pointer stored there may name is storage this
+    /// check models: a site or a local, and no referent it does not model.
+    pub(super) fn names_only_modelled(&self) -> bool {
+        self.names.ones().all(|named| named.storage().is_some())
     }
 
     /// Whether a pointer stored there may name any storage, as
@@ -2819,6 +2847,9 @@ impl Cell {
             writes_elsewhere: _,
             // Recorded above.
             position: _,
+            // A load is vouched for by what it reads, never by a mark
+            // stored. See ADR-0100.
+            vouched: _,
             named_at_read: _,
             returned_by: _,
             fresh_read: _,
@@ -2915,6 +2946,13 @@ pub(super) struct Marks {
     pub(super) array_edge: bool,
     pub(super) stored_through: bool,
     pub(super) may_be_null: bool,
+    /// **Whether its position was read out of memory a record vouched
+    /// for**, so the bounds rule and the interior-free rule measure a
+    /// loaded value from it. Set by `Known::load_into` alone, kept by a
+    /// counted move with no load among its operands (`built::built_from`),
+    /// and joined as both sides, so a path that read nothing vouched for
+    /// takes it away. See ADR-0100.
+    pub(super) vouched: bool,
 }
 
 /// What a value may hold beyond what its sites and its edges name: the one
@@ -3548,7 +3586,7 @@ mod tests {
         let joined = |here: &Cell, there: &Cell, widen: bool| {
             let mut here = here.clone();
             here.absorb(there, widen);
-            here.position.map(|position| position.at)
+            here.stored_position().map(|position| position.at)
         };
         let at_4 = stored(At::Bytes(4), true);
         let at_8 = stored(At::Bytes(8), true);

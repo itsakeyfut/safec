@@ -12,8 +12,8 @@ use crate::source::{SourceMap, Span};
 
 use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
 use super::parts::{
-    At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Reached, Read,
-    ReadKey, Realloced, SiteState, Whole, Width, read_key,
+    At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Position,
+    Reached, Read, ReadKey, Realloced, SiteState, Whole, Width, read_key,
 };
 use super::store::{Certain, Landing, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -1692,6 +1692,38 @@ impl Known {
         !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
+    /// **Where a typed load one dereference through `local` points, where
+    /// the records of what it reads vouch for it** (ADR-0100 rule 2): `local`
+    /// names heap blocks and nothing else, each one not exposed to code this
+    /// check cannot read, and each record naming only what this check models
+    /// and holding a position. The join of those positions, as a store's are
+    /// joined, not widened; `None` where any condition fails. Its caller
+    /// asks the rest: a typed read, one dereference, not the caller's
+    /// memory.
+    fn vouches(&self, local: LocalId) -> Option<Position> {
+        let through = &self.points_to[local];
+        if through.beyond().any_unknown() || through.locals().next().is_some() {
+            return None;
+        }
+        let mut read_at: Option<(Position, bool)> = None;
+        for site in through.sites() {
+            let cell = &self.contents[site];
+            let position = cell.stored_position()?;
+            if !cell.names_only_modelled() || self.exposed[site] {
+                return None;
+            }
+            let names = cell.sites().next().is_some() || cell.locals().next().is_some();
+            read_at = Some(match read_at {
+                None => (position, names),
+                Some((here, here_names)) => (
+                    here.joined(here_names, position, names, false),
+                    here_names || names,
+                ),
+            });
+        }
+        read_at.map(|(position, _)| position)
+    }
+
     /// Pour `poured` into each of `containers`, and mark every array in
     /// `in_part` as one a pointer reaching it only by #639's rule was stored
     /// into memory for, whether or not there is a container: a store into a
@@ -1741,6 +1773,13 @@ impl Known {
     /// level a load reads its value out of is `depth - 1`. Both callers hold
     /// that: `read_through` by its own test, and `built_from` because it
     /// takes as a load only a place with at least one dereference.
+    ///
+    /// `vouch` is `None` for a load that is an operand, which keeps the
+    /// position it is given and is never vouched for, and `Some(typed)` for
+    /// one assigned to a local, whose position is set here: the records'
+    /// where [`Self::vouches`] answers, and not known otherwise. See
+    /// ADR-0100.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn load_into(
         &self,
         held: &mut Held,
@@ -1748,10 +1787,22 @@ impl Known {
         depth: usize,
         is_array: &dyn Fn(LocalIdx) -> bool,
         from_caller: bool,
+        vouch: Option<bool>,
     ) -> bool {
+        let read_at = match vouch {
+            Some(true) if depth == 1 && !from_caller => self.vouches(local),
+            Some(_) | None => None,
+        };
         let (sites, locals) = self.levels_below(local, depth);
         for site in sites {
-            held.hold(site, At::Unknown);
+            held.hold(site, read_at.map_or(At::Unknown, |read_at| read_at.at));
+        }
+        held.vouched = read_at.is_some();
+        if vouch.is_some() {
+            held.position = read_at.unwrap_or(Position {
+                at: At::Unknown,
+                row: None,
+            });
         }
         // **And the locals whose address it may be**, as edges, so a write
         // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not

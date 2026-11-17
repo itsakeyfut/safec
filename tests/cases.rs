@@ -5892,6 +5892,41 @@ cases! {
         // Without the overwrite it still is. Mutation: replace at every store
         // into the block, `*b = x;` among them; this goes silent.
         a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer stored in a block and read back into a local is measured
+        // from the position the block's record vouches for, as its local
+        // spelling is. See ADR-0100. Mutation: keep the `loaded` gate alone
+        // in `fit::reached`; the first is doubted and the second only
+        // doubted. Mutation: have `Known::load_into` vouch for nothing; both.
+        a_pointer_stored_off_its_start_and_read_back_is_measured_from_where_it_was_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_near_the_end_and_read_back_past_it_is_proved_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A counted move of a value vouched for stays vouched for. Mutation:
+        // have `built::built_from` vouch for nothing; this is doubted.
+        a_pointer_read_back_and_moved_by_a_constant_is_measured_from_where_it_was_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A null stored on one path takes no part in the record's position,
+        // as in a value's join, so the other path's read past the end is
+        // proved, as its local spelling is; a null stored over it on every
+        // path leaves nothing there to prove from, since a store over the
+        // whole block replaces its record. Mutation: have `Known::load_into`
+        // vouch for nothing; the first is only doubted. Mutation: keep the
+        // record a store replaces (`replaces` in the store's pour); the
+        // second is proved outside on a program that reads nothing there.
+        a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_null_stored_over_a_pointer_past_the_end_and_read_back_is_not_proved_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The interior-free rule measures a vouched value too, by the owner's
+        // decision on #997. Mutation: pass `vouched` as `false` to
+        // `interior`; the `SC0404` goes.
+        a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An escaped local written where this check could not see, then
+        // stored: its stale start is not recorded (ADR-0100 rule 3), found by
+        // the adversary of #1025. Mutation: have `Cell::poured` record the
+        // position whatever the value's marks; both go silent at `q[1]`.
+        a_pointer_an_unplaced_store_wrote_stored_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer a library copy reads out of a block is bytes, which prove
+        // nothing of what they name (ADR-0046), so it is not vouched for and
+        // stays doubted on a program that is defined. Mutation: vouch for a
+        // read of bytes; this goes quiet.
+        a_pointer_a_library_copy_reads_out_of_a_block_is_not_measured_from_its_record: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A site made on a cycle stands for every turn's block. Mutation:
         // let `Allocations::replaces` skip asking `made_once`; this goes
         // silent.

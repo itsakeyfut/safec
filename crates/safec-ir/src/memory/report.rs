@@ -394,9 +394,17 @@ pub(super) fn reported(
         unproven: verdict.unproven,
     };
 
+    // **Whether every pointer handed is a local whose position a record
+    // vouched for**, which `interior` then measures though it was read out
+    // of memory. A constant or a projection is not. See ADR-0100.
+    let vouched = asked(arguments, null, block).all(|argument| match argument {
+        Operand::Copy(place) if place.projection.is_empty() => known.points_to[place.local].vouched,
+        Operand::Copy(_) | Operand::Constant(_) => false,
+    });
+
     // Asked first because `verdict` takes what was reached by value; pushed
     // last, for the order the doc comment gives.
-    let inside = interior(&reached, offset, known);
+    let inside = interior(&reached, offset, vouched, known);
 
     // What it frees that was stored where code outside may read it, asked
     // before `verdict` takes what was reached. See `Known::stored_out`.
@@ -482,11 +490,17 @@ pub(super) fn reported(
 ///
 /// `freed` is `None` whatever the answer: what this reports is not about a free
 /// that already happened.
-fn interior(reached: &[Reached], offset: At, known: &Known) -> Option<Verdict> {
+fn interior(reached: &[Reached], offset: At, vouched: bool, known: &Known) -> Option<Verdict> {
     let mut sites = Vec::new();
     for entry in reached {
         match entry {
             Reached::Site(site) => sites.push(*site),
+            // A load is lost and partial for what it names, and its
+            // position is still the record's where the record vouched for
+            // it: `Allocations::touching` and `Known::reached_by` mark it
+            // so for `loaded` alone. Any other loss, a local's address
+            // among them, stops the rule. See ADR-0100.
+            Reached::Lost(LostReason::ReadOutOfMemory) | Reached::Partial if vouched => {}
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says
             // the same. The doc comment above says what holds the pair.

@@ -219,7 +219,9 @@ fn reached(
         At::Bytes(at) | At::Within { most: at, .. } => at.checked_add(width),
         At::Moved | At::Unknown => None,
     };
-    let Some(reach) = reach.filter(|_| !held.beyond().loaded()) else {
+    // A load proves nothing (ADR-0067 rule 2) unless its record vouched for
+    // its position (ADR-0100).
+    let Some(reach) = reach.filter(|_| !held.beyond().loaded() || held.vouched) else {
         return Some(Fit::Unknown);
     };
     // **Inside the row it walks, where it walks one**, for a typed access:
