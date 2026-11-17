@@ -1211,7 +1211,14 @@ fn departing_fit(
     width: u64,
     known: &Known,
 ) -> Option<Fit> {
-    let off_start = known.points_to[local].position.at.off_start();
+    // **Or may be, a range from the start included** (#944): `p` and
+    // `p + 1` met leave unasked by the start alone, and a callee freeing
+    // what it was handed freed the interior pointer in silence, found by
+    // review. Mutation: ask `off_start` alone;
+    // `a_pointer_at_its_start_or_past_it_leaving_is_asked_whether_it_starts_an_object`
+    // goes silent.
+    let at = known.points_to[local].position.at;
+    let off_start = at.off_start() || matches!(at, At::Within { .. });
     fits(analysis, function, local, width, known, false)
         .map(|fit| if off_start { Fit::Unknown } else { fit })
 }

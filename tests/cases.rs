@@ -274,6 +274,19 @@ cases! {
         // doubt (#944, #947). Mutation: take a range as inside its row; this
         // goes silent.
         a_pointer_at_one_of_two_positions_in_a_row_reaching_past_the_row_from_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Three places a range must not believe more than before it, each
+        // found by review of #944 silent where `main` reported: a range
+        // entering a row, which enters no one row; a range from the start
+        // leaving, which may not point at it; and a null moved on one arm,
+        // whose position says nothing of the other's. Each mutation is named
+        // where its rule is.
+        a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_at_its_start_or_past_it_leaving_is_asked_whether_it_starts_an_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_null_moved_on_one_arm_and_read_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a range's near end is asked against its row as its far end is:
+        // one arm before the row it walks is a doubt. Found by review of
+        // #944. Mutation: ask the far end alone; this goes silent.
+        a_pointer_at_one_of_two_positions_in_a_row_reaching_before_the_row_from_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written by a store first. Mutation: have a store through one
         // dereference leave its sites fresh. It is reported.

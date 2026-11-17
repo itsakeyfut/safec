@@ -230,7 +230,9 @@ impl At {
     /// **At a loop's back edge, `widen`, no range**, but what the join gave
     /// before #944: a pointer a loop moves on every turn would grow the range
     /// every turn and the walk would not end. Mutation: ignore `widen`;
-    /// `a_counted_position_meeting_another_at_a_back_edge_is_widened` fails.
+    /// `a_counted_position_meeting_another_at_a_back_edge_is_widened` fails,
+    /// and so do a dozen cases of a loop walking a pointer, whose walk the
+    /// solver stops with a panic that it did not converge.
     ///
     /// **Off the start survives a join, and that is not slack.** Two paths
     /// that each moved the pointer off the start both arrive off the start,
@@ -1118,9 +1120,18 @@ impl Position {
             };
         }
         Position {
+            // **A null only at the start**: a null moved, `p + 1` with `p`
+            // null, names nothing, and where it is says nothing of where the
+            // other side points in what it names, so the two meet as not
+            // known. Taken as no part of the join, or joined into a range, it
+            // hid where it went, found by review. Mutation: take any side
+            // naming nothing as the identity;
+            // `a_null_moved_on_one_arm_and_read_is_doubted` loses its
+            // `SC0412`.
             at: match (here_names, there_names) {
-                (true, false) => self.at,
-                (false, true) => other.at,
+                (true, false) if other.at == At::Bytes(0) => self.at,
+                (false, true) if self.at == At::Bytes(0) => other.at,
+                (true, false) | (false, true) => At::Unknown,
                 (true, true) | (false, false) => self.at.joined(other.at, widen),
             },
             row: if here_names { self.row } else { other.row },
@@ -3451,9 +3462,9 @@ mod tests {
     /// At a loop's back edge two positions that differ join as they did
     /// before #944: `Moved` where both are off the start, `Unknown`
     /// otherwise, so a pointer a loop moves on every turn reaches a fixpoint
-    /// rather than a range that grows each turn. No case can show the
-    /// difference as a failure, since a walk that does not end is a test that
-    /// does not finish.
+    /// rather than a range that grows each turn. Without it the solver's
+    /// visit budget stops the walk with a panic, and the cases of a loop
+    /// walking a pointer fail beside this one, measured.
     ///
     /// Mutation: ignore `widen` in `At::joined`; this fails.
     #[test]

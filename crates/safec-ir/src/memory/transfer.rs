@@ -776,8 +776,23 @@ impl Allocations<'_> {
         if from == to || !matches!(self.unit.ty(from), Ty::Array { .. }) {
             return;
         }
-        let At::Bytes(at) = held.position.at else {
-            return;
+        // **A range enters no one row** (#944): its ends may be in two, and
+        // left as it was, with no row, an access past the row one end walks
+        // was measured against the whole object and proved inside, found by
+        // review. Not counted, as before ranges. Mutation: return here for a
+        // range as for `Moved`;
+        // `a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted`
+        // goes silent.
+        let at = match held.position.at {
+            At::Bytes(at) => at,
+            At::Within { .. } => {
+                held.position = Position {
+                    at: At::Unknown,
+                    row: None,
+                };
+                return;
+            }
+            At::Moved | At::Unknown => return,
         };
         let entered = self.unit.size_of(from).map(|len| Row { start: at, len });
         let row = match (held.position.row, entered) {
@@ -2324,7 +2339,9 @@ impl Analysis for Allocations<'_> {
         // site and the number below is not changed for it. That is slack being
         // spent rather than a bound being re-derived, and the paragraph below
         // is why that is acceptable here. Where a local points in its sites
-        // moves from `Bytes(0)` or `Moved` to `Unknown` at a join and never back,
+        // moves from a counted position, `Bytes` or a `Within` a branch made, or
+        // `Moved` to `Unknown` at a back edge and never back, which keeps no
+        // range (#944),
         // once per local, and the per-local term below counts that step.
         // Whether a site is exposed is one more bit per site that a join only
         // sets, so one more step each; what each site may contain is a third
