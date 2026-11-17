@@ -172,7 +172,7 @@ pub(crate) enum Callee {
     /// the length written, `Allocations::copied_pointers` among them. So a
     /// pointer it rebuilds is still used after its free in silence, the
     /// silence #691 closed for the others, by the author's decision.
-    /// `a_pointer_rebuilt_by_strncat_is_not_yet_doubted` holds it.
+    /// `a_pointer_rebuilt_by_strncat_is_not_yet_doubted_after_its_free` holds it.
     /// A variant of its own rather than a name read inside the transfer, so
     /// that every reader of the callee answers for it. See ADR-0039.
     Copies,
@@ -232,8 +232,8 @@ pub(crate) enum Leaves {
     /// Indeterminate bytes: `malloc` (C17 7.22.3.4 p2) and `aligned_alloc`
     /// (7.22.3.1 p2). The allocation is unwritten, `Known::written`. See ADR-0057.
     Indeterminate,
-    /// Zero bits, which is a null pointer on every target here: `calloc`
-    /// (7.22.3.2 p2).
+    /// Zero bits: `calloc` (7.22.3.2 p2). A null pointer on every target
+    /// here, but not one C17 promises, so no whole pointer (#940, ADR-0098).
     ZeroBits,
     /// What the object it was handed held, up to the lesser of the two
     /// sizes (7.22.3.5 p2), and indeterminate bytes where it was handed a

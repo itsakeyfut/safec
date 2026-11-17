@@ -1,3 +1,13 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:16:5 ]
+    │
+ 16 │     memset(a, 1, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:19:5 ]
     │
@@ -38,6 +48,16 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:35:5 ]
+    │
+ 35 │     memset(b, 1, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:38:5 ]
     │
@@ -58,6 +78,16 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:43:5 ]
+    │
+ 43 │     memset(a, n, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:46:5 ]
     │
@@ -78,6 +108,16 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:53:5 ]
+    │
+ 53 │     memset(s, 1, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:57:5 ]
     │
@@ -98,6 +138,26 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:62:5 ]
+    │
+ 62 │     memset(a, 0, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:83:5 ]
+    │
+ 83 │     memset(v, 1, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:86:5 ]
     │
@@ -118,6 +178,16 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:93:5 ]
+    │
+ 93 │     memset(s, 1, 8);
+    │     ───────┬───────  
+    │            ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:98:5 ]
     │
@@ -138,6 +208,16 @@ error[SC0412]: this may reach outside the object `r` points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+     ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:105:5 ]
+     │
+ 105 │     memset(s, 1, 8);
+     │     ───────┬───────  
+     │            ╰───────── written here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `r`, which this check stopped following
      ╭─[ a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows.c:110:5 ]
      │

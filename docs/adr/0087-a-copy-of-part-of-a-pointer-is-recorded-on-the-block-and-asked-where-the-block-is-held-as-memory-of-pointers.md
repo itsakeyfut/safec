@@ -1,5 +1,5 @@
 ---
-status: "accepted (its open silence about a copy closed by ADR-0088; rule 3 superseded by ADR-0092; the record names the place and the write state decides, ADR-0097)"
+status: "accepted (its open silence about a copy closed by ADR-0088; rule 3 superseded by ADR-0092; the record names the place and the write state decides, ADR-0097; its belief that a slot no partial write was recorded in is whole replaced by ADR-0098)"
 date: 2026-11-10
 decision-makers: itsakeyfut
 ---

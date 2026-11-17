@@ -331,16 +331,17 @@ cases! {
         // A write narrower than a pointer into memory that may hold one
         // writes part of a pointer, however it is spelled: an `int` store, a
         // `memset` of part of a slot and a `char` store each record it, as a
-        // library copy of that length does (#913, #917, ADR-0092 rule 5). A
-        // whole `memset`, whole pointers, and an `int` store into memory of
-        // `int`s are not reported. Mutation: `note_narrow_store` records
+        // library copy of that length does (#913, #917, ADR-0092 rule 5).
+        // Whole pointers and an `int` store into memory of `int`s are not
+        // reported; a whole `memset` writes no pointer and is reported in its
+        // own words (#940). Mutation: `note_narrow_store` records
         // nothing; the first and third go silent. Mutation: the `memset` arm
         // records nothing; the second goes silent. Mutation: `memset`'s
         // row says it `fills` nothing; the second goes silent.
         an_int_stored_into_a_table_of_pointers_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_char_stored_into_a_pointer_read_back_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_memset_of_a_whole_table_of_pointers_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_of_whole_pointers_that_leaves_is_not_reported_as_part_of_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_stored_into_memory_of_ints_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A byte written over a pointer stored whole leaves a read of it a
@@ -1954,6 +1955,30 @@ cases! {
         // Found by review of #1019. Mutation: where it leaves, ask the state
         // as a read does; this goes silent.
         part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A slot is whole only where a whole pointer was written (#940):
+        // `calloc`'s zero bytes are no pointer, said at the `calloc` where a
+        // copy carries them into memory read back as pointers. Held twice,
+        // where the copy reads them and where its bytes are read back.
+        // Mutation: the copy door asks nothing and the copy's write ignores
+        // what its source holds; this goes silent, and either alone leaves
+        // it reported. Mutation: the copy carries no record of where; the
+        // read back gains a second report, in the words of a write nobody
+        // recorded.
+        a_block_calloc_made_copied_whole_and_read_back_is_reported_at_the_calloc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where a block leaves, what a block the site made before held,
+        // kept where the site is made again (`Known::part_before`). Mutation:
+        // `Known::reborn` keeps nothing of it; this goes silent. Mutation:
+        // the join keeps it only where both paths do; this goes silent.
+        zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where what a block holds points at the blocks its site made
+        // before, a copy or a `realloc` of it carries what those held: the
+        // newest is written whole, the older still hold part, and the copy
+        // leaves. Found by review of #940, where both were silent and `main`
+        // reported them. Mutation: the carry asks the newest block's state
+        // alone; the first goes silent. Mutation: the copy's write asks it
+        // alone; the second goes silent.
+        part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Never held as pointers. Mutation: ask every block with the record,
         // whether or not it left; this is reported.
         a_partial_pointer_copied_into_a_block_that_never_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2276,8 +2301,10 @@ cases! {
         // The same block from `calloc`, whose bytes are zero: every element is
         // written where it was made, so one more write leaves nothing
         // unwritten. Mutation: take `calloc`'s block as unwritten, as
-        // `malloc`'s; this is doubted.
-        a_heap_block_from_calloc_written_at_one_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `malloc`'s; this is reported unwritten. Its zero bytes are no
+        // pointer, so the element nothing wrote since is `SC0413` at the
+        // `calloc` (#940).
+        a_heap_block_from_calloc_written_at_one_element_and_returned_is_not_doubted_as_unwritten: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at both. Mutation: a constant move leaves the element where it
         // was; `b[1]` writes `b[0]` again and this is reported.
         a_heap_block_written_at_every_element_and_returned_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -5863,7 +5890,7 @@ cases! {
         // The silence `Callee::Copies` names for `strncat`, held so that the
         // day it closes, this case moves. Mutation: read `strncat` as a copy;
         // this gains `SC0402`.
-        a_pointer_rebuilt_by_strncat_is_not_yet_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_rebuilt_by_strncat_is_not_yet_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And between buffers that never held a pointer, nothing new: the
         // same four `SC0412`s as when the copies only exposed.
         a_string_copied_between_char_arrays_that_never_held_a_pointer_reports_nothing_new: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],

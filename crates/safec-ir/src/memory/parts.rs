@@ -320,12 +320,12 @@ impl Extent {
 
 /// What a write wrote into a slot: **a whole pointer, or anything else**
 /// (#1019). Every writer of the write state says which, so a write route
-/// added later cannot leave it unsaid. **Each says what is believed
-/// today**: `Other` where a write of part of a pointer is noted, a narrow
-/// store, a partial copy or fill, or a copy or `realloc` out of memory that
-/// may hold part of one, and `Pointer` everywhere else. #940 narrows that to
-/// the writes that write a whole pointer; what code this check cannot read
-/// writes, and the state a function starts in, are #941's. See ADR-0097.
+/// added later cannot leave it unsaid. **A whole pointer only where one was
+/// written** (#940): a store of a pointer type, a library copy of whole
+/// pointers out of memory holding whole pointers, and `realloc`'s copy of
+/// the old block; and, believed, what code this check cannot read writes
+/// and the state a function starts in, which are #941's. Every other write
+/// says `Other`. See ADR-0097 and ADR-0098.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Whole {
     /// A whole pointer, written by a write that wrote one.

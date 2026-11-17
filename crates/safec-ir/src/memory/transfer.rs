@@ -67,6 +67,17 @@ pub(super) enum Pours {
     },
 }
 
+/// Which record a write that leaves no whole pointer is noted in, for the
+/// place a report names ([`Allocations::note_written`]).
+#[derive(Clone, Copy)]
+pub(super) enum Noted {
+    /// Less than a pointer: `Known::part_written`.
+    Part,
+    /// A value at least a pointer wide that is not one:
+    /// `Known::other_written` (#940).
+    NotAPointer,
+}
+
 /// How a library copy's length covers the pointers it writes, which
 /// [`Allocations::copied_pointers`] answers once for the two doors that ask:
 /// what the copy leaves (`report::departed_at_call`) and what it writes of
@@ -130,10 +141,10 @@ impl Allocations<'_> {
 
     /// What a library copy or fill is believed to write where it lands,
     /// asked before it writes (#1019): [`Whole::Other`] where its length
-    /// ends part way through a pointer, which `note_less_than_a_pointer`
+    /// ends part way through a pointer, which `note_written`
     /// notes, or where it copies out of memory that may hold part of one,
-    /// which `Known::carry_part_written` carries; [`Whole::Pointer`]
-    /// otherwise, today's belief, which #940 narrows. The two notes run
+    /// which `Known::carry_part_written` carries, or where it fills, since a
+    /// fill writes no pointer (#940); [`Whole::Pointer`] otherwise. The notes run
     /// before the copy's own write, so the write has to say it too, or a
     /// copy that covers a slot whole would clear what they said.
     ///
@@ -154,10 +165,14 @@ impl Allocations<'_> {
         arguments: &[Operand],
         value: &Known,
     ) -> Whole {
-        if !matches!(
-            self.copied_pointers(callee, arguments),
-            CopiedPointers::Whole
-        ) {
+        // **A fill writes no pointer**, whatever it fills with: zero bytes
+        // are not a null pointer in C17 (#940). See ADR-0098.
+        if self.library(callee).is_some_and(|row| row.fills)
+            || !matches!(
+                self.copied_pointers(callee, arguments),
+                CopiedPointers::Whole
+            )
+        {
             return Whole::Other;
         }
         let copies = matches!(kind, Callee::Copies);
@@ -167,12 +182,11 @@ impl Allocations<'_> {
                     && (source.projection.is_empty() || derefs(source) > 0);
                 let (sites, locals) = value.levels_below(source.local, derefs(source));
                 placed
-                    && (sites
-                        .iter()
-                        .any(|&site| value.written[site].may_hold_part())
-                        || locals
-                            .iter()
-                            .any(|&local| value.written[local].may_hold_part()))
+                    && (sites.iter().any(|&site| {
+                        value.written[site].may_hold_part() || value.part_before[site]
+                    }) || locals.iter().any(|&local| {
+                        value.written[local].may_hold_part() || value.part_before[local]
+                    }))
             }
             _ => false,
         };
@@ -500,13 +514,27 @@ impl Allocations<'_> {
     /// (ADR-0094 rule 3, #893). **Not memory narrower than a pointer**,
     /// which holds no pointer to make of it. A store of a pointer's whole
     /// width is not narrow.
-    fn note_narrow_store(&self, landing: &Landing, wrote: Write, at: Span, value: &mut Known) {
+    ///
+    /// **And a store of a value that is not a pointer, at least a pointer
+    /// wide**, as one that is: `Noted::NotAPointer`, which names where it
+    /// was written for the report the write state now makes of it (#940).
+    /// A store of a pointer writes one whole, and says so where it lands
+    /// (`Wrote::Store`).
+    fn note_narrow_store(
+        &self,
+        landing: &Landing,
+        wrote: Write,
+        whole: Whole,
+        at: Span,
+        value: &mut Known,
+    ) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        if !wrote.width.is_some_and(|width| width < pointer) {
-            return;
+        if wrote.width.is_some_and(|width| width < pointer) {
+            self.note_landing(landing, Noted::Part, at, value);
+        } else if whole == Whole::Other {
+            self.note_landing(landing, Noted::NotAPointer, at, value);
         }
-        self.note_landing_in_part(landing, at, value);
     }
 
     /// Record a write of less than a pointer landing as `landing` as part
@@ -515,10 +543,16 @@ impl Allocations<'_> {
     /// by the `memset`, `memset(*box, 1, 4)` into memory later let leave as
     /// pointers noted nothing where `memset(t, 1, 4)` of the same block is
     /// `SC0413`. Found by the architecture review of 2026-11-13.
-    pub(super) fn note_landing_in_part(&self, landing: &Landing, at: Span, value: &mut Known) {
+    pub(super) fn note_landing(
+        &self,
+        landing: &Landing,
+        noted: Noted,
+        at: Span,
+        value: &mut Known,
+    ) {
         match landing.deep {
             0 => {}
-            1 => self.note_part_of_a_pointer(landing.pointer, at, value),
+            1 => self.note_through(landing.pointer, noted, at, value),
             _ => {
                 let storages: Vec<Storage> = landing
                     .containers
@@ -526,7 +560,7 @@ impl Allocations<'_> {
                     .map(|&site| Storage::Heap(site))
                     .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
                     .collect();
-                self.note_less_than_a_pointer(storages, at, value);
+                self.note_written(storages, noted, at, value);
             }
         }
     }
@@ -534,15 +568,15 @@ impl Allocations<'_> {
     /// Record a write through `local` at `at` as writing part of a pointer
     /// in each block or local it names that is wide enough to hold one,
     /// whatever its position: what a write lands in one dereference down.
-    /// See [`Self::note_landing_in_part`].
-    pub(super) fn note_part_of_a_pointer(&self, local: LocalId, at: Span, value: &mut Known) {
+    /// See [`Self::note_landing`].
+    pub(super) fn note_through(&self, local: LocalId, noted: Noted, at: Span, value: &mut Known) {
         let held = &value.points_to[local];
         let storages: Vec<Storage> = held
             .sites()
             .map(Storage::Heap)
             .chain(held.locals().map(Storage::Local))
             .collect();
-        self.note_less_than_a_pointer(storages, at, value);
+        self.note_written(storages, noted, at, value);
     }
 
     /// **A write of less than a pointer into `storages`**, whoever wrote it: a
@@ -561,9 +595,13 @@ impl Allocations<'_> {
     /// **And what was stored through a pointer there is no longer what a
     /// read through it reads**: `*m = x; *c = 1; q = *m;` with `c` into `m`'s
     /// block read half of `x` in silence, found while measuring #917.
-    pub(super) fn note_less_than_a_pointer(
+    ///
+    /// **A value that is not a pointer, at least a pointer wide**, is noted
+    /// the same way in its own record, `Known::other_written` (#940).
+    pub(super) fn note_written(
         &self,
         storages: impl IntoIterator<Item = Storage>,
+        noted: Noted,
         at: Span,
         value: &mut Known,
     ) {
@@ -574,10 +612,25 @@ impl Allocations<'_> {
             .into_iter()
             .filter(|&storage| !narrower(value.extent[storage]))
             .collect();
-        for &written in &storages {
-            value.note_part_written(self.sources, written, at);
+        match noted {
+            Noted::Part => {
+                for &written in &storages {
+                    value.note_part_written(self.sources, written, at);
+                }
+                value.written_over(&storages);
+            }
+            Noted::NotAPointer => {
+                for &written in &storages {
+                    value.note_other_written(self.sources, written, at);
+                }
+                // As a part does: left set, a fill over a slot a pointer was
+                // stored through read the fill back as that pointer, in
+                // silence, found by review. Mutation: leave it set;
+                // `a_pointer_made_of_bytes_a_fill_or_a_copy_wrote_is_no_pointer_this_check_follows`
+                // loses two reports.
+                value.written_over(&storages);
+            }
         }
-        value.written_over(&storages);
     }
 
     /// How many innermost elements one object of `ty` holds: an array's
@@ -1196,6 +1249,8 @@ impl Allocations<'_> {
             left_at: _,
             held_levels: _,
             part_written: _,
+            other_written: _,
+            part_before: _,
             // Not read by a load: what a call may have stored is asked where
             // the value is handed on.
             handed_untyped: _,
@@ -1905,6 +1960,8 @@ impl Allocations<'_> {
             left_at,
             held_levels,
             part_written,
+            other_written,
+            part_before,
             handed_untyped,
         } = into;
         // May-facts, so a union, as `exposed` of a local is. See
@@ -1923,6 +1980,12 @@ impl Allocations<'_> {
         }
         for (here, there) in part_written.iter_mut().zip(&from.part_written) {
             here.join(self.sources, *there);
+        }
+        for (here, there) in other_written.iter_mut().zip(&from.other_written) {
+            here.join(self.sources, *there);
+        }
+        for (here, there) in part_before.iter_mut().zip(&from.part_before) {
+            *here = *here || *there;
         }
         // The larger, so a path that held the block as pointers asks it. See
         // `Known::held_levels`.
@@ -2468,6 +2531,8 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
             part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
+            other_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
+            part_before: Table::filled(false, Storage::count(self.locals)),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Storage::count(self.locals)),
         };
@@ -2726,9 +2791,14 @@ impl Analysis for Allocations<'_> {
                     // leaves marks what it carries (ADR-0085).
                     stored_out: _,
                     left_at: _,
-                    // Through `Self::note_less_than_a_pointer`: a store
+                    // Through `Self::note_written`: a store
                     // narrower than a pointer (ADR-0087).
                     part_written: _,
+                    // Through the same, for a value at least a pointer wide that
+                    // is not one (#940).
+                    other_written: _,
+                    // Not touched by a store, which makes no block.
+                    part_before: _,
                     // Read, by `Self::replaces` and the part-of-a-pointer
                     // rule: how wide each place is.
                     extent: _,
@@ -2750,6 +2820,22 @@ impl Analysis for Allocations<'_> {
                     pointer: self.may_be_pointer(function, &operation.place),
                     levels: place_ty.map_or(0, |ty| self.levels_holding_pointers(ty)),
                     width: place_ty.and_then(|ty| self.unit.size_of(ty)),
+                };
+                // **A whole pointer only where its type is a pointer**: any
+                // other store, an aggregate that holds one included, leaves
+                // the slot not believed to hold one (#940). See ADR-0098.
+                // **Held by no case, measured**: on a target whose pointers
+                // are wider than an `int`, a store of another type is
+                // narrower than a pointer in what this frontend reads, and
+                // `note_narrow_store` says it wrote part of one after this;
+                // `long` and structs are `SC0207`. On one where they are not,
+                // `i686` or `wasm32`, an `int` store as wide is held by no
+                // case either.
+                let whole = if place_ty.is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Pointer(_)))
+                {
+                    Whole::Pointer
+                } else {
+                    Whole::Other
                 };
                 // **What a store that leaves carries is stored out**, asked
                 // before it lands, as the store door asks it: the sites the
@@ -2790,11 +2876,28 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
-                // `Known::written`.
-                // Believed whole, today's belief (#1019): an assignment to a
-                // local is no write of part of a pointer this check notes.
+                // `Known::written`. **A whole pointer only where its type is
+                // one**, as a store through a pointer (#940); one that is not
+                // is noted where it was written, for a copy of its bytes read
+                // as a pointer. **Held by no case, measured**, for the reason
+                // the store's is.
                 if let Some(at) = Strong::assigned(&operation.place) {
-                    value.written_local(at.into(), Whole::Pointer);
+                    value.written_local(at.into(), whole);
+                    if whole == Whole::Other {
+                        let target = self.unit.target();
+                        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+                        let noted = if wrote.width.is_some_and(|width| width < pointer) {
+                            Noted::Part
+                        } else {
+                            Noted::NotAPointer
+                        };
+                        self.note_written(
+                            [Storage::Local(at.local())],
+                            noted,
+                            operation.origin.span(),
+                            value,
+                        );
+                    }
                 }
 
                 // **This check follows a write through exactly one `Deref` and
@@ -2869,11 +2972,12 @@ impl Analysis for Allocations<'_> {
                         landing: &before,
                         unwritten_before: &unwritten_before,
                         width: wrote.width,
+                        whole,
                     },
                 );
                 // And part of a pointer, where it is narrower than one. See
                 // `Self::note_narrow_store`.
-                self.note_narrow_store(&before, wrote, operation.origin.span(), value);
+                self.note_narrow_store(&before, wrote, whole, operation.origin.span(), value);
 
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by

@@ -503,6 +503,21 @@ pub(super) struct Known {
     /// `ever` answers alone, since the state is of the block made since. See
     /// ADR-0097.
     pub(super) part_written: Table<Storage, Earliest>,
+    /// **Per storage, the earliest write of a value at least a pointer wide
+    /// that is not a pointer**, an `int` as wide, a `long`, zero bytes or a
+    /// struct (#940): the place a report about it names, as `part_written`
+    /// is for less than a pointer, noted, carried, joined and made again as
+    /// that is. It decides nothing. See ADR-0098.
+    pub(super) other_written: Table<Storage, Earliest>,
+    /// **Per storage, whether a block it named before the one it names now
+    /// may hold no whole pointer where one is read** (#940): what the write
+    /// state, which is of the block it names now, said where the site was
+    /// made again, kept across later remakes. Asked where a block leaves,
+    /// since the caller may hold any block the site made: the state alone
+    /// left a list built in a loop, its older blocks holding part, silent
+    /// (#1019's review). A may-fact, joined by `||`, and cleared where a
+    /// local's lifetime begins, as `part_written` is. See ADR-0098.
+    pub(super) part_before: Table<Storage, bool>,
     /// Per local, each type a call this check cannot read reached it as on
     /// the walk a departure takes, where that type is untyped somewhere
     /// below: `void`, `char` or `int` bytes, a pointer whose chain ends in
@@ -556,6 +571,14 @@ impl Known {
         self.written[storage].wrote_part();
     }
 
+    /// Note on `storage` a write at `at` of a value at least a pointer wide
+    /// that is not one, keeping the earlier, and say in the write state that
+    /// no whole pointer is there. See [`Self::other_written`].
+    pub(super) fn note_other_written(&mut self, sources: &SourceMap, storage: Storage, at: Span) {
+        self.other_written[storage].note(sources, at);
+        self.written[storage].wrote_part();
+    }
+
     /// What was stored through a pointer naming any of `storages` is no longer
     /// what a read through it reads, since a write of part of a pointer
     /// landed over it there. See `Held::stored_through`.
@@ -582,16 +605,30 @@ impl Known {
         from: &[Storage],
         to: &[Storage],
     ) {
+        // **And the write state, from the state of what it copies** (#1019),
+        // **or of what a block its site made before held** (#940): what the
+        // copy moves may point at those blocks, and the record it carries
+        // says so, which the doors where a block leaves read no longer.
+        // Asked of the newest block alone, a list built in a loop, its older
+        // blocks holding part, copied or `realloc`ed whole and let leave was
+        // silent where `main` reported it, found by review.
+        let holds_part = |known: &Self, block: Storage| {
+            known.written[block].may_hold_part() || known.part_before[block]
+        };
+        let part = from.iter().any(|&block| holds_part(self, block));
+        // **The records of the blocks that may hold part, and only those**
+        // (#940): one whose part a whole pointer was written over since
+        // names a write that is no longer there, and named the wrong
+        // `calloc` where two were copied, found by review.
         let mut carried = Earliest::none();
-        for &block in from {
+        let mut other = Earliest::none();
+        for &block in from.iter().filter(|&&block| holds_part(self, block)) {
             carried.join(sources, self.part_written[block]);
+            other.join(sources, self.other_written[block]);
         }
-        // **And the write state, from the state of what it copies** (#1019).
-        let part = from
-            .iter()
-            .any(|&block| self.written[block].may_hold_part());
         for &site in to {
             self.part_written[site].join(sources, carried);
+            self.other_written[site].join(sources, other);
             if part {
                 self.written[site].wrote_part();
             }
@@ -648,6 +685,8 @@ impl Known {
             left_at: _,
             held_levels: _,
             part_written,
+            other_written,
+            part_before,
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`).
             handed_untyped: _,
@@ -659,6 +698,8 @@ impl Known {
         // buffer declared in a loop body carried last turn's partial copy
         // into this turn's. See ADR-0090.
         part_written[local] = Earliest::none();
+        other_written[local] = Earliest::none();
+        part_before[local] = false;
     }
 
     /// A local's lifetime begins (`StorageLive`): a new object, holding
@@ -694,6 +735,8 @@ impl Known {
             held_levels: _,
             // Cleared by `Self::clear` above.
             part_written: _,
+            other_written: _,
+            part_before: _,
             handed_untyped,
         } = self;
         // **A new object, indeterminate again** (C17 6.2.4 p6), so an
@@ -2297,6 +2340,10 @@ impl Known {
             // it, and the caller may hold the old one. See
             // `Known::part_written`.
             part_written,
+            other_written,
+            // **What the block it named held, kept** before the state is
+            // made the new block's. See `Known::part_before`.
+            part_before,
             // Not a local's, which a site being reborn is not about, and
             // kept for the site, as `names` is: a call may still hold the old
             // allocation's address, and the slots of the new one are not told
@@ -2308,6 +2355,8 @@ impl Known {
         contents[site].kept_when_reborn();
         stored_out[site].made_again();
         part_written[site].made_again();
+        other_written[site].made_again();
+        part_before[site] = part_before[site] || written[site].may_hold_part();
 
         // **A local that loses an allocation that is gone may hold one**, so
         // a store of it marks where it lands, as a load out of a marked

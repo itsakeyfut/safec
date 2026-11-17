@@ -430,6 +430,16 @@ function asked it, labelled `written here` (#935). It is the one `SC0413`
 where nothing need leave: what is asked is the same belief, a pointer nobody
 wrote whole, at the write that made it, and a second code would split one
 question by which door asked it first.
+**A slot holds a whole pointer only where one was written** (#940,
+[ADR-0098](adr/0098-a-slot-holds-a-whole-pointer-only-where-a-whole-pointer-was-written-replacing-the-belief-of-adr-0087-to-adr-0090-that-a-slot-no-partial-write-was-recorded-in-is-whole.md)),
+so a write of a value that is not a pointer, a fill or `calloc`'s zero bytes,
+is said in words of its own at the write, `this writes a value that is not a
+pointer into memory that leaves holding pointers` or `that is read back as
+pointers`, labelled `written here`. Where no write is recorded it is said at
+the door that asked, `this lets memory leave holding pointers that no write is
+known to have written whole`, labelled `leaves here`, or `this reads a
+pointer out of memory that no write is known to have written whole`,
+labelled `read here`.
 Each is asked at the wider of its own type and the type the receiver reads it
 as, so a `void *` local's address passed as an `int **` asks the local four
 bytes wide, and memory by what its record says the pointers stored there point

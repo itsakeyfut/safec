@@ -1935,7 +1935,7 @@ pub(super) fn departed_at_call(
             named.extend(known.held_below(below, levels.saturating_sub(1)));
             ask_partial(
                 PartialDoor::Call,
-                named.into_iter().map(Storage::Heap),
+                named.into_iter().map(|site| (Storage::Heap(site), at)),
                 findings,
                 analysis,
                 known,

@@ -21,7 +21,7 @@ use super::parts::{
     Realloced, SiteState, Whole, Width,
 };
 use super::store::{Landing, StoreKind, Strong};
-use super::transfer::{CopiedPointers, Pours, ReadAs, believed_width};
+use super::transfer::{CopiedPointers, Noted, Pours, ReadAs, believed_width};
 use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Makes};
 use crate::reads::derefs;
@@ -431,21 +431,27 @@ impl Allocations<'_> {
                     }
                 }
             }
-            if !matches!(covered, CopiedPointers::Whole) {
-                // Wherever it lands, as a store's write does. See
-                // `Self::note_landing_in_part`.
-                if let Some(Operand::Copy(dest)) = arguments.first() {
-                    let into_depth = derefs(dest);
-                    if dest.projection.is_empty() || into_depth > 0 {
-                        let landing = self.landing(
-                            value,
-                            dest.local,
-                            into_depth + 1,
-                            into_depth == 0,
-                            StoreKind::Copy,
-                        );
-                        self.note_landing_in_part(&landing, origin.span(), value);
-                    }
+            // **And a fill of whole pointers writes none** (#940): bytes of
+            // its own, zero bytes included, since C17 does not make all
+            // bits zero a null pointer, so it is noted as a value that is
+            // not one, where a fill of less is part of one.
+            let noted = match covered {
+                CopiedPointers::Whole => Noted::NotAPointer,
+                CopiedPointers::LastInPart | CopiedPointers::NoneWhole => Noted::Part,
+            };
+            // Wherever it lands, as a store's write does. See
+            // `Self::note_landing`.
+            if let Some(Operand::Copy(dest)) = arguments.first() {
+                let into_depth = derefs(dest);
+                if dest.projection.is_empty() || into_depth > 0 {
+                    let landing = self.landing(
+                        value,
+                        dest.local,
+                        into_depth + 1,
+                        into_depth == 0,
+                        StoreKind::Copy,
+                    );
+                    self.note_landing(&landing, noted, origin.span(), value);
                 }
             }
         }
@@ -641,6 +647,12 @@ impl Allocations<'_> {
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
                     part_written: _,
+                    // Through the same two, for a value that is not a pointer
+                    // (#940).
+                    other_written: _,
+                    // Not touched by a copy: the blocks it lands in are not
+                    // made again.
+                    part_before: _,
                     // Not touched by a copy.
                     handed_untyped: _,
                 } = &*value;
@@ -819,8 +831,9 @@ impl Allocations<'_> {
                             // a partial copy of its own. A block, or a local
                             // whose size this check cannot read, is noted.
                             if in_part {
-                                self.note_less_than_a_pointer(
+                                self.note_written(
                                     to.iter().copied(),
+                                    Noted::Part,
                                     origin.span(),
                                     value,
                                 );
@@ -1890,6 +1903,15 @@ impl Allocations<'_> {
                 }
             }
             self.past_the_old_size(function, value, site, result, handed, carried);
+        } else if matches!(
+            self.library(*callee).and_then(|row| row.leaves),
+            Some(Leaves::ZeroBits)
+        ) {
+            // **Zero bytes are no whole pointer** (#940): C17 7.22.3.2 p2
+            // makes all bits zero, which C17 does not make a null pointer.
+            // See ADR-0098.
+            value.written[site].set(Init::Written(Whole::Other));
+            value.note_other_written(self.sources, Storage::Heap(site), origin.span());
         }
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
         // p2, so what a pointer stored in the old one may hold, the new one
@@ -1950,6 +1972,10 @@ impl Allocations<'_> {
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,
+                    other_written: _,
+                    // The new site's, set where `Known::reborn` made it; the old
+                    // block's earlier blocks are not the new site's.
+                    part_before: _,
                     // Not touched by `realloc`.
                     handed_untyped: _,
                 } = &*value;
