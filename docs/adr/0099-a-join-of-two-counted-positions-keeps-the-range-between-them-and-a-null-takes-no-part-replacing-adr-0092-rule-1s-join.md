@@ -42,11 +42,17 @@ Chosen: the range, by the owner's decision on #944.
    range over both.
 2. **Each reader asks the end it needs.** How far an access reaches is from
    `most`; it is outside for certain only where `least` is too, and otherwise a
-   doubt. A free is off the start only where `least` is. Every reader that asks
-   for one offset reads a range as `Moved` where `least >= 1` and as `Unknown`
-   otherwise, which is what it answered before.
+   doubt. A free is off the start only where `least` is, and a pointer leaving
+   the function may be off it wherever it is a range. A range entering the
+   row of an array it walks enters no one row, and is not counted there. Every
+   other reader that asks for one offset reads a range as `Moved` where
+   `least >= 1` and as `Unknown` otherwise, which is what it answered before,
+   or as a counted position where that doubts more (`at_start` in
+   `Allocations::reads_fresh`).
 3. **A null takes no part in the join of a position**, as it already took none
-   in the join of a row (#996): a path holding nothing points nowhere.
+   in the join of a row (#996): a path holding nothing at the start points
+   nowhere. A null moved, holding nothing off the start, meets the other side
+   as not known: where it is says nothing of where the other points.
 4. **At a loop's back edge two positions that differ join as rule 1 had
    them**, `Moved` or `Unknown`, so a pointer a loop moves every turn reaches a
    fixpoint. The range holds across a branch, not across a loop.
@@ -77,14 +83,24 @@ Measured on #944's branch by applying each change and restoring it:
 * A free reading the far end proves
   `a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed`.
 * `widen` ignored fails
-  `a_counted_position_meeting_another_at_a_back_edge_is_widened`; a loop that
-  moves a pointer would not end, which no case can show as a failure.
+  `a_counted_position_meeting_another_at_a_back_edge_is_widened` and a dozen
+  cases of a loop walking a pointer, which the solver stops with a panic that
+  it did not converge.
+* Found by review, each silent where `main` reported it, each held now: a
+  range entering a row taken as entering none silences
+  `a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted`; a range
+  leaving asked as off the start alone silences
+  `a_pointer_at_its_start_or_past_it_leaving_is_asked_whether_it_starts_an_object`;
+  a null moved taken as no part of the join silences the `SC0412` of
+  `a_null_moved_on_one_arm_and_read_is_doubted`; and a range's near end not
+  asked against its row silences
+  `a_pointer_at_one_of_two_positions_in_a_row_reaching_before_the_row_from_one_is_doubted`.
 
 ### Consequences
 
-* Good, because twelve `SC0412` doubts on accesses every path keeps inside
-  their object go, eleven in corpus cases and one in a route row, and none
-  that may reach past one is lost.
+* Good, because eleven `SC0412` doubts on accesses every path keeps inside
+  their object go, ten in corpus cases and one in a route row, and none that
+  may reach past one is lost.
 * Bad, because the range does not survive memory: the same two arms stored
   through a box and read back are still doubted, which is #997's.
 
