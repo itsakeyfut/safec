@@ -1293,7 +1293,7 @@ impl Allocations<'_> {
                 }
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
-                // `Known::reached_only_beside_another`.
+                // `Known::named_alone`.
                 let holders: Vec<Held> = handed
                     .iter()
                     .filter_map(|argument| match argument {
@@ -1301,12 +1301,11 @@ impl Allocations<'_> {
                         Operand::Constant(_) => None,
                     })
                     .collect();
-                let beside = value
-                    .reached_only_beside_another(&holders, |local| self.is_array(function, local));
+                let alone = value.named_alone(&holders, |local| self.is_array(function, local));
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
-                    WrittenBy::Call { beside: &beside },
+                    WrittenBy::Call { alone: &alone },
                 );
                 // Believed whole, as what such code writes is (#940's
                 // decision).

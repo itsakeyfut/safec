@@ -1976,12 +1976,14 @@ impl Known {
         self.unknown_code_reaches().sites
     }
 
-    /// The locals a call this check cannot read reaches only through a
-    /// pointer that may name something else as well, so it may have written
-    /// another in its place: every pointer it can find, `handed` and those
-    /// stored in what is exposed, asked what it names, and a local named
-    /// beside another storage by each one that names it at all. **A pointer
-    /// that may name two places writes one of them.** `fill(p)` with `p`
+    /// **The locals a call this check cannot read writes for certain**: those
+    /// some pointer it can find names alone, `handed` and those stored in
+    /// what is exposed, asked what each names. Every other local it may
+    /// reach it may have written, a route this walk does not take among
+    /// them, so a route missed here is a doubt and not a silence. See
+    /// ADR-0101.
+    ///
+    /// **A pointer that may name two places writes one of them.** `fill(p)` with `p`
     /// either `&a` or `&b` was believed to write both, and a read of `a`
     /// built silent where the store `*p = &x;` is `SC0411`. Found by the
     /// architecture review of 2026-11-13; on `main` too.
@@ -2023,33 +2025,27 @@ impl Known {
     /// block cannot say which element it points at, so `&arr[k]` kept in a
     /// block is still taken as the whole array (#938).
     ///
-    /// **A local named alone by any of them stays believed written**, the
+    /// **A local named alone by any of them is believed written**, the
     /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
-    /// through `p` alone. So does one no pointer this function recorded
-    /// names, an address stored where this check cannot place it, since
-    /// nothing says what else was beside it there.
-    ///
-    /// **Asked of what the call can find, not of what an earlier call
-    /// kept**: `keep(p); tick();` believes `a` written at `tick`, since `p`
-    /// itself was never handed and is not found. That read is still
-    /// reported, as a use of a pointer this check stopped following.
-    pub(super) fn reached_only_beside_another(
+    /// through `p` alone. One no pointer it can find names, an address an
+    /// earlier call kept or one stored where this check cannot place it, is
+    /// not: `keep(p); other();` with `p` either `&x` or `&y` believed `x`
+    /// written at `other`, and an indeterminate `x` was read without
+    /// `SC0411` (#1028).
+    pub(super) fn named_alone(
         &self,
         handed: &[Held],
         is_array: impl Fn(LocalIdx) -> bool,
     ) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
-        let mut beside = BTreeSet::new();
         let mut alone = BTreeSet::new();
-        let mut ask = |sites: Vec<Site>, locals: Vec<LocalIdx>, unmodelled: bool| match (
-            sites.len(),
-            locals.as_slice(),
-            unmodelled,
-        ) {
-            (0, [local], false) => {
+        // A local beside another storage, or beside what this check does
+        // not model, is left out: a may-write, which is what a local outside
+        // `alone` is.
+        let mut ask = |sites: Vec<Site>, locals: Vec<LocalIdx>, unmodelled: bool| {
+            if let (0, [local], false) = (sites.len(), locals.as_slice(), unmodelled) {
                 alone.insert(*local);
             }
-            _ => beside.extend(locals),
         };
         // **One question per value, however it was found**, so the value a
         // call is handed and one it finds in a local cannot be asked
@@ -2081,8 +2077,7 @@ impl Known {
             let cell = &self.contents[container];
             ask(cell.sites().collect(), cell.locals().collect(), false);
         }
-        beside.retain(|local| !alone.contains(local));
-        beside
+        alone
     }
 
     /// The walk [`Self::locals_named_by_unknown_code`] and
@@ -3324,11 +3319,11 @@ impl Known {
             // call's belief wrote it for certain (#803). See ADR-0074.
             if may_write(local) && self.escaped[local] {
                 match writer {
-                    WrittenBy::Call { beside } if beside.contains(&local) => {
-                        self.written[local].may_write(Whole::Pointer);
-                    }
-                    WrittenBy::Call { beside: _ } => {
+                    WrittenBy::Call { alone } if alone.contains(&local) => {
                         self.believed_written_local_by_unknown_code(local);
+                    }
+                    WrittenBy::Call { alone: _ } => {
+                        self.written[local].may_write(Whole::Pointer);
                     }
                     WrittenBy::StoreOrCopy(whole) => {
                         self.written[local].may_write(whole);
@@ -3350,11 +3345,11 @@ struct Closed {
 /// that a writer added answers what it does to a local it may reach.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum WrittenBy<'a> {
-    /// A call this check cannot read, believed to write what it may reach
-    /// (#782), except `beside`, which it reaches only through a pointer that
-    /// may name another place and so may have missed. See
-    /// [`Known::reached_only_beside_another`].
-    Call { beside: &'a BTreeSet<LocalIdx> },
+    /// A call this check cannot read, believed to write `alone`, the locals
+    /// some pointer it can find names alone, and which may have written
+    /// every other local it may reach. See [`Known::named_alone`] and
+    /// ADR-0101.
+    Call { alone: &'a BTreeSet<LocalIdx> },
     /// A store or a library copy this check could not prove one local for,
     /// which may have missed each it may reach, and what it wrote. See
     /// ADR-0074.
