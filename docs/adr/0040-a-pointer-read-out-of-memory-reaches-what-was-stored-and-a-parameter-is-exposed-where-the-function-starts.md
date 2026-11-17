@@ -196,7 +196,7 @@ is stored there instead fails
 Reading a container that may itself hold a load as though it did not fails
 `a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join` alone.
 Leaving `memset`'s arguments out fails
-`what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call` alone.
+`what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call` alone.
 
 **Contents.** The block that records into `Contents::inside` ignoring `read_out`
 fails `a_pointer_copied_from_one_table_to_another_is_inside_both` alone.

@@ -674,13 +674,13 @@ fn report_returned_unwritten(
 ///   destination's type or by what it points at ([`points_at_a_pointer`]);
 /// - **what it copies may be unwritten** ([`source_may_be_unwritten`]).
 ///
-/// **Leaving is the store's answer, and a library copy exposes what it is
-/// handed**, so a second copy into a block this function made, a copy in a
-/// loop among them, is asked as leaving: copying unwritten bytes into it is
-/// doubted there as well as where it is read, and a block filled that way
-/// and freed unread is doubted though nothing reads it. That is the
-/// conservative side of the store's question, and answering it otherwise
-/// here would answer one destination two ways (#737).
+/// **Leaving is the store's answer**, and a library copy exposes only what
+/// it carries where it lands where this check cannot place or name it, as a
+/// store does (ADR-0096), so a copy into a block this function made is asked
+/// as leaving where that block leaves, as a store into it is. Answering it
+/// otherwise here would answer one destination two ways (#737). Until #1014 a
+/// second copy into such a block was asked as leaving because the copy
+/// exposed what it was handed.
 fn copied_unwritten(
     analysis: &Allocations<'_>,
     function: &Function,

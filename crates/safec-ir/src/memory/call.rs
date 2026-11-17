@@ -76,7 +76,17 @@ impl Allocations<'_> {
             &Levels::new(vec![Width::Unbounded]),
             &forged,
         );
-        self.land_contents(value, landing, &poured, &[], Pours::Copy { replaces: None });
+        self.land_contents(
+            value,
+            landing,
+            &poured,
+            &[],
+            Pours::Copy {
+                replaces: None,
+                carried: Vec::new(),
+                span: None,
+            },
+        );
         for &local in &landing.targets {
             value.points_to[local].name_unknown(Why::Forged);
         }
@@ -1040,21 +1050,22 @@ impl Allocations<'_> {
                                 &landing,
                                 &poured,
                                 &in_part,
-                                Pours::Copy { replaces },
+                                Pours::Copy {
+                                    replaces,
+                                    carried: copied.iter().copied().collect(),
+                                    span: Some(origin.span()),
+                                },
                             );
                         }
                     }
                 }
-                // What a pointer it was handed may be, read out of memory, as
-                // for an opaque call, exposed, and what the copy writes of what
-                // is unwritten. See `Allocations::initialised_by` and ADR-0040.
-                let reach = self.reach(function, handed, sites(), value);
+                // What the copy writes of what is unwritten. See
+                // `Allocations::initialised_by`.
                 self.initialised_by(
                     function,
                     value,
                     Wrote::Copy {
                         dest: arguments.first(),
-                        reach,
                         span: origin.span(),
                         length: self.copied_pointers(*callee, arguments),
                         bytes: self.written_bytes(*callee, arguments),
@@ -1582,11 +1593,11 @@ impl Allocations<'_> {
                     }
                     // `memset(*tab, 0, 4)` returns a pointer read out of
                     // memory, and says so, as an assignment of `*tab` would.
-                    // **Nothing holds this**: the call has just exposed what
-                    // `*tab` reaches, so a later call handed the result finds
-                    // it exposed already. It is here so that the day this
-                    // family stops exposing what it is handed, its result is
-                    // not a silence. See ADR-0040.
+                    // **Read as a load**, so that a later call handed the
+                    // result does not find it proved. It was written for the
+                    // day this family stopped exposing what it is handed,
+                    // which ADR-0096 is; whether a case holds it since is not
+                    // measured. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::from_marks(
                         value.points_to.len(),

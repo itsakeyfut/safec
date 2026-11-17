@@ -60,7 +60,11 @@ pub(super) enum Pours {
     },
     /// A library copy, and the one block it replaces whole, where
     /// [`Allocations::replaces`] says it does.
-    Copy { replaces: Option<Site> },
+    Copy {
+        replaces: Option<Site>,
+        carried: Vec<Site>,
+        span: Option<Span>,
+    },
 }
 
 /// How a library copy's length covers the pointers it writes, which
@@ -879,8 +883,8 @@ impl Allocations<'_> {
     /// pointer; a copy lands so whatever its type, since it copies bytes. A
     /// store exposes what it carries where it is unplaced or its pointer is
     /// unnamed, and tells a pending read where what it lands in is already
-    /// reachable; a copy exposes what it was handed afterwards, in
-    /// [`Self::initialised_by`]. Each as that door did. See ADR-0044.
+    /// reachable; a copy does both with what it carries, through the same
+    /// helpers. See ADR-0044 and ADR-0096.
     pub(super) fn land_contents(
         &self,
         value: &mut Known,
@@ -935,27 +939,20 @@ impl Allocations<'_> {
                 // level below the stored one was believed written by the same
                 // store, found by review. See ADR-0077.
                 let before = value.written.clone();
-                let stored: Vec<Site> = value.closure(carried.clone()).into_iter().collect();
-                let keep = |value: &mut Known| {
-                    for &site in containers.iter() {
-                        if before[site].whole() == Init::Maybe {
-                            value.written[site].set(Init::Maybe);
-                        }
-                    }
-                    for &site in &stored {
-                        value.written[site] = before[site].clone();
-                    }
-                };
                 if unplaced {
                     // No container, so what is poured is the arrays it marks
                     // alone.
                     value.pour(&[], poured, in_part);
-                    value.expose(self.sources, carried, Some(span));
-                    keep(value);
+                    self.expose_carried(value, &before, containers, carried, Some(span));
                 } else {
                     if unnamed {
-                        value.expose(self.sources, carried.clone(), Some(span));
-                        keep(value);
+                        self.expose_carried(
+                            value,
+                            &before,
+                            containers,
+                            carried.clone(),
+                            Some(span),
+                        );
                     }
                     // **What it replaces holds nothing else first**, so the
                     // pour below leaves what this store carries alone
@@ -964,23 +961,26 @@ impl Allocations<'_> {
                         value.contents[site] = Cell::none(value.points_to.len());
                     }
                     value.pour(containers, poured, in_part);
-                    // Stored where code this check cannot read already
-                    // reaches is reachable to it from now on, which no call
-                    // marks until the next one: a read before this store in
-                    // the same expression is told here.
-                    let reachable = value.reachable_now();
-                    if containers
-                        .iter()
-                        .any(|container| reachable.contains(container))
-                    {
-                        let routes = value.closure(carried);
-                        value.noticed(self.sources, Some(span), &routes);
-                    }
+                    self.noticed_where_reachable(value, containers, carried, Some(span));
                 }
             }
-            Pours::Copy { replaces } => {
+            Pours::Copy {
+                replaces,
+                carried,
+                span,
+            } => {
                 if elsewhere {
                     value.landed_where_unknown_code_points(poured);
+                }
+                // **What it carries is exposed where it lands where this check
+                // cannot place or name it, as a store's is**, and nowhere else:
+                // a library copy writes the bytes its clause names and nothing
+                // more (C17 7.24.2.1, 7.24.2.2, 7.24.6.1), so exposing all it
+                // was handed made `memset(p, 0, 4); forget(); *p` a use after
+                // a free nothing could have made (#1014). See ADR-0096.
+                if unplaced || unnamed {
+                    let before = value.written.clone();
+                    self.expose_carried(value, &before, containers, carried.clone(), span);
                 }
                 // What it replaces holds nothing else first, as a store's
                 // does (#927).
@@ -988,7 +988,63 @@ impl Allocations<'_> {
                     value.contents[site] = Cell::none(value.points_to.len());
                 }
                 value.pour(containers, poured, in_part);
+                // **And copied into memory code this check cannot read already
+                // reaches**, as a store's is: a parameter's pointee, where
+                // `memcpy(out, box, 8)` of a pointer in `box` let a read of
+                // it beside a later call go silent once the copy stopped
+                // exposing all it was handed. Found while implementing #1014.
+                if !unplaced {
+                    self.noticed_where_reachable(value, containers, carried, span);
+                }
             }
+        }
+    }
+
+    /// Tell the reads still pending what a write `carried` into `containers`
+    /// made reachable, where code this check cannot read already reaches one
+    /// of them: it is reachable to such code from now on, which no call marks
+    /// until the next one, so a read before the write in the same expression
+    /// is told here. A store and a library copy alike (#1014).
+    fn noticed_where_reachable(
+        &self,
+        value: &mut Known,
+        containers: &[Site],
+        carried: Vec<Site>,
+        span: Option<Span>,
+    ) {
+        let reachable = value.reachable_now();
+        if containers
+            .iter()
+            .any(|container| reachable.contains(container))
+        {
+            let routes = value.closure(carried);
+            value.noticed(self.sources, span, &routes);
+        }
+    }
+
+    /// Expose what a write `carried`, landing where this check cannot place
+    /// or name it, and keep what was known of the writes of its `containers`
+    /// and of every block reachable from what it carried, as `before` had
+    /// them: a store and a library copy alike run no code, so the exposure's
+    /// belief that every exposed block was written by code this check cannot
+    /// read is not theirs to give (#754, #858). See ADR-0077 and ADR-0096.
+    fn expose_carried(
+        &self,
+        value: &mut Known,
+        before: &Table<Storage, PlaceInit>,
+        containers: &[Site],
+        carried: Vec<Site>,
+        span: Option<Span>,
+    ) {
+        let stored: Vec<Site> = value.closure(carried.clone()).into_iter().collect();
+        value.expose(self.sources, carried, span);
+        for &site in containers {
+            if before[site].whole() == Init::Maybe {
+                value.written[site].set(Init::Maybe);
+            }
+        }
+        for &site in &stored {
+            value.written[site] = before[site].clone();
         }
     }
 

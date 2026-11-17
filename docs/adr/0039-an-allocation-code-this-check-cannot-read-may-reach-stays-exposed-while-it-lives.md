@@ -184,7 +184,7 @@ case. A closure that stops after one step fails
 `a_pointer_two_tables_deep_is_reached_through_both` alone, and recording into
 only the first allocation a pointer may hold fails
 `a_pointer_stored_through_either_of_two_tables_is_inside_both` alone. Closing only from the sites a call has just marked fails
-`a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call` alone,
+`a_pointer_in_a_table_memset_was_handed_on_the_other_arm_is_not_freed_by_a_later_call` alone,
 which is the join, where an invariant applied only at the writes is missed, and
 which mutating the first version of this change found as a silence. An
 unplaced write exposing nothing fails
@@ -222,7 +222,7 @@ of the other four fails
 `what_the_other_library_copies_return_is_what_they_were_handed`. Their arm not
 exposing
 what it is handed fails
-`what_memset_was_handed_is_unproven_after_a_later_call`; not replacing what an
+`what_memset_was_handed_is_not_freed_by_a_later_call`; not replacing what an
 escaped local holds fails
 `a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
 alone; not returning the first argument fails the `memset` and `strcpy` cases.

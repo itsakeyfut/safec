@@ -5614,10 +5614,6 @@ const UNCERTAIN: &[(&str, &str)] = &[
 /// believe the same width at the write, and the store's `SC0412` came from
 /// the lowering's read-back of the assignment.
 const WIDTH_ASKED_APART: &str = "the copy and a store over the same program ask the width of the write apart, `SC0412` or `SC0413` on one side alone or proved on one (#965)";
-/// A row of [`COPY_DIFFERS`]: a doubt the copy raises and a store over the
-/// same program does not (#926).
-const COPY_DOUBTS_MORE: &str =
-    "the copy doubts what a store over the same program does not, away from its arguments (#926)";
 /// A row of [`COPY_DIFFERS`]: a doubt a store over the same program raises
 /// and the copy does not (#926).
 const TWIN_DOUBTS_MORE: &str = "a store over the same program doubts what the copy does not (#926)";
@@ -5636,7 +5632,7 @@ const INDETERMINATE_BYTES_ARE_COPIED: &str = "a copy carries bytes nothing wrote
 /// absorbed only where a reviewer reads the count move (#999): #987 added
 /// eight rows with a new reason and nothing asked whether the list should
 /// grow.
-const COPY_DIFFERS_ROWS: usize = 104;
+const COPY_DIFFERS_ROWS: usize = 96;
 /// What a whole copy is not answered alike with a store over its own
 /// program ([`twin_of`]), row by row, with every reason it differs: a
 /// library copy of a whole pointer is the store of it, so any report its
@@ -5649,14 +5645,8 @@ const COPY_DIFFERS_ROWS: usize = 104;
 /// the test asks whether a listed row differs, not how, so a reason that
 /// stops being true passes, measured, until the row is read again.
 const COPY_DIFFERS: &[(&str, &[&str])] = &[
-    ("caller_memcpy_block_d1_both", &[COPY_DOUBTS_MORE]),
-    ("caller_memcpy_block_d1_one", &[COPY_DOUBTS_MORE]),
-    ("caller_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
-    ("caller_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
     ("caller_memcpy_d2_both", &[WIDTH_ASKED_APART]),
     ("caller_memcpy_d2_one", &[WIDTH_ASKED_APART]),
-    ("caller_memmove_d1_both", &[COPY_DOUBTS_MORE]),
-    ("caller_memmove_d1_one", &[COPY_DOUBTS_MORE]),
     ("caller_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("caller_memmove_d2_one", &[WIDTH_ASKED_APART]),
     ("fresh_memcpy_d0_both", &[INDETERMINATE_BYTES_ARE_COPIED]),
@@ -5721,12 +5711,8 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
     ("part_pointer_memmove_d2_one", &[TWIN_DOUBTS_MORE]),
     ("reborn_memcpy_block_d0_both", &[WIDTH_ASKED_APART]),
     ("reborn_memcpy_block_d0_one", &[WIDTH_ASKED_APART]),
-    ("reborn_memcpy_d1_both", &[COPY_DOUBTS_MORE]),
-    ("reborn_memcpy_d1_one", &[COPY_DOUBTS_MORE]),
     ("reborn_memcpy_d2_both", &[WIDTH_ASKED_APART]),
     ("reborn_memcpy_d2_one", &[WIDTH_ASKED_APART]),
-    ("reborn_memmove_d1_both", &[COPY_DOUBTS_MORE]),
-    ("reborn_memmove_d1_one", &[COPY_DOUBTS_MORE]),
     ("reborn_memmove_d2_both", &[WIDTH_ASKED_APART]),
     ("reborn_memmove_d2_one", &[WIDTH_ASKED_APART]),
     ("returned_memcpy_d1_both", &[TWIN_DOUBTS_MORE]),
@@ -5792,6 +5778,8 @@ const COPY_DIFFERS: &[(&str, &[&str])] = &[
         "stored_freed_memcpy_block_d2_one",
         &[TWIN_READS_IT_ON_TWO_LINES],
     ),
+    ("reborn_memcpy_block_d1_both", &[TWIN_DOUBTS_MORE]),
+    ("reborn_memcpy_block_d1_one", &[TWIN_DOUBTS_MORE]),
 ];
 
 /// [`aligned`] places a report on a line both programs share before the
@@ -6736,15 +6724,8 @@ const ASKED_WHERE_STORED: &str = "a pointer this check cannot say starts an obje
 /// See ADR-0045.
 const LOST_READ_FROM_A_LOCAL: &str = "a lost pointer read out of a local proves nothing where it is used, and one read out of memory is believed as it was stored (ADR-0045)";
 
-/// Why a pair is listed in [`APART`]: a library copy into memory that does
-/// not leave is not asked the width of what it carries.
-const COPY_STAYS_AT_DEPTH_ZERO: &str = "a library copy into memory that does not leave is not asked the width of what it carries, as a store there is not (the memory model rebuilt on #924, stage 2); at depth zero the block the copy lands in stays in this function, and one level below it is memory a load reached, which may leave";
-/// Why a pair is listed in [`APART`]: a library copy lets a lost value
-/// leave as a store by name does, and one level down the store spelling
-/// does not ask it yet.
-const COPY_ASKS_LOST: &str = "a library copy lets a value this check stopped following leave as `SC0414`, as a store of the same value by name does (#924); one level down the copy reads it out of memory where the lost answer stands, and the store spelling of that route does not ask it yet";
 /// How many pairs [`APART`] holds, for [`COPY_DIFFERS_ROWS`]'s reason.
-const APART_ROWS: usize = 35;
+const APART_ROWS: usize = 29;
 /// The pairs of a row at depth zero and its row at depth one that answer
 /// differently, with why: each a rule that tells a local from a block on
 /// purpose. Every other pair answers alike in its codes and its exits,
@@ -6753,12 +6734,6 @@ const APART_ROWS: usize = 35;
 /// [`every_pair_kept_apart_still_differs`]. Named as the rows are, without
 /// the depth.
 const APART: &[(&str, &str)] = &[
-    ("reborn_memcpy_both", COPY_ASKS_LOST),
-    ("reborn_memmove_both", COPY_ASKS_LOST),
-    ("reborn_memcpy_one", COPY_ASKS_LOST),
-    ("reborn_memmove_one", COPY_ASKS_LOST),
-    ("reborn_memcpy_block_both", COPY_STAYS_AT_DEPTH_ZERO),
-    ("reborn_memcpy_block_one", COPY_STAYS_AT_DEPTH_ZERO),
     ("caller_ret_both", ASKED_WHERE_STORED),
     ("caller_ret_one", ASKED_WHERE_STORED),
     ("width_ret_both", ASKED_WHERE_STORED),

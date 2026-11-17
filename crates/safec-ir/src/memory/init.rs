@@ -36,14 +36,13 @@ pub(super) enum Wrote<'a> {
         /// rather than this rule asking the place's type again.
         width: Option<u64>,
     },
-    /// A library copy handed `dest` first and `source` second, which
-    /// exposes `reach`, and whose length covers the pointers it writes as
+    /// A library copy handed `dest` first and `source` second, whose length
+    /// covers the pointers it writes as
     /// `length` says. `byte_for_byte` where it copies `bytes` of the source
     /// as they are, `memcpy` and `memmove`, and not a string copy, which
     /// stops at a null and may pad with zeros (C17 7.24.2.3 to 7.24.3.1).
     Copy {
         dest: Option<&'a Operand>,
-        reach: Vec<Site>,
         span: Span,
         length: CopiedPointers,
         bytes: Option<u64>,
@@ -597,7 +596,6 @@ impl Allocations<'_> {
             }
             Wrote::Copy {
                 dest,
-                reach,
                 span,
                 length,
                 bytes,
@@ -630,19 +628,12 @@ impl Allocations<'_> {
                     }
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
                 };
-                // What a pointer it was handed may be, read out of memory, as
-                // for an opaque call, exposed. See ADR-0040.
-                //
                 // **What it writes, only where its destination may land**: the
                 // blocks its landing names and, where it may land where this
                 // check cannot place it, what code this check cannot read can
-                // name, as a store's are since #726. The exposure wrote the fresh
-                // mark of everything it reached, the copy's source and what its
-                // destination only holds among them: `memcpy(d, m, 8); r = *m;`
-                // and `*o = m; memcpy(o, pp, 8); r = *m;` read a block nothing
-                // wrote in silence, where the store forms are certain (#739).
-                // So the exposure stays, and the mark it had is put back on every
-                // block outside that set.
+                // name, as a store's are since #726. It exposes nothing it was
+                // handed: what it carries is exposed where it lands, by
+                // `land_contents`, as a store's is (#1014, ADR-0096).
                 //
                 // **Where the landing names more than one place**, sites and
                 // locals together and through a place of dereferences too, it
@@ -788,7 +779,6 @@ impl Allocations<'_> {
                     .as_ref()
                     .is_none_or(|(blocks, _, _, _, _)| blocks.is_empty());
                 let before = value.written.clone();
-                value.expose(self.sources, reach, Some(span));
                 if let Some((may_land, several, alone, landing, place)) = may_land {
                     // **And only as far as its length writes a pointer
                     // whole**: a copy shorter than one writes no pointer in
@@ -825,18 +815,13 @@ impl Allocations<'_> {
                         value.covers_whole(Storage::Heap(site), dest_at, bytes)
                     };
                     // **The blocks it writes are the store's to mark**
-                    // (#1005): the exposure's belief about every block is
-                    // put back, and then the copy writes where its landing
-                    // lands, whole where it covers a block and the slots it
-                    // covers where one is kept per slot, as a store through
-                    // `*dest` does. Kept as the exposure believed it, written
-                    // whole, `memcpy(b, &x, 8)` into a block of two slots left
-                    // `b[1]` read in silence where `b[0] = x;` is `SC0411`
-                    // (#925). A copy that writes no pointer whole writes none
-                    // of them.
-                    for site in before.sites() {
-                        value.written[site] = before[site].clone();
-                    }
+                    // (#1005): the copy writes where its landing lands, whole
+                    // where it covers a block and the slots it covers where
+                    // one is kept per slot, as a store through `*dest` does.
+                    // Written whole, `memcpy(b, &x, 8)` into a block of two
+                    // slots left `b[1]` read in silence where `b[0] = x;` is
+                    // `SC0411` (#925). A copy that writes no pointer whole
+                    // writes none of them.
                     if !unwritten {
                         self.blocks_written(value, &place, &landing, bytes);
                     }
@@ -1203,12 +1188,15 @@ impl Allocations<'_> {
         // start, which is where an edge to a local points. Asked only at a
         // known start, `memcpy(&**m, &v_, 8); r = **m; *r` read a `char`
         // buffer written at one byte in silence, where `**m = v_;` doubts it:
-        // the copy exposes the block it writes, the walk below the first
-        // level adds what is exposed, and `r`'s position joined to `Unknown`
+        // the copy then exposed the block it wrote, the walk below the first
+        // level added what was exposed, and `r`'s position joined to `Unknown`
         // (#686, measured by the route matrix). A doubt, so it can only add
         // one. Mutation: ask at `At::Bytes(0)` alone again;
-        // `a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read`
-        // goes silent.
+        // `a_long_local_array_written_at_one_element_is_doubted_where_read_at_another`
+        // and the route rows `part_local_restored_d2_both` and
+        // `part_local_ret_d1_one` fail, among others. The case written for
+        // #686 no longer depends on it since the copy stopped exposing what
+        // it is handed (#1014).
         let at_start = !matches!(through.position.at, At::Moved);
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,
