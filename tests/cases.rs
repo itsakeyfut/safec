@@ -1940,6 +1940,14 @@ cases! {
         a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_partial_pointer_copied_into_a_block_handed_to_a_pointer_parameter_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_partial_pointer_copied_into_a_block_stored_as_a_pointer_slot_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The write state is the belief and the record names the place
+        // (#1019): a whole pointer stored over the part ends the report, and
+        // one stored into another slot does not. Mutation: the partial
+        // doors take every recorded block as holding part, whatever its
+        // state says; the first is reported. Mutation: a whole store at one
+        // slot writes the block whole; the second goes silent.
+        a_whole_pointer_stored_over_part_of_one_before_the_block_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        part_of_a_pointer_in_a_slot_no_whole_one_was_stored_over_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Never held as pointers. Mutation: ask every block with the record,
         // whether or not it left; this is reported.
         a_partial_pointer_copied_into_a_block_that_never_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

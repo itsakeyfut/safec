@@ -371,6 +371,12 @@ impl PartialDoor {
     /// leaves, a site made again since (`now` gone) is answered by `ever`
     /// alone, since the state is of the block made since. A state that says
     /// part with no place recorded is #940's to report.
+    ///
+    /// Mutation: take every recorded block as holding part;
+    /// `a_whole_pointer_stored_over_part_of_one_before_the_block_leaves_is_not_reported`
+    /// is reported. **No case holds `now` being gone where it leaves**,
+    /// measured: asking the state there too fails nothing, since a site made
+    /// again reaches the exit joined with the turn that wrote the part.
     fn record(self, known: &Known, at: Storage) -> Option<Span> {
         let part = known.written[at].may_hold_part();
         let record = known.part_written[at];

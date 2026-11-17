@@ -139,6 +139,14 @@ impl Allocations<'_> {
     ///
     /// The source only of a row that copies, and only where the copy door
     /// places it, as the carry does: a fill's second argument is a byte.
+    ///
+    /// Mutation: the source is not asked; five cases of a partial pointer
+    /// copied on whole go silent,
+    /// `a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported`
+    /// among them. **No case holds the length's answer**, measured: the
+    /// slot a copy ends part way through is one it does not cover, so the
+    /// note's part survives it, and a copy of 12 bytes covering a block of
+    /// 12 is still reported.
     pub(super) fn copy_writes(
         &self,
         callee: FuncId,
