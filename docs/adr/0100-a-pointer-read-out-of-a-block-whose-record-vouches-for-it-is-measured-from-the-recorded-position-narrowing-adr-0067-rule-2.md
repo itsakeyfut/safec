@@ -57,10 +57,16 @@ Chosen: the position alone, by the owner's decision on #1025 and #997.
    operands stays vouched; a join is vouched only where both sides are.
 3. **A store records a position only where the bounds rule would trust the
    stored value's own**: a value this check stopped following, or one written
-   where it could not see, records an unknown position, and no load out of the
-   block is vouched for. Found by the adversary on #1025, where an escaped
-   local written through a pointer this check could not place was stored and
-   read back as proved inside.
+   where it could not see, records an unknown position, and so does an inner
+   address, which the bounds rule doubts though its position says the start.
+   Found by the adversary on #1025, where an escaped local written through a
+   pointer this check could not place was stored and read back as proved
+   inside. **Nor do bytes that are not a whole pointer keep the record's
+   position**: a value that is not a pointer by its type stored over part of
+   a slot, and a fill of zeros or of less than a pointer, leave it unknown.
+   Each names nothing, as a null does, and a null takes no part in the join,
+   so each left the position of the pointer it overwrote. Found by review of
+   #997.
 4. **Two readers measure a vouched value from its position**: how far an
    access reaches (`fit::reached`), and whether a free is off the start of
    what it frees (`report::interior`). Every other reader, and these two for
@@ -81,7 +87,12 @@ Measured on #997's branch by applying each change and restoring it:
   `Known::load_into` vouching for nothing fails those four and
   `a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved`.
 * `Cell::absorb` keeping its own position, or ignoring `widen`, fails
-  `a_blocks_record_joins_the_positions_stored_and_widens_them_at_a_back_edge`.
+  `a_blocks_record_joins_the_positions_stored_and_widens_them_at_a_back_edge`;
+  the join passing `false` for `widen` makes the solver panic that it did
+  not converge on
+  `a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint`,
+  and `Known::pour` widening doubts
+  `a_pointer_stored_into_two_slots_and_read_back_from_one_is_measured_from_both`.
   A store over the whole block keeping the record it replaces proves
   `a_null_stored_over_a_pointer_past_the_end_and_read_back_is_not_proved_outside`
   outside.
@@ -102,6 +113,24 @@ Measured on #997's branch by applying each change and restoring it:
   copy of a temporary.
 * `report::interior` told nothing is vouched for fails
   `a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved`.
+* Found by review, each silent where `main` doubted: a fill leaving the
+  record's position as it was silences
+  `a_pointer_read_back_after_a_fill_of_part_of_it_is_doubted` and
+  `a_pointer_read_back_after_a_fill_of_zeros_is_doubted`; a value that is
+  not a pointer by its type recording its start silences
+  `a_pointer_read_back_after_a_byte_written_over_it_is_doubted`.
+* Found by review, rules no earlier case reached: a load through two
+  dereferences vouched for silences
+  `a_pointer_read_back_through_two_dereferences_is_not_measured_from_the_outer_record`;
+  a record keeping no row silences
+  `a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted`;
+  and `Known::vouches` taking every side as naming storage only doubts
+  `a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end`.
+* **Held by nothing**: an inner address recorded at its start, since the C
+  frontend lowers every such address to the start and arithmetic; and a
+  may-write through an address (`Known::target_union`) keeping the target's
+  mark, since every loaded value that is not vouched for is at an unknown
+  position, which the join keeps.
 
 ### Consequences
 
