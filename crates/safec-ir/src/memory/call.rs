@@ -1593,11 +1593,11 @@ impl Allocations<'_> {
                     }
                     // `memset(*tab, 0, 4)` returns a pointer read out of
                     // memory, and says so, as an assignment of `*tab` would.
-                    // **Nothing holds this**: the call has just exposed what
-                    // `*tab` reaches, so a later call handed the result finds
-                    // it exposed already. It is here so that the day this
-                    // family stops exposing what it is handed, its result is
-                    // not a silence. See ADR-0040.
+                    // **Read as a load**, so that a later call handed the
+                    // result does not find it proved. It was written for the
+                    // day this family stopped exposing what it is handed,
+                    // which ADR-0096 is; whether a case holds it since is not
+                    // measured. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::from_marks(
                         value.points_to.len(),

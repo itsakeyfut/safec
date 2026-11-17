@@ -64,8 +64,8 @@ pub(super) struct Known {
     /// local, since a route missed there would be a free in silence
     /// (ADR-0029).
     ///
-    /// **A library copy sets no local here**, though it exposes the
-    /// allocations it is handed, because it keeps no address: it writes
+    /// **A library copy sets no local here**, though it exposes what it
+    /// carries where it lands (ADR-0096), because it keeps no address: it writes
     /// only through its first argument, which the `Callee::Copies` arm of
     /// the transfer answers for by itself.
     ///

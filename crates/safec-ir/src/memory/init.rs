@@ -1188,12 +1188,15 @@ impl Allocations<'_> {
         // start, which is where an edge to a local points. Asked only at a
         // known start, `memcpy(&**m, &v_, 8); r = **m; *r` read a `char`
         // buffer written at one byte in silence, where `**m = v_;` doubts it:
-        // the copy exposes the block it writes, the walk below the first
-        // level adds what is exposed, and `r`'s position joined to `Unknown`
+        // the copy then exposed the block it wrote, the walk below the first
+        // level added what was exposed, and `r`'s position joined to `Unknown`
         // (#686, measured by the route matrix). A doubt, so it can only add
         // one. Mutation: ask at `At::Bytes(0)` alone again;
-        // `a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read`
-        // goes silent.
+        // `a_long_local_array_written_at_one_element_is_doubted_where_read_at_another`
+        // and the route rows `part_local_restored_d2_both` and
+        // `part_local_ret_d1_one` fail, among others. The case written for
+        // #686 no longer depends on it since the copy stopped exposing what
+        // it is handed (#1014).
         let at_start = !matches!(through.position.at, At::Moved);
         let maybe = |local: LocalIdx| value.may_be_unwritten(local, through.element, at_start);
         // **Any block it may read that may still be fresh is enough**,

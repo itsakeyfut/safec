@@ -2839,8 +2839,10 @@ cases! {
         a_block_written_before_its_pointer_passes_through_another_block_is_returned_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` buffer whose address a copy puts two levels down is read
         // as a pointer at a position nobody said, which may be its start
-        // (#686). Mutation: ask a local only at a known start again; this
-        // goes silent.
+        // (#686). Since #1014 the copy no longer exposes the block it writes,
+        // and asking a local only at a known start no longer silences this;
+        // the rule is held by the cases `Allocations::reads_partly`'s
+        // comment names.
         a_char_buffer_whose_address_a_copy_puts_two_levels_down_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `realloc` of a pointer that may be null copies nothing on the path
         // where it is, so what it returns may be indeterminate there (#708,
@@ -4872,7 +4874,9 @@ cases! {
         // over contents has to run over every exposed allocation, not only the
         // ones a call has just marked. The arm that exposed did it with
         // `memset`, which exposes nothing it is handed since #1014 (ADR-0096),
-        // so this reports nothing and no longer holds that closure (#1016).
+        // so this reports nothing; the closure is held by
+        // `a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported`
+        // and two cases beside it.
         a_pointer_in_a_table_memset_was_handed_on_the_other_arm_is_not_freed_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The callee had what it returned, and may have kept it.
         what_a_call_returned_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -6790,7 +6794,7 @@ cases! {
         // ADR-0096), and reports nothing now. Mutation: tell every pending read
         // in `Known::noticed`, owned or not; the first two gain a report.
         // Mutation: own a read only by `inside`; each of the three gains one.
-        // Owning it only by `entry.at == by` fails no case since #1014 (#1016).
+        // Mutation: own it only by `entry.at == by`; the third gains one.
         // The dereference in
         // the second is ordered before `keep2` by
         // `Element::ArgumentsEvaluated`, so it is not pending there.

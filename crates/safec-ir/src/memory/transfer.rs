@@ -883,8 +883,8 @@ impl Allocations<'_> {
     /// pointer; a copy lands so whatever its type, since it copies bytes. A
     /// store exposes what it carries where it is unplaced or its pointer is
     /// unnamed, and tells a pending read where what it lands in is already
-    /// reachable; a copy exposes what it was handed afterwards, in
-    /// [`Self::initialised_by`]. Each as that door did. See ADR-0044.
+    /// reachable; a copy does both with what it carries, through the same
+    /// helpers. See ADR-0044 and ADR-0096.
     pub(super) fn land_contents(
         &self,
         value: &mut Known,

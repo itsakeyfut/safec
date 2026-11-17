@@ -203,9 +203,10 @@ the copy is where it is said (#764). `int *a[1]; memcpy(out, a, 8);` with
 into memory only the function reads, and a copy into memory believed to hold
 no pointer, an `int *` parameter's, say nothing. Where an array is kept
 element by element and the length is a constant, only the elements the copy
-covers are asked. A second copy into a block the function made is asked as
-leaving, since a library copy exposes what it is handed, so unwritten bytes
-copied into it twice are doubted at the copy as well as where they are read.
+covers are asked. A copy into a block the function made is asked as leaving
+where that block leaves, as a store into it is: a library copy exposes only
+what it carries where it lands where the check cannot place or name it
+(ADR-0096).
 A block is asked whether it leaves when the copy is made, so a block filled by
 a copy and handed back afterwards is asked where it is handed back, below.
 
