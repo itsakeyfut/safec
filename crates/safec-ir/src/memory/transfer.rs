@@ -961,18 +961,7 @@ impl Allocations<'_> {
                         value.contents[site] = Cell::none(value.points_to.len());
                     }
                     value.pour(containers, poured, in_part);
-                    // Stored where code this check cannot read already
-                    // reaches is reachable to it from now on, which no call
-                    // marks until the next one: a read before this store in
-                    // the same expression is told here.
-                    let reachable = value.reachable_now();
-                    if containers
-                        .iter()
-                        .any(|container| reachable.contains(container))
-                    {
-                        let routes = value.closure(carried);
-                        value.noticed(self.sources, Some(span), &routes);
-                    }
+                    self.noticed_where_reachable(value, containers, carried, Some(span));
                 }
             }
             Pours::Copy {
@@ -991,7 +980,7 @@ impl Allocations<'_> {
                 // a free nothing could have made (#1014). See ADR-0096.
                 if unplaced || unnamed {
                     let before = value.written.clone();
-                    self.expose_carried(value, &before, containers, carried, span);
+                    self.expose_carried(value, &before, containers, carried.clone(), span);
                 }
                 // What it replaces holds nothing else first, as a store's
                 // does (#927).
@@ -999,7 +988,37 @@ impl Allocations<'_> {
                     value.contents[site] = Cell::none(value.points_to.len());
                 }
                 value.pour(containers, poured, in_part);
+                // **And copied into memory code this check cannot read already
+                // reaches**, as a store's is: a parameter's pointee, where
+                // `memcpy(out, box, 8)` of a pointer in `box` let a read of
+                // it beside a later call go silent once the copy stopped
+                // exposing all it was handed. Found while implementing #1014.
+                if !unplaced {
+                    self.noticed_where_reachable(value, containers, carried, span);
+                }
             }
+        }
+    }
+
+    /// Tell the reads still pending what a write `carried` into `containers`
+    /// made reachable, where code this check cannot read already reaches one
+    /// of them: it is reachable to such code from now on, which no call marks
+    /// until the next one, so a read before the write in the same expression
+    /// is told here. A store and a library copy alike (#1014).
+    fn noticed_where_reachable(
+        &self,
+        value: &mut Known,
+        containers: &[Site],
+        carried: Vec<Site>,
+        span: Option<Span>,
+    ) {
+        let reachable = value.reachable_now();
+        if containers
+            .iter()
+            .any(|container| reachable.contains(container))
+        {
+            let routes = value.closure(carried);
+            value.noticed(self.sources, span, &routes);
         }
     }
 

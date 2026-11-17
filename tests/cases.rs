@@ -2564,6 +2564,15 @@ cases! {
         // no block, beside `covers_exactly` in `Allocations::locals_written`;
         // `a` is doubted.
         a_copy_two_levels_down_into_its_one_local_writes_it_while_a_pointer_parameter_is_in_scope: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy into memory code this check cannot read already reaches, a
+        // parameter's pointee, makes what it carries reachable to a later call,
+        // so a read of `a` beside `release_all()` in one expression is asked,
+        // as the store `*out_ = *box_` asks it. Found while implementing
+        // #1014: with the copy no longer exposing all it was handed, this went
+        // silent until the copy's arm told the pending reads as the store's
+        // does. Mutation: do not call `noticed_where_reachable` for a copy in
+        // `land_contents`; this goes silent at `a[0]`.
+        a_pointer_copied_into_a_parameters_memory_is_asked_of_a_read_beside_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memmove_and_freed_is_reported_where_the_copy_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_out_through_an_address_is_reported_where_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
