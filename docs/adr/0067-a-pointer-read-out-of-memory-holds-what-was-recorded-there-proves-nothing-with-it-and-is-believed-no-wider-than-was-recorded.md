@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (rule 2 narrowed by ADR-0100)"
 date: 2026-11-06
 decision-makers: itsakeyfut
 ---
