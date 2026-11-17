@@ -266,8 +266,23 @@ fn offset_of(
             Some(_) => At::Moved,
             None => At::Unknown,
         },
+        // **A range moves as a whole** (#944): both bounds by the distance,
+        // off the start where its far bound is still before it.
+        (At::Within { least, most }, Some(distance)) => match (
+            i128::from(least).checked_add(distance),
+            i128::from(most).checked_add(distance),
+        ) {
+            (Some(least), Some(most)) if least >= 0 => {
+                match (u64::try_from(least), u64::try_from(most)) {
+                    (Ok(least), Ok(most)) => At::range(least, most),
+                    _ => At::Unknown,
+                }
+            }
+            (Some(_), Some(most)) if most < 0 => At::Moved,
+            _ => At::Unknown,
+        },
         (At::Bytes(0), None) if by != 0 => At::Moved,
-        (At::Bytes(_) | At::Moved | At::Unknown, _) => At::Unknown,
+        (At::Bytes(_) | At::Within { .. } | At::Moved | At::Unknown, _) => At::Unknown,
     }
 }
 

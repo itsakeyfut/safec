@@ -213,8 +213,10 @@ fn reached(
     // width** (#703): `m[1]` of a block of two `int`s reaches eight bytes and
     // fits. Off the start by a distance not counted, or not known to be
     // anywhere, is unknown. A sum that overflows reaches past every object.
+    // **From the far end of a range** (#944): every position it stands for
+    // reaches no further than that. See ADR-0099.
     let reach = match held.position.at {
-        At::Bytes(at) => at.checked_add(width),
+        At::Bytes(at) | At::Within { most: at, .. } => at.checked_add(width),
         At::Moved | At::Unknown => None,
     };
     let Some(reach) = reach.filter(|_| !held.beyond().loaded()) else {
@@ -223,9 +225,14 @@ fn reached(
     // **Inside the row it walks, where it walks one**, for a typed access:
     // past its row is undefined though the object is wider, and doubted,
     // since the object around it is not what is reached. See `Row` (#947).
-    if let (Access::Typed, Some(row), At::Bytes(at)) = (access, held.position.row, held.position.at)
-    {
-        if !row.holds(at, width) {
+    if let (Access::Typed, Some(row)) = (access, held.position.row) {
+        // Both ends of a range, which holds every position between (#944).
+        let held_in_row = match held.position.at {
+            At::Bytes(at) => row.holds(at, width),
+            At::Within { least, most } => row.holds(least, width) && row.holds(most, width),
+            At::Moved | At::Unknown => true,
+        };
+        if !held_in_row {
             return Some(Fit::Unknown);
         }
     }
@@ -242,7 +249,21 @@ fn reached(
         return Some(Fit::Unknown);
     }
 
+    // **Outside for certain only where the near end of a range is too**
+    // (#944): `a + 1` on one arm and `a + 3` on the other, then `q[1]`,
+    // reaches past the end on one path alone, a doubt. Mutation: answer from
+    // the far end alone; `a_pointer_at_one_of_two_positions_reaching_past_the_end_from_one_is_doubted`
+    // is proved outside. See ADR-0099.
+    let near = match held.position.at {
+        At::Within { least, .. } => least.checked_add(width),
+        At::Bytes(_) | At::Moved | At::Unknown => Some(reach),
+    };
     match folded(&extents, reach) {
+        Fit::Outside { .. }
+            if !near.is_some_and(|near| matches!(folded(&extents, near), Fit::Outside { .. })) =>
+        {
+            Some(Fit::Unknown)
+        }
         Fit::Outside { reach, extent, .. } => {
             let mut made: Option<Option<Span>> = None;
             for site in held.sites() {

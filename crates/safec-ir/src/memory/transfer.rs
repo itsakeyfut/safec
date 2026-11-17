@@ -776,8 +776,23 @@ impl Allocations<'_> {
         if from == to || !matches!(self.unit.ty(from), Ty::Array { .. }) {
             return;
         }
-        let At::Bytes(at) = held.position.at else {
-            return;
+        // **A range enters no one row** (#944): its ends may be in two, and
+        // left as it was, with no row, an access past the row one end walks
+        // was measured against the whole object and proved inside, found by
+        // review. Not counted, as before ranges. Mutation: return here for a
+        // range as for `Moved`;
+        // `a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted`
+        // goes silent.
+        let at = match held.position.at {
+            At::Bytes(at) => at,
+            At::Within { .. } => {
+                held.position = Position {
+                    at: At::Unknown,
+                    row: None,
+                };
+                return;
+            }
+            At::Moved | At::Unknown => return,
         };
         let entered = self.unit.size_of(from).map(|len| Row { start: at, len });
         let row = match (held.position.row, entered) {
@@ -1933,7 +1948,10 @@ impl Allocations<'_> {
     /// once, `Allocations::runs_once`: one body, so the two cannot drift
     /// apart. They differ only in what a local unwritten on one side and
     /// written on the other becomes. See `Known::written`.
-    fn joined(&self, into: &mut Known, from: &Known, back: bool) {
+    ///
+    /// `widen` is set at a loop's back edge alone, where a position joins as
+    /// it did before it kept a range, so the walk ends (#944, `At::joined`).
+    fn joined(&self, into: &mut Known, from: &Known, back: bool, widen: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
         // and nothing else in the build says so: the field is read, the walk
@@ -2160,7 +2178,7 @@ impl Allocations<'_> {
                 (None, Some(site)) if no_block(here, &state[site], site) => Some(site),
                 _ => None,
             };
-            here.joined(there, self.sources);
+            here.joined(there, self.sources, widen);
             if kept.is_some() {
                 here.returned_by = kept;
             }
@@ -2321,7 +2339,9 @@ impl Analysis for Allocations<'_> {
         // site and the number below is not changed for it. That is slack being
         // spent rather than a bound being re-derived, and the paragraph below
         // is why that is acceptable here. Where a local points in its sites
-        // moves from `Bytes(0)` or `Moved` to `Unknown` at a join and never back,
+        // moves from a counted position, `Bytes` or a `Within` a branch made, or
+        // `Moved` to `Unknown` at a back edge and never back, which keeps no
+        // range (#944),
         // once per local, and the per-local term below counts that step.
         // Whether a site is exposed is one more bit per site that a join only
         // sets, so one more step each; what each site may contain is a third
@@ -2618,11 +2638,11 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, false);
+        self.joined(into, from, false, false);
     }
 
     fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, self.runs_once[head.index()].is_some());
+        self.joined(into, from, self.runs_once[head.index()].is_some(), true);
     }
 
     /// A loop shown to run is left only through its head after a whole turn
@@ -2649,7 +2669,7 @@ impl Analysis for Allocations<'_> {
         from: &Self::Value,
         before: &Self::Value,
     ) {
-        self.joined(into, from, self.runs_once[head.index()].is_some());
+        self.joined(into, from, self.runs_once[head.index()].is_some(), true);
         for place in into.written.indices() {
             // **Not a site the paths into the loop did not name**, which the
             // back edge made and nothing before it wrote.

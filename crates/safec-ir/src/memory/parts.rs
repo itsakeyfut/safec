@@ -213,13 +213,26 @@ pub(super) enum At {
     Bytes(u64),
     /// Off the start of every site it holds, by a distance not counted.
     Moved,
+    /// Somewhere from `least` to `most` bytes from the start of every site
+    /// it holds, each counted, `least < most`: two paths that counted two
+    /// distances, met (#944). An access reaches from `most`, and only
+    /// `least >= 1` says it is off the start. See ADR-0099.
+    Within { least: u64, most: u64 },
     /// This check cannot say where.
     Unknown,
 }
 
 impl At {
-    /// The two together: themselves where they agree, `Moved` where both
-    /// are off the start, and `Unknown` otherwise.
+    /// The two together: themselves where they agree, **the range between
+    /// two counted ones** (#944), `Moved` where both are off the start, and
+    /// `Unknown` otherwise.
+    ///
+    /// **At a loop's back edge, `widen`, no range**, but what the join gave
+    /// before #944: a pointer a loop moves on every turn would grow the range
+    /// every turn and the walk would not end. Mutation: ignore `widen`;
+    /// `a_counted_position_meeting_another_at_a_back_edge_is_widened` fails,
+    /// and so do a dozen cases of a loop walking a pointer, whose walk the
+    /// solver stops with a panic that it did not converge.
     ///
     /// **Off the start survives a join, and that is not slack.** Two paths
     /// that each moved the pointer off the start both arrive off the start,
@@ -232,13 +245,51 @@ impl At {
     /// `Unknown`, which is a warning on a program that frees null on one path
     /// and an interior pointer on the other. That is a false report the
     /// reader can see rather than saying safe wrongly, and ADR-0036 records
-    /// it as what three values cost.
-    pub(super) fn joined(self, other: Self) -> Self {
-        match (self, other) {
-            (here, there) if here == there => here,
-            (At::Moved | At::Bytes(1..), At::Moved | At::Bytes(1..)) => At::Moved,
-            _ => At::Unknown,
+    /// it as what three values cost. A null now takes no part
+    /// (`Position::joined`), and the start meets a counted position as a
+    /// range whose `least` is the start, a doubt where it is freed.
+    pub(super) fn joined(self, other: Self, widen: bool) -> Self {
+        if self == other {
+            return self;
         }
+        if !widen {
+            if let (Some((here_least, here_most)), Some((there_least, there_most))) =
+                (self.counted(), other.counted())
+            {
+                return At::range(here_least.min(there_least), here_most.max(there_most));
+            }
+        }
+        if self.off_start() && other.off_start() {
+            At::Moved
+        } else {
+            At::Unknown
+        }
+    }
+
+    /// The least and the most it is, where both are counted.
+    fn counted(self) -> Option<(u64, u64)> {
+        match self {
+            At::Bytes(at) => Some((at, at)),
+            At::Within { least, most } => Some((least, most)),
+            At::Moved | At::Unknown => None,
+        }
+    }
+
+    /// `least` to `most`, one position where they are one.
+    pub(super) fn range(least: u64, most: u64) -> At {
+        if least == most {
+            At::Bytes(least)
+        } else {
+            At::Within { least, most }
+        }
+    }
+
+    /// Whether it is certainly off the start of every site it holds.
+    pub(super) fn off_start(self) -> bool {
+        matches!(
+            self,
+            At::Moved | At::Bytes(1..) | At::Within { least: 1.., .. }
+        )
     }
 }
 
@@ -1050,7 +1101,18 @@ impl Position {
     /// or a row and the whole object, leave no position counted against
     /// either: kept, a row joined with a wider path would prove an access
     /// past the row. See [`Row`].
-    pub(super) fn joined(self, here_names: bool, other: Position, there_names: bool) -> Position {
+    ///
+    /// **And the null is the identity of `at` as of the row** (#944): a path
+    /// holding nothing points nowhere, so `int *q = 0; if (c) q = a + 1;`
+    /// is `a + 1` wherever `q` names anything. `widen` is the back edge's,
+    /// [`At::joined`]. See ADR-0099.
+    pub(super) fn joined(
+        self,
+        here_names: bool,
+        other: Position,
+        there_names: bool,
+        widen: bool,
+    ) -> Position {
         if here_names && there_names && self.row != other.row {
             return Position {
                 at: At::Unknown,
@@ -1058,7 +1120,20 @@ impl Position {
             };
         }
         Position {
-            at: self.at.joined(other.at),
+            // **A null only at the start**: a null moved, `p + 1` with `p`
+            // null, names nothing, and where it is says nothing of where the
+            // other side points in what it names, so the two meet as not
+            // known. Taken as no part of the join, or joined into a range, it
+            // hid where it went, found by review. Mutation: take any side
+            // naming nothing as the identity;
+            // `a_null_moved_on_one_arm_and_read_is_doubted` loses its
+            // `SC0412`.
+            at: match (here_names, there_names) {
+                (true, false) if other.at == At::Bytes(0) => self.at,
+                (false, true) if self.at == At::Bytes(0) => other.at,
+                (true, false) | (false, true) => At::Unknown,
+                (true, true) | (false, false) => self.at.joined(other.at, widen),
+            },
             row: if here_names { self.row } else { other.row },
         }
     }
@@ -1636,7 +1711,7 @@ impl Held {
     pub(super) fn recorded_width(&self, extent: &Table<Storage, Option<Extent>>) -> Option<u64> {
         let at = match self.position.at {
             At::Bytes(at) => at,
-            At::Moved | At::Unknown => return Some(0),
+            At::Moved | At::Within { .. } | At::Unknown => return Some(0),
         };
         if self.inner_address || self.beyond().any_unknown() {
             return Some(0);
@@ -1794,10 +1869,14 @@ impl Held {
     /// told which side names any storage, a side naming none being a null.
     /// **Asked before the names are joined**, since after it `self` names
     /// what either did.
-    pub(super) fn position_joined(&self, other: &Held) -> Position {
+    pub(super) fn position_joined(&self, other: &Held, widen: bool) -> Position {
         let names_storage = |held: &Held| held.names.ones().any(|named| named.storage().is_some());
-        self.position
-            .joined(names_storage(self), other.position, names_storage(other))
+        self.position.joined(
+            names_storage(self),
+            other.position,
+            names_storage(other),
+            widen,
+        )
     }
 
     /// Every local whose address this value may be, its address edges.
@@ -1966,7 +2045,7 @@ impl Held {
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: Site, offset: At) {
         self.names.set(Referent::Heap(site));
-        self.position.at = self.position.at.joined(offset);
+        self.position.at = self.position.at.joined(offset, false);
     }
 
     /// The one local this is certainly the address of: one address edge, and
@@ -2084,7 +2163,7 @@ impl Held {
     /// as one does: `memcpy(m, &t, 8)` of a `t` written on one arm only, read
     /// back as an `int *`, was believed whole once it was taken for one.
     /// Found by review. [`Self::may_be_null`] tells the two apart.
-    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap) {
+    pub(super) fn joined(&mut self, other: &Held, sources: &SourceMap, widen: bool) {
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
         // to say what it means in each. ADR-0024 is why there are two places
@@ -2092,7 +2171,7 @@ impl Held {
         //
         // Asked before the union below, which leaves `self` naming what
         // either path named.
-        let joined_position = self.position_joined(other);
+        let joined_position = self.position_joined(other, widen);
         let Held {
             names,
             freed,
@@ -2325,8 +2404,7 @@ impl Held {
     pub(super) fn moved_by_arithmetic(&mut self, by: Option<i128>) {
         // **Kept by the array rule alone**, where the move is known not to
         // be zero: an earlier rule dropped this edge. See `Held::array_edge`.
-        if matches!(self.position.at, At::Moved | At::Bytes(1..)) && self.may_be_a_locals_address()
-        {
+        if self.position.at.off_start() && self.may_be_a_locals_address() {
             self.array_edge = true;
         }
         // **The element moves by what was added**, where both are known: `by`
@@ -3354,22 +3432,50 @@ mod tests {
         );
     }
 
-    /// Two positions join to themselves where they agree, to `Moved` where
-    /// both are off the start by any distances, and to `Unknown` where one
-    /// is at the start and the other is not or either is unknown (ADR-0092
-    /// rule 1). A program reaches the second where two arms move a pointer
-    /// by different constants.
+    /// Two counted positions join to the range between them, each end
+    /// counted, and a range with a third to the range over all three (#944).
+    /// A program reaches it where two arms move a pointer by different
+    /// constants.
     ///
-    /// Mutation: drop the arm that joins two positions off the start; this
-    /// fails at `Bytes(4)` beside `Bytes(8)`.
+    /// Mutation: join two counted positions as `Moved`; this fails at
+    /// `Bytes(4)` beside `Bytes(8)`.
     #[test]
-    fn two_positions_off_the_start_join_off_the_start_whatever_the_distances() {
-        assert_eq!(At::Bytes(4).joined(At::Bytes(4)), At::Bytes(4));
-        assert_eq!(At::Bytes(4).joined(At::Bytes(8)), At::Moved);
-        assert_eq!(At::Moved.joined(At::Bytes(8)), At::Moved);
-        assert_eq!(At::Bytes(0).joined(At::Moved), At::Unknown);
-        assert_eq!(At::Bytes(0).joined(At::Bytes(4)), At::Unknown);
-        assert_eq!(At::Moved.joined(At::Unknown), At::Unknown);
+    fn two_counted_positions_join_to_the_range_between_them() {
+        assert_eq!(At::Bytes(4).joined(At::Bytes(4), false), At::Bytes(4));
+        assert_eq!(
+            At::Bytes(4).joined(At::Bytes(8), false),
+            At::Within { least: 4, most: 8 }
+        );
+        assert_eq!(
+            At::Bytes(0).joined(At::Bytes(4), false),
+            At::Within { least: 0, most: 4 }
+        );
+        assert_eq!(
+            At::Within { least: 4, most: 8 }.joined(At::Bytes(12), false),
+            At::Within { least: 4, most: 12 }
+        );
+        assert_eq!(At::Moved.joined(At::Bytes(8), false), At::Moved);
+        assert_eq!(At::Bytes(0).joined(At::Moved, false), At::Unknown);
+        assert_eq!(At::Moved.joined(At::Unknown, false), At::Unknown);
+    }
+
+    /// At a loop's back edge two positions that differ join as they did
+    /// before #944: `Moved` where both are off the start, `Unknown`
+    /// otherwise, so a pointer a loop moves on every turn reaches a fixpoint
+    /// rather than a range that grows each turn. Without it the solver's
+    /// visit budget stops the walk with a panic, and the cases of a loop
+    /// walking a pointer fail beside this one, measured.
+    ///
+    /// Mutation: ignore `widen` in `At::joined`; this fails.
+    #[test]
+    fn a_counted_position_meeting_another_at_a_back_edge_is_widened() {
+        assert_eq!(At::Bytes(4).joined(At::Bytes(8), true), At::Moved);
+        assert_eq!(
+            At::Within { least: 4, most: 8 }.joined(At::Bytes(12), true),
+            At::Moved
+        );
+        assert_eq!(At::Bytes(0).joined(At::Bytes(4), true), At::Unknown);
+        assert_eq!(At::Bytes(4).joined(At::Bytes(4), true), At::Bytes(4));
     }
 
     /// The lower of two bounds, where `None` is no bound: what
@@ -3501,8 +3607,27 @@ mod tests {
             row: Some(Row { start: 4, len: 4 }),
         };
         let null = Position::START;
-        assert_eq!(null.joined(false, walking, true).row, walking.row);
-        assert_eq!(walking.joined(true, null, false).row, walking.row);
+        assert_eq!(null.joined(false, walking, true, false).row, walking.row);
+        assert_eq!(walking.joined(true, null, false, false).row, walking.row);
+    }
+
+    /// And the null is the identity of the byte position, at both kinds of
+    /// join (#944): `int *q = 0; if (c) q = a + 1;` points at `a + 1`
+    /// wherever it names anything.
+    ///
+    /// Mutation: join the null's `Bytes(0)` in; this fails, and so does
+    /// `a_local_array_written_through_memory_after_an_earlier_turn_stored_a_moved_pointer_is_doubted`.
+    #[test]
+    fn a_null_joined_with_a_counted_pointer_keeps_its_position() {
+        let moved = Position {
+            at: At::Bytes(4),
+            row: None,
+        };
+        let null = Position::START;
+        for widen in [false, true] {
+            assert_eq!(null.joined(false, moved, true, widen).at, At::Bytes(4));
+            assert_eq!(moved.joined(true, null, false, widen).at, At::Bytes(4));
+        }
     }
 
     /// What a local is given replaces every site and every edge it had, and
