@@ -1,0 +1,190 @@
+Target "x86_64-pc-windows-msvc"
+Function zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:1:7 "calloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int" parameter "size"
+Function zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "void ***" parameter "out"
+  Local "_2" "int" parameter "n"
+  Local "_3" "int *" parameter _Nonnull "y"
+  Local "_4" "int"
+  Local "_5" "void **" "q"
+  Local "_6" "void **" "prev"
+  Local "_7" "int" "i"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "void **"
+  Local "_11" "int"
+  Local "_12" "void **"
+  Local "_13" "void *"
+  Local "_14" "void **"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "void *"
+  Local "_19" "void **"
+  Block "bb0" entry
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:3:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:4:12 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:4:16 generated
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:5:12 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:5:19 generated
+    StorageLive zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:10 generated "_7"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:14 written
+      Destination "_7"
+      Use
+        Constant 0
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:18 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:21 written
+      Destination "_8"
+      Binary "Lt"
+        Copy "_7"
+        Copy "_2"
+    Branch zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:21 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:21 generated
+    ArgumentsEvaluated zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:7:13 generated
+    Call zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:7:13 written "calloc" "bb7"
+      Destination "_9"
+      Constant 1
+      Constant 16
+  Block "bb6"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:21 generated
+    StorageDead zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:11:5 generated "_7"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:9 written
+      Destination "_17"
+      Unary "Not"
+        Copy "_5"
+    Branch zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:9 written "bb14" "bb15"
+      Copy "_17"
+  Block "bb7"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:7:9 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:7:9 generated
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:13 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_5"
+    Branch zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:13 written "bb8" "bb9"
+      Copy "_11"
+  Block "bb8"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:13 generated
+    Goto "bb11"
+  Block "bb9"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:13 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:9:9 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:9:9 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_6"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:9:9 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:9:9 generated
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:10:9 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:10:9 written
+      Destination "_14"
+      Use
+        Copy "_6"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:10:9 generated
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:28 written
+      Destination "_15"
+      Use
+        Copy "_7"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:28 written
+      Destination "_16"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:28 written
+      Destination "_7"
+      Use
+        Copy "_16"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:6:28 generated
+    Goto "bb4"
+  Block "bb11"
+    Goto "bb12"
+  Block "bb12"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:26 generated
+    Goto "bb11"
+  Block "bb13"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:8:26 generated
+    Goto "bb10"
+  Block "bb14"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:9 generated
+    Goto "bb17"
+  Block "bb15"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:13:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:13:5 written
+      Destination "_18"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:13:5 generated
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:14:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Operation zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:14:5 written
+      Destination "_19"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:14:5 generated
+    Return
+  Block "bb17"
+    Goto "bb18"
+  Block "bb18"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:22 generated
+    Goto "bb17"
+  Block "bb19"
+    Sequenced zero_bytes_in_a_block_an_earlier_turn_made_leave_after_the_newest_is_written_whole.c:12:22 generated
+    Goto "bb16"

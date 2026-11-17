@@ -22,7 +22,7 @@ use super::bits::Bits;
 use super::fit::{pointee, pointee_width};
 use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
-use super::parts::{Earliest, Init, SiteState};
+use super::parts::{Earliest, Extent, Init, SiteState};
 use super::store::{StoreKind, Written};
 use super::{Departure, Finding, Kind, PartAsked, Unproven, WrittenAs};
 
@@ -419,7 +419,17 @@ pub(super) fn ask_partial(
     analysis: &Allocations<'_>,
     known: &Known,
 ) {
+    // **Not memory narrower than a pointer**, which holds no pointer to be
+    // part of, as the notes skip it (`Allocations::note_written`): a read of
+    // a pointer out of an `int` is the bounds rule's (#940).
+    let target = analysis.unit.target();
+    let pointer = u64::from(target.pointer_bits() / target.char().bits());
+    let narrower =
+        |at: Storage| matches!(known.extent[at], Some(Extent::Exactly(size)) if size < pointer);
     for (at, caret) in storages {
+        if narrower(at) {
+            continue;
+        }
         if let Some((place, written)) = door.record(known, at) {
             let said = place.unwrap_or(caret);
             push_part_of_a_pointer(findings, analysis, said, door.asked(), written);

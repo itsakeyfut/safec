@@ -1,3 +1,13 @@
+warning[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+   ╭─[ a_pointer_rebuilt_by_strcat_is_doubted_after_its_free.c:8:15 ]
+   │
+ 8 │     int **a = calloc(1, 8); int **b = calloc(1, 8);
+   │               ──────┬─────  
+   │                     ╰─────── written here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 warning[SC0412]: this may reach outside the object `cb` points at
     ╭─[ a_pointer_rebuilt_by_strcat_is_doubted_after_its_free.c:13:5 ]
     │

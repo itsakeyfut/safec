@@ -1,0 +1,10 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+   ╭─[ a_block_calloc_made_copied_whole_and_read_back_is_reported_at_the_calloc.c:6:16 ]
+   │
+ 6 │     void **q = calloc(1, 8);
+   │                ──────┬─────  
+   │                      ╰─────── written here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers

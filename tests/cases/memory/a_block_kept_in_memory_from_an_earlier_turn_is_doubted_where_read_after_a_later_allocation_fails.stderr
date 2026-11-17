@@ -1,3 +1,13 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+   ╭─[ a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_read_after_a_later_allocation_fails.c:5:18 ]
+   │
+ 5 │     int ***box = calloc(1, 8);
+   │                  ──────┬─────  
+   │                        ╰─────── written here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0411]: `*old` may be read before anything was assigned to it
     ╭─[ a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_read_after_a_later_allocation_fails.c:13:13 ]
     │

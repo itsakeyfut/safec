@@ -571,6 +571,14 @@ impl Known {
         self.written[storage].wrote_part();
     }
 
+    /// Note on `storage` a write at `at` of a value at least a pointer wide
+    /// that is not one, keeping the earlier, and say in the write state that
+    /// no whole pointer is there. See [`Self::other_written`].
+    pub(super) fn note_other_written(&mut self, sources: &SourceMap, storage: Storage, at: Span) {
+        self.other_written[storage].note(sources, at);
+        self.written[storage].wrote_part();
+    }
+
     /// What was stored through a pointer naming any of `storages` is no longer
     /// what a read through it reads, since a write of part of a pointer
     /// landed over it there. See `Held::stored_through`.
@@ -598,8 +606,10 @@ impl Known {
         to: &[Storage],
     ) {
         let mut carried = Earliest::none();
+        let mut other = Earliest::none();
         for &block in from {
             carried.join(sources, self.part_written[block]);
+            other.join(sources, self.other_written[block]);
         }
         // **And the write state, from the state of what it copies** (#1019).
         let part = from
@@ -607,6 +617,7 @@ impl Known {
             .any(|&block| self.written[block].may_hold_part());
         for &site in to {
             self.part_written[site].join(sources, carried);
+            self.other_written[site].join(sources, other);
             if part {
                 self.written[site].wrote_part();
             }

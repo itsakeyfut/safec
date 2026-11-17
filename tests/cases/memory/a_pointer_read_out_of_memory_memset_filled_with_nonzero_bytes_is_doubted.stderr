@@ -1,3 +1,13 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+   ╭─[ a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:57 ]
+   │
+ 2 │ void f(void) { int **box = malloc(8); if (!box) return; memset(box, 1, 8); int *t = *box; if (t) *t = 1; free(box); }
+   │                                                         ────────┬────────  
+   │                                                                 ╰────────── written here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0402]: this uses `t`, which this check stopped following
    ╭─[ a_pointer_read_out_of_memory_memset_filled_with_nonzero_bytes_is_doubted.c:2:98 ]
    │

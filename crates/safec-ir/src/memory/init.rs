@@ -35,6 +35,9 @@ pub(super) enum Wrote<'a> {
         /// How many bytes it writes, which `Write` says once for the store
         /// rather than this rule asking the place's type again.
         width: Option<u64>,
+        /// What it wrote: a whole pointer only where its type is a pointer
+        /// (#940).
+        whole: Whole,
     },
     /// A library copy handed `dest` first and `source` second, whose length
     /// covers the pointers it writes as
@@ -203,8 +206,22 @@ impl Allocations<'_> {
             // y;` through a parameter that cannot reach `*m` left
             // `*m` read in silence where it was `SC0411` without
             // the store (#778).
+            //
+            // **What it wrote is said only of the blocks its landing
+            // names** (#940): what code this check cannot read can name
+            // beside them keeps what it held. A store of a value that is
+            // not a pointer landing in memory of pointers is undefined
+            // itself (C17 6.5p7), so a defined program never makes it hold
+            // one, and saying it did doubted every pointer read out of
+            // such memory after an `int` stored through a parameter, by the
+            // owner's decision. See ADR-0098.
             for site in may_land {
-                value.written[site].may_write(whole);
+                let wrote = if landing.containers.contains(&site) {
+                    whole
+                } else {
+                    Whole::Pointer
+                };
+                value.written[site].may_write(wrote);
             }
             let certain = landing.certain();
             let mut uncertain = certain.is_none();
@@ -502,11 +519,8 @@ impl Allocations<'_> {
                 landing,
                 unwritten_before,
                 width,
+                whole,
             } => {
-                // **A whole pointer, as today's belief has it** (#1019): a
-                // store narrower than one says it wrote part of one after
-                // this, through `note_narrow_store`, which runs after it.
-                let whole = Whole::Pointer;
                 let pointer = place.local;
                 let one_step = landing.one_step;
                 // **And a local it may write past the end of**, at every depth:
