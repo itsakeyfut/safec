@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (extended to a call by ADR-0101)"
 date: 2026-11-07
 decision-makers: itsakeyfut
 ---
