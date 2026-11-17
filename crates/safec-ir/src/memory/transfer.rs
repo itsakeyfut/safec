@@ -2820,6 +2820,10 @@ impl Analysis for Allocations<'_> {
                 // **A whole pointer only where its type is a pointer**: any
                 // other store, an aggregate that holds one included, leaves
                 // the slot not believed to hold one (#940). See ADR-0098.
+                // **Held by no case, measured**: a store of another type is
+                // narrower than a pointer in what this frontend reads, an
+                // `int` or a `char`, and `note_narrow_store` says it wrote
+                // part of one after this; `long` and structs are `SC0207`.
                 let whole = if place_ty.is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Pointer(_)))
                 {
                     Whole::Pointer
@@ -2868,7 +2872,9 @@ impl Analysis for Allocations<'_> {
                 // `Known::written`. **A whole pointer only where its type is
                 // one**, as a store through a pointer (#940); one that is not
                 // is noted where it was written, for a copy of its bytes read
-                // as a pointer.
+                // as a pointer. **Held by no case, measured**, for the reason
+                // the store's is: a local of another type is narrower than a
+                // pointer, which the doors do not ask.
                 if let Some(at) = Strong::assigned(&operation.place) {
                     value.written_local(at.into(), whole);
                     if whole == Whole::Other {
