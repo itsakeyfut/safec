@@ -2218,7 +2218,7 @@ impl Allocations<'_> {
         // What each allocation may contain, every field at once. See
         // `Cell::absorb`.
         for (here, there) in contents.iter_mut().zip(&from.contents) {
-            here.absorb(there);
+            here.absorb(there, widen);
         }
 
         // **A union, because a read on either arm is a read some execution

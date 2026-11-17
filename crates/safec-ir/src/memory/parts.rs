@@ -2598,6 +2598,11 @@ pub(super) struct Cell {
     /// used two, so each of its four doors named all 22 and a field added
     /// to `Held` was answered at seven doors where it is answered at four.
     names: Bits<Referent>,
+    /// **Where in what it names a pointer stored there points**, joined over
+    /// every store as the rest of the record is, `None` where nothing was
+    /// stored: the identity of [`Cell::absorb`]. Read by a load only where
+    /// the load is vouched for. See ADR-0100.
+    position: Option<Position>,
 }
 
 impl Cell {
@@ -2608,6 +2613,7 @@ impl Cell {
         Cell {
             widths: Levels::default(),
             names: Bits::new(Referent::count(locals)),
+            position: None,
         }
     }
 
@@ -2619,6 +2625,12 @@ impl Cell {
     /// Every local whose address a pointer stored there may be.
     pub(super) fn locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
         self.names.ones().filter_map(Referent::local)
+    }
+
+    /// Whether a pointer stored there may name any storage, as
+    /// [`Position::joined`] asks of each side.
+    fn names_storage(&self) -> bool {
+        self.names.ones().any(|named| named.storage().is_some())
     }
 
     /// Whether a pointer stored there may hold `site`.
@@ -2676,6 +2688,9 @@ impl Cell {
         let Cell {
             names: _,
             widths: _,
+            // Its position goes with the record, which `Known::reborn` keeps
+            // or drops whole.
+            position: _,
         } = self;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field, so that a field added to `Held`
@@ -2718,6 +2733,9 @@ impl Cell {
         let Cell {
             names: _,
             widths: _,
+            // Taken by `Known::load_into` alone, and only where it vouches
+            // for the load. See ADR-0100.
+            position: _,
         } = self;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
@@ -2769,6 +2787,20 @@ impl Cell {
             poured.names.set(Referent::Local(target));
         }
         poured.bound_stored(stored);
+        // **Only a position the bounds rule would trust in the value
+        // itself** (ADR-0100 rule 3): one this check stopped following, or
+        // wrote where it could not see, is recorded as not known, so no load
+        // out of the block is vouched for. Kept, an escaped local written
+        // through a pointer this check could not place was stored at its
+        // stale start and read back as proved inside (#1025).
+        poured.position = Some(if from.beyond().stopped_following_or_written_unseen() {
+            Position {
+                at: At::Unknown,
+                row: None,
+            }
+        } else {
+            from.position
+        });
         // Every field named, never `..`: a mark memory keeps that no door
         // puts there is a mark no load ever sees, so a field added to `Held`
         // is `error[E0027]` here until it says what a store leaves of it.
@@ -2785,6 +2817,7 @@ impl Cell {
             // Not recorded in memory. See `Self::absorb`.
             freed: _,
             writes_elsewhere: _,
+            // Recorded above.
             position: _,
             named_at_read: _,
             returned_by: _,
@@ -2828,8 +2861,23 @@ impl Cell {
     /// join's identity and a block nothing was stored in is one. `other` is
     /// destructured with no `..`, so a field added to a cell is
     /// `error[E0027]` here until it says how two blocks' records join.
-    pub(super) fn absorb(&mut self, other: &Cell) {
-        let Cell { names, widths } = other;
+    pub(super) fn absorb(&mut self, other: &Cell, widen: bool) {
+        let Cell {
+            names,
+            widths,
+            position,
+        } = other;
+        // **Joined as a value's is**, each side's names saying whether it
+        // names storage, so a null stored takes no part, and widened at a
+        // loop's back edge (ADR-0099); nothing stored is the identity.
+        // Computed before the names are taken in, which it reads.
+        self.position = match (self.position, *position) {
+            (None, there) => there,
+            (here, None) => here,
+            (Some(here), Some(there)) => {
+                Some(here.joined(self.names_storage(), there, other.names_storage(), widen))
+            }
+        };
         self.names.union_with(names);
         // **The lower at every level**, and a store that recorded no width at
         // level 0 absorbs whatever the other recorded (#767).
@@ -3404,8 +3452,8 @@ mod tests {
     }
 
     use super::{
-        At, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Position, Row, SiteState, Whole,
-        Why, Width, earlier,
+        At, Cell, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Position, Row, SiteState,
+        Whole, Why, Width, earlier,
     };
     use crate::memory::index::{Idx, LocalIdx, Site};
     use crate::source::inside;
@@ -3476,6 +3524,45 @@ mod tests {
         );
         assert_eq!(At::Bytes(0).joined(At::Bytes(4), true), At::Unknown);
         assert_eq!(At::Bytes(4).joined(At::Bytes(4), true), At::Bytes(4));
+    }
+
+    /// A block's record takes the position of what was stored in it, joined
+    /// as a value's: two stores at different counted positions keep the range
+    /// between them, and at a loop's back edge they widen, so a record a loop
+    /// stores a moving pointer into reaches a fixpoint. Nothing stored is the
+    /// identity, and a null stored takes no part. See ADR-0100.
+    ///
+    /// Mutation: have `Cell::absorb` ignore `widen`; this fails at the back
+    /// edge. Mutation: have it keep its own position; this fails at the
+    /// range.
+    #[test]
+    fn a_blocks_record_joins_the_positions_stored_and_widens_them_at_a_back_edge() {
+        let stored = |at: At, names_a_site: bool| {
+            let mut cell = Cell::none(2);
+            if names_a_site {
+                cell.name_site(Site::at(1));
+            }
+            cell.position = Some(Position { at, row: None });
+            cell
+        };
+        let joined = |here: &Cell, there: &Cell, widen: bool| {
+            let mut here = here.clone();
+            here.absorb(there, widen);
+            here.position.map(|position| position.at)
+        };
+        let at_4 = stored(At::Bytes(4), true);
+        let at_8 = stored(At::Bytes(8), true);
+        assert_eq!(
+            joined(&at_4, &at_8, false),
+            Some(At::Within { least: 4, most: 8 })
+        );
+        assert_eq!(joined(&at_4, &at_8, true), Some(At::Moved));
+        assert_eq!(joined(&Cell::none(2), &at_8, false), Some(At::Bytes(8)));
+        assert_eq!(joined(&at_4, &Cell::none(2), false), Some(At::Bytes(4)));
+        assert_eq!(
+            joined(&at_4, &stored(At::Bytes(0), false), false),
+            Some(At::Bytes(4))
+        );
     }
 
     /// The lower of two bounds, where `None` is no bound: what

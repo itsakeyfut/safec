@@ -1713,7 +1713,8 @@ impl Known {
     /// writes into what it was handed, which records the sites alone.
     pub(super) fn pour(&mut self, containers: &[Site], poured: &Cell, in_part: &[LocalIdx]) {
         for &container in containers {
-            self.contents[container].absorb(poured);
+            // A store is no loop, so nothing widens here.
+            self.contents[container].absorb(poured, false);
         }
         for &array in in_part {
             self.stored_in_part[array] = true;
