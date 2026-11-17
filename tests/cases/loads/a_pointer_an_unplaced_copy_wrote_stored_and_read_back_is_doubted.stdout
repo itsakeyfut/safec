@@ -1,0 +1,287 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:4:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+Function a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter "ww"
+  Local "_2" "int[4]" "a"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Local "_14" "int *" "p"
+  Local "_15" "int **"
+  Local "_16" "int *"
+  Local "_17" "int *"
+  Local "_18" "int **" "w"
+  Local "_19" "int *" "t"
+  Local "_20" "int *"
+  Local "_21" "int *"
+  Local "_22" "int **"
+  Local "_23" "void *"
+  Local "_24" "int **" "box"
+  Local "_25" "void *"
+  Local "_26" "int"
+  Local "_27" "int *"
+  Local "_28" "int *" "q"
+  Local "_29" "int"
+  Local "_30" "int" "r"
+  Local "_31" "int *"
+  Block "bb0" entry
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:5 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:5 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:15 generated
+      Destination "_5"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:15 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:15 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:15 written
+      Destination "_7"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:15 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:25 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:25 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_8"
+        Constant 2
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:25 written
+      Destination "_9"
+        Deref
+      Use
+        Constant 2
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:25 written
+      Destination "_10"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:25 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:35 generated
+      Destination "_11"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:35 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_11"
+        Constant 3
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:35 written
+      Destination "_12"
+        Deref
+      Use
+        Constant 3
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:35 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:7:35 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:8:10 written
+      Destination "_14"
+      Use
+        Constant 0
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:8:14 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:9:10 written
+      Destination "_15"
+      Address
+        Place "_14"
+    ArgumentsEvaluated a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:9:5 generated
+    Call a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:9:5 written "keep" "bb1"
+      Copy "_15"
+  Block "bb1"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:9:5 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:10:9 generated
+      Destination "_16"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:10:5 written
+      Destination "_14"
+      Use
+        Copy "_16"
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:10:5 written
+      Destination "_17"
+      Use
+        Copy "_14"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:10:5 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:11:11 written
+      Destination "_18"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:11:15 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:12:14 generated
+      Destination "_20"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:12:14 written
+      Destination "_21"
+      Binary "Add"
+        Copy "_20"
+        Constant 3
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:12:10 written
+      Destination "_19"
+      Use
+        Copy "_21"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:12:14 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:13:15 written
+      Destination "_22"
+      Address
+        Place "_19"
+    ArgumentsEvaluated a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:13:5 generated
+    Call a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:13:5 written "memcpy" "bb2"
+      Destination "_23"
+      Copy "_18"
+      Copy "_22"
+      Constant 8
+  Block "bb2"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:13:5 generated
+    ArgumentsEvaluated a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:14:17 generated
+    Call a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:14:17 written "malloc" "bb3"
+      Destination "_25"
+      Constant 8
+  Block "bb3"
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:14:11 written
+      Destination "_24"
+      Use
+        Copy "_25"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:14:17 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:9 written
+      Destination "_26"
+      Binary "Eq"
+        Copy "_24"
+        Constant 0
+    Branch a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:9 written "bb4" "bb5"
+      Copy "_26"
+  Block "bb4"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:9 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:19 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:26 generated
+    Return
+  Block "bb5"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:15:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:16:5 written
+      Destination "_24"
+        Deref
+      Use
+        Copy "_14"
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:16:5 written
+      Destination "_27"
+      Use
+        Copy "_24"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:16:5 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:17:10 written
+      Destination "_28"
+      Use
+        Copy "_24"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:17:14 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:18:9 written
+      Destination "_29"
+      Binary "Eq"
+        Copy "_28"
+        Constant 0
+    Branch a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:18:9 written "bb7" "bb8"
+      Copy "_29"
+  Block "bb7"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:18:9 generated
+    ArgumentsEvaluated a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:19:9 generated
+    Call a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:19:9 written "free" "bb10"
+      Copy "_24"
+  Block "bb8"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:18:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:22:13 written
+      Destination "_31"
+      Binary "Add"
+        Copy "_28"
+        Constant 1
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:22:9 written
+      Destination "_30"
+      Use
+        Copy "_31"
+          Deref
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:22:13 generated
+    ArgumentsEvaluated a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:23:5 generated
+    Call a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:23:5 written "free" "bb11"
+      Copy "_24"
+  Block "bb10"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:19:9 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:20:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:20:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:23:5 generated
+    Operation a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:24:5 written
+      Destination "_0"
+      Use
+        Copy "_30"
+    Sequenced a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted.c:24:12 generated
+    Return

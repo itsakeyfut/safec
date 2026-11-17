@@ -140,6 +140,7 @@ pub(super) fn built_from(
             array_edge: false,
             stored_through: false,
             may_be_null: false,
+            vouched: false,
         },
     );
     for &source in &followed {
@@ -160,6 +161,18 @@ pub(super) fn built_from(
             _ => None,
         },
     };
+    // **A counted move of a value vouched for stays vouched**, its position
+    // being the one just counted from the one vouched for; a load or a byte
+    // among the operands is not, and neither is a value with no pointer
+    // operand. Decided here, where the operands are counted, not in
+    // `Held::accumulated`, which sees two values and not how many operands
+    // there were. See ADR-0100.
+    reached.vouched = !followed.is_empty()
+        && loads.is_empty()
+        && bytes.is_empty()
+        && followed
+            .iter()
+            .all(|&source| value.points_to[source].vouched);
     // **And it contributes what it holds**, what a load out of the same place
     // assigned to a local is given, at an offset nobody said since the
     // distance is not carried (ADR-0036). `loaded` below keeps every reader
@@ -175,6 +188,9 @@ pub(super) fn built_from(
             derefs(load),
             &is_array,
             reads_caller_memory(load.local, derefs(load)),
+            // An operand keeps the position its arithmetic gives it, and is
+            // never vouched for. See ADR-0100.
+            None,
         );
     }
 

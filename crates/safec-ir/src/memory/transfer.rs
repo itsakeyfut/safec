@@ -355,6 +355,7 @@ impl Allocations<'_> {
                     array_edge: false,
                     stored_through: false,
                     may_be_null: false,
+                    vouched: false,
                 },
             ),
         }
@@ -1353,6 +1354,7 @@ impl Allocations<'_> {
                 // Memory records no null, so what is read out of it may be
                 // one (#931).
                 may_be_null: true,
+                vouched: false,
             },
         );
         // What could be named as this was read. See `Held::named_at_read`.
@@ -1375,6 +1377,9 @@ impl Allocations<'_> {
                 depth,
                 &|local| self.is_array(function, local),
                 self.reads_caller_memory(local, depth, value),
+                // A byte proves nothing of what it names (ADR-0046), so only
+                // a typed read is vouched for. See ADR-0100.
+                Some(matches!(read_as, ReadAs::Typed(_))),
             );
             if named_a_local {
                 held.writes_elsewhere = true;
@@ -2218,7 +2223,7 @@ impl Allocations<'_> {
         // What each allocation may contain, every field at once. See
         // `Cell::absorb`.
         for (here, there) in contents.iter_mut().zip(&from.contents) {
-            here.absorb(there);
+            here.absorb(there, widen);
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -2484,6 +2489,7 @@ impl Analysis for Allocations<'_> {
                         array_edge: false,
                         stored_through: false,
                         may_be_null: false,
+                        vouched: false,
                     },
                 ),
                 self.locals,
@@ -2598,6 +2604,7 @@ impl Analysis for Allocations<'_> {
                     // **And may be null, unless it is `_Nonnull`**: the caller may
                     // pass none (#931).
                     may_be_null: function.nonnull(parameter).is_none(),
+                    vouched: false,
                 },
             );
             known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), At::Bytes(0));
@@ -3469,6 +3476,7 @@ impl Analysis for Allocations<'_> {
                                     array_edge: false,
                                     stored_through: false,
                                     may_be_null: false,
+                                    vouched: false,
                                 },
                             ),
                         );
@@ -3547,6 +3555,7 @@ impl Analysis for Allocations<'_> {
                                     array_edge: false,
                                     stored_through: false,
                                     may_be_null: false,
+                                    vouched: false,
                                 },
                             ),
                         );

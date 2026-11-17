@@ -651,6 +651,15 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
             "a local nothing was assigned holds nothing, nor null; a parameter and a call's result set it on the value `Held::none` builds, each at its own door (#931)",
         ),
     ),
+    (
+        "vouched",
+        Field::Exempt(
+            "whether a load's position is the one its block's record vouches for (ADR-0100); only a load out of a heap block sets it, and no belief's rows read one back through a local; held by the corpus",
+        ),
+        Start::Quiet(
+            "no value is read out of memory before the function runs, so nothing is vouched for, and the bounds rule doubts a load that is not",
+        ),
+    ),
 ];
 
 /// The fields of `Held`, read off its declaration, comments skipped.

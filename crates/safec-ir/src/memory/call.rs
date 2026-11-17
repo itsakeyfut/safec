@@ -67,6 +67,7 @@ impl Allocations<'_> {
                 array_edge: false,
                 stored_through: false,
                 may_be_null: false,
+                vouched: false,
             },
         );
         let poured = Cell::poured(
@@ -452,6 +453,15 @@ impl Allocations<'_> {
                         StoreKind::Copy,
                     );
                     self.note_landing(&landing, noted, origin.span(), value);
+                    // **And where a pointer stored there points is no
+                    // longer known**, whatever the bytes: a fill of zeros
+                    // or of less than a pointer pours nothing, so the
+                    // record kept `a + 1` under `memset(box, 255, 4)` and
+                    // a read past `a` back out of it went silent. Found by
+                    // review. See ADR-0100.
+                    for &site in &landing.containers {
+                        value.contents[site].position_unknown();
+                    }
                 }
             }
         }
@@ -1592,6 +1602,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 );
@@ -1650,6 +1661,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 };
@@ -1699,6 +1711,7 @@ impl Allocations<'_> {
                             array_edge: false,
                             stored_through: false,
                             may_be_null: false,
+                            vouched: false,
                         },
                     ),
                 };
@@ -1769,6 +1782,7 @@ impl Allocations<'_> {
                     // **And may be null**, an allocation's result as much as an opaque
                     // call's, unless its callee promises otherwise (#931).
                     may_be_null: self.unit.function(*callee).promised().is_none(),
+                    vouched: false,
                 },
             ),
         );
