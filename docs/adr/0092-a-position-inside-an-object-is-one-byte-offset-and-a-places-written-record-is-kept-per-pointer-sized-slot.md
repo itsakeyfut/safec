@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (rule 1's join of two counted positions and of a null superseded by ADR-0099)"
 date: 2026-11-11
 decision-makers: itsakeyfut
 ---
@@ -117,7 +117,8 @@ Each measured on the #918 branch by applying the change and restoring it.
 The cases are in `tests/cases/`, with their mutations in their notes in
 `tests/cases.rs`.
 
-* **Rule 1.** `two_positions_off_the_start_join_off_the_start_whatever_the_distances`
+* **Rule 1.** `two_counted_positions_join_to_the_range_between_them`, which
+  replaced the test this named when ADR-0099 changed the join,
   in `crates/safec-ir/src/memory/parts.rs` fails, and so does
   `a_free_offset_on_both_arms_is_still_proved`, when two positions off the
   start join as `Unknown`. `built::offset_of` counting no distance fails 84
