@@ -365,26 +365,29 @@ impl PartialDoor {
     /// site made again in a loop meets the turn that wrote it at the loop's
     /// head, so `now` still holds the write wherever the block leaves.
     ///
-    /// **Only where the write state says part of a pointer may be there**
-    /// (#1019): the record names the place, and the state is the belief, so
-    /// a whole pointer written over the part since ends the report. Where it
-    /// leaves, a site made again since (`now` gone) is answered by `ever`
-    /// alone, since the state is of the block made since. A state that says
-    /// part with no place recorded is #940's to report.
+    /// **A read asks the write state too** (#1019): the record names the
+    /// place and the state is the belief, so a whole pointer written over
+    /// the part since ends the report. A state that says part with no place
+    /// recorded is #940's to report.
     ///
-    /// Mutation: take every recorded block as holding part;
-    /// `a_whole_pointer_stored_over_part_of_one_before_the_block_leaves_is_not_reported`
-    /// is reported. **No case holds `now` being gone where it leaves**,
-    /// measured: asking the state there too fails nothing, since a site made
-    /// again reaches the exit joined with the turn that wrote the part.
+    /// **Where it leaves, the record alone**, as before: `ever` covers every
+    /// block the site made, and the state only the one it names now. Asked
+    /// there too, a list built in a loop, each block written in part and the
+    /// newest written whole after it, left with its older blocks holding
+    /// part in silence, found by review.
+    ///
+    /// Mutation: a read takes every recorded block as holding part;
+    /// `a_whole_pointer_stored_over_part_of_one_before_it_is_read_back_is_not_reported`
+    /// is reported. Mutation: where it leaves, ask the state as a read does;
+    /// `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole`
+    /// goes silent.
     fn record(self, known: &Known, at: Storage) -> Option<Span> {
-        let part = known.written[at].may_hold_part();
         let record = known.part_written[at];
         match self {
-            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
-                record.ever().filter(|_| part || record.now().is_none())
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => record.ever(),
+            PartialDoor::Load | PartialDoor::CopyOut => {
+                record.now().filter(|_| known.written[at].may_hold_part())
             }
-            PartialDoor::Load | PartialDoor::CopyOut => record.now().filter(|_| part),
         }
     }
 

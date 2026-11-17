@@ -49,12 +49,16 @@ split this from the change of belief (#1019).
    (`Allocations::copy_writes`); every other write, and every belief at a
    boundary, says `Pointer`. Code this check cannot read is believed to
    write whole pointers without writing over what was there.
-3. **The partial-pointer doors ask the state; the record names the place.**
-   A whole pointer written over the part since ends the report. Where a
-   block leaves after its site was made again, `now` is gone and `ever`
-   answers alone, as ADR-0089 keeps it, since the state is of the block
-   made since.
-4. **The third set of bits is counted in the memory bound** by its size.
+3. **A read asks the state; the record names the place.** A load or a
+   library copy out of the block reports where the state says part may be
+   there and `now` names the write, so a whole pointer written over the
+   part since ends the report.
+4. **Where a block leaves, the record alone**, as ADR-0087 and ADR-0089
+   have it: `ever` covers every block the site made, and the state only
+   the one it names now. Asked there too, a list built in a loop, each
+   block written in part and the newest written whole after it, left with
+   its older blocks holding part in silence, found by review of #1019.
+5. **The third set of bits is counted in the memory bound** by its size.
 
 ### Confirmation
 
@@ -79,20 +83,23 @@ Measured on #1019's branch by applying each change and restoring it:
   `a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported`;
   `realloc` not carrying the state fails
   `a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported`.
-* The doors taking every recorded block as holding part reports
-  `a_whole_pointer_stored_over_part_of_one_before_the_block_leaves_is_not_reported`;
+* A read taking every recorded block as holding part reports
+  `a_whole_pointer_stored_over_part_of_one_before_it_is_read_back_is_not_reported`;
   a store at one slot writing the block whole silences
-  `part_of_a_pointer_in_a_slot_no_whole_one_was_stored_over_is_reported`.
-* **Held by nothing**: the leaving doors answering by `ever` where `now`
-  is gone, and the copy's own answer for a length that ends part way
-  through a pointer. Each says so where it is.
+  `part_of_a_pointer_in_a_slot_no_whole_one_was_stored_over_is_reported_where_read_back`.
+* The doors where a block leaves asking the state as a read does silences
+  `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole`.
+* **Held by nothing**: the copy's own answer for a length that ends part
+  way through a pointer, which says so where it is.
 
 ### Consequences
 
 * Good, because a writer that does not say what it wrote does not compile,
   and #940 changes what each says rather than adding a route.
-* Good, because a whole pointer stored over the part is no longer reported:
-  the program reads the pointer it wrote.
+* Good, because a whole pointer stored over the part is no longer reported
+  where it is read back: the program reads the pointer it wrote.
+* Bad, because where the block leaves it still is, since the record cannot
+  tell the block the site names now from older ones; #940 meets that.
 * Bad, because every slot keeps a third bit, counted in the memory bound,
   which moves the estimate the too-large cases print.
 
