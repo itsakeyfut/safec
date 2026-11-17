@@ -371,7 +371,7 @@ pub(super) fn reported(
             // `Reached::Lost` above, which `interior` answers nothing for.
             Operand::Copy(_) | Operand::Constant(_) => None,
         })
-        .reduce(At::joined)
+        .reduce(|here, there| here.joined(there, false))
         .unwrap_or(At::Bytes(0));
 
     // One pointer handed to be freed, read as itself, is the value both
@@ -509,8 +509,10 @@ fn interior(reached: &[Reached], offset: At, known: &Known) -> Option<Verdict> {
 
     let (conclusion, unproven) = match offset {
         At::Bytes(0) => return None,
-        At::Moved | At::Bytes(1..) => (Conclusion::Unsafe, None),
-        At::Unknown => (Conclusion::Unknown, Some(Unproven::Offset)),
+        // **A range is off the start only where its near end is** (#944):
+        // `p` and `p + 1` met may be either, a doubt. See ADR-0099.
+        At::Moved | At::Bytes(1..) | At::Within { least: 1.., .. } => (Conclusion::Unsafe, None),
+        At::Within { least: 0, .. } | At::Unknown => (Conclusion::Unknown, Some(Unproven::Offset)),
     };
 
     Some(Verdict {
@@ -1209,10 +1211,7 @@ fn departing_fit(
     width: u64,
     known: &Known,
 ) -> Option<Fit> {
-    let off_start = matches!(
-        known.points_to[local].position.at,
-        At::Moved | At::Bytes(1..)
-    );
+    let off_start = known.points_to[local].position.at.off_start();
     fits(analysis, function, local, width, known, false)
         .map(|fit| if off_start { Fit::Unknown } else { fit })
 }

@@ -1933,7 +1933,10 @@ impl Allocations<'_> {
     /// once, `Allocations::runs_once`: one body, so the two cannot drift
     /// apart. They differ only in what a local unwritten on one side and
     /// written on the other becomes. See `Known::written`.
-    fn joined(&self, into: &mut Known, from: &Known, back: bool) {
+    ///
+    /// `widen` is set at a loop's back edge alone, where a position joins as
+    /// it did before it kept a range, so the walk ends (#944, `At::joined`).
+    fn joined(&self, into: &mut Known, from: &Known, back: bool, widen: bool) {
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
         // and nothing else in the build says so: the field is read, the walk
@@ -2160,7 +2163,7 @@ impl Allocations<'_> {
                 (None, Some(site)) if no_block(here, &state[site], site) => Some(site),
                 _ => None,
             };
-            here.joined(there, self.sources);
+            here.joined(there, self.sources, widen);
             if kept.is_some() {
                 here.returned_by = kept;
             }
@@ -2618,11 +2621,11 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, false);
+        self.joined(into, from, false, false);
     }
 
     fn join_back(&self, head: BlockId, into: &mut Self::Value, from: &Self::Value) {
-        self.joined(into, from, self.runs_once[head.index()].is_some());
+        self.joined(into, from, self.runs_once[head.index()].is_some(), true);
     }
 
     /// A loop shown to run is left only through its head after a whole turn
@@ -2649,7 +2652,7 @@ impl Analysis for Allocations<'_> {
         from: &Self::Value,
         before: &Self::Value,
     ) {
-        self.joined(into, from, self.runs_once[head.index()].is_some());
+        self.joined(into, from, self.runs_once[head.index()].is_some(), true);
         for place in into.written.indices() {
             // **Not a site the paths into the loop did not name**, which the
             // back edge made and nothing before it wrote.

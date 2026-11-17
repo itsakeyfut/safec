@@ -2645,7 +2645,8 @@ impl Known {
     pub(super) fn covers_whole(&self, at: Storage, offset: At, width: Option<u64>) -> bool {
         match self.extent[at] {
             Some(Extent::Exactly(size)) => {
-                !matches!(offset, At::Moved | At::Bytes(1..))
+                // A range may be off the start, so no whole write (#944).
+                !matches!(offset, At::Moved | At::Bytes(1..) | At::Within { .. })
                     && width.is_some_and(|width| width >= size)
             }
             Some(Extent::AtLeast(_)) | None => false,
@@ -2729,7 +2730,7 @@ impl Known {
     /// a position joined with one in another row. See
     /// [`Position::joined`](super::parts::Position::joined).
     pub(super) fn target_union(&mut self, target: LocalIdx, written: &Held) {
-        let position = self.points_to[target].position_joined(written);
+        let position = self.points_to[target].position_joined(written, false);
         self.points_to[target].accumulated(written);
         self.points_to[target].position = position;
         self.points_to[target].freed = None;

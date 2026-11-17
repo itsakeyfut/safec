@@ -1,0 +1,14 @@
+error[SC0404]: this frees `q`, which may not be the start of an allocation
+   ╭─[ a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:7:5 ]
+   │
+ 3 │     int *a = malloc(16);
+   │              ─────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 7 │     free(q);
+   │     ───┬───  
+   │        ╰───── this offset may not be zero
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero

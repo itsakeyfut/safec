@@ -1099,7 +1099,7 @@ impl Allocations<'_> {
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
         through.site_element.or(match through.position.at {
             At::Bytes(at) if at % pointer == 0 => Some(at / pointer),
-            At::Bytes(_) | At::Moved | At::Unknown => None,
+            At::Bytes(_) | At::Within { .. } | At::Moved | At::Unknown => None,
         })
     }
 
@@ -1144,7 +1144,7 @@ impl Allocations<'_> {
             Some(element) => element.checked_mul(pointer)?,
             None => match offset {
                 At::Bytes(at) => at,
-                At::Moved | At::Unknown => return None,
+                At::Within { .. } | At::Moved | At::Unknown => return None,
             },
         };
         let end = start.checked_add(bytes.filter(|&bytes| bytes > 0)?)?;
