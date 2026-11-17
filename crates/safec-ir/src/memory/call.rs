@@ -453,6 +453,15 @@ impl Allocations<'_> {
                         StoreKind::Copy,
                     );
                     self.note_landing(&landing, noted, origin.span(), value);
+                    // **And where a pointer stored there points is no
+                    // longer known**, whatever the bytes: a fill of zeros
+                    // or of less than a pointer pours nothing, so the
+                    // record kept `a + 1` under `memset(box, 255, 4)` and
+                    // a read past `a` back out of it went silent. Found by
+                    // review. See ADR-0100.
+                    for &site in &landing.containers {
+                        value.contents[site].position_unknown();
+                    }
                 }
             }
         }

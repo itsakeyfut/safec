@@ -2789,6 +2789,10 @@ impl Known {
         self.points_to[target].accumulated(written);
         self.points_to[target].position = position;
         self.points_to[target].freed = None;
+        // A may-write is a join, so vouched for only where both were
+        // (ADR-0100); `accumulated` leaves the mark as the target had it.
+        // Found by review.
+        self.points_to[target].vouched = self.points_to[target].vouched && written.vouched;
     }
 
     /// What `writes` leave of the arrays they name, taken before the write

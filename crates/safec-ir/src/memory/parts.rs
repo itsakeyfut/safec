@@ -2655,9 +2655,20 @@ impl Cell {
         self.names.ones().all(|named| named.storage().is_some())
     }
 
+    /// Where a pointer stored there points is no longer known: bytes were
+    /// written over part or all of it by a door that pours no value, a
+    /// fill. Not `None`, which would make the next store's position the
+    /// record's whole. See ADR-0100.
+    pub(super) fn position_unknown(&mut self) {
+        self.position = Some(Position {
+            at: At::Unknown,
+            row: None,
+        });
+    }
+
     /// Whether a pointer stored there may name any storage, as
     /// [`Position::joined`] asks of each side.
-    fn names_storage(&self) -> bool {
+    pub(super) fn names_storage(&self) -> bool {
         self.names.ones().any(|named| named.storage().is_some())
     }
 
@@ -2821,14 +2832,32 @@ impl Cell {
         // out of the block is vouched for. Kept, an escaped local written
         // through a pointer this check could not place was stored at its
         // stale start and read back as proved inside (#1025).
-        poured.position = Some(if from.beyond().stopped_following_or_written_unseen() {
-            Position {
-                at: At::Unknown,
-                row: None,
-            }
-        } else {
-            from.position
-        });
+        //
+        // **Nor a value that is not a pointer by its type**, whose bytes
+        // land over part of a slot: it names nothing, as a null does, and
+        // a null's start is the identity of the join, so `c[0] = 1;` through
+        // a `char *` over `*box = a + 1` left the record at `a + 1` and a
+        // read past `a` back out of it went silent. Its level 0 records no
+        // width, which a null's does not (`Self::widths`). Found by review.
+        //
+        // **Nor an inner address**, which the bounds rule doubts in the
+        // value itself (`fit::reached` asks `inner_address`) while its
+        // position says the start: stored at that start, it would be read
+        // back as proved inside. Found by review; the C frontend lowers no
+        // such address today.
+        poured.position = Some(
+            if from.beyond().stopped_following_or_written_unseen()
+                || stored.at(0) == Width::Nothing
+                || from.inner_address
+            {
+                Position {
+                    at: At::Unknown,
+                    row: None,
+                }
+            } else {
+                from.position
+            },
+        );
         // Every field named, never `..`: a mark memory keeps that no door
         // puts there is a mark no load ever sees, so a field added to `Held`
         // is `error[E0027]` here until it says what a store leaves of it.

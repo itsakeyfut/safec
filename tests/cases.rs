@@ -5922,6 +5922,16 @@ cases! {
         // position whatever the value's marks; both go silent at `q[1]`.
         a_pointer_an_unplaced_store_wrote_stored_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_an_unplaced_copy_wrote_stored_and_read_back_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Bytes written over a stored pointer by a door that pours no value
+        // leave the record's position not known: a fill of part of it or of
+        // zeros, and a value that is not a pointer by its type written
+        // through a `char *`. Found by review. Mutation: drop the fill's
+        // `Cell::position_unknown`; the two fills go silent at `q[2]`.
+        // Mutation: drop the `Width::Nothing` test in `Cell::poured`; the
+        // byte goes silent at `q[2]`.
+        a_pointer_read_back_after_a_fill_of_part_of_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_back_after_a_fill_of_zeros_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_back_after_a_byte_written_over_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer a library copy reads out of a block is bytes, which prove
         // nothing of what they name (ADR-0046), so it is not vouched for and
         // stays doubted on a program that is defined. Mutation: vouch for a
