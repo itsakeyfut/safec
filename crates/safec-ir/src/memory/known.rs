@@ -1712,7 +1712,9 @@ impl Known {
             if !cell.names_only_modelled() || self.exposed[site] {
                 return None;
             }
-            let names = cell.sites().next().is_some() || cell.locals().next().is_some();
+            // Each side with whether it names storage, as `Position::joined`
+            // asks, so a block holding only a null takes no part.
+            let names = cell.names_storage();
             read_at = Some(match read_at {
                 None => (position, names),
                 Some((here, here_names)) => (
@@ -1779,7 +1781,6 @@ impl Known {
     /// one assigned to a local, whose position is set here: the records'
     /// where [`Self::vouches`] answers, and not known otherwise. See
     /// ADR-0100.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn load_into(
         &self,
         held: &mut Held,
@@ -1797,6 +1798,8 @@ impl Known {
         for site in sites {
             held.hold(site, read_at.map_or(At::Unknown, |read_at| read_at.at));
         }
+        // Set for an operand too, which is never vouched for: `built_from`
+        // decides its own mark after this, from its operands.
         held.vouched = read_at.is_some();
         if vouch.is_some() {
             held.position = read_at.unwrap_or(Position {

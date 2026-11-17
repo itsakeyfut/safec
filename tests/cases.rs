@@ -5895,12 +5895,15 @@ cases! {
         // A pointer stored in a block and read back into a local is measured
         // from the position the block's record vouches for, as its local
         // spelling is. See ADR-0100. Mutation: keep the `loaded` gate alone
-        // in `fit::reached`; the first is doubted and the second only
-        // doubted. Mutation: have `Known::load_into` vouch for nothing; both.
+        // in `fit::reached`, or have `Known::load_into` vouch for nothing;
+        // the read inside `a` in the first gains an `SC0412` doubt, and the
+        // read past the end in the second is doubted where it was proved.
         a_pointer_stored_off_its_start_and_read_back_is_measured_from_where_it_was_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_near_the_end_and_read_back_past_it_is_proved_outside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A counted move of a value vouched for stays vouched for. Mutation:
-        // have `built::built_from` vouch for nothing; this is doubted.
+        // have `built::built_from` vouch for nothing; this is doubted, and
+        // so are the two above and the arm-and-null case below, since a load
+        // assigned to a named local reaches it through a copy.
         a_pointer_read_back_and_moved_by_a_constant_is_measured_from_where_it_was_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A null stored on one path takes no part in the record's position,
         // as in a value's join, so the other path's read past the end is

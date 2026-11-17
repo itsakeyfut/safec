@@ -466,7 +466,11 @@ pub(super) fn reported(
 ///   local owes. **That rule is what covers this line**, and the day something
 ///   narrows what an escaped local is reported as, this line stops being
 ///   covered: a field a stronger rule upstream answers for has no guard of
-///   its own.
+///   its own. **Except a load's own**, where `vouched` says every pointer
+///   handed is a local whose position its block's record vouched for: a
+///   [`Reached::Lost`] for [`LostReason::ReadOutOfMemory`] and the
+///   [`Reached::Partial`] beside it say what it names is incomplete, not
+///   where it points. See ADR-0100.
 /// * a [`Reached::SetFreed`] is. The sites are gone from `reached` by then, so
 ///   there is nothing left to be an offset into.
 /// * no site at all. A local that reaches nothing is one this check never
@@ -497,9 +501,11 @@ fn interior(reached: &[Reached], offset: At, vouched: bool, known: &Known) -> Op
             Reached::Site(site) => sites.push(*site),
             // A load is lost and partial for what it names, and its
             // position is still the record's where the record vouched for
-            // it: `Allocations::touching` and `Known::reached_by` mark it
-            // so for `loaded` alone. Any other loss, a local's address
-            // among them, stops the rule. See ADR-0100.
+            // it. `Known::reached_by` pushes `Partial` for a local's address
+            // too, and that one is not skipped by this arm alone: for the
+            // same value `Allocations::touching` joins the reasons into
+            // `LostReason::MayBeALocal`, which the arm below answers. A
+            // change to that join reaches here. See ADR-0100.
             Reached::Lost(LostReason::ReadOutOfMemory) | Reached::Partial if vouched => {}
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says

@@ -1454,10 +1454,11 @@ pub(super) struct Held {
     pub(super) may_be_null: bool,
     /// **Whether its position was read out of memory a record vouched
     /// for**, so the bounds rule and the interior-free rule measure a
-    /// loaded value from it. Set by `Known::load_into` alone, kept by a
-    /// counted move with no load among its operands (`built::built_from`),
-    /// and joined as both sides, so a path that read nothing vouched for
-    /// takes it away. See ADR-0100.
+    /// loaded value from it. Granted only where a load is read
+    /// (`Known::load_into`), kept by a counted move with no load among its
+    /// operands (`built::built_from`), and kept by a join or a may-write
+    /// only where both sides have it, so a path that read nothing vouched
+    /// for takes it away. See ADR-0100.
     pub(super) vouched: bool,
 }
 
@@ -2615,9 +2616,11 @@ pub(super) struct Cell {
     /// to `Held` was answered at seven doors where it is answered at four.
     names: Bits<Referent>,
     /// **Where in what it names a pointer stored there points**, joined over
-    /// every store as the rest of the record is, `None` where nothing was
-    /// stored: the identity of [`Cell::absorb`]. Read by a load only where
-    /// the load is vouched for ([`Held::vouched`]). See ADR-0100.
+    /// every store by [`Position::joined`], as a value's position is where
+    /// paths meet, `None` where nothing was stored: the identity of
+    /// [`Cell::absorb`]. A store over the whole block replaces the record
+    /// with the rest of it (`Allocations::replaces`). Read by a load only
+    /// where the load is vouched for ([`Held::vouched`]). See ADR-0100.
     position: Option<Position>,
 }
 
@@ -2921,6 +2924,11 @@ impl Cell {
     /// join's identity and a block nothing was stored in is one. `other` is
     /// destructured with no `..`, so a field added to a cell is
     /// `error[E0027]` here until it says how two blocks' records join.
+    ///
+    /// **The position joins as a value's does**, by [`Position::joined`],
+    /// not as a union: `None`, nothing stored, is its identity, and a null
+    /// stored takes no part. `widen` is set at a loop's back edge alone,
+    /// where it widens as [`At::joined`] says. See ADR-0100.
     pub(super) fn absorb(&mut self, other: &Cell, widen: bool) {
         let Cell {
             names,
@@ -2975,12 +2983,7 @@ pub(super) struct Marks {
     pub(super) array_edge: bool,
     pub(super) stored_through: bool,
     pub(super) may_be_null: bool,
-    /// **Whether its position was read out of memory a record vouched
-    /// for**, so the bounds rule and the interior-free rule measure a
-    /// loaded value from it. Set by `Known::load_into` alone, kept by a
-    /// counted move with no load among its operands (`built::built_from`),
-    /// and joined as both sides, so a path that read nothing vouched for
-    /// takes it away. See ADR-0100.
+    /// See [`Held::vouched`].
     pub(super) vouched: bool,
 }
 
