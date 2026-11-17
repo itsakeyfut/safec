@@ -22,9 +22,9 @@ use super::bits::Bits;
 use super::fit::{pointee, pointee_width};
 use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
-use super::parts::{Init, SiteState};
+use super::parts::{Earliest, Init, SiteState};
 use super::store::{StoreKind, Written};
-use super::{Departure, Finding, Kind, PartAsked, Unproven};
+use super::{Departure, Finding, Kind, PartAsked, Unproven, WrittenAs};
 
 /// One place the report asks whether memory a value names may be unwritten.
 ///
@@ -226,7 +226,8 @@ pub(super) fn asked_unwritten_in_terminator(
                             let storages = sites
                                 .into_iter()
                                 .map(Storage::Heap)
-                                .chain(locals.into_iter().map(Storage::Local));
+                                .chain(locals.into_iter().map(Storage::Local))
+                                .map(|storage| (storage, origin.span()));
                             ask_partial(
                                 PartialDoor::CopyOut,
                                 storages,
@@ -288,7 +289,7 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     // ADR-0087.
     ask_partial(
         PartialDoor::Exit,
-        asked.iter().map(|&(site, _)| Storage::Heap(site)),
+        asked.iter().map(|&(site, at)| (Storage::Heap(site), at)),
         findings,
         ask.analysis,
         known,
@@ -365,30 +366,38 @@ impl PartialDoor {
     /// site made again in a loop meets the turn that wrote it at the loop's
     /// head, so `now` still holds the write wherever the block leaves.
     ///
-    /// **A read asks the write state too** (#1019): the record names the
-    /// place and the state is the belief, so a whole pointer written over
-    /// the part since ends the report. A state that says part with no place
-    /// recorded is #940's to report.
-    ///
-    /// **Where it leaves, the record alone**, as before: `ever` covers every
-    /// block the site made, and the state only the one it names now. Asked
-    /// there too, a list built in a loop, each block written in part and the
-    /// newest written whole after it, left with its older blocks holding
-    /// part in silence, found by review.
+    /// **Whether it is asked is the write state's; the record names the
+    /// place** (#940): a read asks the state of the block the site names
+    /// now, and where the block leaves the state or `Known::part_before`,
+    /// since the caller may hold any block the site made: the state alone
+    /// left a list built in a loop, its older blocks holding part, silent
+    /// (#1019's review). The place is a write of less than a pointer, then
+    /// one of a value that is not a pointer, then none, said at the door.
+    /// See ADR-0098.
     ///
     /// Mutation: a read takes every recorded block as holding part;
     /// `a_whole_pointer_stored_over_part_of_one_before_it_is_read_back_is_not_reported`
-    /// is reported. Mutation: where it leaves, ask the state as a read does;
+    /// is reported. Mutation: where it leaves, ask the state alone;
     /// `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole`
     /// goes silent.
-    fn record(self, known: &Known, at: Storage) -> Option<Span> {
-        let record = known.part_written[at];
-        match self {
-            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => record.ever(),
-            PartialDoor::Load | PartialDoor::CopyOut => {
-                record.now().filter(|_| known.written[at].may_hold_part())
+    fn record(self, known: &Known, at: Storage) -> Option<(Option<Span>, WrittenAs)> {
+        let part = known.written[at].may_hold_part();
+        let (asked, place): (bool, fn(Earliest) -> Option<Span>) = match self {
+            PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
+                (part || known.part_before[at], Earliest::ever)
             }
+            PartialDoor::Load | PartialDoor::CopyOut => (part, Earliest::now),
+        };
+        if !asked {
+            return None;
         }
+        Some(if let Some(span) = place(known.part_written[at]) {
+            (Some(span), WrittenAs::LessThanAPointer)
+        } else if let Some(span) = place(known.other_written[at]) {
+            (Some(span), WrittenAs::NotAPointer)
+        } else {
+            (None, WrittenAs::Unplaced)
+        })
     }
 
     /// Where the report says the memory was asked (#935).
@@ -400,18 +409,20 @@ impl PartialDoor {
     }
 }
 
-/// Report, at the write, each of `storages` whose record `door` reads says a
-/// write left part of a pointer there.
+/// Report, at the write, each of `storages` that `door` finds may hold no
+/// whole pointer where one is read, or at the caret beside it where no
+/// write is recorded.
 pub(super) fn ask_partial(
     door: PartialDoor,
-    storages: impl IntoIterator<Item = Storage>,
+    storages: impl IntoIterator<Item = (Storage, Span)>,
     findings: &mut Vec<Finding>,
     analysis: &Allocations<'_>,
     known: &Known,
 ) {
-    for at in storages {
-        if let Some(copy) = door.record(known, at) {
-            push_part_of_a_pointer(findings, analysis, copy, door.asked());
+    for (at, caret) in storages {
+        if let Some((place, written)) = door.record(known, at) {
+            let said = place.unwrap_or(caret);
+            push_part_of_a_pointer(findings, analysis, said, door.asked(), written);
         }
     }
 }
@@ -430,6 +441,7 @@ fn push_part_of_a_pointer(
     analysis: &Allocations<'_>,
     copy: Span,
     asked: PartAsked,
+    written: WrittenAs,
 ) {
     let said = findings.iter().any(|said| {
         said.at == copy
@@ -442,7 +454,7 @@ fn push_part_of_a_pointer(
             )
     });
     if !said {
-        findings.push(part_of_a_pointer_written(analysis, copy, asked));
+        findings.push(part_of_a_pointer_written(analysis, copy, asked, written));
     }
 }
 
@@ -453,12 +465,17 @@ pub(super) fn is_part_of_a_pointer_written(said: &Finding, at: Span) -> bool {
 }
 
 /// A write at `copy` of part of a pointer into a block later held as memory
-/// of pointers, asked where `asked` says. See `Known::part_written` and
-/// ADR-0087.
-fn part_of_a_pointer_written(analysis: &Allocations<'_>, copy: Span, asked: PartAsked) -> Finding {
+/// of pointers, asked where `asked` says, of the kind `written` says. See
+/// `Known::part_written` and ADR-0087.
+fn part_of_a_pointer_written(
+    analysis: &Allocations<'_>,
+    copy: Span,
+    asked: PartAsked,
+    written: WrittenAs,
+) -> Finding {
     Finding {
         function: analysis.function,
-        kind: Kind::PartOfAPointer { asked },
+        kind: Kind::PartOfAPointer { asked, written },
         conclusion: Conclusion::Unknown,
         at: copy,
         local: None,
@@ -611,7 +628,7 @@ fn report_returned_unwritten(
             .iter()
             .flatten()
             .chain(&below)
-            .map(|&site| Storage::Heap(site)),
+            .map(|&site| (Storage::Heap(site), operation.origin.span())),
         findings,
         analysis,
         known,
@@ -903,7 +920,9 @@ pub(super) fn loaded_indeterminate(
             if !rewritten && analysis.may_be_pointer(function, &place) {
                 ask_partial(
                     PartialDoor::Load,
-                    blocks_read(&place, known),
+                    blocks_read(&place, known)
+                        .into_iter()
+                        .map(|storage| (storage, at)),
                     findings,
                     analysis,
                     known,

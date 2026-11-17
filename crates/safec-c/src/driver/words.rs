@@ -9,7 +9,9 @@ use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{Between, Promise};
-use safec_ir::memory::{self, Carrier, Departure, Kind, LostReason, PartAsked, Unproven};
+use safec_ir::memory::{
+    self, Carrier, Departure, Kind, LostReason, PartAsked, Unproven, WrittenAs,
+};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::{SourceMap, Span};
 
@@ -953,7 +955,62 @@ pub(super) fn memory_finding(
         // in a pointer nobody wrote whole, and in words of its own, since
         // nothing need leave (#935). Only ever `Unknown`, as that is;
         // `Unsafe` takes the same words so the match stays exhaustive.
-        (Kind::PartOfAPointer { asked }, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+        //
+        // **And what was written, in its own words** (#940): a write of a
+        // value that is not a pointer is not less than one, and where no
+        // write is recorded the report is at the door that asked.
+        (
+            Kind::PartOfAPointer {
+                asked,
+                written: WrittenAs::NotAPointer,
+            },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
+            HANDED_ON_NARROW,
+            match asked {
+                PartAsked::Leaves => "this writes a value that is not a pointer into memory that \
+                                      leaves holding pointers"
+                    .to_owned(),
+                PartAsked::Read => "this writes a value that is not a pointer into memory that \
+                                    is read back as pointers"
+                    .to_owned(),
+            },
+            "written here",
+            "store a pointer there, or keep values that are not pointers out of memory read as \
+             pointers",
+        ),
+        (
+            Kind::PartOfAPointer {
+                asked,
+                written: WrittenAs::Unplaced,
+            },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
+            HANDED_ON_NARROW,
+            match asked {
+                PartAsked::Leaves => "this lets memory leave holding pointers that no write is \
+                                      known to have written whole"
+                    .to_owned(),
+                PartAsked::Read => "this reads a pointer out of memory that no write is known to \
+                                    have written whole"
+                    .to_owned(),
+            },
+            match asked {
+                PartAsked::Leaves => "leaves here",
+                PartAsked::Read => "read here",
+            },
+            "write a pointer whole into it before it is read as one",
+        ),
+        (
+            Kind::PartOfAPointer {
+                asked,
+                written: WrittenAs::LessThanAPointer,
+            },
+            Conclusion::Unknown | Conclusion::Unsafe,
+            _,
+        ) => (
             HANDED_ON_NARROW,
             match asked {
                 // **Less than a pointer**, not part of one: what is written

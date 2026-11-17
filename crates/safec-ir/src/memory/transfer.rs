@@ -1196,6 +1196,8 @@ impl Allocations<'_> {
             left_at: _,
             held_levels: _,
             part_written: _,
+            other_written: _,
+            part_before: _,
             // Not read by a load: what a call may have stored is asked where
             // the value is handed on.
             handed_untyped: _,
@@ -1905,6 +1907,8 @@ impl Allocations<'_> {
             left_at,
             held_levels,
             part_written,
+            other_written,
+            part_before,
             handed_untyped,
         } = into;
         // May-facts, so a union, as `exposed` of a local is. See
@@ -1923,6 +1927,12 @@ impl Allocations<'_> {
         }
         for (here, there) in part_written.iter_mut().zip(&from.part_written) {
             here.join(self.sources, *there);
+        }
+        for (here, there) in other_written.iter_mut().zip(&from.other_written) {
+            here.join(self.sources, *there);
+        }
+        for (here, there) in part_before.iter_mut().zip(&from.part_before) {
+            *here = *here || *there;
         }
         // The larger, so a path that held the block as pointers asks it. See
         // `Known::held_levels`.
@@ -2468,6 +2478,8 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
             part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
+            other_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
+            part_before: Table::filled(false, Storage::count(self.locals)),
             // No call has been handed anything yet.
             handed_untyped: Table::filled(Vec::new(), Storage::count(self.locals)),
         };
@@ -2729,6 +2741,11 @@ impl Analysis for Allocations<'_> {
                     // Through `Self::note_less_than_a_pointer`: a store
                     // narrower than a pointer (ADR-0087).
                     part_written: _,
+                    // Through the same, for a value at least a pointer wide that
+                    // is not one (#940).
+                    other_written: _,
+                    // Not touched by a store, which makes no block.
+                    part_before: _,
                     // Read, by `Self::replaces` and the part-of-a-pointer
                     // rule: how wide each place is.
                     extent: _,

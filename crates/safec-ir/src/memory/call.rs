@@ -641,6 +641,12 @@ impl Allocations<'_> {
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
                     part_written: _,
+                    // Through the same two, for a value that is not a pointer
+                    // (#940).
+                    other_written: _,
+                    // Not touched by a copy: the blocks it lands in are not
+                    // made again.
+                    part_before: _,
                     // Not touched by a copy.
                     handed_untyped: _,
                 } = &*value;
@@ -1950,6 +1956,10 @@ impl Allocations<'_> {
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,
+                    other_written: _,
+                    // The new site's, set where `Known::reborn` made it; the old
+                    // block's earlier blocks are not the new site's.
+                    part_before: _,
                     // Not touched by `realloc`.
                     handed_untyped: _,
                 } = &*value;

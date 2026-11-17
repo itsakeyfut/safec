@@ -525,6 +525,20 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Field::Belief(&[Belief::PartPointer]),
         Start::Quiet(NOTHING_YET),
     ),
+    (
+        "other_written",
+        Field::Exempt(
+            "names the place a report about a value that is not a pointer is said at, and decides nothing (#940); the write state decides",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
+    (
+        "part_before",
+        Field::Exempt(
+            "set only where a site is made again, a loop's, and asked where a block leaves; the corpus holds it (#940)",
+        ),
+        Start::Quiet(NOTHING_YET),
+    ),
     // Read where a pointer is passed on after a call kept a local untyped:
     // the `Kept*` routes name the mutations that silence it.
     (

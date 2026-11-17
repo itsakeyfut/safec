@@ -394,7 +394,24 @@ pub enum Kind {
     PartOfAPointer {
         /// Where the memory was asked.
         asked: PartAsked,
+        /// What the write it is said at wrote, or that none is known (#940).
+        written: WrittenAs,
     },
+}
+
+/// What left a slot of memory read as pointers holding no whole pointer
+/// ([`Kind::PartOfAPointer`]): the kind of write the report is said at, so
+/// that its words say what was written (#940). See ADR-0098.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WrittenAs {
+    /// A write of less than a pointer, said at the write.
+    LessThanAPointer,
+    /// A write of at least a pointer's width of something that is not a
+    /// pointer, an `int` as wide or a `long`, zero bytes or a struct, said
+    /// at the write.
+    NotAPointer,
+    /// No write is recorded, so it is said where the memory is asked.
+    Unplaced,
 }
 
 /// Where memory a write left part of a pointer in was asked
