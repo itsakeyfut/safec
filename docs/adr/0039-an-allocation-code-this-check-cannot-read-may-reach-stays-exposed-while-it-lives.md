@@ -222,7 +222,7 @@ of the other four fails
 `what_the_other_library_copies_return_is_what_they_were_handed`. Their arm not
 exposing
 what it is handed fails
-`what_memset_was_handed_is_unproven_after_a_later_call`; not replacing what an
+`what_memset_was_handed_is_not_freed_by_a_later_call`; not replacing what an
 escaped local holds fails
 `a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
 alone; not returning the first argument fails the `memset` and `strcpy` cases.

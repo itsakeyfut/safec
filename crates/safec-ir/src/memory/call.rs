@@ -76,7 +76,17 @@ impl Allocations<'_> {
             &Levels::new(vec![Width::Unbounded]),
             &forged,
         );
-        self.land_contents(value, landing, &poured, &[], Pours::Copy { replaces: None });
+        self.land_contents(
+            value,
+            landing,
+            &poured,
+            &[],
+            Pours::Copy {
+                replaces: None,
+                carried: Vec::new(),
+                span: None,
+            },
+        );
         for &local in &landing.targets {
             value.points_to[local].name_unknown(Why::Forged);
         }
@@ -1040,21 +1050,22 @@ impl Allocations<'_> {
                                 &landing,
                                 &poured,
                                 &in_part,
-                                Pours::Copy { replaces },
+                                Pours::Copy {
+                                    replaces,
+                                    carried: copied.iter().copied().collect(),
+                                    span: Some(origin.span()),
+                                },
                             );
                         }
                     }
                 }
-                // What a pointer it was handed may be, read out of memory, as
-                // for an opaque call, exposed, and what the copy writes of what
-                // is unwritten. See `Allocations::initialised_by` and ADR-0040.
-                let reach = self.reach(function, handed, sites(), value);
+                // What the copy writes of what is unwritten. See
+                // `Allocations::initialised_by`.
                 self.initialised_by(
                     function,
                     value,
                     Wrote::Copy {
                         dest: arguments.first(),
-                        reach,
                         span: origin.span(),
                         length: self.copied_pointers(*callee, arguments),
                         bytes: self.written_bytes(*callee, arguments),

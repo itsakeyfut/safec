@@ -1,11 +1,13 @@
 void *malloc(int n);
 void free(void *p);
-void *memset(void *s, int c, int n);
+void *memcpy(void *d, void *s, int n);
+void **slot(void);
 int release_all(void);
 void stash(int **pp);
 void g(int v, void *p);
 
 int f(void) {
+    void **out_ = slot();
     int x;
     int r;
     int *a;
@@ -17,7 +19,7 @@ int f(void) {
         return 0;
     }
     a[0] = 1;
-    g(release_all() + (x = a[0]), memset(a, 0, 4));
+    g(release_all() + (x = a[0]), memcpy(out_, &a, 8));
     r = 0;
     return r;
 }

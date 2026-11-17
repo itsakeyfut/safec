@@ -4865,8 +4865,11 @@ cases! {
         a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The callee had what it returned, and may have kept it.
         what_a_call_returned_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `memset` frees nothing and still exposes what it was handed.
-        what_memset_was_handed_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `memset` frees nothing and exposes nothing it was handed: it
+        // writes the bytes its clause names (C17 7.24.6.1), so a later call
+        // cannot have freed `p` through it (#1014, ADR-0096). Mutation: expose
+        // what a library copy is handed, in `Wrote::Copy`; this reports.
+        what_memset_was_handed_is_not_freed_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `memcpy` can be handed a local's address and write a pointer into it,
         // so a free through that local proves nothing about what a sharer
         // holds.
@@ -5068,11 +5071,11 @@ cases! {
         the_arguments_the_host_hands_main_are_not_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The bit a load leaves on a local: set by a load on either arm of a
         // join, carried through arithmetic, cleared by what the local is given
-        // next, and never set by an integer. A load handed to `memset` is read
-        // as one too.
+        // next, and never set by an integer. A load handed to `memset` makes
+        // nothing reachable to a later call (#1014).
         a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_a_load_is_still_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_given_something_else_after_a_load_is_no_longer_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_integer_read_out_of_memory_is_not_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A loop that allocates a table again leaves last turn's table holding
