@@ -319,14 +319,13 @@ impl Extent {
 }
 
 /// What a write wrote into a slot: **a whole pointer, or anything else**
-/// (#940). A slot holds a whole pointer only where a write said so; every
-/// other write, of part of a pointer, of an `int`, of zero bytes, says
-/// `Other`, so a write route that forgets to say leaves the slot doubted
-/// where a pointer is read out of it, rather than believed. Granted by a
-/// typed store of a pointer a pointer wide and by a library copy whose length
-/// covers whole pointers; and by what code this check cannot read writes and
-/// the state a function starts in, which are believed as before (#941's to
-/// narrow). See ADR-0097.
+/// (#1019). Every writer of the write state says which, so a write route
+/// added later cannot leave it unsaid. **Each says what is believed
+/// today**: `Other` where a write of part of a pointer is noted, a narrow
+/// store, a partial copy or fill, or a copy or `realloc` out of memory that
+/// may hold part of one, and `Pointer` everywhere else. #940 narrows that to
+/// the writes that write a whole pointer; what code this check cannot read
+/// writes, and the state a function starts in, are #941's. See ADR-0097.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Whole {
     /// A whole pointer, written by a write that wrote one.
@@ -473,11 +472,12 @@ impl Init {
 /// An [`Init`] per element of a local array of at most `ELEMENTS_KEPT`
 /// innermost elements, or of none for every other local.
 ///
-/// **Two sets of bits behind one value**, so that it takes no more than the
-/// record it replaced and `memory::per_block` counts the same: `proved`, the
-/// elements [`Init::Unwritten`], and `doubted`, the elements that are not
-/// [`Init::Written`], a superset of `proved`. Nothing outside reads the bits,
-/// so the superset is this type's to keep (#733).
+/// **Three sets of bits behind one value**: `proved`, the elements
+/// [`Init::Unwritten`], and `doubted`, the elements that are not
+/// [`Init::Written`], a superset of `proved`, which take no more than the
+/// record they replaced (#733); and `whole`, what each element's writes
+/// wrote (#1019), which `memory::per_block` counts by its size. Nothing
+/// outside reads the bits, so the superset is this type's to keep.
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Inits {
     proved: Bits<usize>,
@@ -643,7 +643,7 @@ impl Inits {
 /// **And where its unwritten bytes came from**, [`Self::carried`]: a copy
 /// or a `realloc` that carried bytes nothing wrote into it, or nothing for
 /// bytes an allocation or a local's lifetime left so. Kept beside the
-/// record rather than in each slot, since the slots are two sets of bits.
+/// record rather than in each slot, since the slots are three sets of bits.
 /// It decides no conclusion, only what the report about a read says
 /// (#752).
 #[derive(Clone, PartialEq, Eq)]
@@ -3187,7 +3187,7 @@ mod tests {
     /// path that wrote a whole one, or one that wrote nothing. Mutation:
     /// `Whole::joined` answers `Pointer` for a mixed pair; the first fails.
     /// Mutation: `Init::joined` answers `Maybe(Whole::Pointer)` for any
-    /// `Maybe`; the second fails.
+    /// `Maybe`; the last fails.
     #[test]
     fn a_join_holds_a_whole_pointer_only_where_every_path_that_wrote_wrote_one() {
         for back in [false, true] {
@@ -3201,6 +3201,11 @@ mod tests {
                     .may_hold_part()
             );
             assert!(!Init::Unwritten(Whole::Pointer).may_hold_part());
+            assert!(
+                Init::Maybe(Whole::Other)
+                    .joined(Init::Written(Whole::Pointer), back)
+                    .may_hold_part()
+            );
         }
     }
 
