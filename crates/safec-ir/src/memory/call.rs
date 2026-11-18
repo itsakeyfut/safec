@@ -1297,10 +1297,17 @@ impl Allocations<'_> {
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
-                let holders: Vec<Held> = handed
+                let holders: Vec<(Held, bool)> = handed
                     .iter()
                     .filter_map(|argument| match argument {
-                        Operand::Copy(place) => Some(self.handed_value(function, place, value)),
+                        Operand::Copy(place) => Some((
+                            self.handed_value(function, place, value),
+                            place.projection.is_empty()
+                                && !matches!(
+                                    written_before[place.local].whole(),
+                                    Init::Written(Whole::Pointer)
+                                ),
+                        )),
                         Operand::Constant(_) => None,
                     })
                     .collect();

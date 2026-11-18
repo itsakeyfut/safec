@@ -1,0 +1,60 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:2:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "int **" "h"
+  Local "_3" "int **"
+  Local "_4" "int ***"
+  Local "_5" "void *"
+  Local "_6" "int ***"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:5:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:5:15 generated
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:6:12 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:6:5 generated
+    Call a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:6:5 written "memset" "bb1"
+      Destination "_5"
+      Copy "_4"
+      Constant 0
+      Constant 8
+  Block "bb1"
+    Sequenced a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:6:5 generated
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:7:10 written
+      Destination "_6"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:7:5 generated
+    Call a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:7:5 written "fill" "bb2"
+      Copy "_6"
+  Block "bb2"
+    Sequenced a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:7:5 generated
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:8:12 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Operation a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address.c:8:12 generated
+    Return

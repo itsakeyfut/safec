@@ -2034,7 +2034,7 @@ impl Known {
     /// `SC0411` (#1028).
     pub(super) fn named_alone(
         &self,
-        handed: &[Held],
+        handed: &[(Held, bool)],
         is_array: impl Fn(LocalIdx) -> bool,
         before: &Table<Storage, PlaceInit>,
         one_block: impl Fn(Site) -> bool,
@@ -2085,8 +2085,13 @@ impl Known {
                 );
                 ask(Vec::new(), arrays, true);
             };
-            for held in handed {
-                ask_value(held, false);
+            // A value the call is handed, with whether it is a local that may
+            // hold anything but a whole pointer before the call: `memset(&h,
+            // 0, 8); fill(h);` left `h` naming `a`, since a fill of zeros
+            // pours no value, and `a` was believed written (#1037). See
+            // ADR-0103 rule 1.
+            for (held, not_whole) in handed {
+                ask_value(held, *not_whole);
             }
             for &holder in &reached.locals {
                 ask_value(&self.points_to[holder], not_whole(Storage::Local(holder)));
