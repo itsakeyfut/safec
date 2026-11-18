@@ -1171,6 +1171,20 @@ impl Allocations<'_> {
                 let written_before = value.written.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
+                // And believed written only where an argument names it
+                // alone. See `Known::believed_written_only_where_named_alone`.
+                let handed_values: Vec<Held> = handed
+                    .iter()
+                    .filter_map(|argument| match argument {
+                        Operand::Copy(place) => Some(self.handed_value(function, place, value)),
+                        Operand::Constant(_) => None,
+                    })
+                    .collect();
+                value.believed_written_only_where_named_alone(
+                    &handed_values,
+                    &written_before,
+                    |site| self.made_once[site.local()],
+                );
                 // Pending from here, and not at its own exposure above, which
                 // `Known::noticed` leaves out by `by` anyway. See ADR-0042.
                 let span = origin.span();
