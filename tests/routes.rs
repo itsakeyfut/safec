@@ -806,6 +806,96 @@ fn every_field_of_a_held_value_is_a_belief_or_an_exemption() {
     check_fields("Held", &held_fields(), HELD_FIELDS);
 }
 
+/// The table in `docs/safety-model.md` under "Where each fact starts" lists
+/// every field of `Known` and `Held` once, where it starts, and what holds
+/// it, as [`KNOWN_FIELDS`] and [`HELD_FIELDS`] say, and nothing else. Each
+/// row is compared whole: the last column is derived from the row in this
+/// file, the beliefs it names, how many tests its `held_by` names, or the
+/// head of its reason where it names none. A field added, removed, started
+/// or held differently in one and not the other, or a row the document
+/// repeats, fails here, naming the rows that differ. See ADR-0101 rule 3.
+///
+/// Mutation: delete `vouched`'s row from the document; this fails. Mutation:
+/// change `points_to`'s start there to `entry fact`; this fails. Mutation:
+/// change `vouched`'s last column to `99 tests named in its row`; this
+/// fails. Mutation: repeat `vouched`'s row; this fails. Mutation: rename a
+/// row of [`HELD_FIELDS`]'s table and not the document; this fails here as
+/// well as in the field check.
+#[test]
+fn the_safety_models_table_lists_every_field_and_where_it_starts() {
+    let starts = |start: &Start| match start {
+        Start::Doubt => "in doubt",
+        Start::Believed(_) => "believed",
+        Start::Fact(_) => "entry fact",
+    };
+    let held = |field: &Field| match field {
+        Field::Belief(beliefs) => format!(
+            "beliefs {}",
+            beliefs
+                .iter()
+                .map(|belief| format!("`{belief:?}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Field::Exempt { why, held_by } => match held_by.len() {
+            0 => why.split(':').next().unwrap_or(why).to_string(),
+            1 => "1 test named in its row".to_string(),
+            tests => format!("{tests} tests named in its row"),
+        },
+    };
+    let mut tables: Vec<[String; 4]> = [("Known", KNOWN_FIELDS), ("Held", HELD_FIELDS)]
+        .iter()
+        .flat_map(|(value, table)| {
+            table.iter().map(move |(field, kind, start)| {
+                [
+                    value.to_string(),
+                    field.to_string(),
+                    starts(start).to_string(),
+                    held(kind),
+                ]
+            })
+        })
+        .collect();
+    let document = include_str!("../docs/safety-model.md");
+    let section = document
+        .split("<!-- fields:start -->")
+        .nth(1)
+        .and_then(|rest| rest.split("<!-- fields:end -->").next())
+        .expect("docs/safety-model.md holds the table between its markers");
+    let mut listed: Vec<[String; 4]> = section
+        .lines()
+        .filter_map(|line| {
+            let cells: Vec<&str> = line
+                .trim()
+                .trim_matches('|')
+                .split('|')
+                .map(str::trim)
+                .collect();
+            match cells.as_slice() {
+                [value, field, start, held] if *value == "Known" || *value == "Held" => Some([
+                    value.to_string(),
+                    field.trim_matches('`').to_string(),
+                    start.to_string(),
+                    held.to_string(),
+                ]),
+                _ => None,
+            }
+        })
+        .collect();
+    tables.sort();
+    listed.sort();
+    // **A list, not a set**, so a row the document repeats is a row too
+    // many rather than one that collapses into its twin. Found by review.
+    let missing: Vec<_> = tables.iter().filter(|row| !listed.contains(row)).collect();
+    let extra: Vec<_> = listed.iter().filter(|row| !tables.contains(row)).collect();
+    assert!(
+        missing.is_empty() && extra.is_empty() && listed.len() == tables.len(),
+        "docs/safety-model.md's table differs from the field tables: in the tables and not the document {missing:?}; in the document and not the tables {extra:?}; {} rows against {}",
+        listed.len(),
+        tables.len()
+    );
+}
+
 /// The fields of `Known`, read off its declaration.
 fn known_fields() -> Vec<String> {
     let source = include_str!("../crates/safec-ir/src/memory/known.rs");

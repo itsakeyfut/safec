@@ -79,7 +79,11 @@ it:
   alone silences
   `a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call`.
 
-Rules 2 and 3 are settled as #1029 and #1030 land.
+Rule 2 is narrowed by ADR-0102, whose Confirmation holds it. Rule 3:
+`the_safety_models_table_lists_every_field_and_where_it_starts` fails when
+a row of the table in `docs/safety-model.md` is deleted, repeated, starts
+differently or says differently what holds it, or a field's row in
+`tests/routes.rs` has no row there.
 
 ### Consequences
 
