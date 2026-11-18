@@ -1692,6 +1692,29 @@ impl Known {
         !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
+    /// Whether a load `depth` dereferences through `local` may read a null,
+    /// from what it reads: see `Self::load_into`.
+    fn load_may_be_null(&self, local: LocalId, depth: usize, from_caller: bool) -> bool {
+        if from_caller || depth != 1 || self.points_to[local].beyond().any_unknown() {
+            return true;
+        }
+        let (sites, locals) = self.levels_below(local, depth - 1);
+        let sites: Vec<Site> = sites.into_iter().collect();
+        let locals: Vec<LocalIdx> = locals.into_iter().collect();
+        if sites.is_empty() && locals.is_empty() {
+            return true;
+        }
+        sites.iter().any(|&site| {
+            let cell = &self.contents[site];
+            cell.may_hold_null()
+                || !cell.names_only_modelled()
+                || (cell.sites().next().is_none() && cell.locals().next().is_none())
+        }) || locals.iter().any(|&read_from| {
+            let value = &self.points_to[read_from];
+            value.may_be_null || (value.sites().next().is_none() && value.locals().next().is_none())
+        })
+    }
+
     /// **Where a typed load one dereference through `local` points, where
     /// the records of what it reads vouch for it** (ADR-0100 rule 2): `local`
     /// names heap blocks and nothing else, each one not exposed to code this
@@ -1806,6 +1829,14 @@ impl Known {
                 at: At::Unknown,
                 row: None,
             });
+            // **Null only where what it reads may hold one** (#1038): a block
+            // whose record may hold a null or names what this check does not
+            // model, or names nothing; a local that may be null or names
+            // nothing; memory a caller or a pointer this check cannot follow
+            // reaches. Taken as null whatever it read, a copy of a pointer
+            // into a block marked the block as holding a null, and a call
+            // handed it was doubted. See ADR-0103 rule 2.
+            held.may_be_null = self.load_may_be_null(local, depth, from_caller);
         }
         // **And the locals whose address it may be**, as edges, so a write
         // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not
@@ -2000,8 +2031,11 @@ impl Known {
     /// null on the other hands `a`'s address over on one path only, so the
     /// call may not have written it, and `p = 0; if (k) p = &a; fill(p);`
     /// read `a` in silence (#950). A pointer tested not null first names
-    /// `a` alone again, as `if (p) fill(p);` does. A block cannot say it
-    /// may hold a null yet (#938).
+    /// `a` alone again, as `if (p) fill(p);` does. **Nor a block that may
+    /// hold a null** (#1038): one whose address of `a` was overwritten by a
+    /// null, `*out = &x; *out = 0; other();`, kept naming `x`, since a store
+    /// into a block it does not replace adds to what it holds. See ADR-0103
+    /// rule 2.
     ///
     /// **`handed` is the values the call is handed, however spelled**: a
     /// pointer handed through a projection, `fill(*pp)` or `fill(q[0])`, is
@@ -2110,7 +2144,9 @@ impl Known {
             ask(
                 cell.sites().collect(),
                 cell.locals().collect(),
-                not_whole(Storage::Heap(container)) || !one_block(container),
+                not_whole(Storage::Heap(container))
+                    || !one_block(container)
+                    || cell.may_hold_null(),
             );
         }
         alone

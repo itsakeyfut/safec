@@ -2624,6 +2624,14 @@ pub(super) struct Cell {
     /// with the rest of it (`Allocations::replaces`). Read by a load only
     /// where the load is vouched for ([`Held::vouched`]). See ADR-0100.
     position: Option<Position>,
+    /// **Whether a null may have been stored there**, false where nothing
+    /// was: a value that may be null, or that names nothing, poured in.
+    /// A union at a join, as the rest of the record is, and kept by nothing
+    /// a load reads, since a load is taken as possibly null whatever memory
+    /// holds (#931). Read where a block is asked whether it names a local
+    /// alone, which it does not where it may hold a null. See ADR-0103
+    /// rule 2.
+    may_hold_null: bool,
 }
 
 impl Cell {
@@ -2635,6 +2643,7 @@ impl Cell {
             widths: Levels::default(),
             names: Bits::new(Referent::count(locals)),
             position: None,
+            may_hold_null: false,
         }
     }
 
@@ -2652,6 +2661,11 @@ impl Cell {
     /// See ADR-0100.
     pub(super) fn stored_position(&self) -> Option<Position> {
         self.position
+    }
+
+    /// Whether a null may have been stored there. See ADR-0103 rule 2.
+    pub(super) fn may_hold_null(&self) -> bool {
+        self.may_hold_null
     }
 
     /// Whether everything a pointer stored there may name is storage this
@@ -2732,9 +2746,10 @@ impl Cell {
         let Cell {
             names: _,
             widths: _,
-            // Its position goes with the record, which `Known::reborn` keeps
-            // or drops whole.
+            // Its position and its null go with the record, which
+            // `Known::reborn` keeps or drops whole.
             position: _,
+            may_hold_null: _,
         } = self;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field, so that a field added to `Held`
@@ -2780,6 +2795,8 @@ impl Cell {
             // Taken by `Known::load_into` alone, and only where it vouches
             // for the load. See ADR-0100.
             position: _,
+            // Not taken: a load is possibly null whatever memory holds.
+            may_hold_null: _,
         } = self;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
@@ -2892,9 +2909,15 @@ impl Cell {
             site_element: _,
             array_edge: _,
             stored_through: _,
-            // Not recorded in memory, so a load gives none.
+            // Recorded below as the block's `may_hold_null`, which no load
+            // reads back.
             may_be_null: _,
         } = from;
+        // **A null stored, or anything that names nothing**, may leave the
+        // slot holding no address: kept, so that a block whose address of a
+        // local was overwritten by a null names it alone to no later call
+        // (#1038). See ADR-0103 rule 2.
+        poured.may_hold_null = from.may_be_null || from.names.ones().next().is_none();
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
             (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
@@ -2936,7 +2959,10 @@ impl Cell {
             names,
             widths,
             position,
+            may_hold_null,
         } = other;
+        // A may-fact, so a union, as the names are.
+        self.may_hold_null = self.may_hold_null || *may_hold_null;
         // **Joined as a value's is**, each side's names saying whether it
         // names storage, so a null stored takes no part, and widened at a
         // loop's back edge (ADR-0099); nothing stored is the identity.

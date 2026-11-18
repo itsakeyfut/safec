@@ -223,6 +223,11 @@ The limits, each a doubt the reader sees unless it says otherwise:
 * A store replaces what a block holds only where the block is one pointer
   wide and made once, so a pointer freed and then overwritten in a block of
   several slots is still doubted where the block is asked (ADR-0094 rule 1).
+  So is a null stored into memory a caller handed over before a local's
+  address: that memory is never replaced, so a call that writes the local
+  through it is doubted, `*out = 0; *out = &x; other();` among them
+  ([ADR-0103](adr/0103-a-holder-names-a-local-alone-only-where-it-certainly-holds-a-whole-pointer-to-it-and-nothing-else-replacing-adr-0101-rule-1s-exception.md),
+  rule 2).
 * **A silence:** `strncat` carries nothing of what its source holds, so a
   pointer it rebuilds out of zeroed memory is used after its free in silence,
   where `strcpy`, `strncpy` and `strcat` carry it (#691).

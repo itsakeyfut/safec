@@ -67,8 +67,30 @@ Chosen: the last, by the owner's decisions on #941.
 
 ### Confirmation
 
-Settled as #1036, #1037, #1038 and #938 land: each rule's mutation and the case
-it fails are named here then.
+Rule 1, measured on #1036's and #1037's branches: the block branch of
+`Known::named_alone` asked with `false`, or asked after the call's exposure,
+silences `a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call`;
+every site taken as one block silences
+`a_local_one_of_a_loops_blocks_names_is_not_believed_written_by_a_call_handed_another`;
+every handed value counted as a whole pointer silences
+`a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_it`;
+a zero fill's targets left as they were silences
+`a_local_a_copy_of_a_zeroed_pointer_named_is_not_believed_written_by_a_call`.
+
+Rule 2, measured on #1038's branch: `Cell::poured` never marking a null, or
+`Cell::absorb` keeping its own, silences
+`a_local_a_block_named_before_a_null_overwrote_it_is_not_believed_written_by_a_later_call`
+and `a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call`.
+A load takes its null from what it reads, so a copy of a pointer naming its
+local alone marks none (`a_pointer_copied_into_a_block_names_its_local_alone_to_a_call`
+is doubted when every load may be null) and a copy of one that may be null
+does (`a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call`
+is silent when none may be). Memory a caller handed over is never replaced, so
+a null stored there before an address keeps it possibly null:
+`a_local_stored_into_caller_memory_after_a_null_is_doubted_after_a_call` is
+that accepted cost.
+
+Rule 3 is settled as #938 lands.
 
 ### Consequences
 
