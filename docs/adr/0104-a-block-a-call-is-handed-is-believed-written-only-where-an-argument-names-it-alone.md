@@ -65,7 +65,9 @@ In `Known::believed_written_only_where_named_alone`:
   `a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_returned`;
 * counting a possibly null argument as naming its site alone silences the
   first and the third;
-* counting an argument that names two sites as alone silences the second.
+* counting an argument that names two sites as alone silences the second;
+* counting an argument that names a local beside the site as alone silences
+  `a_block_a_call_was_handed_through_a_pointer_that_may_name_a_local_is_doubted_where_read`.
 
 No case holds the site standing for one block: dropping that condition leaves
 the suite green, measured, since a block a loop makes again is one this check
@@ -81,7 +83,12 @@ was written: no case in `tests/cases.rs` or `tests/routes.rs` moved.
 * Bad, because a block reached only through another block keeps the belief:
   `*box = p; fill(box);` with `p` either `b` or a null still believes `*b`
   written, and is reported, measured when this was written, only by the doubt
-  that the call may have freed `b`: a silence once that doubt goes.
+  that the call may have freed `b`: a silence once that doubt goes. Two more
+  are reported the same way only, measured by review, both older than this
+  record: a pointer at one element of a block, `fill(&b[k])`, is taken as the
+  whole block (#1050), and a null stored into a local array element,
+  `arr[0] = 0; if (c) arr[0] = b; fill(arr[0]);`, is not read back as
+  possibly null (#1052).
 * What would reverse this: a measurement showing the asked blocks refuse
   correct programs the corpus relies on, or a declaration saying what a callee
   writes, which would replace the belief altogether.

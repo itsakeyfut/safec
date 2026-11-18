@@ -2665,10 +2665,16 @@ impl Known {
     /// Every other block an argument names keeps what it held `before` the
     /// exposure, may-written, as a store through the same pointer leaves
     /// it: `p = 0; if (c) p = b; fill(p); return *b != 0;` read `*b`
-    /// indeterminate in silence where `c` is zero (#1046). A local is asked
-    /// the same of its holders by [`Self::named_alone`]. Blocks reached
+    /// indeterminate in silence where `c` is zero (#1046). Blocks reached
     /// only through other blocks keep [`Self::expose`]'s belief. See
     /// ADR-0104.
+    ///
+    /// **Fewer questions than [`Self::named_alone`] asks of a local's
+    /// holders**: not whether the value names what this check does not
+    /// follow, whether a local holder was assigned on every path, or at
+    /// which element it points. An unassigned holder is reported where it
+    /// is read; a pointer at one element of a block is taken as the whole
+    /// block, as before this rule (#1050).
     ///
     /// **No case holds `one_block`**, measured: dropping it leaves the
     /// suite green, and a block a loop makes again is one this check stops
