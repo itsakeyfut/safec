@@ -90,7 +90,12 @@ a null stored there before an address keeps it possibly null:
 `a_local_stored_into_caller_memory_after_a_null_is_doubted_after_a_call` is
 that accepted cost.
 
-Rule 3 is settled as #938 lands.
+Rule 3, measured on #938's branch: the block branch of `Known::named_alone`
+ignoring what a cell does not model silences
+`a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call`,
+and takes back the `SC0411` the belief gave up in
+`a_local_array_stored_where_this_check_cannot_place_is_doubted_where_read_after_a_call`
+and `a_local_array_left_through_caller_memory_is_doubted_where_read_after_a_call`.
 
 ### Consequences
 

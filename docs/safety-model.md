@@ -614,8 +614,11 @@ another may have been missed, and a read of `a` after `fill(p, &x)` is
 reported as it is after `*p = &x;`. So may one no pointer it can find names
 at all, an address an earlier call kept: `keep(p); other();` with `p` either
 `&x` or `&y` leaves `x` possibly unwritten
-([ADR-0101](adr/0101-a-fact-starts-believed-only-where-an-operation-grants-it-and-a-call-writes-for-certain-only-a-local-named-alone.md)). A block that may hold `&a` or what this
-check does not follow still counts as naming `a` alone. Saying what a
+([ADR-0101](adr/0101-a-fact-starts-believed-only-where-an-operation-grants-it-and-a-call-writes-for-certain-only-a-local-named-alone.md)). Nor does a block that may hold `&a` beside
+a null or what this check does not follow name `a` alone
+([ADR-0103](adr/0103-a-holder-names-a-local-alone-only-where-it-certainly-holds-a-whole-pointer-to-it-and-nothing-else-replacing-adr-0101-rule-1s-exception.md)),
+so `*slot = m; tick();` with `slot` a caller's is doubted where `m` is read.
+Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
 copy is no call: one this check cannot place writes a local for certain only

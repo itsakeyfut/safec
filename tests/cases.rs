@@ -1127,12 +1127,14 @@ cases! {
         // call wrote lands in what is named at the write again; this loses
         // its `SC0411`.
         a_pointer_a_call_wrote_before_a_local_array_left_does_not_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Written after the address left, it may be the array. Two things
-        // say so: the call is taken to write every local it may name, and
-        // what it could name is recorded on the pointer. Mutation: both
-        // dropped, the second by passing no local as the call's `may_write`;
-        // this gains `SC0411`. Either alone leaves it silent.
-        a_pointer_a_call_wrote_after_a_local_array_left_may_write_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The array leaves through caller memory, which names it beside what
+        // this check does not model, so the call that may write it names it
+        // alone nowhere, and `m[0]` is doubted: the belief that it wrote it is
+        // given up (ADR-0103 rule 3, #938; this case was
+        // `a_pointer_a_call_wrote_after_a_local_array_left_may_write_it`).
+        // Mutation: the block branch of `Known::named_alone` ignores what a
+        // cell does not model; this loses its `SC0411`.
+        a_local_array_left_through_caller_memory_is_doubted_where_read_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place, through a pointer a call may have
         // aimed at `t`, may put there the array's address it makes nameable
         // itself, so a write through `t` after it may write the array. A
@@ -1924,6 +1926,17 @@ cases! {
         // writes the local. Mutation: `Cell::poured` never sets
         // `may_hold_null`; this goes quiet.
         a_local_stored_into_caller_memory_after_a_null_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Caller memory stored into on one path names what this check does
+        // not model beside the local, so it names nothing alone (ADR-0103
+        // rule 3, #938). Mutation: the block branch of `Known::named_alone`
+        // ignores what a cell does not model; this loses its `SC0411`.
+        a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #938's own program, a block holding a caller's pointer beside the
+        // local. Rule 3 does not hold it alone: the caller's pointer is read
+        // as possibly null (rule 2, #1038), which marks the block. Mutation:
+        // the block branch ignores both what a cell does not model and
+        // whether it may hold a null; this loses its `SC0411`.
+        a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2895,11 +2908,14 @@ cases! {
         // Mutation: `exposed` of a local joined by intersection; this is
         // reported.
         a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An address stored through a pointer this check cannot place,
-        // which records it in every allocation such code can reach.
-        // Mutation: the walk does not start from `reachable_now()`; this is
-        // reported.
-        a_local_array_stored_where_this_check_cannot_place_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An address stored through a pointer this check cannot place, which
+        // records it in every allocation such code can reach beside what it
+        // does not model, so a later call names it alone nowhere and may not
+        // have written it: the belief that it did is given up (ADR-0103 rule
+        // 3, #938; this case was `..._is_not_reported_as_indeterminate`).
+        // Mutation: the block branch of `Known::named_alone` ignores what a
+        // cell does not model; this loses its `SC0411`.
+        a_local_array_stored_where_this_check_cannot_place_is_doubted_where_read_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the opaque arm skips `levels_below` for an argument
         // read through a dereference; this is reported.
         a_local_array_handed_to_a_call_as_a_pointer_read_out_of_a_local_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
