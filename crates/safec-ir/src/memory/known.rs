@@ -2037,6 +2037,7 @@ impl Known {
         handed: &[Held],
         is_array: impl Fn(LocalIdx) -> bool,
         before: &Table<Storage, PlaceInit>,
+        one_block: impl Fn(Site) -> bool,
     ) -> BTreeSet<LocalIdx> {
         // **Whether a holder may hold anything but a whole pointer**, asked
         // of what it held before the call exposed it: an exposure marks what
@@ -2094,13 +2095,17 @@ impl Known {
         // **And a block holder, by the same question** (#1036): asked with
         // `false`, a block a store wrote on one path only named its local
         // alone, and `if (c) *b = &a; fill(b);` read `a` in silence where `c`
-        // is zero, where the local spelling was `SC0411`.
+        // is zero, where the local spelling was `SC0411`. **Only a site that
+        // stands for one block**, `one_block`: the write state and the record
+        // are kept per site, so a store through one block a loop made wrote
+        // the site, and a call handed another of its blocks found the local
+        // named alone. Found by review.
         for &container in &reached.sites {
             let cell = &self.contents[container];
             ask(
                 cell.sites().collect(),
                 cell.locals().collect(),
-                not_whole(Storage::Heap(container)),
+                not_whole(Storage::Heap(container)) || !one_block(container),
             );
         }
         alone

@@ -1884,6 +1884,11 @@ cases! {
         // `SC0411` goes. Mutation: ask `Known::written` after the exposure
         // instead of before; it goes too.
         a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A site a loop makes stands for every block it made, so a store
+        // through one of them says nothing of another a call is handed.
+        // Found by review. Mutation: `Known::named_alone` takes every site as
+        // one block (`one_block` answering `true`); the `SC0411` at `x` goes.
+        a_local_one_of_a_loops_blocks_names_is_not_believed_written_by_a_call_handed_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

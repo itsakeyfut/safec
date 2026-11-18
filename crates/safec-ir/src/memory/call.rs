@@ -1308,6 +1308,7 @@ impl Allocations<'_> {
                     &holders,
                     |local| self.is_array(function, local),
                     &written_before,
+                    |site| self.made_once[site.local()],
                 );
                 value.replaced(
                     |_| true,
