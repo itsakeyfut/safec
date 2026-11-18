@@ -271,7 +271,7 @@ fails where this table and that file differ.
 | Known | `exposed_after_call` | entry fact | 1 test named in its row |
 | Known | `extent` | in doubt | 2 tests named in its row |
 | Known | `handed_at_most` | entry fact | beliefs `Width` |
-| Known | `exposed_in_part` | entry fact | no program isolates it |
+| Known | `exposed_in_part` | entry fact | 2 tests named in its row |
 | Known | `stored_in_part` | entry fact | 1 test named in its row |
 | Known | `stored_out` | entry fact | beliefs `StoredOut` |
 | Known | `left_at` | entry fact | 2 tests named in its row |

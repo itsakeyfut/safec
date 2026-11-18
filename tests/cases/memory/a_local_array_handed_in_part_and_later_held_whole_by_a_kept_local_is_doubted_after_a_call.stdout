@@ -1,0 +1,93 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:1:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "s"
+Function a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:2:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "p"
+Function a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:3:6 "tick" declared
+  Local "_0" "void" return
+Function a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *[2]" "m"
+  Local "_2" "int **" "h"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int ***"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int *" "r"
+  Local "_9" "int **"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:7:10 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:7:10 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    ArgumentsEvaluated a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:7:5 generated
+    Call a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:7:5 written "fill" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:7:5 generated
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:8:11 written
+      Destination "_5"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:8:5 generated
+    Call a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:8:5 written "stash" "bb2"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:8:5 generated
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:9:9 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:9:5 written
+      Destination "_2"
+      Use
+        Copy "_6"
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:9:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:9:5 generated
+    ArgumentsEvaluated a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:10:5 generated
+    Call a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:10:5 written "tick" "bb3"
+  Block "bb3"
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:10:5 generated
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:11:14 generated
+      Destination "_9"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:11:10 written
+      Destination "_8"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:11:14 generated
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:12:12 written
+      Destination "_10"
+      Binary "Ne"
+        Copy "_8"
+        Constant 0
+    Operation a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call.c:12:12 generated
+    Return
