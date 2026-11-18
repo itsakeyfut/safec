@@ -469,6 +469,14 @@ impl Allocations<'_> {
                     // h; fill(g);` handed on `h`'s names, and `a` was
                     // believed written. Found by review of #1037. See
                     // ADR-0103 rule 1.
+                    //
+                    // **A null test drops the mark**, as it drops any null's:
+                    // `if (g) fill(g);` after the fill and a copy believes `a`
+                    // written again. That arm runs only where all-zero bits
+                    // are not a null pointer, which C17 allows (#940) and no
+                    // target this compiler accepts has; a target that had
+                    // would need the fill kept apart from a null. Measured
+                    // by review, accepted by the owner.
                     if zero {
                         for &local in &landing.targets {
                             value.points_to[local].may_be_null = true;
