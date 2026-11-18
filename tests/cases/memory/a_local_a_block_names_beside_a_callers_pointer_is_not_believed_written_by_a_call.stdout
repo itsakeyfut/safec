@@ -1,0 +1,134 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:2:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "box"
+  Local "_2" "int *" parameter "x"
+Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter "in"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" "x"
+  Local "_4" "int *" "a"
+  Local "_5" "int"
+  Local "_6" "int ***" "box"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:4:9 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:4:13 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:9 written "bb1" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:9 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:18 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:25 generated
+    Return
+  Block "bb2"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:18 generated
+    Call a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:18 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb4"
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:12 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:18 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:33 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:33 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:33 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:43 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:50 generated
+    Return
+  Block "bb6"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:6:33 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:7:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_1"
+          Deref
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:7:5 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:7:5 generated
+    Branch a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:9 written "bb8" "bb9"
+      Copy "_2"
+  Block "bb8"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:9 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:21 written
+      Destination "_10"
+      Address
+        Place "_4"
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 written
+      Destination "_11"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:15 written
+      Destination "_12"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 generated
+    Call a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 written "fill" "bb11"
+      Copy "_6"
+      Copy "_12"
+  Block "bb11"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 generated
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:12 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:12 generated
+    Return

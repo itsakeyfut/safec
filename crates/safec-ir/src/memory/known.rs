@@ -2022,10 +2022,12 @@ impl Known {
     /// **What this check does not model is another place** a pointer may
     /// name: `fill(p, &x)` with `p` either `&a` or what an earlier call
     /// filled in was believed to write `a`, and a read of `a` built silent,
-    /// found by review. Asked of a pointer and not yet of what a block
-    /// holds: a block may name what is not modelled because an address was
-    /// stored where this check cannot place it, and asked there, two
-    /// output-parameter beliefs below are doubted.
+    /// found by review. **And of what a block holds** (#938): a block whose
+    /// record names what this check does not model, a caller's memory or
+    /// an address stored where this check cannot place it, names nothing
+    /// alone. That gives up the belief that such a block still hands its
+    /// local over, by the owner's decision: two output-parameter programs
+    /// through such memory are doubted. See ADR-0103 rule 3.
     ///
     /// **Nor is a null one place**: a pointer that is `&a` on one path and
     /// null on the other hands `a`'s address over on one path only, so the
@@ -2146,7 +2148,8 @@ impl Known {
                 cell.locals().collect(),
                 not_whole(Storage::Heap(container))
                     || !one_block(container)
-                    || cell.may_hold_null(),
+                    || cell.may_hold_null()
+                    || !cell.names_only_modelled(),
             );
         }
         alone
