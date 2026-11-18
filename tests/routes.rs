@@ -355,8 +355,16 @@ struct Row {
 enum Field {
     /// The beliefs whose rows write it through every route.
     Belief(&'static [Belief]),
-    /// Why no belief writes it, said where a reader of the matrix looks.
-    Exempt(&'static str),
+    /// Why no belief writes it, said where a reader of the matrix looks, and
+    /// **the tests that fail when its updates are dropped**: measured once by
+    /// putting the field back to where it starts after every element and
+    /// terminator, and named so that a reader knows what holds it. Empty
+    /// only where `why` says no C reaches it or no program isolates it. See
+    /// ADR-0102.
+    Exempt {
+        why: &'static str,
+        held_by: &'static [&'static str],
+    },
 }
 
 /// Why a field has no belief yet. A field listed so is the matrix's own
@@ -369,15 +377,20 @@ const PENDING: &str = "no belief yet: the corpus holds it, and its rows land wit
 /// unsequenced.
 const UNSEQUENCED: &str = "a fact about what is unsequenced inside one expression (ADR-0042), and each route is statements of its own, so no row leaves a read and a call unsequenced";
 
-/// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3).
+/// Where a field of `Known` starts at a function's entry (ADR-0091 rule 3),
+/// one of three (ADR-0102).
 enum Start {
     /// At the value that doubts: what it says makes the check report rather
     /// than believe.
     Doubt,
-    /// At a value that does not doubt, with why that is right there: a
-    /// belief, or a may-fact that is false because nothing has happened yet
-    /// ([`NOTHING_YET`]).
-    Quiet(&'static str),
+    /// At a value that does not doubt because it assumes something of the
+    /// caller, which a route-matrix belief must exercise: only a
+    /// [`Field::Belief`] row may start so.
+    Believed(&'static str),
+    /// At the value that is the fact at entry, with why: a may-fact false
+    /// because nothing has happened yet ([`NOTHING_YET`]), or what a value
+    /// is before any door gave it anything.
+    Fact(&'static str),
 }
 
 /// Why a may-fact about what the function has done starts false: at its
@@ -404,7 +417,7 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             Belief::Unreplaced,
             Belief::HeldPointers,
         ]),
-        Start::Quiet(
+        Start::Believed(
             "a parameter is believed one whole object of the type it points to, which the caller is asked at every call (ADR-0060), and may be null unless it is `_Nonnull` (#931)",
         ),
     ),
@@ -416,7 +429,7 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             Belief::StoredFreed,
             Belief::LeftBehind,
         ]),
-        Start::Quiet(
+        Start::Believed(
             "a parameter's site is live: a caller that passes a freed pointer is asked so at its call",
         ),
     ),
@@ -428,18 +441,29 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             Belief::LeftBehind,
             Belief::PartLocal,
         ]),
-        Start::Quiet(NOTHING_YET),
+        Start::Fact(NOTHING_YET),
     ),
     (
         "handed_away",
-        Field::Exempt(
-            "no belief's rule reads it: with its one write dropped, seven corpus cases and `a_whole_copy_answers_as_a_store_over_its_own_program` fail, measured after #970, and no row does",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "no belief's rule reads it: with its one write dropped, seven corpus cases and `a_whole_copy_answers_as_a_store_over_its_own_program` fail, measured after #970, and no row does",
+            held_by: &["a_pointer_handed_by_address_around_another_call_builds"],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     // Every site a parameter stands for that this check exposes, since the
     // caller may have kept the pointer (ADR-0040).
-    ("exposed", Field::Exempt(PENDING), Start::Doubt),
+    (
+        "exposed",
+        Field::Exempt {
+            why: PENDING,
+            held_by: &[
+                "a_block_a_store_lets_leave_unwritten_is_reported_where_the_function_returns",
+                "a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns",
+            ],
+        },
+        Start::Doubt,
+    ),
     // What an exposed parameter points at is marked as the caller's, so a
     // load out of it after a call is one this check stopped following
     // (#482).
@@ -450,10 +474,14 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "realloced",
-        Field::Exempt(
-            "what a `realloc` was handed until a branch says whether it succeeded (ADR-0039); the `Realloc` routes test their result at once, so no row reads it unsettled, and the corpus does",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "what a `realloc` was handed until a branch says whether it succeeded (ADR-0039); the `Realloc` routes test their result at once, so no row reads it unsettled, and the corpus does",
+            held_by: &[
+                "a_block_grown_by_realloc_is_doubted_where_it_is_returned",
+                "a_block_grown_by_realloc_is_reported_where_read_past_its_old_size",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     // Every local `unwritten_at_entry` names unwritten. A parameter's memory
     // is the caller's, which may have written it, and is not.
@@ -464,87 +492,132 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     ),
     (
         "pending",
-        Field::Exempt(UNSEQUENCED),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: UNSEQUENCED,
+            held_by: &[
+                "a_call_holding_a_whole_expansion_is_checked_as_written",
+                "a_call_on_the_first_arm_is_pending_after_the_join",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "calls",
-        Field::Exempt(UNSEQUENCED),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: UNSEQUENCED,
+            held_by: &[
+                "a_call_on_the_first_arm_is_pending_after_the_join",
+                "a_call_on_the_second_arm_is_pending_after_the_join",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "exposed_after_call",
-        Field::Exempt(UNSEQUENCED),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: UNSEQUENCED,
+            held_by: &["a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked"],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     // A parameter's block is at least what it points to, which no write is
     // known to cover (#932); a local is the size its type is.
-    ("extent", Field::Exempt(PENDING), Start::Doubt),
+    (
+        "extent",
+        Field::Exempt {
+            why: PENDING,
+            held_by: &[
+                "a_belief_two_paths_meet_with_is_the_narrower",
+                "a_block_a_copy_wrote_half_a_pointer_into_is_doubted_where_it_is_returned",
+            ],
+        },
+        Start::Doubt,
+    ),
     // Read where a call wrote a local: `Route::CallStored` and
     // `Route::CallDeep` name the mutation that silences them.
     (
         "handed_at_most",
         Field::Belief(&[Belief::Width]),
-        Start::Quiet(NOTHING_YET),
+        Start::Fact(NOTHING_YET),
     ),
     (
         "exposed_in_part",
-        Field::Exempt(
-            "set where a local array is handed to a call only through a pointer moved off its start, and no route hands an array to a call",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "no program isolates it: since #1028 a call writes only a local some pointer names alone, so an array an earlier call held an element of is a may-write whether or not this is set; measured with its updates dropped",
+            held_by: &[],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "stored_in_part",
-        Field::Exempt(
-            "no row reads it: with both its reads dropped, at a load and at a call, every row passes, measured (#943); the corpus holds the call's read alone, and the load's is held by nothing",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "no row reads it: with both its reads dropped, at a load and at a call, every row passes, measured (#943); the corpus holds the call's read alone, and the load's is held by nothing",
+            held_by: &[
+                "a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "stored_out",
         Field::Belief(&[Belief::StoredOut]),
-        Start::Quiet(NOTHING_YET),
+        Start::Fact(NOTHING_YET),
     ),
     (
         "left_at",
-        Field::Exempt(
-            "asked at the function's exit of a block a store let leave holding pointers (ADR-0076); `Belief::Returned` asks a block a `return` lets leave, and no row stores a block out and fills it after",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "asked at the function's exit of a block a store let leave holding pointers (ADR-0076); `Belief::Returned` asks a block a `return` lets leave, and no row stores a block out and fills it after",
+            held_by: &[
+                "a_local_a_callee_wrote_as_bytes_is_asked_when_handed_on",
+                "a_local_a_callee_wrote_as_bytes_is_doubted_at_every_level_when_read_back",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "held_levels",
-        Field::Exempt(
-            "no row yet: a block held as pointers and reached later through a `void *` (ADR-0086) is asked at a `return` the matrix does not write; `HeldPointers` is held by the value's own record, and no row fails when this is never raised",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "no row yet: a block held as pointers and reached later through a `void *` (ADR-0086) is asked at a `return` the matrix does not write; `HeldPointers` is held by the value's own record, and no row fails when this is never raised",
+            held_by: &[
+                "a_block_below_a_returned_void_pointer_box_is_reported_at_the_return",
+                "a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "part_written",
         Field::Belief(&[Belief::PartPointer]),
-        Start::Quiet(NOTHING_YET),
+        Start::Fact(NOTHING_YET),
     ),
     (
         "other_written",
-        Field::Exempt(
-            "names the place a report about a value that is not a pointer is said at, and decides nothing (#940); the write state decides",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "names the place a report about a value that is not a pointer is said at, and decides nothing (#940); the write state decides",
+            held_by: &[
+                "a_block_calloc_made_copied_whole_and_read_back_is_reported_at_the_calloc",
+                "a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_read_after_a_later_allocation_fails",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     (
         "part_before",
-        Field::Exempt(
-            "set only where a site is made again, a loop's, and asked where a block leaves; the corpus holds it (#940)",
-        ),
-        Start::Quiet(NOTHING_YET),
+        Field::Exempt {
+            why: "set only where a site is made again, a loop's, and asked where a block leaves; the corpus holds it (#940)",
+            held_by: &[
+                "part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole",
+                "part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_copy_of_the_newest",
+            ],
+        },
+        Start::Fact(NOTHING_YET),
     ),
     // Read where a pointer is passed on after a call kept a local untyped:
     // the `Kept*` routes name the mutations that silence it.
     (
         "handed_untyped",
         Field::Belief(&[Belief::Width]),
-        Start::Quiet(NOTHING_YET),
+        Start::Fact(NOTHING_YET),
     ),
 ];
 
@@ -559,104 +632,135 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
     (
         "names",
         Field::Belief(&[Belief::Lost, Belief::Stale, Belief::Reborn, Belief::Caller]),
-        Start::Quiet(
+        Start::Fact(
             "a value names only what a door gave it, and at its start it was given nothing; a place whose root reaches no site says nothing (`report::used`)",
         ),
     ),
     (
         "freed",
         Field::Belief(&[Belief::Stale, Belief::StoredFreed]),
-        Start::Quiet("no free has acted on the value at its start"),
+        Start::Fact("no free has acted on the value at its start"),
     ),
     (
         "writes_elsewhere",
-        Field::Exempt(
-            "whether a write through the value may land where its edges do not say: it decides whether a store replaces a local (ADR-0028), and the routes reach it only through that",
-        ),
+        Field::Exempt {
+            why: "whether a write through the value may land where its edges do not say: it decides whether a store replaces a local (ADR-0028), and the routes reach it only through that",
+            held_by: &[
+                "a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local",
+                "a_local_array_written_in_part_and_then_at_a_known_element_is_still_doubted",
+            ],
+        },
         Start::Doubt,
     ),
     (
         "position",
         Field::Belief(&[Belief::Width]),
-        Start::Quiet(
+        Start::Fact(
             "at the start of the whole of what it names until a move says otherwise, since no door makes a value inside a row and a conversion does (#947); a door that cannot place it gives `At::Unknown`",
         ),
     ),
     (
         "named_at_read",
-        Field::Exempt(
-            "the locals code this check cannot read could name where the value was read out of memory or written by such code; only such a read or write sets it, and no belief's rows name it apart",
-        ),
-        Start::Quiet(
+        Field::Exempt {
+            why: "the locals code this check cannot read could name where the value was read out of memory or written by such code; only such a read or write sets it, and no belief's rows name it apart",
+            held_by: &[
+                "a_pointer_a_call_kept_written_by_a_store_that_made_a_local_array_nameable_may_write_it",
+                "a_pointer_moved_as_it_is_read_out_of_memory_a_call_wrote_after_a_local_array_left_may_write_it",
+            ],
+        },
+        Start::Fact(
             "the value was neither read out of memory nor written by code this check cannot read at its start",
         ),
     ),
     (
         "returned_by",
-        Field::Exempt(
-            "the site an allocation or `realloc` returned, read only by a branch on that result (ADR-0080), which no route takes",
-        ),
-        Start::Quiet("no call returned the value at its start"),
+        Field::Exempt {
+            why: "the site an allocation or `realloc` returned, read only by a branch on that result (ADR-0080), which no route takes",
+            held_by: &[
+                "a_block_grown_by_realloc_is_doubted_where_it_is_returned",
+                "a_block_grown_by_realloc_is_reported_where_read_past_its_old_size",
+            ],
+        },
+        Start::Fact("no call returned the value at its start"),
     ),
     ("fresh_read", Field::Belief(&[Belief::Fresh]), Start::Doubt),
     ("widths", Field::Belief(&[Belief::Width]), Start::Doubt),
     (
         "arrived_holds_pointer",
         Field::Belief(&[Belief::HeldPointers]),
-        Start::Quiet(
-            "set from the type a value arrives as, and at its start it arrived as nothing",
-        ),
+        Start::Fact("set from the type a value arrives as, and at its start it arrived as nothing"),
     ),
     (
         "inner_address",
-        Field::Exempt(
-            "whether an edge may be the address of something inside the local it names, set by `&*pp` alone, which no route writes",
-        ),
-        Start::Quiet("the value names no local at its start"),
+        Field::Exempt {
+            why: "no C reaches it: the frontend lowers every address inside a local to its start and arithmetic, so no route or case sets it; its reader is held by the unit test `an_edge_inside_a_local_is_not_read_at_the_local_s_size`",
+            held_by: &[],
+        },
+        Start::Fact("the value names no local at its start"),
     ),
     (
         "element",
         Field::Belief(&[Belief::PartLocal]),
-        Start::Quiet(
+        Start::Fact(
             "which element of a local array is known only where a door counts it, and the value names no array at its start",
         ),
     ),
     (
         "site_element",
-        Field::Exempt(
-            "which element of a heap block the value points at, where a constant says so (#873); held by the corpus, since no belief's rows write a block in part",
-        ),
-        Start::Quiet("the value holds no site at its start"),
+        Field::Exempt {
+            why: "which element of a heap block the value points at, where a constant says so (#873); held by the corpus, since no belief's rows write a block in part",
+            held_by: &[
+                "a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds",
+                "a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted",
+            ],
+        },
+        Start::Fact("the value holds no site at its start"),
     ),
     (
         "array_edge",
-        Field::Exempt(
-            "whether an edge survives only by the rule that keeps it through a known move (#639, #647); held by the corpus, since no route moves a pointer",
-        ),
-        Start::Quiet("no move has acted on the value at its start"),
+        Field::Exempt {
+            why: "whether an edge survives only by the rule that keeps it through a known move (#639, #647); held by the corpus, since no route moves a pointer",
+            held_by: &[
+                "a_local_array_handed_to_a_call_through_a_pointer_moved_back_onto_it_is_reported",
+                "a_local_array_reached_by_a_call_through_a_moved_pointer_stored_in_an_allocation_is_doubted",
+            ],
+        },
+        Start::Fact("no move has acted on the value at its start"),
     ),
     (
         "stored_through",
-        Field::Exempt(
-            "whether a store through the value has written what it points at, which keeps the lowering's read of an assignment's value undoubted (#667); held by the corpus",
-        ),
+        Field::Exempt {
+            why: "whether a store through the value has written what it points at, which keeps the lowering's read of an assignment's value undoubted (#667); held by the corpus",
+            held_by: &[
+                "a_block_of_no_constant_size_written_at_its_start_is_doubted_where_returned",
+                "a_double_free_through_an_array_filled_backwards_is_reported",
+            ],
+        },
         Start::Doubt,
     ),
     (
         "may_be_null",
-        Field::Exempt(
-            "whether the value may be null on some path, read where a null test refines a call's result (#931); the nullability check owns null",
-        ),
-        Start::Quiet(
+        Field::Exempt {
+            why: "whether the value may be null on some path, read where a null test refines a call's result (#931); the nullability check owns null",
+            held_by: &[
+                "a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local",
+                "a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local",
+            ],
+        },
+        Start::Fact(
             "a local nothing was assigned holds nothing, nor null; a parameter and a call's result set it on the value `Held::none` builds, each at its own door (#931)",
         ),
     ),
     (
         "vouched",
-        Field::Exempt(
-            "whether a load's position is the one its block's record vouches for (ADR-0100); only a load out of a heap block sets it, and no belief's rows read one back through a local; held by the corpus",
-        ),
-        Start::Quiet(
+        Field::Exempt {
+            why: "whether a load's position is the one its block's record vouches for (ADR-0100); only a load out of a heap block sets it, and no belief's rows read one back through a local; held by the corpus",
+            held_by: &[
+                "a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved",
+                "a_pointer_read_back_and_moved_by_a_constant_is_measured_from_where_it_was_stored",
+            ],
+        },
+        Start::Fact(
             "no value is read out of memory before the function runs, so nothing is vouched for, and the bounds rule doubts a load that is not",
         ),
     ),
@@ -735,8 +839,16 @@ fn known_fields() -> Vec<String> {
 ///
 /// **Nor that a start is the one the field takes**: [`Start`] is what the
 /// row says, and the entry is read by review. Mutation: give a row
-/// `Start::Quiet(" ")`; this fails. Mutation: give `left_at` the exemption
-/// `PENDING` again; this fails, since it starts quiet.
+/// `Start::Fact(" ")`; this fails. Mutation: give `left_at` the exemption
+/// `PENDING` again; this fails, since it starts quiet. Mutation: start
+/// `handed_away` `Start::Believed`; this fails, since no belief's rows ask
+/// it (ADR-0102).
+///
+/// **And that each exempt field names a test that holds its updates**, by
+/// name only: that the test fails when the updates are dropped was measured
+/// once (ADR-0102's Confirmation). Mutation: name a test that does not
+/// exist in `handed_away`'s `held_by`; this fails. Mutation: empty it; this
+/// fails.
 #[test]
 fn every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption() {
     check_fields("Known", &known_fields(), KNOWN_FIELDS);
@@ -765,26 +877,55 @@ fn check_fields(value: &str, declared: &[String], table: &[(&str, Field, Start)]
                 !beliefs.is_empty() && beliefs.iter().all(|belief| BELIEFS.contains(belief)),
                 "`{name}` names a belief the matrix does not ask"
             ),
-            Field::Exempt(why) => {
+            Field::Exempt { why, held_by } => {
                 assert!(!why.is_empty(), "`{name}` is exempt with no reason");
                 // **A field that starts quiet says why no row writes it in
-                // its own words** (#943): it is a belief or a may-fact the
-                // check does not doubt, so the generic reason that a row
-                // will come later hid which beliefs had none.
+                // its own words** (#943): the generic reason that a row will
+                // come later hid which fields had none.
                 assert!(
-                    !(*why == PENDING && matches!(start, Start::Quiet(_))),
+                    !(*why == PENDING && matches!(start, Start::Fact(_))),
                     "`{name}` starts quiet and is exempt only as `PENDING`; name the belief that writes it or say why none can"
                 );
+                // **And names what fails when its updates are dropped**, a
+                // test that exists (ADR-0102): a name no test has is a guard
+                // nobody runs.
+                assert!(
+                    !held_by.is_empty()
+                        || why.starts_with("no C reaches it")
+                        || why.starts_with("no program isolates it"),
+                    "`{name}` is exempt and names no test that holds its updates"
+                );
+                for test in *held_by {
+                    assert!(
+                        is_a_test(test),
+                        "`{name}` is held by `{test}`, which is no test"
+                    );
+                }
             }
         }
         match start {
             Start::Doubt => {}
-            Start::Quiet(why) => assert!(
+            // **Only a field a belief's rows exercise may start believed**
+            // (ADR-0102): a start that assumes something of the caller with
+            // no row to ask it is a silence nobody measures.
+            Start::Believed(why) => assert!(
+                !why.trim().is_empty() && matches!(field, Field::Belief(_)),
+                "`{name}` starts believed with no reason or no belief's rows (ADR-0102)"
+            ),
+            Start::Fact(why) => assert!(
                 !why.trim().is_empty(),
-                "`{name}` starts quiet with no reason (ADR-0091 rule 3)"
+                "`{name}` starts at an entry fact with no reason (ADR-0091 rule 3)"
             ),
         }
     }
+}
+
+/// Whether `name` is a test: a case the corpus table lists, or a function of
+/// this file's. A guard named in a table is a claim that it exists.
+fn is_a_test(name: &str) -> bool {
+    let cases = include_str!("cases.rs");
+    let routes = include_str!("routes.rs");
+    cases.contains(&format!("        {name}: [")) || routes.contains(&format!("fn {name}("))
 }
 
 /// Every value of each axis, in the order [`axis_place`] gives them.
