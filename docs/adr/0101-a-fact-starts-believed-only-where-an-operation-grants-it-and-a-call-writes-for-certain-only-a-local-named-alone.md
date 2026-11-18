@@ -49,7 +49,11 @@ Chosen, by the owner's decisions on #941:
    and a copy, applied to the call. Measured on a prototype: no report moves
    over the corpus and the route matrix, and a local a call may have missed,
    then reached by a later call through nothing that names it, is `SC0411`
-   where it was believed written (#1028).
+   where it was believed written (#1028). A pointer that may be null, or a
+   holder nothing may have assigned on some path, names no local alone,
+   since on that path it hands no address over; a block that may hold a null
+   still counts as naming what it holds alone, since a block records no null
+   (#938).
 2. **A field starts believed only where an operation grants its safe value or
    a route-matrix belief exercises it**; one with neither starts in doubt, and
    the reports that moves are listed, a correct program refused being put to
@@ -61,8 +65,21 @@ Chosen, by the owner's decisions on #941:
 
 ### Confirmation
 
-Settled as each of #1028, #1029 and #1030 lands: each rule's mutation and the
-case it fails are named here then.
+Rule 1, measured on #1028's branch by applying each change and restoring
+it:
+
+* A call believing every local not named beside another written, as before,
+  silences the `SC0411` of
+  `a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call`
+  and `a_local_kept_on_one_path_is_not_believed_written_by_a_later_call`.
+* A call believing every local it may write written fails those two and the
+  six `a_call_handed_*` and `a_local_array_handed_*` cases that hold each
+  route a pointer may name another place by.
+* A holder nothing may have assigned on some path counted as naming its local
+  alone silences
+  `a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call`.
+
+Rules 2 and 3 are settled as #1029 and #1030 land.
 
 ### Consequences
 
