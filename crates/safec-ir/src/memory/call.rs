@@ -462,6 +462,18 @@ impl Allocations<'_> {
                     for &site in &landing.containers {
                         value.contents[site].position_unknown();
                     }
+                    // **And a local a fill of zeros landed in may now hold
+                    // no address at all**, as a null does, so what it named
+                    // is named alone by nobody, and a copy of it carries
+                    // that: a fill pours no value, so `memset(&h, 0, 8); g =
+                    // h; fill(g);` handed on `h`'s names, and `a` was
+                    // believed written. Found by review of #1037. See
+                    // ADR-0103 rule 1.
+                    if zero {
+                        for &local in &landing.targets {
+                            value.points_to[local].may_be_null = true;
+                        }
+                    }
                 }
             }
         }
