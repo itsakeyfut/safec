@@ -1938,6 +1938,15 @@ cases! {
         // `Known::named_alone` ignores what a cell does not model; this
         // loses its `SC0411` at the read.
         a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A constant null stored through a pointer to a holder is a null,
+        // as `h = 0` is, so the holder may be null and names the local
+        // nothing alone (ADR-0103 rule 1, #1045): on one path, in a loop
+        // whose head joins it, and copied into a block the call is handed.
+        // Mutation: drop the `Constant(0)` arm of `Allocations::carried`, so
+        // the constant arm answers it with no null; each loses its `SC0411`.
+        a_local_a_null_stored_through_a_pointer_to_its_holder_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:

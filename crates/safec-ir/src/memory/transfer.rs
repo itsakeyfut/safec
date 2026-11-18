@@ -327,6 +327,12 @@ impl Allocations<'_> {
                 reached.moved_by_arithmetic(None);
                 reached
             }
+            // **A `0` is a null**, as the direct assignment's arm says it is
+            // (ADR-0093 rule 3): answered by the constant arm below, `*hh =
+            // 0` left `h` naming nothing and not null, joined with the path
+            // that held `&a` it named `a` alone, and a call handed `h` was
+            // believed to write `a` (#1045).
+            Rvalue::Use(Operand::Constant(0)) => Held::null(value.points_to.len()),
             // A constant, an address. Neither is a pointer this check
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
