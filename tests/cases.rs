@@ -1862,6 +1862,13 @@ cases! {
         // not named beside another written, as before #1028; the `SC0411`
         // at `*x` goes.
         a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // So is one kept on one path only. Mutation: believe every local not
+        // named beside another written, as before #1028; the `SC0411` goes.
+        a_local_kept_on_one_path_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder nothing may have assigned on some path names nothing there,
+        // as a null does. Found by review. Mutation: pass `false` for
+        // `unassigned` in `Known::named_alone`; the `SC0411` goes.
+        a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

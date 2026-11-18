@@ -2054,23 +2054,35 @@ impl Known {
         // array is beside the array, never alone: split off without saying
         // so, `p` either `&b` or `&arr[k]` left `b` named alone and believed
         // written. Found by review.
+        //
+        // **Nor is a holder nothing may have assigned on some path**: there it
+        // holds no address, as a null holds none, but a value no write reached
+        // takes no part in the join, so `if (c) h = &a; fill(&h);` left `h`
+        // naming `a` alone and `a` believed written where `c` is zero. Found
+        // by review of #1028.
         {
-            let mut ask_value = |held: &Held| {
+            let mut ask_value = |held: &Held, unassigned: bool| {
                 let in_part = held.element.is_none() || held.array_edge;
                 let (arrays, rest): (Vec<LocalIdx>, Vec<LocalIdx>) =
                     held.locals().partition(|&local| in_part && is_array(local));
                 ask(
                     held.sites().collect(),
                     rest,
-                    held.beyond().any_unknown() || held.may_be_null || !arrays.is_empty(),
+                    held.beyond().any_unknown()
+                        || held.may_be_null
+                        || unassigned
+                        || !arrays.is_empty(),
                 );
                 ask(Vec::new(), arrays, true);
             };
             for held in handed {
-                ask_value(held);
+                ask_value(held, false);
             }
             for &holder in &reached.locals {
-                ask_value(&self.points_to[holder]);
+                ask_value(
+                    &self.points_to[holder],
+                    self.written[holder].whole().may_be_unwritten(),
+                );
             }
         }
         for &container in &reached.sites {
