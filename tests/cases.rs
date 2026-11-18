@@ -1947,6 +1947,21 @@ cases! {
         a_local_a_null_stored_through_a_pointer_to_its_holder_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a call is handed through a pointer that may be null, or
+        // may name another block, may not have been written by it, and is
+        // doubted where it is read or returned (ADR-0104, #1046). Mutations,
+        // in `Known::believed_written_only_where_named_alone`: drop the
+        // may-write, so every handed block is written again, and all three
+        // lose their `SC0411`; count a possibly null argument as naming its
+        // site alone, and the first and third lose it; count an argument
+        // naming two sites as alone, and the second loses it.
+        a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_call_was_handed_through_a_pointer_that_may_name_another_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same, where the pointer may name a local instead of the
+        // block. Mutation: count an argument that names a local beside the
+        // site as naming it alone; this loses its `SC0411`. Found by review.
+        a_block_a_call_was_handed_through_a_pointer_that_may_name_a_local_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:

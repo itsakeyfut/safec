@@ -2659,6 +2659,53 @@ impl Known {
         self.written[site].written_by_unknown_code();
     }
 
+    /// **A block an argument names is believed written only where some
+    /// argument names it alone**: that one site and nothing else, not
+    /// possibly null, and a site that stands for one block (`one_block`).
+    /// Every other block an argument names keeps what it held `before` the
+    /// exposure, may-written, as a store through the same pointer leaves
+    /// it: `p = 0; if (c) p = b; fill(p); return *b != 0;` read `*b`
+    /// indeterminate in silence where `c` is zero (#1046). Blocks reached
+    /// only through other blocks keep [`Self::expose`]'s belief. See
+    /// ADR-0104.
+    ///
+    /// **Fewer questions than [`Self::named_alone`] asks of a local's
+    /// holders**: not whether the value names what this check does not
+    /// follow, whether a local holder was assigned on every path, or at
+    /// which element it points. An unassigned holder is reported where it
+    /// is read; a pointer at one element of a block is taken as the whole
+    /// block, as before this rule (#1050).
+    ///
+    /// **No case holds `one_block`**, measured: dropping it leaves the
+    /// suite green, and a block a loop makes again is one this check stops
+    /// following by the next turn, so a read of the earlier one is doubted
+    /// for that. Kept because it can only add a doubt, and because it is
+    /// the condition [`Self::named_alone`] asks of a block holder.
+    pub(super) fn believed_written_only_where_named_alone(
+        &mut self,
+        handed: &[Held],
+        before: &Table<Storage, PlaceInit>,
+        one_block: impl Fn(Site) -> bool,
+    ) {
+        let names_alone = |held: &Held, site: Site| {
+            !held.may_be_null
+                && held.locals().next().is_none()
+                && held.sites().eq([site])
+                && one_block(site)
+        };
+        let alone: BTreeSet<Site> = handed
+            .iter()
+            .flat_map(|held| held.sites().filter(|&site| names_alone(held, site)))
+            .collect();
+        for held in handed {
+            for site in held.sites().filter(|site| !alone.contains(site)) {
+                let storage = Storage::Heap(site);
+                self.written[storage] = before[storage].clone();
+                self.written[storage].may_write(Whole::Pointer);
+            }
+        }
+    }
+
     /// Whether `local` holds a pointer read out of fresh memory that nothing
     /// may have replaced: [`Held::fresh_read`](super::parts::Held::fresh_read),
     /// and not a local whose address escaped, since code this check cannot
