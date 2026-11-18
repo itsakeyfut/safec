@@ -1853,22 +1853,35 @@ cases! {
         // Mutation: `copied_away` leaves out every lost answer again; this
         // goes silent.
         a_lost_value_copied_out_is_reported_as_its_store_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `reached_only_beside_another` answers nothing; `a` is
-        // believed written by the call and the `SC0411` goes.
+        // Mutation: believe every local a call may write (`WrittenBy::Call`
+        // ignoring `alone`); `a` is believed written by the call and the
+        // `SC0411` goes.
         a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `reached_only_beside_another` asks a pointer only its
+        // A local no pointer the later call can find names is one it may have
+        // missed, not one it wrote (ADR-0101). Mutation: believe every local
+        // not named beside another written, as before #1028; the `SC0411`
+        // at `*x` goes.
+        a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // So is one kept on one path only. Mutation: believe every local not
+        // named beside another written, as before #1028; the `SC0411` goes.
+        a_local_kept_on_one_path_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder nothing may have assigned on some path names nothing there,
+        // as a null does. Found by review. Mutation: pass `false` for
+        // `unassigned` in `Known::named_alone`; the `SC0411` goes.
+        a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `reached_only_beside_another` counts a pointer that may
+        // Mutation: `named_alone` counts a pointer that may
         // be null as naming its local alone; the four reads go quiet.
         a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: hand `reached_only_beside_another` the arguments with no
+        // Mutation: hand `named_alone` the arguments with no
         // projection alone; the five reads go quiet. Mutation: read a
         // dereference certainly of one local as a load (`handed_value` skips
         // `read_from_locals`); the last function is reported.
         a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: count a pointer at an uncounted element as naming the
-        // array alone in `reached_only_beside_another`; the first and last
+        // array alone in `named_alone`; the first and last
         // reads go quiet. Mutation: drop `|| !arrays.is_empty()` there, so
         // what is split off the array may be named alone; `b == 0` goes quiet.
         a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2367,7 +2380,7 @@ cases! {
         // An array handed at an element this check cannot count may have
         // been written in part by the call (#951). Mutation: count a pointer
         // at an uncounted element as naming the array alone in
-        // `reached_only_beside_another`; this goes quiet.
+        // `named_alone`; this goes quiet.
         a_local_array_handed_to_a_call_at_an_element_not_known_may_have_missed_the_rest: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written at one element before an inner loop that makes it again:
         // unwritten again at the back edge element by element, found by
