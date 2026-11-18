@@ -1926,13 +1926,16 @@ cases! {
         // writes the local. Mutation: `Cell::poured` never sets
         // `may_hold_null`; this goes quiet.
         a_local_stored_into_caller_memory_after_a_null_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A block that names what this check does not model, caller memory
-        // stored into on one path or a block holding a caller's pointer beside
-        // the local, names nothing alone (ADR-0103 rule 3, #938). Mutation:
-        // the block branch of `Known::named_alone` ignores what a cell does
-        // not model; the first loses its `SC0411`. The second is held by
-        // rule 2 as well, a caller's pointer read as possibly null.
+        // Caller memory stored into on one path names what this check does
+        // not model beside the local, so it names nothing alone (ADR-0103
+        // rule 3, #938). Mutation: the block branch of `Known::named_alone`
+        // ignores what a cell does not model; this loses its `SC0411`.
         a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // #938's own program, a block holding a caller's pointer beside the
+        // local. Rule 3 does not hold it alone: the caller's pointer is read
+        // as possibly null (rule 2, #1038), which marks the block. Mutation:
+        // the block branch ignores both what a cell does not model and
+        // whether it may hold a null; this loses its `SC0411`.
         a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
