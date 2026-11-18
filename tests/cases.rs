@@ -1907,7 +1907,7 @@ cases! {
         // of the local was overwritten by a null, and one that holds a null on
         // one path (ADR-0103 rule 2, #1038). Mutation: `Cell::poured` never
         // sets `may_hold_null`; both lose their `SC0411`. Mutation:
-        // `Cell::absorb` keeps its own `may_hold_null`; the first loses it.
+        // `Cell::absorb` keeps its own `may_hold_null`; both lose it too.
         a_local_a_block_named_before_a_null_overwrote_it_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
