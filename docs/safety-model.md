@@ -618,6 +618,11 @@ at all, an address an earlier call kept: `keep(p); other();` with `p` either
 a null or what this check does not follow name `a` alone
 ([ADR-0103](adr/0103-a-holder-names-a-local-alone-only-where-it-certainly-holds-a-whole-pointer-to-it-and-nothing-else-replacing-adr-0101-rule-1s-exception.md)),
 so `*slot = m; tick();` with `slot` a caller's is doubted where `m` is read.
+A block it is handed is believed written the same way, only where an
+argument names it alone: `fill(p)` with `p` either `b` or a null leaves `*b`
+possibly unwritten
+([ADR-0104](adr/0104-a-block-a-call-is-handed-is-believed-written-only-where-an-argument-names-it-alone.md)).
+A block reached only through another block is still believed written.
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
