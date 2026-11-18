@@ -243,6 +243,61 @@ The limits, each a doubt the reader sees unless it says otherwise:
   that may be null is doubted as a dereference of one is (ADR-0084).
 
 
+### Where each fact starts
+
+Each fact the memory check keeps starts a function in one of three ways: **in
+doubt**, at the value that makes it report; **believed**, assuming something
+of the caller that the caller is asked at its call; or at an **entry fact**,
+what is true before the function has done anything
+([ADR-0102](adr/0102-a-start-is-a-doubt-a-belief-or-an-entry-fact-and-what-updates-a-fact-is-held-by-a-named-test-narrowing-adr-0101-rule-2.md)).
+The last column says what holds it: the route-matrix beliefs whose rows
+exercise it, or, for a fact no belief writes, the tests its row in
+`tests/routes.rs` names as failing when its updates are dropped. A test there
+fails where this table and that file differ.
+
+<!-- fields:start -->
+| value | field | starts | held by |
+|---|---|---|---|
+| Known | `points_to` | believed | beliefs `Width`, `Lost`, `Stale`, `Caller`, `Unreplaced`, `HeldPointers` |
+| Known | `state` | believed | beliefs `Lost`, `Reborn`, `StoredFreed`, `LeftBehind` |
+| Known | `escaped` | entry fact | beliefs `Width`, `Unreplaced`, `LeftBehind`, `PartLocal` |
+| Known | `handed_away` | entry fact | 1 test named in its row |
+| Known | `exposed` | in doubt | 2 tests named in its row |
+| Known | `contents` | in doubt | beliefs `Width`, `Lost`, `Stale`, `Caller` |
+| Known | `realloced` | entry fact | 2 tests named in its row |
+| Known | `written` | in doubt | beliefs `Fresh`, `PartLocal`, `Returned` |
+| Known | `pending` | entry fact | 2 tests named in its row |
+| Known | `calls` | entry fact | 2 tests named in its row |
+| Known | `exposed_after_call` | entry fact | 1 test named in its row |
+| Known | `extent` | in doubt | 2 tests named in its row |
+| Known | `handed_at_most` | entry fact | beliefs `Width` |
+| Known | `exposed_in_part` | entry fact | no program isolates it |
+| Known | `stored_in_part` | entry fact | 1 test named in its row |
+| Known | `stored_out` | entry fact | beliefs `StoredOut` |
+| Known | `left_at` | entry fact | 2 tests named in its row |
+| Known | `held_levels` | entry fact | 2 tests named in its row |
+| Known | `part_written` | entry fact | beliefs `PartPointer` |
+| Known | `other_written` | entry fact | 2 tests named in its row |
+| Known | `part_before` | entry fact | 2 tests named in its row |
+| Known | `handed_untyped` | entry fact | beliefs `Width` |
+| Held | `names` | entry fact | beliefs `Lost`, `Stale`, `Reborn`, `Caller` |
+| Held | `freed` | entry fact | beliefs `Stale`, `StoredFreed` |
+| Held | `writes_elsewhere` | in doubt | 2 tests named in its row |
+| Held | `position` | entry fact | beliefs `Width` |
+| Held | `named_at_read` | entry fact | 2 tests named in its row |
+| Held | `returned_by` | entry fact | 2 tests named in its row |
+| Held | `fresh_read` | in doubt | beliefs `Fresh` |
+| Held | `widths` | in doubt | beliefs `Width` |
+| Held | `arrived_holds_pointer` | entry fact | beliefs `HeldPointers` |
+| Held | `inner_address` | entry fact | no C reaches it |
+| Held | `element` | entry fact | beliefs `PartLocal` |
+| Held | `site_element` | entry fact | 2 tests named in its row |
+| Held | `array_edge` | entry fact | 2 tests named in its row |
+| Held | `stored_through` | in doubt | 2 tests named in its row |
+| Held | `may_be_null` | entry fact | 2 tests named in its row |
+| Held | `vouched` | entry fact | 2 tests named in its row |
+<!-- fields:end -->
+
 ## Incremental Safety Levels
 
 Avoid requiring every existing C program to become fully safe immediately.

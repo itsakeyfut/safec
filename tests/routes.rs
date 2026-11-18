@@ -806,6 +806,70 @@ fn every_field_of_a_held_value_is_a_belief_or_an_exemption() {
     check_fields("Held", &held_fields(), HELD_FIELDS);
 }
 
+/// The table in `docs/safety-model.md` under "Where each fact starts" lists
+/// every field of `Known` and `Held` and where it starts, as
+/// [`KNOWN_FIELDS`] and [`HELD_FIELDS`] say, and nothing else: a field added,
+/// removed or started differently in one and not the other fails here,
+/// naming the rows that differ. Only the first three columns are compared;
+/// the last says in prose what holds the field. See ADR-0101 rule 3.
+///
+/// Mutation: delete `vouched`'s row from the document; this fails. Mutation:
+/// change `points_to`'s start there to `entry fact`; this fails. Mutation:
+/// add a row to [`HELD_FIELDS`]'s table and not the document; this fails
+/// here as well as in the field check.
+#[test]
+fn the_safety_models_table_lists_every_field_and_where_it_starts() {
+    let starts = |start: &Start| match start {
+        Start::Doubt => "in doubt",
+        Start::Believed(_) => "believed",
+        Start::Fact(_) => "entry fact",
+    };
+    let tables: std::collections::BTreeSet<(String, String, String)> =
+        [("Known", KNOWN_FIELDS), ("Held", HELD_FIELDS)]
+            .iter()
+            .flat_map(|(value, table)| {
+                table.iter().map(move |(field, _, start)| {
+                    (
+                        value.to_string(),
+                        field.to_string(),
+                        starts(start).to_string(),
+                    )
+                })
+            })
+            .collect();
+    let document = include_str!("../docs/safety-model.md");
+    let section = document
+        .split("<!-- fields:start -->")
+        .nth(1)
+        .and_then(|rest| rest.split("<!-- fields:end -->").next())
+        .expect("docs/safety-model.md holds the table between its markers");
+    let listed: std::collections::BTreeSet<(String, String, String)> = section
+        .lines()
+        .filter_map(|line| {
+            let cells: Vec<&str> = line
+                .trim()
+                .trim_matches('|')
+                .split('|')
+                .map(str::trim)
+                .collect();
+            match cells.as_slice() {
+                [value, field, start, _] if *value == "Known" || *value == "Held" => Some((
+                    value.to_string(),
+                    field.trim_matches('`').to_string(),
+                    start.to_string(),
+                )),
+                _ => None,
+            }
+        })
+        .collect();
+    let missing: Vec<_> = tables.difference(&listed).collect();
+    let extra: Vec<_> = listed.difference(&tables).collect();
+    assert!(
+        missing.is_empty() && extra.is_empty(),
+        "docs/safety-model.md's table differs from the field tables: in the tables and not the document {missing:?}; in the document and not the tables {extra:?}"
+    );
+}
+
 /// The fields of `Known`, read off its declaration.
 fn known_fields() -> Vec<String> {
     let source = include_str!("../crates/safec-ir/src/memory/known.rs");
