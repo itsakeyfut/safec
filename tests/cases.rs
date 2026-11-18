@@ -1878,6 +1878,12 @@ cases! {
         // as a null does. Found by review. Mutation: pass `false` for
         // `unassigned` in `Known::named_alone`; the `SC0411` goes.
         a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // So does a block a store wrote on one path only, asked as it was
+        // before the call exposed it (ADR-0103 rule 1, #1036). Mutation: the
+        // block branch of `Known::named_alone` asks with `false`; the
+        // `SC0411` goes. Mutation: ask `Known::written` after the exposure
+        // instead of before; it goes too.
+        a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

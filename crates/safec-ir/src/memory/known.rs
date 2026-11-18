@@ -2036,7 +2036,15 @@ impl Known {
         &self,
         handed: &[Held],
         is_array: impl Fn(LocalIdx) -> bool,
+        before: &Table<Storage, PlaceInit>,
     ) -> BTreeSet<LocalIdx> {
+        // **Whether a holder may hold anything but a whole pointer**, asked
+        // of what it held before the call exposed it: an exposure marks what
+        // it reaches written by code this check cannot read, so asked after
+        // it a block a store wrote on one path only read as written. See
+        // ADR-0103 rule 1.
+        let not_whole =
+            |storage: Storage| !matches!(before[storage].whole(), Init::Written(Whole::Pointer));
         let reached = self.unknown_code_reaches();
         let mut alone = BTreeSet::new();
         // A local beside another storage, or beside what this check does
@@ -2055,11 +2063,12 @@ impl Known {
         // so, `p` either `&b` or `&arr[k]` left `b` named alone and believed
         // written. Found by review.
         //
-        // **Nor is a holder nothing may have assigned on some path**: there it
-        // holds no address, as a null holds none, but a value no write reached
+        // **Nor is a holder that may hold anything but a whole pointer**, one
+        // nothing may have assigned on some path among them: there it holds
+        // no address, as a null holds none, but a value no write reached
         // takes no part in the join, so `if (c) h = &a; fill(&h);` left `h`
         // naming `a` alone and `a` believed written where `c` is zero. Found
-        // by review of #1028.
+        // by review of #1028. See ADR-0103 rule 1.
         {
             let mut ask_value = |held: &Held, unassigned: bool| {
                 let in_part = held.element.is_none() || held.array_edge;
@@ -2079,15 +2088,20 @@ impl Known {
                 ask_value(held, false);
             }
             for &holder in &reached.locals {
-                ask_value(
-                    &self.points_to[holder],
-                    self.written[holder].whole().may_be_unwritten(),
-                );
+                ask_value(&self.points_to[holder], not_whole(Storage::Local(holder)));
             }
         }
+        // **And a block holder, by the same question** (#1036): asked with
+        // `false`, a block a store wrote on one path only named its local
+        // alone, and `if (c) *b = &a; fill(b);` read `a` in silence where `c`
+        // is zero, where the local spelling was `SC0411`.
         for &container in &reached.sites {
             let cell = &self.contents[container];
-            ask(cell.sites().collect(), cell.locals().collect(), false);
+            ask(
+                cell.sites().collect(),
+                cell.locals().collect(),
+                not_whole(Storage::Heap(container)),
+            );
         }
         alone
     }
