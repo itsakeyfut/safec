@@ -1146,6 +1146,9 @@ impl Allocations<'_> {
                 // What it can reach includes what an argument read out of
                 // memory may be, which `reach` says. See ADR-0039.
                 let reach = self.reach(function, handed, sites(), value);
+                // What every place held before this call exposed it, which
+                // `Known::named_alone` asks. See ADR-0103 rule 1.
+                let written_before = value.written.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
                 // Pending from here, and not at its own exposure above, which
@@ -1301,7 +1304,12 @@ impl Allocations<'_> {
                         Operand::Constant(_) => None,
                     })
                     .collect();
-                let alone = value.named_alone(&holders, |local| self.is_array(function, local));
+                let alone = value.named_alone(
+                    &holders,
+                    |local| self.is_array(function, local),
+                    &written_before,
+                    |site| self.made_once[site.local()],
+                );
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
