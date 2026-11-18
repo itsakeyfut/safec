@@ -67,6 +67,10 @@ In `Known::believed_written_only_where_named_alone`:
   first and the third;
 * counting an argument that names two sites as alone silences the second.
 
+No case holds the site standing for one block: dropping that condition leaves
+the suite green, measured, since a block a loop makes again is one this check
+stops following by the next turn. It is kept because it can only add a doubt.
+
 The output-parameter cases that hold #778 pass unchanged, measured when this
 was written: no case in `tests/cases.rs` or `tests/routes.rs` moved.
 

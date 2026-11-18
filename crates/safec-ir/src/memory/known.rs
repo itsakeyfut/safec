@@ -2669,6 +2669,12 @@ impl Known {
     /// the same of its holders by [`Self::named_alone`]. Blocks reached
     /// only through other blocks keep [`Self::expose`]'s belief. See
     /// ADR-0104.
+    ///
+    /// **No case holds `one_block`**, measured: dropping it leaves the
+    /// suite green, and a block a loop makes again is one this check stops
+    /// following by the next turn, so a read of the earlier one is doubted
+    /// for that. Kept because it can only add a doubt, and because it is
+    /// the condition [`Self::named_alone`] asks of a block holder.
     pub(super) fn believed_written_only_where_named_alone(
         &mut self,
         handed: &[Held],
