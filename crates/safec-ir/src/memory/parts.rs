@@ -1434,8 +1434,9 @@ pub(super) struct Held {
     ///
     /// **Set where nothing says the value is not null** (#931): a load and a
     /// library copy into a local, since memory records no null; a parameter
-    /// not `_Nonnull`; and what a call returns, an allocation's included,
-    /// unless its callee promises it is not. Dropped on the arm of a branch
+    /// not `_Nonnull`; what a call returns, an allocation's included,
+    /// unless its callee promises it is not; and a local a library fill of
+    /// zeros landed in (#1037). Dropped on the arm of a branch
     /// that tested the value not null. Given only by a constant, `realloc` of
     /// a parameter was read as copying an old block on the path where the
     /// caller passed none, and what it returned was believed written. A
@@ -1447,8 +1448,9 @@ pub(super) struct Held {
     /// which a local nothing was assigned shares with a null and arithmetic
     /// on a null kept. See ADR-0093 rule 3.
     ///
-    /// Read by the door that asks it, `realloc`'s, whose result may be
-    /// fresh on the path where it was handed a null (#708); a join needs
+    /// Read by `realloc`'s door, whose result may be fresh on the path where
+    /// it was handed a null (#708), and by `Known::named_alone`, where a
+    /// value that may be null names nothing alone (ADR-0103); a join needs
     /// none of it, since a null's own level of [`Self::widths`] is the
     /// identity there ([`Held::null`]).
     pub(super) may_be_null: bool,

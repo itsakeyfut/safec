@@ -462,6 +462,26 @@ impl Allocations<'_> {
                     for &site in &landing.containers {
                         value.contents[site].position_unknown();
                     }
+                    // **And a local a fill of zeros landed in may now hold
+                    // no address at all**, as a null does, so what it named
+                    // is named alone by nobody, and a copy of it carries
+                    // that: a fill pours no value, so `memset(&h, 0, 8); g =
+                    // h; fill(g);` handed on `h`'s names, and `a` was
+                    // believed written. Found by review of #1037. See
+                    // ADR-0103 rule 1.
+                    //
+                    // **A null test drops the mark**, as it drops any null's:
+                    // `if (g) fill(g);` after the fill and a copy believes `a`
+                    // written again. That arm runs only where all-zero bits
+                    // are not a null pointer, which C17 allows (#940) and no
+                    // target this compiler accepts has; a target that had
+                    // would need the fill kept apart from a null. Measured
+                    // by review, accepted by the owner.
+                    if zero {
+                        for &local in &landing.targets {
+                            value.points_to[local].may_be_null = true;
+                        }
+                    }
                 }
             }
         }
@@ -1297,10 +1317,17 @@ impl Allocations<'_> {
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
-                let holders: Vec<Held> = handed
+                let holders: Vec<(Held, bool)> = handed
                     .iter()
                     .filter_map(|argument| match argument {
-                        Operand::Copy(place) => Some(self.handed_value(function, place, value)),
+                        Operand::Copy(place) => Some((
+                            self.handed_value(function, place, value),
+                            place.projection.is_empty()
+                                && !matches!(
+                                    written_before[place.local].whole(),
+                                    Init::Written(Whole::Pointer)
+                                ),
+                        )),
                         Operand::Constant(_) => None,
                     })
                     .collect();

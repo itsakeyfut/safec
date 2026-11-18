@@ -1889,6 +1889,20 @@ cases! {
         // Found by review. Mutation: `Known::named_alone` takes every site as
         // one block (`one_block` answering `true`); the `SC0411` at `x` goes.
         a_local_one_of_a_loops_blocks_names_is_not_believed_written_by_a_call_handed_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer a fill of zeros wrote holds no address of what it named
+        // before, so a call handed it, or handed its address, writes nothing
+        // through it (ADR-0103 rule 1, #1037). Mutation: hand
+        // `Known::named_alone` every value as certainly a whole pointer; the
+        // first loses its `SC0411`. Mutation: ask a found holder whether it
+        // may be unwritten rather than whether it is a whole pointer; the
+        // second loses it.
+        a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_its_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a copy of it, which a whole-pointer write leaves whole: the
+        // fill marks what it landed in as possibly null, and the copy
+        // carries that. Found by review. Mutation: drop the zero fill's
+        // `may_be_null` in `memory/call.rs`; this loses its `SC0411`.
+        a_local_a_copy_of_a_zeroed_pointer_named_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
