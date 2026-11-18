@@ -53,7 +53,9 @@ Chosen: the last, by the owner's decisions on #941.
    **names that local and no other storage, may not be null, and names nothing
    this check does not model.** Asked of a local holder, of a value the call is
    handed, and of a block alike, and of the write state as it was before the
-   call exposed what it reaches.
+   call exposed what it reaches; and of a block only where its site stands for
+   one block, made on no cycle of the graph, since the write state and the
+   record are kept per site. Found by review of #1036.
 2. **A block records whether a null may have been stored in it**, and one that
    may hold a null names nothing alone. This replaces ADR-0101 rule 1's
    exception for a block that may hold a null.
