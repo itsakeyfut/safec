@@ -2000,8 +2000,11 @@ impl Known {
     /// null on the other hands `a`'s address over on one path only, so the
     /// call may not have written it, and `p = 0; if (k) p = &a; fill(p);`
     /// read `a` in silence (#950). A pointer tested not null first names
-    /// `a` alone again, as `if (p) fill(p);` does. A block cannot say it
-    /// may hold a null yet (#938).
+    /// `a` alone again, as `if (p) fill(p);` does. **Nor a block that may
+    /// hold a null** (#1038): one whose address of `a` was overwritten by a
+    /// null, `*out = &x; *out = 0; other();`, kept naming `x`, since a store
+    /// into a block it does not replace adds to what it holds. See ADR-0103
+    /// rule 2.
     ///
     /// **`handed` is the values the call is handed, however spelled**: a
     /// pointer handed through a projection, `fill(*pp)` or `fill(q[0])`, is
@@ -2110,7 +2113,9 @@ impl Known {
             ask(
                 cell.sites().collect(),
                 cell.locals().collect(),
-                not_whole(Storage::Heap(container)) || !one_block(container),
+                not_whole(Storage::Heap(container))
+                    || !one_block(container)
+                    || cell.may_hold_null(),
             );
         }
         alone

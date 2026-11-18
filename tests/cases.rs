@@ -1903,6 +1903,13 @@ cases! {
         // carries that. Found by review. Mutation: drop the zero fill's
         // `may_be_null` in `memory/call.rs`; this loses its `SC0411`.
         a_local_a_copy_of_a_zeroed_pointer_named_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block that may hold a null names nothing alone: one whose address
+        // of the local was overwritten by a null, and one that holds a null on
+        // one path (ADR-0103 rule 2, #1038). Mutation: `Cell::poured` never
+        // sets `may_hold_null`; both lose their `SC0411`. Mutation:
+        // `Cell::absorb` keeps its own `may_hold_null`; the first loses it.
+        a_local_a_block_named_before_a_null_overwrote_it_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `named_alone` asks a pointer only its
         // sites and locals; `a` is believed written and the `SC0411` goes.
         a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
