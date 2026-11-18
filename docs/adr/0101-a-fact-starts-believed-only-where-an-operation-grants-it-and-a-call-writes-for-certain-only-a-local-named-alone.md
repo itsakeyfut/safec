@@ -81,8 +81,9 @@ it:
 
 Rule 2 is narrowed by ADR-0102, whose Confirmation holds it. Rule 3:
 `the_safety_models_table_lists_every_field_and_where_it_starts` fails when
-a row of the table in `docs/safety-model.md` is deleted or starts
-differently, or a field's row in `tests/routes.rs` has no row there.
+a row of the table in `docs/safety-model.md` is deleted, repeated, starts
+differently or says differently what holds it, or a field's row in
+`tests/routes.rs` has no row there.
 
 ### Consequences
 
