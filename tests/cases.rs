@@ -1931,6 +1931,13 @@ cases! {
         // rule 3, #938). Mutation: the block branch of `Known::named_alone`
         // ignores what a cell does not model; this loses its `SC0411`.
         a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two calls of one function give blocks that share a site, which a
+        // loop's cycle test does not see; each is a callee's, whose record
+        // names what this check does not model, so neither names the local
+        // alone (ADR-0103 rule 3, #1039). Mutation: the block branch of
+        // `Known::named_alone` ignores what a cell does not model; this
+        // loses its `SC0411` at the read.
+        a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:

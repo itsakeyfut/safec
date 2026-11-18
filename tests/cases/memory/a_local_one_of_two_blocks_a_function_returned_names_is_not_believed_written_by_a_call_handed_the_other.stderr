@@ -1,0 +1,41 @@
+error[SC0411]: this returns memory nothing wrote, and the caller may read pointers out of it
+   ╭─[ a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:4:5 ]
+   │
+ 4 │     return malloc(8);
+   │     ────────┬────────  
+   │             ╰────────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before returning it, or allocate it with `calloc`
+error[SC0402]: this uses `a`, which may have been freed
+    ╭─[ a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:12:5 ]
+    │
+ 12 │     *a = &x;
+    │     ───┬───  
+    │        ╰───── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this passes `b`, which may point to a freed allocation
+    ╭─[ a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:13:5 ]
+    │
+ 13 │     fill(b);
+    │     ───┬───  
+    │        ╰───── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0411]: `x` may be read before anything was assigned to it
+    ╭─[ a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:14:12 ]
+    │
+ 14 │     return x != 0;
+    │            ───┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
