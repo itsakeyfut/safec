@@ -359,8 +359,7 @@ enum Field {
     /// **the tests that fail when its updates are dropped**: measured once by
     /// putting the field back to where it starts after every element and
     /// terminator, and named so that a reader knows what holds it. Empty
-    /// only where `why` says no C reaches it or no program isolates it. See
-    /// ADR-0102.
+    /// only where `why` says no C reaches it. See ADR-0102.
     Exempt {
         why: &'static str,
         held_by: &'static [&'static str],
@@ -543,8 +542,11 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
     (
         "exposed_in_part",
         Field::Exempt {
-            why: "no program isolates it: since #1028 a call writes only a local some pointer names alone, so an array an earlier call held an element of is a may-write whether or not this is set; measured with its updates dropped",
-            held_by: &[],
+            why: "set where a local array is handed to a call only through a pointer moved off its start, and no route hands an array to a call",
+            held_by: &[
+                "a_local_array_an_earlier_call_kept_an_element_of_is_doubted_after_a_later_call_finds_it_whole",
+                "a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call",
+            ],
         },
         Start::Fact(NOTHING_YET),
     ),
@@ -980,9 +982,7 @@ fn check_fields(value: &str, declared: &[String], table: &[(&str, Field, Start)]
                 // test that exists (ADR-0102): a name no test has is a guard
                 // nobody runs.
                 assert!(
-                    !held_by.is_empty()
-                        || why.starts_with("no C reaches it")
-                        || why.starts_with("no program isolates it"),
+                    !held_by.is_empty() || why.starts_with("no C reaches it"),
                     "`{name}` is exempt and names no test that holds its updates"
                 );
                 for test in *held_by {

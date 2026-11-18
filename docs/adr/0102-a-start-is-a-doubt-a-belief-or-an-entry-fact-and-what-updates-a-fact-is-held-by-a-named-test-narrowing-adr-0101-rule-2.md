@@ -63,18 +63,21 @@ failed per field: `handed_away` 1, `exposed` 343, `realloced` 23, `pending`
 `writes_elsewhere` 38, `named_at_read` 4, `returned_by` 52, `site_element`
 20, `array_edge` 10, `stored_through` 72, `may_be_null` 11, `vouched` 7.
 
-Two failed nothing, and their rows say why:
+One failed nothing, and its row says why: `inner_address`, which no C
+reaches, since the frontend lowers every address inside a local to its start
+and arithmetic; its reader is held by the unit test
+`an_edge_inside_a_local_is_not_read_at_the_local_s_size`.
 
-* `exposed_in_part`: no program isolates it since ADR-0101 rule 1, which
-  makes an array an earlier call held an element of a may-write whether or
-  not the field is set. Three programs measured alike with it dropped.
-* `inner_address`: no C reaches it, since the frontend lowers every address
-  inside a local to its start and arithmetic; its reader is held by the unit
-  test `an_edge_inside_a_local_is_not_read_at_the_local_s_size`.
+A second, `exposed_in_part`, failed nothing as first measured and was taken
+to be isolated by no program. Review of #1032, which meant to remove it,
+found programs only it keeps reported: a later call that finds a pointer
+naming the array alone, after an earlier call kept one of its elements.
+`a_local_array_an_earlier_call_kept_an_element_of_is_doubted_after_a_later_call_finds_it_whole`
+and its twin hold it now, and its row names them.
 
 `every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption` fails
 when an exempt row starts believed, names a test that does not exist, or
-names none without one of those two reasons.
+names none without saying no C reaches it.
 
 ### Consequences
 

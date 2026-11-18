@@ -1374,6 +1374,15 @@ cases! {
         // through it: still in part. Mutation: `Known::exposed_in_part`
         // adds nothing at a later call; the doubt goes.
         a_local_array_handed_in_part_to_a_call_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A later call that finds a pointer naming the array alone, `e = m`
+        // or `h = m` kept by an earlier call, may still write it only
+        // through the element pointer an earlier call kept, so it writes the
+        // array in part and `m[0]` is doubted. Found by review of #1032,
+        // which meant to remove the record that holds this. Mutation: put
+        // `Known::exposed_in_part` back to false after every transfer, or
+        // drop its read in `call.rs`; the `SC0411` at `m[0]` goes.
+        a_local_array_an_earlier_call_kept_an_element_of_is_doubted_after_a_later_call_finds_it_whole: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_array_handed_in_part_and_later_held_whole_by_a_kept_local_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `m[i]` in a loop is an offset this check cannot read, a may-write
         // of every element (ADR-0094 rule 3), so the array is doubted until a
         // proof that the loop fills it, the cost rule 4 names (#893).
