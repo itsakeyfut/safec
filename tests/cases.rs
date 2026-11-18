@@ -1958,6 +1958,10 @@ cases! {
         a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_was_handed_through_a_pointer_that_may_name_another_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same, where the pointer may name a local instead of the
+        // block. Mutation: count an argument that names a local beside the
+        // site as naming it alone; this loses its `SC0411`. Found by review.
+        a_block_a_call_was_handed_through_a_pointer_that_may_name_a_local_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
