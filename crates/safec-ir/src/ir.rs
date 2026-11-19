@@ -288,6 +288,103 @@ impl Place {
             projection: Vec::new(),
         }
     }
+
+    /// A place reached from `local` by `steps`, for the lowering and for IR
+    /// built by hand.
+    pub fn new(local: LocalId, steps: Vec<Projection>) -> Self {
+        Self {
+            local,
+            projection: steps,
+        }
+    }
+
+    /// What this place's steps amount to, which a reader matches with every
+    /// arm written so that a new kind of step is `E0004` wherever a place is
+    /// read. See ADR-0113.
+    pub fn shape(&self) -> Shape {
+        let mut derefs = 0;
+        for step in &self.projection {
+            match step {
+                Projection::Deref => derefs += 1,
+                Projection::Index(_) => return Shape::Indexed,
+            }
+        }
+        if derefs == 0 {
+            Shape::Local
+        } else {
+            Shape::Deref(derefs)
+        }
+    }
+
+    /// How many dereferences this place is, when it is nothing but
+    /// dereferences, and zero otherwise: [`Shape::Deref`]'s count.
+    ///
+    /// One answer for the load and for the report, so that the two cannot
+    /// disagree about which places are followed below their first level. A
+    /// place with an `Index` in it is an array's element and is not one of
+    /// them. No program this compiler accepts tells that apart from following
+    /// it too: the lowering builds an `Index` only under `Rvalue::Address`,
+    /// which is no place read or written, and `a[i]` is `*(a + i)` (#621).
+    /// See ADR-0045.
+    pub fn derefs(&self) -> usize {
+        match self.shape() {
+            Shape::Deref(derefs) => derefs,
+            Shape::Local | Shape::Indexed => 0,
+        }
+    }
+
+    /// This place with one more dereference: what it points at.
+    #[must_use]
+    pub fn deref(&self) -> Self {
+        let mut place = self.clone();
+        place.projection.push(Projection::Deref);
+        place
+    }
+
+    /// This place's first `steps` steps.
+    #[must_use]
+    pub fn prefix(&self, steps: usize) -> Self {
+        Self {
+            local: self.local,
+            projection: self.projection[..steps].to_vec(),
+        }
+    }
+
+    /// The place this one dereferences last, where its last step is a
+    /// dereference: the pointer a write through it goes through.
+    pub fn without_last_deref(&self) -> Option<Self> {
+        match self.projection.split_last() {
+            Some((Projection::Deref, rest)) => Some(Self {
+                local: self.local,
+                projection: rest.to_vec(),
+            }),
+            Some((Projection::Index(_), _)) | None => None,
+        }
+    }
+
+    /// The steps themselves, read-only, for a walk that matches every
+    /// [`Projection`] on its own: printing, the interpreter, liveness, the
+    /// backend. An analysis asks [`Self::shape`] instead.
+    pub fn steps(&self) -> &[Projection] {
+        &self.projection
+    }
+}
+
+/// What a place's steps amount to, for a reader that has to answer each.
+///
+/// **No `PartialEq`, so it is matched rather than compared**, and a new kind
+/// of step is a new variant here: `E0004` at every reader that has not said
+/// what it means. `every_reader_of_a_place_answers_every_shape` holds the
+/// readers to a `match`. See ADR-0113.
+#[derive(Clone, Copy, Debug)]
+pub enum Shape {
+    /// The local itself: no steps.
+    Local,
+    /// Nothing but dereferences, this many, at least one.
+    Deref(usize),
+    /// A step that is not a dereference: today an `Index`, which the lowering
+    /// builds only under `Rvalue::Address` (#621).
+    Indexed,
 }
 
 /// What an operation reads.
