@@ -1,0 +1,128 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:1:28 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "void **" parameter "other"
+  Local "_3" "int" parameter "k"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "char *" "c"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "void *" "t"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Local "_13" "void **" "vo"
+  Local "_14" "char **"
+  Local "_15" "void *"
+  Block "bb0" entry
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_4"
+        Constant 0
+    Branch a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 written "bb3" "bb2"
+      Copy "_5"
+  Block "bb1"
+    Branch a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 written "bb3" "bb4"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 generated
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:17 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_2"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:17 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_6"
+        Constant 0
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 generated
+    Return
+  Block "bb4"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:4:15 generated
+    Call a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:4:15 written "malloc" "bb6"
+      Destination "_8"
+      Constant 3
+  Block "bb6"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:4:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:4:15 generated
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:5:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:5:9 written "bb7" "bb8"
+      Copy "_9"
+  Block "bb7"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:5:9 generated
+    Return
+  Block "bb8"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:5:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Branch a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:9 written "bb10" "bb11"
+      Copy "_3"
+  Block "bb10"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:9 generated
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:12 written
+      Destination "_10"
+      Use
+        Copy "_1"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:12 written
+      Destination "_11"
+      Use
+        Copy "_10"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:12 generated
+    Goto "bb12"
+  Block "bb11"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:9 generated
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:26 written
+      Destination "_10"
+      Use
+        Copy "_2"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:26 written
+      Destination "_12"
+      Use
+        Copy "_10"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:26 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:8:12 written
+      Destination "_13"
+      Use
+        Copy "_10"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:8:17 generated
+    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:16 written
+      Destination "_14"
+      Address
+        Place "_7"
+    ArgumentsEvaluated a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 generated
+    Call a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 written "memcpy" "bb13"
+      Destination "_15"
+      Copy "_13"
+      Copy "_14"
+      Constant 8
+  Block "bb13"
+    Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 generated
+    Return

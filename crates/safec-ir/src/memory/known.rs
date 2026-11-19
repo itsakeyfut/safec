@@ -480,6 +480,21 @@ pub(super) struct Known {
     /// the larger, and kept where the site is made again, as `left_at` is.
     /// See ADR-0086.
     pub(super) held_levels: Table<Site, usize>,
+    /// Per site, the widest a reader outside this function reads a pointer
+    /// stored in the block as pointing at, in bytes: `0` where no reader's
+    /// type says. A pointer parameter's memory records its type where the
+    /// function starts, `int **out` four and `char **other` one.
+    ///
+    /// **On the block, not on the value**, for the reason `held_levels` is:
+    /// the width a departure is asked at is what the reader reads, and a
+    /// pointer that may name either of two such blocks met their widths as
+    /// a read's upper bound, the narrower, so `t` either `out` or `other`
+    /// let three bytes leave where `out`'s reader reads four (#1082). A fact
+    /// about the reader's type, not the block's bytes, so no write answers
+    /// for it. A may-fact, joined by the larger, and kept where the site is
+    /// made again, as `held_levels` is. Read by
+    /// [`Self::receiver_width_of`]. See ADR-0112.
+    pub(super) receiver_width: Table<Site, u64>,
     /// Per site, the earliest library copy that may have written part of a
     /// pointer into it: one whose length is shorter than a pointer, or ends
     /// part way through one (`Allocations::copied_pointers`), whatever either
@@ -697,6 +712,7 @@ impl Known {
             stored_out: _,
             left_at: _,
             held_levels: _,
+            receiver_width: _,
             part_written,
             other_written,
             part_before,
@@ -747,6 +763,7 @@ impl Known {
             stored_out: _,
             left_at: _,
             held_levels: _,
+            receiver_width: _,
             // Cleared by `Self::clear` above.
             part_written: _,
             other_written: _,
@@ -1526,6 +1543,16 @@ impl Known {
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
+    }
+
+    /// The widest any of `sites` records a reader outside reads its pointers
+    /// at, `0` where none does. See [`Self::receiver_width`].
+    pub(super) fn receiver_width_of(&self, sites: impl IntoIterator<Item = Site>) -> u64 {
+        sites
+            .into_iter()
+            .map(|site| self.receiver_width[site])
+            .max()
+            .unwrap_or(0)
     }
 
     /// `sites`, and everything a pointer stored in one of them may hold, and
@@ -2377,6 +2404,9 @@ impl Known {
             left_at: _,
             // Kept, for the reason `left_at` is. See `Known::held_levels`.
             held_levels: _,
+            // Kept too: a reader holding the older allocation reads it so.
+            // See `Known::receiver_width`.
+            receiver_width: _,
             // **Since it was made, cleared; ever, kept**, for the reason
             // `left_at` is: the new allocation has had nothing copied into
             // it, and the caller may hold the old one. See

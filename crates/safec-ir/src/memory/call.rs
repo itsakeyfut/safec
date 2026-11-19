@@ -695,6 +695,7 @@ impl Allocations<'_> {
                     // Read, by `Known::held_below`, for how far down that
                     // marking goes.
                     held_levels: _,
+                    receiver_width: _,
                     // Through `Known::note_part_written` and
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
@@ -2053,6 +2054,7 @@ impl Allocations<'_> {
                     stored_out: _,
                     left_at: _,
                     held_levels: _,
+                    receiver_width: _,
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,

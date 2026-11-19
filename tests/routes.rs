@@ -599,6 +599,19 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         Start::Fact(NOTHING_YET),
     ),
     (
+        "receiver_width",
+        Field::Exempt {
+            why: "no row copies through a pointer that may name either of two parameters' memories, where the width a reader reads is the block's rather than the value's (ADR-0112); a row's departure is asked at its own type, which this only raises",
+            held_by: &[
+                "a_copy_into_one_of_two_caller_memories_is_asked_at_the_wider_ones_width",
+                "a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width",
+            ],
+        },
+        Start::Fact(
+            "set from the type a parameter arrives as, and no other block has a reader outside where the function starts",
+        ),
+    ),
+    (
         "part_written",
         Field::Belief(&[Belief::PartPointer]),
         Start::Fact(NOTHING_YET),

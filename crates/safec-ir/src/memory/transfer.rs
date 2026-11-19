@@ -15,7 +15,7 @@ use crate::source::Span;
 use super::LostReason;
 use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::built::{built_from, named};
-use super::fit::{Fit, fits};
+use super::fit::{Fit, fits, pointee, slot_width};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table};
 use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
@@ -1273,6 +1273,7 @@ impl Allocations<'_> {
             stored_out: _,
             left_at: _,
             held_levels: _,
+            receiver_width: _,
             part_written: _,
             other_written: _,
             part_before: _,
@@ -1994,6 +1995,7 @@ impl Allocations<'_> {
             stored_out,
             left_at,
             held_levels,
+            receiver_width,
             part_written,
             other_written,
             part_before,
@@ -2025,6 +2027,11 @@ impl Allocations<'_> {
         // The larger, so a path that held the block as pointers asks it. See
         // `Known::held_levels`.
         for (here, there) in held_levels.iter_mut().zip(&from.held_levels) {
+            *here = (*here).max(*there);
+        }
+        // The larger, so a path whose reader reads wider asks it. See
+        // `Known::receiver_width`.
+        for (here, there) in receiver_width.iter_mut().zip(&from.receiver_width) {
             *here = (*here).max(*there);
         }
         // A may-fact too, keeping the earlier store where both paths let the
@@ -2576,6 +2583,7 @@ impl Analysis for Allocations<'_> {
             stored_out: Table::filled(Earliest::none(), self.locals),
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
+            receiver_width: Table::filled(0, self.locals),
             part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             other_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             part_before: Table::filled(false, Storage::count(self.locals)),
@@ -2640,6 +2648,13 @@ impl Analysis for Allocations<'_> {
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
             ));
+            // **And how wide its reader reads the pointers stored there**,
+            // which is the caller, by the parameter's type. See
+            // `Known::receiver_width`.
+            known.receiver_width[Site::of(LocalIdx::of(parameter))] =
+                pointee(self, function.local(parameter))
+                    .and_then(|read_as| slot_width(self, read_as))
+                    .unwrap_or(0);
         }
 
         // **And exposed**, so that `release_all(); return *p;` is unproven:
@@ -2827,6 +2842,7 @@ impl Analysis for Allocations<'_> {
                     // Written directly: how many levels a block it holds was
                     // held as pointers.
                     held_levels: _,
+                    receiver_width: _,
                     // Through `Self::land_contents`: what the blocks it lands
                     // in may contain, and what an unplaced store exposes.
                     contents: _,
