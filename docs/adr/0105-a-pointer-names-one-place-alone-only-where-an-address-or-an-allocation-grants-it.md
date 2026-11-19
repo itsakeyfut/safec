@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (#1061, which its consequences name as restoring the block idiom, was dropped)"
 date: 2026-11-19
 decision-makers: itsakeyfut
 ---
@@ -90,8 +90,8 @@ check stops following by the next turn. Each is kept because it can only add
 a doubt.
 
 The cases that held ADR-0103 and ADR-0104 pass unchanged, measured when this
-was written. Those that held a rule about a block holder are held, until
-#1061, by a block's record naming nothing alone.
+was written. Those that held a rule about a block holder are held by a
+block's record naming nothing alone.
 
 ### Consequences
 

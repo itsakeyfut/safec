@@ -1363,7 +1363,7 @@ impl Allocations<'_> {
                 // one (#931).
                 may_be_null: true,
                 vouched: false,
-                // A load names nothing for certain until a block's record says so (#1061).
+                // A load names nothing for certain: a block's record keeps no such fact.
                 alone: None,
             },
         );

@@ -2020,7 +2020,7 @@ impl Known {
     /// assigned nothing, a fill, an element, a block a loop made, a block
     /// holding a null or what this check does not follow (#950 to #1046).
     /// A block's record carries no such fact yet, so a pointer found in a
-    /// block names nothing alone until #1061. See ADR-0105.
+    /// block names nothing alone. See ADR-0105.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn named_alone(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
@@ -2543,7 +2543,7 @@ impl Known {
     /// may-written, as a store through the same pointer leaves it: `p = 0;
     /// if (c) p = b; fill(p); return *b != 0;` read `*b` indeterminate in
     /// silence where `c` is zero (#1046). Blocks reached only through other
-    /// blocks keep [`Self::expose`]'s belief until #1061. See ADR-0105.
+    /// blocks keep [`Self::expose`]'s belief (#1064). See ADR-0105.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn believed_written_only_where_named_alone(
