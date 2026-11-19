@@ -1125,10 +1125,7 @@ fn a_pointer_is_read_and_written_through_a_deref() {
     let [p] = f.parameters().collect::<Vec<_>>()[..] else {
         panic!("one parameter");
     };
-    let pointee = Place {
-        local: p,
-        projection: vec![Projection::Deref],
-    };
+    let pointee = Place::new(p, vec![Projection::Deref]);
     let blocks: Vec<_> = f.blocks().collect();
     let [written, held, returned] = assigns(blocks[0])[..] else {
         panic!("{:?}", blocks[0].elements);
@@ -1231,7 +1228,7 @@ fn an_element_is_reached_by_a_subscript_and_by_arithmetic() {
         .collect();
     let reached: Vec<_> = operations
         .iter()
-        .filter(|operation| operation.place.projection == vec![Projection::Deref])
+        .filter(|operation| operation.place.steps() == [Projection::Deref])
         .map(|operation| operation.place.local)
         .collect();
 
@@ -1240,7 +1237,7 @@ fn an_element_is_reached_by_a_subscript_and_by_arithmetic() {
     assert!(
         operations
             .iter()
-            .all(|operation| operation.place.local != p || operation.place.projection.is_empty()),
+            .all(|operation| operation.place.local != p || operation.place.steps().is_empty()),
         "nothing is a projection of the pointer itself"
     );
 
@@ -1252,10 +1249,10 @@ fn an_element_is_reached_by_a_subscript_and_by_arithmetic() {
     assert_eq!(returned.place, Place::local(f.return_place()));
     assert_eq!(
         returned.value,
-        Rvalue::Use(Operand::Copy(Place {
-            local: addressed[2],
-            projection: vec![Projection::Deref],
-        }))
+        Rvalue::Use(Operand::Copy(Place::new(
+            addressed[2],
+            vec![Projection::Deref]
+        )))
     );
 }
 
@@ -1310,7 +1307,7 @@ fn a_compound_assignment_is_the_assignment_it_stands_for() {
         .collect();
 
     let computed = operations[0].place.local;
-    assert!(operations[0].place.projection.is_empty());
+    assert!(operations[0].place.steps().is_empty());
     assert_ne!(
         computed, a,
         "the subtraction does not happen at `a`'s width"
@@ -1861,10 +1858,7 @@ fn a_local_array_decays_to_the_address_of_its_first_element() {
         .flat_map(assigns)
         .filter(|operation| {
             operation.value
-                == Rvalue::Address(Place {
-                    local: a,
-                    projection: vec![Projection::Index(Operand::Constant(0))],
-                })
+                == Rvalue::Address(Place::new(a, vec![Projection::Index(Operand::Constant(0))]))
         })
         .collect();
     assert_eq!(

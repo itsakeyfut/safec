@@ -39,7 +39,8 @@ use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
-    Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Parameter, Place, Projection, Promise, Rvalue, Shape, Terminator, TranslationUnit, Ty, TyId,
+    UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -433,8 +434,9 @@ impl Builder {
         let Operand::Copy(place) = value else {
             return;
         };
-        if place.projection.is_empty() {
-            return;
+        match place.shape() {
+            Shape::Local => return,
+            Shape::Deref(_) | Shape::Indexed => {}
         }
         self.element(Element::Evaluate {
             place,
@@ -2616,17 +2618,17 @@ impl Lowering<'_> {
         };
         let pointer = self.unit.push_type(Ty::Pointer(element));
         let first = builder.function.push_local(pointer);
-        let value = match place.projection.last() {
-            None => Rvalue::Address(Place {
-                local: place.local,
-                projection: vec![Projection::Index(Operand::Constant(0))],
-            }),
-            Some(Projection::Deref) => {
-                let mut pointed = place;
-                pointed.projection.pop();
-                Rvalue::Use(Operand::Copy(pointed))
-            }
-            Some(Projection::Index(_)) => {
+        let value = match place.shape() {
+            Shape::Local => Rvalue::Address(Place::new(
+                place.local,
+                vec![Projection::Index(Operand::Constant(0))],
+            )),
+            Shape::Deref(_) => Rvalue::Use(Operand::Copy(
+                place
+                    .without_last_deref()
+                    .expect("a place of dereferences ends in one"),
+            )),
+            Shape::Indexed => {
                 unreachable!("the lowering builds an `Index` only under `Rvalue::Address`")
             }
         };
@@ -2684,7 +2686,7 @@ impl Lowering<'_> {
                         values.push(self.decayed(builder, place, span));
                     }
                     AstUnOp::AddrOf => {
-                        let mut place = places.pop().expect("a place");
+                        let place = places.pop().expect("a place");
                         // **`&*E` is `E`, and `&E1[E2]` is `E1 + E2`.** C17
                         // 6.5.3.2 p3 says that where the operand of `&` is the
                         // result of a unary `*`, neither operator is evaluated
@@ -2729,9 +2731,8 @@ impl Lowering<'_> {
                         // not `pp`, so this pops rather than clears, and
                         // `an_address_of_a_double_dereference` is the case
                         // that fails if it clears.
-                        if matches!(place.projection.last(), Some(Projection::Deref)) {
-                            place.projection.pop();
-                            values.push(Operand::Copy(place));
+                        if let Some(pointer) = place.without_last_deref() {
+                            values.push(Operand::Copy(pointer));
                         } else {
                             let into = self.temporary(builder, id, diagnostics)?;
                             builder.push(Operation {
@@ -2941,9 +2942,8 @@ impl Lowering<'_> {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Unary { .. } => {
                 let operand = values.pop().expect("a pointer");
-                let mut place = self.pointed_at(id, operand, diagnostics)?;
-                place.projection.push(Projection::Deref);
-                places.push(place);
+                let place = self.pointed_at(id, operand, diagnostics)?;
+                places.push(place.deref());
             }
             // C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, and this
             // builds exactly that: one C expression is one shape in the IR, so
@@ -2989,9 +2989,8 @@ impl Lowering<'_> {
                 // asked for since it was written. See ADR-0021.
                 match Self::unmoved(self.unit.ty(addressed), BinOp::Add, &pointer, &offset) {
                     Some(pointer) => {
-                        let mut place = self.pointed_at(base, pointer, diagnostics)?;
-                        place.projection.push(Projection::Deref);
-                        places.push(place);
+                        let place = self.pointed_at(base, pointer, diagnostics)?;
+                        places.push(place.deref());
                     }
                     None => {
                         let addressed = builder.function.push_local(addressed);
@@ -3004,10 +3003,7 @@ impl Lowering<'_> {
                             },
                             origin: Origin::Written(span),
                         });
-                        places.push(Place {
-                            local: addressed,
-                            projection: vec![Projection::Deref],
-                        });
+                        places.push(Place::new(addressed, vec![Projection::Deref]));
                     }
                 }
             }
