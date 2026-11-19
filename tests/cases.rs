@@ -620,9 +620,8 @@ cases! {
         // A store that leaves is asked at what the memory it lands in is read
         // as outside, as a library copy is: by `fit::carried_width` over the
         // store's landing (ADR-0112, #1083). Mutation: the store door passes
-        // no carried width; the first, second, fourth and fifth go silent on
-        // width. Mutation: ask the stored value's own fit only where the
-        // place's type has a width; the first, fourth and fifth go silent.
+        // no carried width; the first, second and fourth go silent on width,
+        // and so does the next case below.
         a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

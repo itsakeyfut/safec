@@ -13,7 +13,7 @@ use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
 use super::parts::{At, Extent, SiteState, Width, same};
-use super::store::Landing;
+use super::store::Store;
 
 /// What this check can say about whether an access fits the object its
 /// pointer reaches.
@@ -609,25 +609,37 @@ pub(super) fn slot_width(analysis: &Allocations<'_>, read_as: TyId) -> Option<u6
 pub(super) fn carried_width(
     analysis: &Allocations<'_>,
     function: &Function,
-    landing: &Landing,
+    store: &Store<'_>,
     known: &Known,
 ) -> Option<u64> {
-    // The pointer stored through: the landing's pointer, `deep - 1`
-    // dereferences down.
-    let mut through = Place::local(landing.pointer);
-    for _ in 1..landing.deep {
-        through.projection.push(Projection::Deref);
-    }
-    let carried = match analysis.contents_read(function, &through, known).at(0) {
-        Width::AtMost(width) => width,
-        Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
+    let landing = store.landing.as_ref()?;
+    // **The pointer stored through, as written**: the place the store lands
+    // in with its last dereference taken off, every other projection kept,
+    // so `memcpy(a[1], ...)` reads what `a[1]` carries and not what `a`
+    // does. Rebuilding it from the landing's pointer and depth dropped the
+    // index (found by review).
+    let carried = match store.into.projection.split_last() {
+        Some((Projection::Deref, rest)) => {
+            let through = Place {
+                local: store.into.local,
+                projection: rest.to_vec(),
+            };
+            match analysis.contents_read(function, &through, known).at(0) {
+                Width::AtMost(width) => width,
+                Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
+            }
+        }
+        Some(_) | None => 0,
     };
     // **Not where the landing was found through memory whose record is not
     // all it may hold**, `Landing::through_unrecorded`: its places are the
     // ones this check recorded, not the ones the write lands in, and the
     // widest of them belongs to some other reader. `*t = m;` with `t` read
     // out of a caller's `int ****` asked a four-byte `m` at the eight bytes
-    // that parameter's own memory is read at.
+    // that parameter's own memory is read at. Mutation: read the record
+    // here too; three cases a store through such a pointer used to pass
+    // gain a false `SC0413`, among them
+    // `a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at`.
     let recorded = if landing.through_unrecorded {
         0
     } else {

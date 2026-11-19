@@ -1709,10 +1709,7 @@ pub(super) fn departed_in_element(
     // library copy is: `void **vo = t; *vo = c;` with `t` an `int **`
     // parameter lets `c` leave where the caller reads an `int`, asked at
     // `void *`'s start alone before (#1083). See ADR-0112.
-    let carried = store
-        .landing
-        .as_ref()
-        .and_then(|landing| carried_width(analysis, function, landing, known));
+    let carried = carried_width(analysis, function, &store, known);
     // What the value points to first, then the value, whatever it leaves as.
     // **Not at `carried`**: the stored value is the pointer the memory's
     // reader reads, so `carried` is its own width, asked below. What it
@@ -1727,11 +1724,9 @@ pub(super) fn departed_in_element(
         &operation.value,
         known,
     );
-    // Its own width even where the place's type has none, a `void *`, where
-    // the memory carries one.
-    let Some(width) = pointee_width(analysis, ty)
-        .map(|width| width.max(carried.unwrap_or(0)))
-        .or(carried)
+    // Its own width at least `carried`: a `void *` place asks a width of
+    // `0`, its start alone, and the memory's reader reads more.
+    let Some(width) = pointee_width(analysis, ty).map(|width| width.max(carried.unwrap_or(0)))
     else {
         return;
     };
@@ -1871,8 +1866,7 @@ pub(super) fn departed_at_call(
             let into_ty = into.and_then(|place| analysis.unit.place_ty(function, place));
             let carried = analysis
                 .store_at(terminator, known)
-                .and_then(|store| store.landing)
-                .and_then(|landing| carried_width(analysis, function, &landing, known));
+                .and_then(|store| carried_width(analysis, function, &store, known));
             if let (Some(source), Some(into_ty), false) = (arguments.get(1), into_ty, stays) {
                 contents_leaving(
                     findings,
