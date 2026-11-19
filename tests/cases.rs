@@ -2006,6 +2006,13 @@ cases! {
         // certainly kept, as before; both lose their `SC0411`.
         a_local_a_call_reached_through_a_holder_that_changed_since_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_call_reached_through_a_holder_retargeted_on_one_path_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A dereference handed to a call reads the local behind it only
+        // where each step is a must-fact; a pointer a store this check cannot
+        // place may have retargeted names nothing for certain, so `fill(*r)`
+        // is asked as `h = *r; fill(h);` is (ADR-0105, #1071). Mutation:
+        // read the local off the may-set (`read_from_locals`) again; this
+        // loses its `SC0411`.
+        a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a call reaches only through another, behind a slot that may
         // hold a null, may not have been written by it (ADR-0108, #1064).
         // Mutation: may-write only the blocks an argument names; this loses
