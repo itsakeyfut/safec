@@ -1999,6 +1999,13 @@ cases! {
         // Mutation: ask every holder `unknown_code_reaches` finds; this loses
         // its `SC0411`.
         a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An earlier call certainly keeps the holder it was handed, not what
+        // the holder named then: after the holder changes, a later call that
+        // finds it reaches the local no more, or on one path only (ADR-0109,
+        // #1069). Mutation: mark every local `named_alone` returned as
+        // certainly kept, as before; both lose their `SC0411`.
+        a_local_a_call_reached_through_a_holder_that_changed_since_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_call_reached_through_a_holder_retargeted_on_one_path_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a call reaches only through another, behind a slot that may
         // hold a null, may not have been written by it (ADR-0108, #1064).
         // Mutation: may-write only the blocks an argument names; this loses

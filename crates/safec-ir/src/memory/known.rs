@@ -104,8 +104,11 @@ pub(super) struct Known {
     /// were joined, cleared and read by separate lines that said the same.
     pub(super) exposed: Table<Referent, bool>,
     /// **Per local, whether a call this check cannot read certainly holds
-    /// its address**: a value it was handed certainly named it, or a local
-    /// so named certainly held it (`Known::named_alone`'s chain). A must-fact,
+    /// its address**: a value it was handed certainly named it. Not a local
+    /// such a local held: `keep(&h)` with `h = &m` holds `&h`, and reaches
+    /// `m` only through what `h` holds, which `h = 0` changes; a later call
+    /// that finds `h` follows `h`'s own fact (`Known::named_alone`'s chain),
+    /// so `m` is asked as `h` holds it then (#1069, ADR-0109). A must-fact,
     /// so an intersection at a join, where [`Self::exposed`] is a union: a
     /// local a call may only have been handed, `if (c) keep(&h);`, is exposed
     /// and not certainly, and a later call that finds it through it writes
