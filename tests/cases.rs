@@ -2044,6 +2044,14 @@ cases! {
         a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_an_earlier_call_kept_on_one_arm_only_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_reaches_through_a_local_whose_address_sits_in_a_block_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Only an exposed block is may-written: one no call may reach keeps
+        // what it held, so its read stays certain (ADR-0111). Mutation:
+        // may-write every block, exposed or not; this says "may be read".
+        a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The must-chain follows a local that certainly names another local
+        // before it reaches the block (ADR-0111). Mutation: the chain stops
+        // at a local that names a local; the read gains an `SC0411`.
+        a_block_a_call_reaches_through_two_local_holders_that_certainly_name_it_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:

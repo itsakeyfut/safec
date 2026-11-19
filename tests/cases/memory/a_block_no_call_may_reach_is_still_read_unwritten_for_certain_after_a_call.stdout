@@ -1,0 +1,57 @@
+Target "x86_64-pc-windows-msvc"
+Function a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:2:6 "tick" declared
+  Local "_0" "void" return
+Function a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:4:15 generated
+    Call a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:4:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:4:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:4:15 generated
+    Operation a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:9 generated
+    Operation a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:6:5 generated
+    Call a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:6:5 written "tick" "bb5"
+  Block "bb5"
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:6:5 generated
+    Operation a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:7:12 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_1"
+          Deref
+        Constant 0
+    Operation a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call.c:7:12 generated
+    Return

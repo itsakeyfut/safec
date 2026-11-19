@@ -78,7 +78,13 @@ unchanged.
   `a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read`.
 * A chain that grants no block gives
   `a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate`
-  an `SC0411`, and nothing else.
+  an `SC0411`, and nothing else. A chain that stops at a local naming a
+  local gives
+  `a_block_a_call_reaches_through_two_local_holders_that_certainly_name_it_is_not_reported_as_indeterminate`
+  one, and nothing else.
+* May-writing every block, exposed or not, turns the certain read in
+  `a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call`
+  into a doubt, and nothing else.
 
 Measured when this was written.
 
