@@ -12,7 +12,7 @@ use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::named;
-use super::fit::{Fit, fits, read_from_locals, slots_from, slots_leaving};
+use super::fit::{Fit, fits, slots_from, slots_leaving};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
@@ -141,16 +141,30 @@ impl Allocations<'_> {
     /// certain, `fill(*pp)` with `p` certainly `&a` doubted that the call
     /// wrote `a`, and a corpus case kept quiet on purpose was reported.
     /// Found while implementing #949.
+    ///
+    /// **"Certainly" by the must-fact, one step per dereference**
+    /// ([`Held::certain`](super::parts::Held::certain)): read off the may-set
+    /// instead, a pointer that names one local beside what a store this
+    /// check cannot place may have put there handed that local's value, its
+    /// must-fact with it, and `fill(*r)` believed what `h = *r; fill(h);`
+    /// doubted (#1071). See ADR-0105.
     fn handed_value(&self, function: &Function, place: &Place, value: &Known) -> Held {
         let depth = derefs(place);
         if place.projection.is_empty() {
             return value.points_to[place.local].clone();
         }
         if depth == place.projection.len() {
-            if let (locals, true) = read_from_locals(function, value, place.local, depth) {
-                if let [read] = locals[..] {
-                    return value.points_to[read].clone();
-                }
+            let mut read = LocalIdx::of(place.local);
+            let mut steps = 0;
+            while steps < depth {
+                let Some(Referent::Local(next)) = value.points_to[read].certain() else {
+                    break;
+                };
+                read = next;
+                steps += 1;
+            }
+            if steps == depth {
+                return value.points_to[read].clone();
             }
         }
         self.read_through(function, place, value)
