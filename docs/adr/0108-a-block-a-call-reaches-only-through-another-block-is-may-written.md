@@ -1,5 +1,5 @@
 ---
-status: "accepted (widened through local holders by ADR-0110)"
+status: "superseded by ADR-0111"
 date: 2026-11-19
 decision-makers: itsakeyfut
 ---

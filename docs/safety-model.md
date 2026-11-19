@@ -637,13 +637,12 @@ a cost the owner accepted: a block's record carrying the fact was tried and drop
 since every write that changes a record's bytes would have to drop it, and
 review found three that did not
 ([#1061](https://github.com/itsakeyfut/safec/issues/1061)). For the same
-reason a block reached only through another block is may-written, so
-`*h = box; init(h);` doubts what `*box` holds
-([ADR-0108](adr/0108-a-block-a-call-reaches-only-through-another-block-is-may-written.md)),
-and so is one reached through a local that only may name it, `fill(&h)` with
-`h` either `b` or a null, while `fill(&h)` with `h` certainly `b` still
-believes `*b` written
-([ADR-0110](adr/0110-a-block-a-call-reaches-through-a-local-holder-is-may-written.md)).
+reason every block code outside may reach after the call is may-written,
+whatever route reached it, except one a chain of must-facts certainly names:
+`*h = box; init(h);` doubts what `*box` holds, `fill(&h)` with `h` either
+`b` or a null doubts `*b`, and so does `*out = b; tick();`, while `fill(&h)`
+with `h` certainly `b` still believes `*b` written
+([ADR-0111](adr/0111-a-call-is-believed-to-write-only-a-block-a-must-chain-names.md)).
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
