@@ -679,10 +679,7 @@ fn a_place_this_cannot_reach_is_refused() {
         f.push_block(Block {
             elements: vec![Element::Assign(Operation {
                 place: Place::local(f.return_place()),
-                value: Rvalue::Address(Place {
-                    local: n,
-                    projection: vec![projection],
-                }),
+                value: Rvalue::Address(Place::new(n, vec![projection])),
                 origin: Origin::Written(at),
             })],
             terminator: Terminator::Return,

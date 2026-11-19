@@ -257,7 +257,7 @@ impl Emitter<'_> {
         let mut address = format!("%_{}", place.local.index());
         let mut ty = function.local(place.local);
 
-        for projection in &place.projection {
+        for projection in place.steps() {
             match projection {
                 Projection::Deref => match self.unit.ty(ty) {
                     Ty::Pointer(pointee) => {

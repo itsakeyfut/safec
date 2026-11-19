@@ -287,9 +287,7 @@ impl Analysis for Resolving {
             .iter()
             .rev()
             .find_map(|element| match element {
-                Element::Assign(operation) if !operation.place.projection.is_empty() => {
-                    Some("none")
-                }
+                Element::Assign(operation) if !operation.place.steps().is_empty() => Some("none"),
                 Element::Assign(operation) if operation.place == *condition => {
                     match operation.value {
                         Rvalue::Binary { op, .. } => Some(op.name()),
@@ -1627,10 +1625,7 @@ fn a_store_through_a_pointer_stops_the_walk_that_resolves_a_condition() {
                 }),
                 // `*q = 1`. The place names `q`, not `c`.
                 Element::Assign(Operation {
-                    place: Place {
-                        local: through,
-                        projection: vec![Projection::Deref],
-                    },
+                    place: Place::new(through, vec![Projection::Deref]),
                     value: Rvalue::Use(Operand::Constant(1)),
                     origin,
                 }),
