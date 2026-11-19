@@ -570,10 +570,11 @@ cases! {
         caller_memory_copied_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Into either of two caller memories, asked at the wider of what
         // their readers read, which each block records where the function
-        // starts (ADR-0112, #1082). Mutation: join `Known::receiver_width`
-        // by the smaller; the first two go silent on width. Mutation: seed
-        // nothing at entry; the same. Mutation: `carried_width` reads
-        // `contents_read` alone; the same.
+        // starts (ADR-0112, #1082). Mutation: seed nothing at entry; the
+        // first two go silent on width. Mutation: `carried_width` reads
+        // `contents_read` alone; the same. The join by the larger is held by
+        // nothing yet: every record here is set where the function starts,
+        // so two paths never disagree on one.
         a_copy_into_one_of_two_caller_memories_is_asked_at_the_wider_ones_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_pointer_wide_enough_into_one_of_two_caller_memories_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

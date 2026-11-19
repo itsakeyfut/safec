@@ -58,13 +58,17 @@ this decision and land after it.
 
 ### Confirmation
 
-* Joining the record by the smaller, seeding nothing at entry, or having
-  `carried_width` read the value's width alone each silence
+* Seeding nothing at entry, or having `carried_width` read the value's
+  width alone, each silence
   `a_copy_into_one_of_two_caller_memories_is_asked_at_the_wider_ones_width`
   and
   `a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width`.
 * `a_copy_of_a_pointer_wide_enough_into_one_of_two_caller_memories_is_not_asked`
   holds the other side: a pointer as wide as the wider reader is not asked.
+* **The join by the larger is held by nothing yet.** Every record is set
+  where the function starts, so two paths never disagree on one and joining
+  by the smaller changes no answer, measured. #1081 sets records on one path
+  and adds the case that holds it.
 * A field added to `Known` is `error[E0027]` at its join, its entry and a
   rebirth, and then a failure of
   `every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption` until
