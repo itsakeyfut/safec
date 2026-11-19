@@ -9,7 +9,7 @@
 //! same kind of question; the nullability check's own test of a load is
 //! `nullability::read_out_of_memory`, which is a different rule.
 
-use crate::ir::{BinOp, Element, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{BinOp, Element, Operand, Place, Projection, Rvalue, Shape, Terminator};
 use crate::source::Span;
 
 /// Where this element runs, and every place it reads or writes through a
@@ -183,7 +183,14 @@ pub(crate) fn operated_on_in_terminator(terminator: &Terminator) -> Option<(Span
 /// The local an operand reads by name, with nothing projected from it.
 fn named(operand: &Operand) -> Option<&Place> {
     match operand {
-        Operand::Copy(place) if place.projection.is_empty() => Some(place),
+        Operand::Copy(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            Some(place)
+        }
         Operand::Copy(_) | Operand::Constant(_) => None,
     }
 }
@@ -220,7 +227,10 @@ fn dereferenced_in(operand: &Operand) -> Vec<&Place> {
 
 /// The place, where it goes through a projection, and nothing where it does not.
 fn projected(place: &Place) -> Vec<&Place> {
-    if place.projection.is_empty() {
+    if match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    } {
         Vec::new()
     } else {
         vec![place]
@@ -308,8 +318,15 @@ pub(crate) fn read_out_of_memory_after(
     // element that writes is what ends what a store's place is known to
     // hold, and one that writes nothing leaves it.
     *stored = match element {
-        Element::Assign(operation) if derefs(&operation.place) > 1 => Some(operation.place.clone()),
-        Element::Assign(operation) if !operation.place.projection.is_empty() => None,
+        Element::Assign(operation) if operation.place.derefs() > 1 => Some(operation.place.clone()),
+        Element::Assign(operation)
+            if !(match operation.place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            None
+        }
         Element::Assign(operation) => stored
             .take()
             .filter(|place| place.local != operation.place.local),
@@ -392,7 +409,10 @@ fn read_in(operand: &Operand) -> Vec<Place> {
 /// two levels down of memory nothing wrote was asked nothing, where `t =
 /// *m; r = *t;` is `SC0411` (#768). See ADR-0057.
 fn read_as_value(place: &Place) -> Vec<Place> {
-    if place.projection.as_slice() == [Projection::Deref] {
+    if match place.shape() {
+        Shape::Deref(1) => true,
+        Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+    } {
         return vec![place.clone()];
     }
     // **Every level on the way, where it is nothing but dereferences**:
@@ -400,13 +420,10 @@ fn read_as_value(place: &Place) -> Vec<Place> {
     // memory, and asking only the first and the last left an unwritten
     // middle level silent where the step-by-step spelling is doubted.
     // Found by review.
-    let depth = derefs(place);
+    let depth = place.derefs();
     if depth > 1 {
         return (1..=depth)
-            .map(|level| Place {
-                local: place.local,
-                projection: vec![Projection::Deref; level],
-            })
+            .map(|level| Place::new(place.local, vec![Projection::Deref; level]))
             .collect();
     }
     first_of_two_derefs(place).into_iter().collect()
@@ -415,32 +432,8 @@ fn read_as_value(place: &Place) -> Vec<Place> {
 /// The `*l` reaching a place reads on the way, read or written: the first
 /// of two dereferences at its start.
 fn first_of_two_derefs(place: &Place) -> Option<Place> {
-    match place.projection.as_slice() {
-        [Projection::Deref, Projection::Deref, ..] => Some(Place {
-            local: place.local,
-            projection: vec![Projection::Deref],
-        }),
-        _ => None,
-    }
-}
-
-/// How many dereferences `place` is, when it is nothing but dereferences, and
-/// zero otherwise.
-///
-/// One answer for the load and for the report, so that the two cannot disagree
-/// about which places are followed below their first level. A place with an
-/// `Index` in it is an array's element and is not one of them. No program
-/// this compiler accepts tells that apart from following it too: the lowering
-/// builds an `Index` only under `Rvalue::Address`, which is no place read
-/// or written, and `a[i]` is `*(a + i)` (#621). See ADR-0045.
-pub(crate) fn derefs(place: &Place) -> usize {
-    if place
-        .projection
-        .iter()
-        .all(|step| matches!(step, Projection::Deref))
-    {
-        place.projection.len()
-    } else {
-        0
+    match place.shape() {
+        Shape::Deref(depth) if depth >= 2 => Some(Place::local(place.local).deref()),
+        Shape::Local | Shape::Deref(_) | Shape::Indexed => None,
     }
 }
