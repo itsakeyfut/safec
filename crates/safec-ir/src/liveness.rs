@@ -4,7 +4,7 @@
 //! crate level rather than inside the analysis that asks it first: the
 //! memory check's join clears what this says is dead (ADR-0048).
 
-use crate::ir::{Element, Function, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{Element, Function, Operand, Place, Projection, Rvalue, Shape, Terminator};
 
 /// Per block of `function`, the locals that may be read from its entry before
 /// they are written: a backward fixpoint over the graph.
@@ -37,7 +37,7 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
             if !written[place.local.index()] {
                 read[place.local.index()] = true;
             }
-            for step in &place.projection {
+            for step in place.steps() {
                 match step {
                     Projection::Deref => {}
                     Projection::Index(Operand::Copy(index)) => reads_of_place(index, read, written),
@@ -53,7 +53,10 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
         // A destination that is the whole local writes it; one through a
         // projection reads the local it goes through.
         let writes_to = |place: &Place, read: &mut Vec<bool>, written: &mut Vec<bool>| {
-            if place.projection.is_empty() {
+            if match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            } {
                 written[place.local.index()] = true;
             } else {
                 reads_of_operand(&Operand::Copy(place.clone()), read, written);
@@ -238,10 +241,7 @@ mod tests {
     }
 
     fn deref(local: LocalId) -> Place {
-        Place {
-            local,
-            projection: vec![Projection::Deref],
-        }
+        Place::new(local, vec![Projection::Deref])
     }
 
     #[test]
@@ -275,10 +275,7 @@ mod tests {
     #[test]
     fn a_local_used_as_an_index_is_read() {
         let (at_read, at_write) = liveness(|_, x, y, at, then| {
-            let place = Place {
-                local: y,
-                projection: vec![Projection::Index(Operand::Copy(Place::local(x)))],
-            };
+            let place = Place::new(y, vec![Projection::Index(Operand::Copy(Place::local(x)))]);
             assign(Place::local(y), Rvalue::Use(Operand::Copy(place)), at, then)
         });
         assert!(at_read);
@@ -408,14 +405,8 @@ mod tests {
     #[test]
     fn a_local_used_as_an_index_inside_an_index_is_read() {
         let (at_read, at_write) = liveness(|_, x, y, at, then| {
-            let inner = Place {
-                local: y,
-                projection: vec![Projection::Index(Operand::Copy(Place::local(x)))],
-            };
-            let place = Place {
-                local: y,
-                projection: vec![Projection::Index(Operand::Copy(inner))],
-            };
+            let inner = Place::new(y, vec![Projection::Index(Operand::Copy(Place::local(x)))]);
+            let place = Place::new(y, vec![Projection::Index(Operand::Copy(inner))]);
             assign(Place::local(y), Rvalue::Use(Operand::Copy(place)), at, then)
         });
         assert!(at_read);
