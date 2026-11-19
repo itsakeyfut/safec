@@ -623,8 +623,10 @@ null test grants nothing. Nor is a holder it may reach only through such
 a pointer one it certainly finds: `p` either `&h` or a null, with `h = m`,
 leaves `m` possibly unwritten, and so does one an earlier call may only
 have been handed, `if (c) keep(&h); h = m; tick();`, where a holder an
-earlier call certainly kept is found
-([ADR-0107](adr/0107-a-call-writes-for-certain-only-what-a-pointer-it-certainly-finds-certainly-names.md)).
+earlier call certainly kept is found, as it stands then: `keep(&h); h = 0;
+m = &a; tick();` leaves `a` possibly unwritten
+([ADR-0107](adr/0107-a-call-writes-for-certain-only-what-a-pointer-it-certainly-finds-certainly-names.md),
+[ADR-0109](adr/0109-a-call-certainly-keeps-only-what-it-was-certainly-handed.md)).
 A block it is handed is believed written the
 same way, only where an argument certainly names it: `fill(p)` with `p`
 either `b` or a null leaves `*b` possibly unwritten. A pointer read out of

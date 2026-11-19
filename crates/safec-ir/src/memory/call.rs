@@ -1337,9 +1337,14 @@ impl Allocations<'_> {
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
                 let alone = value.named_alone(&handed_values);
-                // **What it certainly found it certainly keeps**, for a later
-                // call to find. See `Known::certainly_exposed`.
-                for &local in &alone {
+                // **What it was certainly handed it certainly keeps**, for a
+                // later call to find: the head of each chain, not what the
+                // chain reached through it, which an assignment can change
+                // (#1069). See `Known::certainly_exposed`.
+                for local in handed_values
+                    .iter()
+                    .filter_map(|held| held.certain().and_then(Referent::local))
+                {
                     value.certainly_exposed[local] = true;
                 }
                 value.replaced(
