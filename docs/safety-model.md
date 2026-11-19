@@ -634,9 +634,10 @@ block, `*box = &a; fill(box);`, is doubted where `a` is read
 a cost the owner accepted: a block's record carrying the fact was tried and dropped,
 since every write that changes a record's bytes would have to drop it, and
 review found three that did not
-([#1061](https://github.com/itsakeyfut/safec/issues/1061)). A block reached
-only through another block is still believed written
-([#1064](https://github.com/itsakeyfut/safec/issues/1064)).
+([#1061](https://github.com/itsakeyfut/safec/issues/1061)). For the same
+reason a block reached only through another block is may-written, so
+`*h = box; init(h);` doubts what `*box` holds
+([ADR-0108](adr/0108-a-block-a-call-reaches-only-through-another-block-is-may-written.md)).
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
