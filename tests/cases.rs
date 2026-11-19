@@ -2018,6 +2018,20 @@ cases! {
         // Mutation: may-write only the blocks an argument names; this loses
         // its `SC0411`.
         a_block_a_call_reaches_only_through_another_that_may_hold_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a local holder, one handed by address and one an
+        // earlier call kept: a block a local the call may reach names is
+        // may-written too (ADR-0110, #1070). Mutation: seed the closure with
+        // the sites the arguments name only; both lose their `SC0411`.
+        // Mutation: leave the exposed locals out of the seeds; the second
+        // loses it.
+        a_block_a_call_reaches_through_a_local_holder_that_may_hold_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_later_call_reaches_through_a_holder_an_earlier_call_kept_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a chain of must-facts reaches, from a local handed by
+        // address or one an earlier call certainly kept, is still believed
+        // written: the output-parameter idiom through a local holder of a
+        // block (ADR-0110). Mutation: the chain grants no block; each read
+        // gains an `SC0411`.
+        a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:

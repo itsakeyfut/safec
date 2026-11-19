@@ -639,7 +639,11 @@ review found three that did not
 ([#1061](https://github.com/itsakeyfut/safec/issues/1061)). For the same
 reason a block reached only through another block is may-written, so
 `*h = box; init(h);` doubts what `*box` holds
-([ADR-0108](adr/0108-a-block-a-call-reaches-only-through-another-block-is-may-written.md)).
+([ADR-0108](adr/0108-a-block-a-call-reaches-only-through-another-block-is-may-written.md)),
+and so is one reached through a local that only may name it, `fill(&h)` with
+`h` either `b` or a null, while `fill(&h)` with `h` certainly `b` still
+believes `*b` written
+([ADR-0110](adr/0110-a-block-a-call-reaches-through-a-local-holder-is-may-written.md)).
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
