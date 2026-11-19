@@ -50,6 +50,12 @@ pub(super) struct Store<'a> {
     /// the corpus and the route matrix hold, a write that lands nowhere named
     /// is also unnamed or reaches what `Known::leaves` answers.
     pub(super) leaves: bool,
+    /// Where it lands, for a write through at least one dereference and for
+    /// a copy; `None` for a direct write, which lands in its own local. The
+    /// one answer [`Self::leaves`] was decided from, so the width a departure
+    /// is asked at is read off the same places (`fit::carried_width`,
+    /// #1083).
+    pub(super) landing: Option<Landing>,
     /// Where it is, which a finding about it points at.
     pub(super) at: Span,
 }
@@ -92,26 +98,29 @@ impl Allocations<'_> {
             return None;
         };
         let into = operation.place.clone();
-        let (kind, leaves) = if into.projection.is_empty() {
+        let (kind, leaves, landing) = if into.projection.is_empty() {
             let leaves = known
                 .locals_named_by_unknown_code()
                 .contains(&LocalIdx::of(into.local));
-            (StoreKind::Direct, leaves)
+            (StoreKind::Direct, leaves, None)
         } else {
             let derefs = derefs(&into);
             let kind = StoreKind::Through { derefs };
-            let leaves = derefs > 0 && {
+            let landing = (derefs > 0).then(|| {
                 let one_step = into.projection.as_slice() == [Projection::Deref];
-                let landing = self.landing(known, into.local, derefs, one_step, kind);
-                known.leaves(&into, &landing)
-            };
-            (kind, leaves)
+                self.landing(known, into.local, derefs, one_step, kind)
+            });
+            let leaves = landing
+                .as_ref()
+                .is_some_and(|landing| known.leaves(&into, landing));
+            (kind, leaves, landing)
         };
         Some(Store {
             into,
             from: Written::Value(&operation.value),
             kind,
             leaves,
+            landing,
             at: operation.origin.span(),
         })
     }
@@ -172,6 +181,7 @@ impl Allocations<'_> {
             from: Written::Bytes(from),
             kind: StoreKind::Copy,
             leaves,
+            landing: Some(landing),
             at: origin.span(),
         })
     }
