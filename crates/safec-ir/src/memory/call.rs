@@ -12,7 +12,7 @@ use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::named;
-use super::fit::{Fit, fits, slot_width, slots_from, slots_leaving};
+use super::fit::{Fit, fits, pointee, slot_width, slots_from, slots_leaving};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
@@ -766,11 +766,18 @@ impl Allocations<'_> {
                                     .max(self.copy_levels_holding_pointers(
                                         self.unit.place_ty(function, dest),
                                     ));
+                                // And as what either side's memory holds,
+                                // for the width its reader reads.
+                                let written: Vec<TyId> = [source, dest]
+                                    .into_iter()
+                                    .filter_map(|side| self.unit.place_ty(function, side))
+                                    .filter_map(|ty| pointee(self, ty))
+                                    .collect();
                                 self.mark_leaving(
                                     value,
                                     copied.iter().copied().collect(),
                                     Vec::new(),
-                                    levels,
+                                    (levels, &written),
                                     origin.span(),
                                 );
                             }
@@ -2371,6 +2378,13 @@ impl Allocations<'_> {
         let (width, levels) = self.handed_bounds(read_as);
         value.contents[site]
             .bound_stored(&levels.stored_under(Width::AtMost(width), self.deepest_pointer));
+        // **And how wide the callee reads the pointers stored there**, as a
+        // local handed so does (#1081). See `Known::receiver_width`.
+        if let Some(read_as) = read_as {
+            let place = Storage::Heap(site);
+            let width = slot_width(self, read_as).unwrap_or(0);
+            value.receiver_width[place] = value.receiver_width[place].max(width);
+        }
     }
 
     /// Whether a callee handed a pointer to `ty` may store any pointer

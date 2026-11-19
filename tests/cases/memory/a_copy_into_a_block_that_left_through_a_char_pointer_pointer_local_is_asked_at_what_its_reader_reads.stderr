@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer to 3 bytes leave where 4 bytes are believed
+   ╭─[ a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 ]
+   │
+ 8 │     memcpy(vv, &c, 8);
+   │     ────────┬────────  
+   │             ╰────────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

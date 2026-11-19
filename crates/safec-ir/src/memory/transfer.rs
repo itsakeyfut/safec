@@ -858,14 +858,42 @@ impl Allocations<'_> {
     ///   out holds what was stored in it before, and `*b = x; *pp = b;
     ///   free(x);` left the caller a freed pointer one level down in silence.
     ///   Found by review of #650. See `Known::stored_out`.
+    /// - **`carried` records how wide its reader reads it**, at each level
+    ///   the written type reads pointers at, by the widest of `written`, the
+    ///   types the written value may be read as: `*out = b;` with `out` an
+    ///   `int ***` records that `b`'s pointers are read as pointing at four
+    ///   bytes, so a later copy into `b` through a `void **` is asked at four
+    ///   (#1081). Each level at its own type: `b` held in a box that left is
+    ///   read as the box's pointee's pointee. See `Known::receiver_width`
+    ///   and ADR-0112.
     pub(super) fn mark_leaving(
         &self,
         value: &mut Known,
         carried: Vec<Site>,
         read_out: Vec<Site>,
-        levels: usize,
+        (levels, written): (usize, &[TyId]),
         at: Span,
     ) {
+        for &ty in written {
+            let mut level: Vec<Site> = carried.clone();
+            let mut seen: BTreeSet<Site> = level.iter().copied().collect();
+            let mut read_as = pointee(self, ty);
+            while let Some(memory) = read_as {
+                let Some(width) = slot_width(self, memory) else {
+                    break;
+                };
+                for &site in &level {
+                    let place = Storage::Heap(site);
+                    value.receiver_width[place] = value.receiver_width[place].max(width);
+                }
+                level = level
+                    .iter()
+                    .flat_map(|&site| value.contents[site].sites().collect::<Vec<_>>())
+                    .filter(|&site| seen.insert(site))
+                    .collect();
+                read_as = pointee(self, memory);
+            }
+        }
         for site in value.held_below(carried.clone(), levels) {
             value.left_at[site] = Some(match value.left_at[site] {
                 Some(before) => earlier(self.sources, before, at),
@@ -2939,7 +2967,19 @@ impl Analysis for Allocations<'_> {
                         Rvalue::Use(written) => self.read_out(function, written, value),
                         _ => Vec::new(),
                     };
-                    self.mark_leaving(value, carried, read_out, levels, operation.origin.span());
+                    // And as what the stored-into type reads it.
+                    let written: Vec<TyId> = self
+                        .unit
+                        .place_ty(function, &operation.place)
+                        .into_iter()
+                        .collect();
+                    self.mark_leaving(
+                        value,
+                        carried,
+                        read_out,
+                        (levels, &written),
+                        operation.origin.span(),
+                    );
                 }
 
                 // An assignment to a local writes it, whatever it writes. See
