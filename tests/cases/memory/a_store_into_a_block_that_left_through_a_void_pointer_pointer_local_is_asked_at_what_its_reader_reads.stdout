@@ -1,0 +1,111 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int"
+  Local "_3" "char *" "c"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "void *" "vb"
+  Local "_11" "void **" "vv"
+  Local "_12" "void *"
+  Block "bb0" entry
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:4:15 generated
+    Call a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:4:15 written "malloc" "bb4"
+      Destination "_4"
+      Constant 3
+  Block "bb4"
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:4:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:4:15 generated
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:5:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:5:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:5:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:5:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:15 generated
+    Call a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:15 written "malloc" "bb8"
+      Destination "_7"
+      Constant 8
+  Block "bb8"
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:15 generated
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:9 written "bb9" "bb10"
+      Copy "_8"
+  Block "bb9"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:9 generated
+    Return
+  Block "bb10"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 written
+      Destination "_9"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 generated
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:9:11 written
+      Destination "_10"
+      Use
+        Copy "_6"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:9:16 generated
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:10:12 written
+      Destination "_11"
+      Use
+        Copy "_10"
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:10:17 generated
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 written
+      Destination "_11"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 written
+      Destination "_12"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 generated
+    Return

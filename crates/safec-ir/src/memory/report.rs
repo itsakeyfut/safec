@@ -1705,7 +1705,19 @@ pub(super) fn departed_in_element(
         return;
     };
     let at = operation.origin.span();
+    // **And at what the memory it lands in is read as outside**, as the
+    // library copy is: `void **vo = t; *vo = c;` with `t` an `int **`
+    // parameter lets `c` leave where the caller reads an `int`, asked at
+    // `void *`'s start alone before (#1083). See ADR-0112.
+    let carried = store
+        .landing
+        .as_ref()
+        .and_then(|landing| carried_width(analysis, function, landing, known));
     // What the value points to first, then the value, whatever it leaves as.
+    // **Not at `carried`**: the stored value is the pointer the memory's
+    // reader reads, so `carried` is its own width, asked below. What it
+    // points at is a level further down, which a library copy's source, a
+    // pointer to the bytes it copies, is not.
     contents_leaving(
         findings,
         departed,
@@ -1715,7 +1727,12 @@ pub(super) fn departed_in_element(
         &operation.value,
         known,
     );
-    let Some(width) = pointee_width(analysis, ty) else {
+    // Its own width even where the place's type has none, a `void *`, where
+    // the memory carries one.
+    let Some(width) = pointee_width(analysis, ty)
+        .map(|width| width.max(carried.unwrap_or(0)))
+        .or(carried)
+    else {
         return;
     };
     let answer = leaving(analysis, function, &operation.value, width, known);
@@ -1852,7 +1869,10 @@ pub(super) fn departed_at_call(
                 Some(Operand::Constant(_)) | None => None,
             };
             let into_ty = into.and_then(|place| analysis.unit.place_ty(function, place));
-            let carried = into.and_then(|place| carried_width(analysis, function, place, known));
+            let carried = analysis
+                .store_at(terminator, known)
+                .and_then(|store| store.landing)
+                .and_then(|landing| carried_width(analysis, function, &landing, known));
             if let (Some(source), Some(into_ty), false) = (arguments.get(1), into_ty, stays) {
                 contents_leaving(
                     findings,

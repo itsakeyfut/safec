@@ -1,0 +1,73 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int"
+  Local "_3" "int *" "c"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void *" "t"
+  Local "_7" "void **" "vo"
+  Local "_8" "void *"
+  Block "bb0" entry
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:3:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:4:14 generated
+    Call a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:4:14 written "malloc" "bb4"
+      Destination "_4"
+      Constant 4
+  Block "bb4"
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:4:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:4:14 generated
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:5:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_3"
+    Branch a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:5:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:5:9 generated
+    Return
+  Block "bb6"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:5:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:6:11 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:6:15 generated
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:7:12 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:7:17 generated
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:8:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:8:5 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked.c:8:5 generated
+    Return

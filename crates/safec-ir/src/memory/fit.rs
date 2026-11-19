@@ -5,7 +5,7 @@
 //! report, and a change to what is reported cannot change what the walk
 //! believes. See ADR-0060 for the question and ADR-0063 for the split.
 
-use crate::ir::{Function, LocalId, Operand, Place, Rvalue, Ty, TyId};
+use crate::ir::{Function, LocalId, Operand, Place, Projection, Rvalue, Ty, TyId};
 use crate::reads::derefs;
 use crate::source::Span;
 
@@ -13,6 +13,7 @@ use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
 use super::parts::{At, Extent, SiteState, Width, same};
+use super::store::Landing;
 
 /// What this check can say about whether an access fits the object its
 /// pointer reaches.
@@ -593,33 +594,50 @@ pub(super) fn slot_width(analysis: &Allocations<'_>, read_as: TyId) -> Option<u6
     stored_pointer(analysis.unit, read_as).and_then(|ty| pointee_width(analysis, ty))
 }
 
-/// The width a reader outside reads what a pointer stored through `pointer`
-/// points at, where the memory says so rather than `pointer`'s type: the
-/// larger of what `pointer`'s value carries from the type it arrived as
-/// (`Allocations::contents_read`, #1079) and what the blocks it may name
-/// record (`Known::receiver_width`, #1082). `None` where neither says a
-/// width. **One answer for every door that asks a departure through a
-/// place**, so that two cannot ask the same memory differently. See
-/// ADR-0112.
+/// The width a reader outside reads what a write landing as `landing`
+/// stores, where the memory says so rather than a type: the larger of what
+/// the pointer it lands through carries from the type it arrived as
+/// (`Allocations::contents_read`, #1079) and what the blocks and locals it
+/// may land in record (`Known::receiver_width`, #1082). `None` where neither
+/// says a width.
+///
+/// **One answer for every door that asks a departure through a place, read
+/// off the write's landing**, the places `Known::leaves` decided it leaves
+/// by, so that the store and the copy cannot ask the same memory
+/// differently, and a write through `**t` reads the record of where it lands
+/// rather than nothing (#1083). See ADR-0112.
 pub(super) fn carried_width(
     analysis: &Allocations<'_>,
     function: &Function,
-    pointer: &Place,
+    landing: &Landing,
     known: &Known,
 ) -> Option<u64> {
-    let carried = match analysis.contents_read(function, pointer, known).at(0) {
+    // The pointer stored through: the landing's pointer, `deep - 1`
+    // dereferences down.
+    let mut through = Place::local(landing.pointer);
+    for _ in 1..landing.deep {
+        through.projection.push(Projection::Deref);
+    }
+    let carried = match analysis.contents_read(function, &through, known).at(0) {
         Width::AtMost(width) => width,
         Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
     };
-    let recorded = if pointer.projection.is_empty() {
-        let held = &known.points_to[pointer.local];
-        known.receiver_width_of(
-            held.sites()
-                .map(Storage::Heap)
-                .chain(held.locals().map(Storage::Local)),
-        )
-    } else {
+    // **Not where the landing was found through memory whose record is not
+    // all it may hold**, `Landing::through_unrecorded`: its places are the
+    // ones this check recorded, not the ones the write lands in, and the
+    // widest of them belongs to some other reader. `*t = m;` with `t` read
+    // out of a caller's `int ****` asked a four-byte `m` at the eight bytes
+    // that parameter's own memory is read at.
+    let recorded = if landing.through_unrecorded {
         0
+    } else {
+        known.receiver_width_of(
+            landing
+                .containers
+                .iter()
+                .map(|&site| Storage::Heap(site))
+                .chain(landing.targets.iter().map(|&local| Storage::Local(local))),
+        )
     };
     Some(carried.max(recorded)).filter(|&width| width > 0)
 }

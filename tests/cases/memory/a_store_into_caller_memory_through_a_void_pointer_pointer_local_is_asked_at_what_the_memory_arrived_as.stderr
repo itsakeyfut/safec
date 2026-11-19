@@ -1,0 +1,14 @@
+error[SC0413]: this lets a pointer to 3 bytes leave where 4 bytes are believed
+   ╭─[ a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as.c:8:5 ]
+   │
+ 4 │     char *c = malloc(3);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 8 │     *vo = c;
+   │     ───┬───  
+   │        ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

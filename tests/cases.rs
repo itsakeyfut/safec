@@ -617,6 +617,22 @@ cases! {
         // review. Mutation: the copy door passes `mark_leaving` no type; this
         // goes silent.
         a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store that leaves is asked at what the memory it lands in is read
+        // as outside, as a library copy is: by `fit::carried_width` over the
+        // store's landing (ADR-0112, #1083). Mutation: the store door passes
+        // no carried width; the first, second, fourth and fifth go silent on
+        // width. Mutation: ask the stored value's own fit only where the
+        // place's type has a width; the first, fourth and fifth go silent.
+        a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_of_a_pointer_wide_enough_into_caller_memory_through_a_void_pointer_pointer_local_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read off the landing, a write two dereferences down reads the
+        // record of where it lands, and so does a copy whose destination is
+        // read out of memory. Mutation: `carried_width` reads the record only
+        // for a landing one dereference down; both go silent on width.
+        a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_a_block_that_left_through_a_pointer_read_out_of_memory_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The width the destination carries is its first level's: `x`, a
         // level below, is asked at its own `int *`. Mutation: drop the
         // first-level filter on the locals in `contents_leaving`; `x` is

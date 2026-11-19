@@ -1,0 +1,10 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:6:5 ]
+   │
+ 6 │     *vo = *in;
+   │     ────┬────  
+   │         ╰────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

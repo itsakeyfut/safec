@@ -1,0 +1,33 @@
+error[SC0411]: this lets a pointer leave to memory nothing wrote by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_copy_into_a_block_that_left_through_a_pointer_read_out_of_memory_is_asked_at_what_its_reader_reads.c:6:5 ]
+   │
+ 5 │     int **b = malloc(8); if (!b) return;
+   │               ────┬────  
+   │                   ╰────── allocated here
+ 6 │     *out = b;
+   │     ────┬───  
+   │         ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it before the function returns, or allocate it with `calloc`
+error[SC0413]: this lets a pointer to 3 bytes leave where 4 bytes are believed
+    ╭─[ a_copy_into_a_block_that_left_through_a_pointer_read_out_of_memory_is_asked_at_what_its_reader_reads.c:10:5 ]
+    │
+ 10 │     memcpy(*pv, &c, 8);
+    │     ─────────┬────────  
+    │              ╰────────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_copy_into_a_block_that_left_through_a_pointer_read_out_of_memory_is_asked_at_what_its_reader_reads.c:10:5 ]
+    │
+ 10 │     memcpy(*pv, &c, 8);
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

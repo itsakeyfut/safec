@@ -1,0 +1,71 @@
+Target "x86_64-pc-windows-msvc"
+Function caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "char **" parameter "in"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "void *" "t"
+  Local "_7" "void **" "vo"
+  Local "_8" "void *"
+  Block "bb0" entry
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Branch caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 written "bb3" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Branch caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 written "bb3" "bb4"
+      Copy "_4"
+  Block "bb2"
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 generated
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:17 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_2"
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:17 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_5"
+        Constant 0
+    Goto "bb1"
+  Block "bb3"
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 generated
+    Return
+  Block "bb4"
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:3:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:4:11 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:4:15 generated
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:5:12 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:5:17 generated
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:6:5 written
+      Destination "_7"
+        Deref
+      Use
+        Copy "_2"
+          Deref
+    Operation caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:6:5 written
+      Destination "_8"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced caller_memory_stored_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as.c:6:5 generated
+    Return
