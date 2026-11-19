@@ -5,8 +5,7 @@
 //! report, and a change to what is reported cannot change what the walk
 //! believes. See ADR-0060 for the question and ADR-0063 for the split.
 
-use crate::ir::{Function, LocalId, Operand, Place, Projection, Rvalue, Ty, TyId};
-use crate::reads::derefs;
+use crate::ir::{Function, LocalId, Operand, Place, Rvalue, Shape, Ty, TyId};
 use crate::source::Span;
 
 use super::allocations::{Allocations, innermost_element, stored_pointer};
@@ -384,7 +383,7 @@ pub(super) fn through_locals(
     width: u64,
     known: &Known,
 ) -> Option<(Fit, Option<LocalId>)> {
-    let (locals, certain) = read_from_locals(function, known, place.local, derefs(place));
+    let (locals, certain) = read_from_locals(function, known, place.local, place.derefs());
     let mut answer: Option<Fit> = None;
     for &local in &locals {
         // A local holding nothing is a null, which is the nullability
@@ -435,8 +434,20 @@ pub(super) fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64>
 /// follow to a local.
 fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<LocalId> {
     match value {
-        Rvalue::Address(place) if place.projection.is_empty() => vec![place.local],
-        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+        Rvalue::Address(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            vec![place.local]
+        }
+        Rvalue::Use(Operand::Copy(place))
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
             let held = &known.points_to[place.local];
             function
                 .locals()
@@ -481,18 +492,25 @@ pub(super) fn slots_leaving(
     // [`locals_reached`]'s; and what arithmetic builds is asked by
     // [`leaving`] and names nothing to walk.
     let (seed_sites, seed_locals): (Vec<Site>, Vec<LocalId>) = match value {
-        Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
-            let (sites, locals) = known.levels_below(place.local, derefs(place));
+        Rvalue::Use(Operand::Copy(place)) if place.derefs() > 0 => {
+            let (sites, locals) = known.levels_below(place.local, place.derefs());
             let locals = function
                 .locals()
                 .filter(|local| locals.contains(&LocalIdx::of(local)))
                 .collect();
             (sites.into_iter().collect(), locals)
         }
-        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => (
-            known.points_to[place.local].sites().collect(),
-            locals_reached(function, value, known),
-        ),
+        Rvalue::Use(Operand::Copy(place))
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            (
+                known.points_to[place.local].sites().collect(),
+                locals_reached(function, value, known),
+            )
+        }
         Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
             (Vec::new(), locals_reached(function, value, known))
         }
@@ -618,18 +636,12 @@ pub(super) fn carried_width(
     // so `memcpy(a[1], ...)` reads what `a[1]` carries and not what `a`
     // does. Rebuilding it from the landing's pointer and depth dropped the
     // index (found by review).
-    let carried = match store.into.projection.split_last() {
-        Some((Projection::Deref, rest)) => {
-            let through = Place {
-                local: store.into.local,
-                projection: rest.to_vec(),
-            };
-            match analysis.contents_read(function, &through, known).at(0) {
-                Width::AtMost(width) => width,
-                Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
-            }
-        }
-        Some(_) | None => 0,
+    let carried = match store.into.without_last_deref() {
+        Some(through) => match analysis.contents_read(function, &through, known).at(0) {
+            Width::AtMost(width) => width,
+            Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
+        },
+        None => 0,
     };
     // **Not a parameter's own memory where the landing was found through
     // memory whose record is not all it may hold**,
