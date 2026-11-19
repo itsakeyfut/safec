@@ -911,10 +911,12 @@ cases! {
         // stays. Mutation: join `Held::fresh_read` with `||`. The doubt goes.
         a_pointer_read_out_of_fresh_memory_on_one_arm_only_is_still_doubted_where_it_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Stored in a holder handed to a call this check cannot read, which
-        // may write through it. Mutation: delete `written` from the loop
-        // over `reachable_now` in `Known::expose`. `SC0411` joins the
-        // doubts.
-        a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // may write through it, and may not: a block reached only through
+        // another is may-written, so the read is doubted, the
+        // output-parameter idiom through a block given up by the owner's
+        // decision (ADR-0108, #1064; this case was
+        // `..._is_not_reported_as_indeterminate`).
+        a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through two dereferences, `**pp = &q;` with `*pp == box`.
         // Mutation: drop `one_step` from the store's clause. It is reported.
         a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1997,6 +1999,11 @@ cases! {
         // Mutation: ask every holder `unknown_code_reaches` finds; this loses
         // its `SC0411`.
         a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a call reaches only through another, behind a slot that may
+        // hold a null, may not have been written by it (ADR-0108, #1064).
+        // Mutation: may-write only the blocks an argument names; this loses
+        // its `SC0411`.
+        a_block_a_call_reaches_only_through_another_that_may_hold_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
