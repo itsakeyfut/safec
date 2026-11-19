@@ -21,13 +21,7 @@ fn the_type_a_place_reaches_follows_its_projections() {
 
     assert_eq!(unit.place_ty(&function, &Place::local(p)), Some(pointer));
     assert_eq!(
-        unit.place_ty(
-            &function,
-            &Place {
-                local: p,
-                projection: vec![Projection::Deref],
-            }
-        ),
+        unit.place_ty(&function, &Place::new(p, vec![Projection::Deref])),
         Some(int)
     );
 
@@ -36,13 +30,7 @@ fn the_type_a_place_reaches_follows_its_projections() {
     // what it promises. Only a hand-built unit gets here.
     let holding = function.push_local(int);
     assert_eq!(
-        unit.place_ty(
-            &function,
-            &Place {
-                local: holding,
-                projection: vec![Projection::Deref],
-            }
-        ),
+        unit.place_ty(&function, &Place::new(holding, vec![Projection::Deref])),
         None
     );
 }
@@ -296,10 +284,7 @@ fn every_terminator_says_where_control_can_go() {
 #[test]
 fn a_place_is_not_the_place_it_points_at() {
     let p = Place::local(LocalId(1));
-    let pointee = Place {
-        local: LocalId(1),
-        projection: vec![Projection::Deref],
-    };
+    let pointee = Place::new(LocalId(1), vec![Projection::Deref]);
 
     assert_ne!(p, pointee);
     assert_eq!(pointee.local, p.local);
@@ -448,10 +433,10 @@ fn an_address_can_be_taken_of_an_element() {
     let index = function.push_local(int);
     let p = function.push_local(pointer);
 
-    let element = Place {
-        local: array,
-        projection: vec![Projection::Index(Operand::Copy(Place::local(index)))],
-    };
+    let element = Place::new(
+        array,
+        vec![Projection::Index(Operand::Copy(Place::local(index)))],
+    );
     let taken = Operation {
         place: Place::local(p),
         value: Rvalue::Address(element.clone()),
@@ -615,10 +600,7 @@ fn a_declaration_is_not_a_definition_with_no_blocks() {
 fn a_place_is_a_key() {
     let mut states = HashMap::new();
     let p = Place::local(LocalId(1));
-    let pointee = Place {
-        local: LocalId(1),
-        projection: vec![Projection::Deref],
-    };
+    let pointee = Place::new(LocalId(1), vec![Projection::Deref]);
 
     states.insert(p.clone(), "live");
     states.insert(pointee.clone(), "freed");
@@ -749,10 +731,7 @@ fn a_branch_is_threaded_along_a_chain_and_never_through_a_place_read_through_a_p
             origin: Origin::Written(at),
         },
     };
-    let read_through = |local: LocalId| Place {
-        local,
-        projection: vec![Projection::Deref],
-    };
+    let read_through = |local: LocalId| Place::new(local, vec![Projection::Deref]);
 
     // A projection on the first branch, then on the second.
     for first_reads_through in [true, false] {
@@ -835,12 +814,95 @@ fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
     assert_eq!(
         unit.place_ty(
             &function,
-            &Place {
-                local: a,
-                projection: vec![Projection::Index(Operand::Constant(0))],
-            }
+            &Place::new(a, vec![Projection::Index(Operand::Constant(0))])
         ),
         Some(int)
     );
     assert_eq!(unit.size_of(array), Some(16));
+}
+
+/// Every reader of a place answers every [`Shape`] with a `match`, so that a
+/// new kind of step is `E0004` wherever a place is read (#1092). A `matches!`
+/// or an `if let` over a place's shape or its steps answers only the arm it
+/// names and lets a new one through in silence, which the compiler cannot see,
+/// so the sources are read for one. See ADR-0113.
+///
+/// Mutation: write `matches!(place.shape(), Shape::Local)` in any reader in
+/// `safec-ir`, `safec-c` or `safec-llvm`; this fails and names the file.
+#[test]
+fn every_reader_of_a_place_answers_every_shape() {
+    fn sources(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("a source directory reads") {
+            let path = entry.expect("an entry reads").path();
+            if path.is_dir() {
+                sources(&path, out);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                out.push(path);
+            }
+        }
+    }
+    let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("the crate sits in `crates/`");
+    let mut files = Vec::new();
+    for name in ["safec-ir", "safec-c", "safec-llvm"] {
+        sources(&crates.join(name).join("src"), &mut files);
+    }
+    assert!(
+        files.len() > 20,
+        "the walk found the sources: {}",
+        files.len()
+    );
+    let mut evasions = Vec::new();
+    // Not this file, which spells the evasions it looks for.
+    let this = std::path::Path::new(file!())
+        .file_name()
+        .expect("a file name");
+    for file in &files {
+        if file.ends_with(std::path::Path::new("ir").join(this)) {
+            continue;
+        }
+        let text = std::fs::read_to_string(file).expect("a source file reads");
+        let mut rest = text.as_str();
+        while let Some(at) = rest.find("matches!(") {
+            let tail = &rest[at..];
+            let mut depth = 0;
+            let mut end = tail.len();
+            for (index, c) in tail.char_indices() {
+                match c {
+                    '(' => depth += 1,
+                    ')' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            end = index;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            let call = &tail[..end];
+            // What it matches is a shape, or a pattern names a step. A guard
+            // that matches a shape exhaustively inside it is fine.
+            let first = call["matches!(".len()..].split(',').next().unwrap_or("");
+            if first.contains(".shape()") || call.contains("Projection::") {
+                evasions.push(format!("{}: {call})", file.display()));
+            }
+            rest = &tail[end..];
+        }
+        for line in text.lines() {
+            if line.contains("let Projection::") || line.contains(".shape() else") {
+                evasions.push(format!("{}: {}", file.display(), line.trim()));
+            }
+        }
+    }
+    assert!(
+        evasions.is_empty(),
+        "a place's shape or steps answered without a `match`:
+{}",
+        evasions.join(
+            "
+"
+        )
+    );
 }

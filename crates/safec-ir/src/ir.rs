@@ -253,7 +253,11 @@ pub struct Place {
     /// Where it starts.
     pub local: LocalId,
     /// How to get from there to what is meant. Empty is the local itself.
-    pub projection: Vec<Projection>,
+    ///
+    /// **Private, so that a reader asks [`Self::shape`]** and a new kind of
+    /// step is a compile error wherever a place is read rather than a branch
+    /// nobody revisits (#1092). See ADR-0113.
+    projection: Vec<Projection>,
 }
 
 impl Projection {
