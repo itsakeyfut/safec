@@ -572,12 +572,25 @@ cases! {
         // their readers read, which each block records where the function
         // starts (ADR-0112, #1082). Mutation: seed nothing at entry; the
         // first two go silent on width. Mutation: `carried_width` reads
-        // `contents_read` alone; the same. The join by the larger is held by
-        // nothing yet: every record here is set where the function starts,
-        // so two paths never disagree on one.
+        // `contents_read` alone; the same.
         a_copy_into_one_of_two_caller_memories_is_asked_at_the_wider_ones_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_pointer_wide_enough_into_one_of_two_caller_memories_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a call returned is a block with no record, read at what the
+        // pointer's value carries from the type it arrived as, which
+        // `carried_width` keeps beside the record (#1085). Found by review.
+        // Mutation: `carried_width` answers the record alone; this goes
+        // silent.
+        a_copy_into_memory_a_call_returned_through_a_void_pointer_local_is_asked_at_what_it_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local whose address a call this check cannot read was handed
+        // records the type the callee reads it as, so a copy into it through
+        // a `void **` alias is asked at that (ADR-0112, found by review).
+        // Mutation: `Allocations::handed` records nothing; the first two go
+        // silent. Mutation: join `Known::receiver_width` by the smaller; the
+        // second, handed on one arm, goes silent.
+        a_copy_into_a_local_a_call_was_handed_through_a_void_pointer_pointer_local_is_asked_at_what_the_call_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_a_local_a_call_was_handed_on_one_arm_is_asked_at_what_the_call_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_a_pointer_wide_enough_into_a_local_a_call_was_handed_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The width the destination carries is its first level's: `x`, a
         // level below, is asked at its own `int *`. Mutation: drop the
         // first-level filter on the locals in `contents_leaving`; `x` is

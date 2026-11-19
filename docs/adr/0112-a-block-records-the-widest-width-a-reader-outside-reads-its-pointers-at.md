@@ -4,7 +4,7 @@ date: 2026-11-19
 decision-makers: itsakeyfut
 ---
 
-# A block records the widest width a reader outside reads its pointers at
+# A block or local records the widest width a reader outside reads its pointers at
 
 ## Context and Problem Statement
 
@@ -28,19 +28,25 @@ all (#1081), and the store door reads none (#1083).
 
 ## Considered Options
 
-* A per-site record, `Known::receiver_width`, of the widest width a reader
-  outside reads the block's pointers at.
+* A record per block or local, `Known::receiver_width`, of the widest width
+  a reader outside reads the pointers stored there at.
 * A second bound on `Held`, the widest, joined by the larger.
 
 ## Decision Outcome
 
-Chosen option: "A per-site record", by the owner's decision on #1085.
+Chosen option: "A record per block or local", by the owner's decision on
+#1085.
 
-* `Known::receiver_width: Table<Site, u64>`, in bytes, `0` where no reader's
-  type says. A pointer parameter's site is set from the parameter's type where
-  the function starts (`fit::slot_width`). A may-fact, joined by the larger,
-  and kept where the site is made again, as `Known::held_levels` is
-  (ADR-0086).
+* `Known::receiver_width: Table<Storage, u64>`, in bytes, `0` where no
+  reader's type says. A pointer parameter's site is set from the parameter's
+  type where the function starts, and a local whose address is handed to a
+  call this check cannot read from the type the callee reads it as
+  (`fit::slot_width`). A may-fact, joined by the larger, and kept where the
+  site is made again, as `Known::held_levels` is (ADR-0086).
+* **A local as well as a block**, by the owner's decision on review of #1082:
+  `int *slot; keep(&slot);` hands the callee a typed view of the local, and a
+  copy into it through a `void **` alias let a pointer to three bytes leave
+  where the callee reads four.
 * It is a fact about the reader's type, not about the block's bytes, so no
   write answers for it.
 * `fit::carried_width` is the one answer the doors read: the larger of what
@@ -65,10 +71,15 @@ this decision and land after it.
   `a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width`.
 * `a_copy_of_a_pointer_wide_enough_into_one_of_two_caller_memories_is_not_asked`
   holds the other side: a pointer as wide as the wider reader is not asked.
-* **The join by the larger is held by nothing yet.** Every record is set
-  where the function starts, so two paths never disagree on one and joining
-  by the smaller changes no answer, measured. #1081 sets records on one path
-  and adds the case that holds it.
+* `Allocations::handed` recording nothing silences
+  `a_copy_into_a_local_a_call_was_handed_through_a_void_pointer_pointer_local_is_asked_at_what_the_call_reads`
+  and
+  `a_copy_into_a_local_a_call_was_handed_on_one_arm_is_asked_at_what_the_call_reads`;
+  joining the record by the smaller silences the second, whose local is
+  handed on one arm only.
+* Answering the record alone, without what the value carries, silences
+  `a_copy_into_memory_a_call_returned_through_a_void_pointer_local_is_asked_at_what_it_arrived_as`:
+  a call's result is a block with no record.
 * A field added to `Known` is `error[E0027]` at its join, its entry and a
   rebirth, and then a failure of
   `every_field_of_the_memory_checks_value_is_a_belief_or_an_exemption` until

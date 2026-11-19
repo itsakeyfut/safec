@@ -480,10 +480,13 @@ pub(super) struct Known {
     /// the larger, and kept where the site is made again, as `left_at` is.
     /// See ADR-0086.
     pub(super) held_levels: Table<Site, usize>,
-    /// Per site, the widest a reader outside this function reads a pointer
-    /// stored in the block as pointing at, in bytes: `0` where no reader's
+    /// Per block or local, the widest a reader outside this function reads a
+    /// pointer stored there as pointing at, in bytes: `0` where no reader's
     /// type says. A pointer parameter's memory records its type where the
-    /// function starts, `int **out` four and `char **other` one.
+    /// function starts, `int **out` four and `char **other` one, and a local
+    /// whose address is handed to a call this check cannot read records the
+    /// type the callee reads it as, `keep(&slot)` with `keep` taking `int **`
+    /// four.
     ///
     /// **On the block, not on the value**, for the reason `held_levels` is:
     /// the width a departure is asked at is what the reader reads, and a
@@ -494,7 +497,7 @@ pub(super) struct Known {
     /// for it. A may-fact, joined by the larger, and kept where the site is
     /// made again, as `held_levels` is. Read by
     /// [`Self::receiver_width_of`]. See ADR-0112.
-    pub(super) receiver_width: Table<Site, u64>,
+    pub(super) receiver_width: Table<Storage, u64>,
     /// Per site, the earliest library copy that may have written part of a
     /// pointer into it: one whose length is shorter than a pointer, or ends
     /// part way through one (`Allocations::copied_pointers`), whatever either
@@ -1545,12 +1548,12 @@ impl Known {
         )
     }
 
-    /// The widest any of `sites` records a reader outside reads its pointers
-    /// at, `0` where none does. See [`Self::receiver_width`].
-    pub(super) fn receiver_width_of(&self, sites: impl IntoIterator<Item = Site>) -> u64 {
-        sites
+    /// The widest any of `places` records a reader outside reads its
+    /// pointers at, `0` where none does. See [`Self::receiver_width`].
+    pub(super) fn receiver_width_of(&self, places: impl IntoIterator<Item = Storage>) -> u64 {
+        places
             .into_iter()
-            .map(|site| self.receiver_width[site])
+            .map(|place| self.receiver_width[place])
             .max()
             .unwrap_or(0)
     }

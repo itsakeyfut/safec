@@ -2583,7 +2583,7 @@ impl Analysis for Allocations<'_> {
             stored_out: Table::filled(Earliest::none(), self.locals),
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
-            receiver_width: Table::filled(0, self.locals),
+            receiver_width: Table::filled(0, Storage::count(self.locals)),
             part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             other_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             part_before: Table::filled(false, Storage::count(self.locals)),
@@ -2651,7 +2651,7 @@ impl Analysis for Allocations<'_> {
             // **And how wide its reader reads the pointers stored there**,
             // which is the caller, by the parameter's type. See
             // `Known::receiver_width`.
-            known.receiver_width[Site::of(LocalIdx::of(parameter))] =
+            known.receiver_width[Storage::Heap(Site::of(LocalIdx::of(parameter)))] =
                 pointee(self, function.local(parameter))
                     .and_then(|read_as| slot_width(self, read_as))
                     .unwrap_or(0);

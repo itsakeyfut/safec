@@ -10,7 +10,7 @@ use crate::reads::derefs;
 use crate::source::Span;
 
 use super::allocations::{Allocations, innermost_element, stored_pointer};
-use super::index::{LocalIdx, Site};
+use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
 use super::parts::{At, Extent, SiteState, Width, same};
 
@@ -584,9 +584,6 @@ pub(super) fn slots_from(
     (asked_locals, asked_sites, untyped_sites)
 }
 
-/// The type `ty` points to, where it is a pointer or an array of them, and
-/// `None` otherwise.
-///
 /// How wide a reader of memory read as `read_as` reads what a pointer stored
 /// there points at: `4` for memory of `int *`, `0` for memory of `void *`,
 /// and `None` where the memory holds no pointer. The width a block records
@@ -615,13 +612,21 @@ pub(super) fn carried_width(
         Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
     };
     let recorded = if pointer.projection.is_empty() {
-        known.receiver_width_of(known.points_to[pointer.local].sites())
+        let held = &known.points_to[pointer.local];
+        known.receiver_width_of(
+            held.sites()
+                .map(Storage::Heap)
+                .chain(held.locals().map(Storage::Local)),
+        )
     } else {
         0
     };
     Some(carried.max(recorded)).filter(|&width| width > 0)
 }
 
+/// The type `ty` points to, where it is a pointer or an array of them, and
+/// `None` otherwise.
+///
 /// **Through an array to its element**, as the call's transfer reads one:
 /// `put(&a)` with `a` an `int **[1]` holding `&w` and `put` taking
 /// `int **(*)[1]` reached `w` below a type that stopped being a pointer, and
