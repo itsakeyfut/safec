@@ -85,10 +85,10 @@ unchanged.
   `a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read`.
 * A chain that grants no block gives
   `a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate`
-  an `SC0411`, and nothing else. A chain that stops at a local naming a
-  local gives
+  and
   `a_block_a_call_reaches_through_two_local_holders_that_certainly_name_it_is_not_reported_as_indeterminate`
-  one, and nothing else.
+  an `SC0411` each, and nothing else. A chain that stops at a local naming
+  a local gives the second one, and nothing else.
 * Exposing a call's result without restoring what the other blocks held
   loses the `SC0411` of
   `a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves`
