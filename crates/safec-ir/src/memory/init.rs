@@ -7,8 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::ir::{Function, Operand, Place, Projection, Ty};
-use crate::reads::derefs;
+use crate::ir::{Function, Operand, Place, Shape, Ty};
 use crate::source::Span;
 
 use super::allocations::{Allocations, innermost_element};
@@ -403,7 +402,7 @@ impl Allocations<'_> {
 
         // Written: a local of the type stored that the place may land in.
         let mut lands: Table<LocalIdx, bool> = Table::filled(false, may_hold.len());
-        for local in value.locals_a_write_may_land_in(place.local, derefs(place)) {
+        for local in value.locals_a_write_may_land_in(place.local, place.derefs()) {
             lands[local] = true;
         }
         // **Through a pointer moved off an array, an element of it**, as the
@@ -415,7 +414,7 @@ impl Allocations<'_> {
             function,
             value,
             place.local,
-            derefs(place),
+            place.derefs(),
             lands
                 .indices()
                 .filter(|&local| lands[local] && may_hold[local]),
@@ -457,7 +456,7 @@ impl Allocations<'_> {
         // with `*t` only `&a`, where the store `**t = s;` does not (#1006's
         // review).
         let alone =
-            written_alone(value, place.local, derefs(place), &landing).filter(|at| match kind {
+            written_alone(value, place.local, place.derefs(), &landing).filter(|at| match kind {
                 StoreKind::Direct | StoreKind::Through { .. } => true,
                 StoreKind::Copy => self.covers_exactly(function, at.local(), copied),
             });
@@ -562,7 +561,7 @@ impl Allocations<'_> {
                 // believed written, and only the doubt whether a read past
                 // its start fits stood in for the slots nothing wrote, the
                 // shape #703 exposed (#932). See ADR-0094 rule 3.
-                if derefs(place) > 0 {
+                if place.derefs() > 0 {
                     let held = &value.points_to[pointer];
                     let placed = one_step && !held.beyond().any_unknown();
                     // The locals it may land in, taken before the blocks are
@@ -603,7 +602,10 @@ impl Allocations<'_> {
                         }
                         // And what it points at is written now, whichever
                         // element that is. See `Held::stored_through`.
-                        if place.projection.as_slice() == [Projection::Deref] {
+                        if match place.shape() {
+                            Shape::Deref(1) => true,
+                            Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+                        } {
                             value.points_to[pointer].stored_through = true;
                         }
                     } else {
@@ -612,12 +614,21 @@ impl Allocations<'_> {
                         // one-step store's is above: without it the lowering's
                         // own read of `*v` after `*v = x;` was doubted. See
                         // `Held::stored_through`.
-                        if uncertain && place.projection.as_slice() == [Projection::Deref] {
+                        if uncertain
+                            && (match place.shape() {
+                                Shape::Deref(1) => true,
+                                Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+                            })
+                        {
                             value.points_to[place.local].stored_through = true;
                         }
                     }
                 }
-                if !place.projection.is_empty() && landing.strong(value).is_none() {
+                if !(match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && landing.strong(value).is_none()
+                {
                     self.locals_written(function, value, place, landing.kind, None, whole);
                     for target in past_end {
                         self.written_past_its_end(function, value, target, unwritten_before);
@@ -645,16 +656,19 @@ impl Allocations<'_> {
                 // destination to have.
                 let past_end: Vec<LocalIdx> = match dest {
                     Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
+                        if match dest.shape() {
+                            Shape::Local | Shape::Deref(_) => true,
+                            Shape::Indexed => false,
+                        } =>
                     {
                         self.past_end_targets(
                             value,
                             dest.local,
-                            derefs(dest) + 1,
-                            dest.projection.is_empty(),
+                            dest.derefs() + 1,
+                            match dest.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            },
                         )
                     }
                     Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
@@ -676,17 +690,20 @@ impl Allocations<'_> {
                 // `Known::written`.
                 let may_land: Option<(BTreeSet<Site>, bool, bool, Landing, Place)> = match dest {
                     Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
+                        if match dest.shape() {
+                            Shape::Local | Shape::Deref(_) => true,
+                            Shape::Indexed => false,
+                        } =>
                     {
-                        let deep = derefs(dest) + 1;
+                        let deep = dest.derefs() + 1;
                         let landing = self.landing(
                             value,
                             dest.local,
                             deep,
-                            dest.projection.is_empty(),
+                            match dest.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            },
                             StoreKind::Copy,
                         );
                         let mut set: BTreeSet<Site> = landing.containers.iter().copied().collect();
@@ -716,12 +733,15 @@ impl Allocations<'_> {
                         // block's size covers the block.
                         let alone = set.len() == 1
                             && landing.targets.is_empty()
-                            && dest.projection.is_empty()
+                            && (match dest.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            })
                             && matches!(value.points_to[dest.local].position.at, At::Bytes(0));
                         // The place it writes, `*dest`, as a store through
                         // the same pointer writes it.
                         let mut written = (*dest).clone();
-                        written.projection.push(Projection::Deref);
+                        written = written.deref();
                         Some((set, several, alone, landing, written))
                     }
                     // A destination that is no place keeps what the exposure
@@ -748,7 +768,12 @@ impl Allocations<'_> {
                 // of the whole, `b[0] = x; memcpy(&r, b, 8);` doubted `r`
                 // where `r = b[0];` reads the slot written.
                 let (source_fresh, source_maybe) = match source {
-                    Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                    Some(Operand::Copy(source))
+                        if (match source.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) =>
+                    {
                         let held = &value.points_to[source.local];
                         let slots = self.slots_read(held, bytes);
                         let plain = !(held.beyond().any_unknown() || held.inner_address);
@@ -774,12 +799,12 @@ impl Allocations<'_> {
                     // `s = *ppp` was doubted. A doubt alone, since what such a
                     // pointer names is not all it may name. Found by review.
                     Some(Operand::Copy(source))
-                        if source
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
+                        if match source.shape() {
+                            Shape::Local | Shape::Deref(_) => true,
+                            Shape::Indexed => false,
+                        } =>
                     {
-                        let (sites, locals) = value.levels_below(source.local, derefs(source));
+                        let (sites, locals) = value.levels_below(source.local, source.derefs());
                         let maybe = sites
                             .iter()
                             .any(|&site| value.written[site].whole().may_be_unwritten())
@@ -799,7 +824,12 @@ impl Allocations<'_> {
                 let copied = Carried {
                     at: span,
                     from: match source {
-                        Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                        Some(Operand::Copy(source))
+                            if (match source.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) =>
+                        {
                             Some(source.local)
                         }
                         Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
@@ -837,7 +867,12 @@ impl Allocations<'_> {
                     };
                     let mut carried = false;
                     let dest_at = match dest {
-                        Some(Operand::Copy(dest)) if dest.projection.is_empty() => {
+                        Some(Operand::Copy(dest))
+                            if (match dest.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) =>
+                        {
                             value.points_to[dest.local].position.at
                         }
                         Some(Operand::Copy(_) | Operand::Constant(_)) | None => At::Unknown,
@@ -914,7 +949,10 @@ impl Allocations<'_> {
                         }
                     } else if several {
                         if let Some(Operand::Copy(dest)) = dest {
-                            if dest.projection.is_empty() {
+                            if match dest.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            } {
                                 value.points_to[dest.local].stored_through = true;
                             }
                         }
@@ -933,12 +971,12 @@ impl Allocations<'_> {
                 // exposes no local. See `Known::written` and ADR-0057.
                 let written: Option<Vec<LocalIdx>> = match dest {
                     Some(Operand::Copy(dest))
-                        if dest
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Deref)) =>
+                        if match dest.shape() {
+                            Shape::Local | Shape::Deref(_) => true,
+                            Shape::Indexed => false,
+                        } =>
                     {
-                        Some(value.locals_a_write_may_land_in(dest.local, derefs(dest) + 1))
+                        Some(value.locals_a_write_may_land_in(dest.local, dest.derefs() + 1))
                     }
                     // A constant writes nothing anyone can read back, and no
                     // other place reaches a call's argument from C.
@@ -954,7 +992,7 @@ impl Allocations<'_> {
                             function,
                             value,
                             dest.local,
-                            derefs(dest) + 1,
+                            dest.derefs() + 1,
                             lands.iter().copied(),
                             true,
                             bytes,
@@ -975,7 +1013,7 @@ impl Allocations<'_> {
                     // **The locals it may land in are the store's to answer**
                     // (#1006), for the place `*dest`, with the copy's own arms.
                     let mut place = (*dest).clone();
-                    place.projection.push(Projection::Deref);
+                    place = place.deref();
                     self.locals_written(function, value, &place, StoreKind::Copy, bytes, whole);
                 } else {
                     // A destination that is no place of dereferences may land
@@ -992,8 +1030,11 @@ impl Allocations<'_> {
                 // of it may be of the part that was written, by the user's
                 // decision.
                 if let (Some(lands), Some(Operand::Copy(dest))) = (&written, dest) {
-                    let at_start = dest.projection.is_empty()
-                        && matches!(value.points_to[dest.local].position.at, At::Bytes(0));
+                    let at_start =
+                        (match dest.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) && matches!(value.points_to[dest.local].position.at, At::Bytes(0));
                     for &local in lands {
                         let covers = value.covers_whole(
                             Storage::Local(local),
@@ -1153,8 +1194,10 @@ impl Allocations<'_> {
 
     pub(super) fn reads_fresh(&self, function: &Function, source: &Place, value: &Known) -> bool {
         let through = &value.points_to[source.local];
-        source.projection.as_slice() == [Projection::Deref]
-            && self.may_be_pointer(function, source)
+        (match source.shape() {
+            Shape::Deref(1) => true,
+            Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+        }) && self.may_be_pointer(function, source)
             && (through.sites().next().is_some() || through.may_be_a_locals_address())
             && !(through.beyond().any_unknown() || through.inner_address)
             && through.sites().all(|site| {
@@ -1198,7 +1241,7 @@ impl Allocations<'_> {
         // start, a local written on one path only was not doubted, where its
         // two-step spelling is. See ADR-0057.
         // `derefs` is zero for a place with anything but dereferences in it.
-        let depth = derefs(source);
+        let depth = source.derefs();
         if depth > 1 {
             if !self.may_be_pointer(function, source) {
                 return false;
@@ -1240,7 +1283,7 @@ impl Allocations<'_> {
                 .site_init_at(site, self.slot_read(through))
                 .may_be_unwritten()
         };
-        source.projection.as_slice() == [Projection::Deref]
+        (match source.shape() { Shape::Deref(1) => true, Shape::Local | Shape::Deref(_) | Shape::Indexed => false })
             && self.may_be_pointer(function, source)
             && (through.may_be_a_locals_address() || through.sites().next().is_some())
             && !(through.beyond().stopped_following_or_written_unseen()
@@ -1285,18 +1328,20 @@ impl Allocations<'_> {
         let Some(Operand::Copy(dest)) = dest else {
             return None;
         };
-        if !dest
-            .projection
-            .iter()
-            .all(|step| matches!(step, Projection::Deref))
-        {
+        if !match dest.shape() {
+            Shape::Local | Shape::Deref(_) => true,
+            Shape::Indexed => false,
+        } {
             return None;
         }
         let landing = self.landing(
             value,
             dest.local,
-            derefs(dest) + 1,
-            dest.projection.is_empty(),
+            dest.derefs() + 1,
+            match dest.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            },
             StoreKind::Copy,
         );
         self.replaces_whole(function, value, &landing, bytes)
