@@ -2573,14 +2573,17 @@ impl Known {
         self.written[site].written_by_unknown_code();
     }
 
-    /// **A block an argument names is believed written only where some
-    /// argument certainly names it**, [`Held::alone`]: an allocation's result
-    /// whose site stands for one block, copied as it is. Every other block
-    /// an argument names keeps what it held `before` the exposure,
+    /// **A block a call reaches from its arguments is believed written only
+    /// where some argument certainly names it**, [`Held::alone`]: an
+    /// allocation's result whose site stands for one block, copied as it
+    /// is. Every other such block keeps what it held `before` the exposure,
     /// may-written, as a store through the same pointer leaves it: `p = 0;
     /// if (c) p = b; fill(p); return *b != 0;` read `*b` indeterminate in
-    /// silence where `c` is zero (#1046). Blocks reached only through other
-    /// blocks keep [`Self::expose`]'s belief (#1064). See ADR-0105.
+    /// silence where `c` is zero (#1046). **And every block reached only
+    /// through another**, which no argument names: a block's record carries
+    /// no must-fact (#1061), so `*box = p; fill(box);` with `p` either `b`
+    /// or a null believed `*b` written where nothing reached it (#1064). See
+    /// ADR-0108.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn believed_written_only_where_named_alone(
@@ -2593,12 +2596,15 @@ impl Known {
             .iter()
             .flat_map(|held| held.sites().filter(|&site| names_alone(held, site)))
             .collect();
-        for held in handed {
-            for site in held.sites().filter(|site| !alone.contains(site)) {
-                let storage = Storage::Heap(site);
-                self.written[storage] = before[storage].clone();
-                self.written[storage].may_write(Whole::Pointer);
-            }
+        let handed_sites: Vec<Site> = handed.iter().flat_map(Held::sites).collect();
+        for site in self
+            .closure(handed_sites)
+            .into_iter()
+            .filter(|site| !alone.contains(site))
+        {
+            let storage = Storage::Heap(site);
+            self.written[storage] = before[storage].clone();
+            self.written[storage].may_write(Whole::Pointer);
         }
     }
 
