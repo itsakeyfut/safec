@@ -608,22 +608,24 @@ review that found it measured 17 of them, with 86 cases moved
 ([#782](https://github.com/itsakeyfut/safec/issues/782)). So a callee that
 writes less than it was handed is not detected, as a wrong hatch promise is
 not, and the route matrix's `fresh_call_*` rows hold it as a belief rather
-than a cost. **Only a local some pointer it can find names alone**: one
-handed `p`, either `&a` or `&b`, or `&a` or what this check does not follow,
-writes one of them, so a local every pointer it can find names only beside
-another may have been missed, and a read of `a` after `fill(p, &x)` is
-reported as it is after `*p = &x;`. So may one no pointer it can find names
-at all, an address an earlier call kept: `keep(p); other();` with `p` either
-`&x` or `&y` leaves `x` possibly unwritten
-([ADR-0101](adr/0101-a-fact-starts-believed-only-where-an-operation-grants-it-and-a-call-writes-for-certain-only-a-local-named-alone.md)). Nor does a block that may hold `&a` beside
-a null or what this check does not follow name `a` alone
-([ADR-0103](adr/0103-a-holder-names-a-local-alone-only-where-it-certainly-holds-a-whole-pointer-to-it-and-nothing-else-replacing-adr-0101-rule-1s-exception.md)),
-so `*slot = m; tick();` with `slot` a caller's is doubted where `m` is read.
-A block it is handed is believed written the same way, only where an
-argument names it alone: `fill(p)` with `p` either `b` or a null leaves `*b`
-possibly unwritten
-([ADR-0104](adr/0104-a-block-a-call-is-handed-is-believed-written-only-where-an-argument-names-it-alone.md)).
-A block reached only through another block is still believed written.
+than a cost. **Only a place some pointer it can find certainly names**:
+a pointer certainly names one place only where taking the address of a
+whole local, or an allocation whose site stands for one block, made it so,
+and copies kept it; a join keeps it only where both paths agree, and every
+other operation drops it
+([ADR-0105](adr/0105-a-pointer-names-one-place-alone-only-where-an-address-or-an-allocation-grants-it.md)).
+So one handed `p`, either `&a` or `&b`, `&a` or a null, `&a` on one path
+and nothing assigned on the other, or `&a` moved by arithmetic, may have
+missed `a`, and a read of `a` after `fill(p, &x)` is reported as it is
+after `*p = &x;`; so is `if (p) fill(p);` after a join with a null, since a
+null test grants nothing. A block it is handed is believed written the
+same way, only where an argument certainly names it: `fill(p)` with `p`
+either `b` or a null leaves `*b` possibly unwritten. A pointer read out of
+a block names nothing for certain yet, so the output-parameter idiom through
+a block, `*box = &a; fill(box);`, is doubted where `a` is read until a
+block's record carries the fact
+([#1061](https://github.com/itsakeyfut/safec/issues/1061)), and a block
+reached only through another block is still believed written.
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library
