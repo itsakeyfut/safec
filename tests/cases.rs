@@ -1984,6 +1984,13 @@ cases! {
         // name; both lose their `SC0411`.
         a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder a call may reach only through a pointer that may be null,
+        // or one an earlier call may have kept through such a pointer, is no
+        // pointer the call certainly finds (ADR-0107, #1063). Mutation: ask
+        // every holder `unknown_code_reaches` finds, as before; both lose
+        // their `SC0411`.
+        a_local_a_holder_a_call_may_reach_only_through_a_possibly_null_pointer_names_is_not_believed_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_holder_an_earlier_call_may_have_kept_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
@@ -2953,7 +2960,9 @@ cases! {
         // and the block cases beside it, measured.
         a_local_array_stored_in_memory_a_call_was_handed_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the walk does not step through what a local holds;
-        // this is reported.
+        // this is reported. Mutation: `Known::named_alone` follows no chain
+        // from a local a handed value certainly names to the local it
+        // certainly holds (ADR-0107); this is reported too.
         a_local_array_reached_through_a_local_a_call_was_handed_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the locals already exposed are not a seed of the walk;
         // this is reported.

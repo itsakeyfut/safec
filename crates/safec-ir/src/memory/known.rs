@@ -2007,29 +2007,55 @@ impl Known {
     }
 
     /// **The locals a call this check cannot read writes for certain**: those
-    /// some pointer it can find certainly names, [`Held::alone`], among the
-    /// values it is `handed` and the local holders it finds from what is
-    /// exposed. Every other local it may reach it may have written, so a
-    /// route this walk does not take is a doubt and not a silence (ADR-0101
-    /// rule 1). A local named alone by any of them is believed written, the
-    /// output-parameter idiom (#782).
+    /// some pointer it certainly finds certainly names, [`Held::alone`].
+    /// Every other local it may reach it may have written, so a route this
+    /// walk does not take is a doubt and not a silence (ADR-0101 rule 1). A
+    /// local named alone is believed written, the output-parameter idiom
+    /// (#782).
     ///
     /// **Asked of the must-fact and of nothing else.** Read off how few
     /// places a may-set named, "alone" needed one exclusion per door that
     /// left the set small while handing nothing over: a null, a path that
     /// assigned nothing, a fill, an element, a block a loop made, a block
     /// holding a null or what this check does not follow (#950 to #1046).
-    /// A block's record carries no such fact yet, so a pointer found in a
-    /// block names nothing alone. See ADR-0105.
+    /// A block's record carries no such fact, so a pointer found in a block
+    /// names nothing alone. See ADR-0105.
+    ///
+    /// **And only of a pointer it certainly finds**: a value it is `handed`,
+    /// a local such a value certainly names, followed as a chain (`fill(&h)`
+    /// with `h = m` names `h` and `m`), or a holder exposed before this call,
+    /// `exposed_before`, which an earlier call or an escape put where code
+    /// this check cannot read keeps it (`stash(&p); p = m; tick();`). A
+    /// holder this call exposes for the first time is found only through
+    /// the chain: the walk that exposes is a may-walk, and `p` either `&h`
+    /// or a null found `h` and named `m` alone though the call may have
+    /// been handed nothing (#1063). See ADR-0107.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
-    pub(super) fn named_alone(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
+    pub(super) fn named_alone(
+        &self,
+        handed: &[Held],
+        exposed_before: &Table<Referent, bool>,
+    ) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
-        handed
+        let mut chain: Vec<LocalIdx> = handed
             .iter()
-            .chain(reached.locals.iter().map(|&holder| &self.points_to[holder]))
+            .chain(
+                reached
+                    .locals
+                    .iter()
+                    .filter(|&&holder| exposed_before[holder])
+                    .map(|&holder| &self.points_to[holder]),
+            )
             .filter_map(|held| held.certain().and_then(Referent::local))
-            .collect()
+            .collect();
+        let mut alone = BTreeSet::new();
+        while let Some(local) = chain.pop() {
+            if alone.insert(local) {
+                chain.extend(self.points_to[local].certain().and_then(Referent::local));
+            }
+        }
+        alone
     }
 
     /// The walk [`Self::locals_named_by_unknown_code`] and

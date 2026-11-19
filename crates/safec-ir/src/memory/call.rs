@@ -1176,6 +1176,9 @@ impl Allocations<'_> {
                 // `Known::believed_written_only_where_named_alone` restores
                 // for a block the call may have missed. See ADR-0105.
                 let written_before = value.written.clone();
+                // And what it was exposed to, which `Known::named_alone` asks
+                // of a holder it finds. See ADR-0107.
+                let exposed_before = value.exposed.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
                 // And believed written only where an argument names it
@@ -1334,7 +1337,7 @@ impl Allocations<'_> {
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
-                let alone = value.named_alone(&handed_values);
+                let alone = value.named_alone(&handed_values, &exposed_before);
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
