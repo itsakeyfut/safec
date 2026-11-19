@@ -68,6 +68,8 @@ impl Allocations<'_> {
                 stored_through: false,
                 may_be_null: false,
                 vouched: false,
+                // No place for certain. See ADR-0105.
+                alone: None,
             },
         );
         let poured = Cell::poured(
@@ -463,12 +465,10 @@ impl Allocations<'_> {
                         value.contents[site].position_unknown();
                     }
                     // **And a local a fill of zeros landed in may now hold
-                    // no address at all**, as a null does, so what it named
-                    // is named alone by nobody, and a copy of it carries
-                    // that: a fill pours no value, so `memset(&h, 0, 8); g =
-                    // h; fill(g);` handed on `h`'s names, and `a` was
-                    // believed written. Found by review of #1037. See
-                    // ADR-0103 rule 1.
+                    // no address at all**, as a null does, and a copy of it
+                    // carries that: a fill pours no value, so `h` keeps its
+                    // names, and what reads a null (`realloc`'s door, the
+                    // null reports) has only this mark to go on (#1037).
                     //
                     // **A null test drops the mark**, as it drops any null's:
                     // `if (g) fill(g);` after the fill and a copy believes `a`
@@ -481,6 +481,12 @@ impl Allocations<'_> {
                         for &local in &landing.targets {
                             value.points_to[local].may_be_null = true;
                         }
+                    }
+                    // **And no place for certain**: a fill writes no address,
+                    // so what it lands in names nothing alone (#1037). See
+                    // ADR-0105.
+                    for &local in &landing.targets {
+                        value.points_to[local].alone = None;
                     }
                 }
             }
@@ -1167,7 +1173,8 @@ impl Allocations<'_> {
                 // memory may be, which `reach` says. See ADR-0039.
                 let reach = self.reach(function, handed, sites(), value);
                 // What every place held before this call exposed it, which
-                // `Known::named_alone` asks. See ADR-0103 rule 1.
+                // `Known::believed_written_only_where_named_alone` restores
+                // for a block the call may have missed. See ADR-0105.
                 let written_before = value.written.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
@@ -1180,11 +1187,7 @@ impl Allocations<'_> {
                         Operand::Constant(_) => None,
                     })
                     .collect();
-                value.believed_written_only_where_named_alone(
-                    &handed_values,
-                    &written_before,
-                    |site| self.made_once[site.local()],
-                );
+                value.believed_written_only_where_named_alone(&handed_values, &written_before);
                 // Pending from here, and not at its own exposure above, which
                 // `Known::noticed` leaves out by `by` anyway. See ADR-0042.
                 let span = origin.span();
@@ -1331,26 +1334,7 @@ impl Allocations<'_> {
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
-                let holders: Vec<(Held, bool)> = handed
-                    .iter()
-                    .filter_map(|argument| match argument {
-                        Operand::Copy(place) => Some((
-                            self.handed_value(function, place, value),
-                            place.projection.is_empty()
-                                && !matches!(
-                                    written_before[place.local].whole(),
-                                    Init::Written(Whole::Pointer)
-                                ),
-                        )),
-                        Operand::Constant(_) => None,
-                    })
-                    .collect();
-                let alone = value.named_alone(
-                    &holders,
-                    |local| self.is_array(function, local),
-                    &written_before,
-                    |site| self.made_once[site.local()],
-                );
+                let alone = value.named_alone(&handed_values);
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
@@ -1651,6 +1635,8 @@ impl Allocations<'_> {
                             stored_through: false,
                             may_be_null: false,
                             vouched: false,
+                            // No place for certain. See ADR-0105.
+                            alone: None,
                         },
                     ),
                 );
@@ -1710,6 +1696,8 @@ impl Allocations<'_> {
                             stored_through: false,
                             may_be_null: false,
                             vouched: false,
+                            // No place for certain. See ADR-0105.
+                            alone: None,
                         },
                     ),
                 };
@@ -1760,6 +1748,8 @@ impl Allocations<'_> {
                             stored_through: false,
                             may_be_null: false,
                             vouched: false,
+                            // No place for certain. See ADR-0105.
+                            alone: None,
                         },
                     ),
                 };
@@ -1831,6 +1821,10 @@ impl Allocations<'_> {
                     // call's, unless its callee promises otherwise (#931).
                     may_be_null: self.unit.function(*callee).promised().is_none(),
                     vouched: false,
+                    // **An allocation's result is certainly its one block**, where its
+                    // site stands for one; nothing else a call returns is. See ADR-0105.
+                    alone: (matches!(kind, Callee::Allocates) && self.made_once[site.local()])
+                        .then_some(Referent::Heap(site)),
                 },
             ),
         );

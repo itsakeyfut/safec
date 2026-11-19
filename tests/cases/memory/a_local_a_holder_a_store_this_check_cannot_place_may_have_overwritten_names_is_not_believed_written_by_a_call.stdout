@@ -1,0 +1,119 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:1:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "pp"
+  Local "_2" "int ****" parameter "box"
+Function a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:1:42 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "p"
+Function a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "a"
+  Local "_2" "int *" "b"
+  Local "_3" "int **" "h"
+  Local "_4" "int **"
+  Local "_5" "int ***" "cell"
+  Local "_6" "int ***"
+  Local "_7" "int ****"
+  Local "_8" "int ***" "t"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int **"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:4:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:4:14 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:5:15 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:5:15 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:6:12 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:6:19 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:7:11 written
+      Destination "_6"
+      Address
+        Place "_3"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:7:15 written
+      Destination "_7"
+      Address
+        Place "_5"
+    ArgumentsEvaluated a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:7:5 generated
+    Call a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:7:5 written "stash" "bb1"
+      Copy "_6"
+      Copy "_7"
+  Block "bb1"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:7:5 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:8:12 written
+      Destination "_8"
+      Use
+        Copy "_5"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:8:16 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:9:9 written
+      Destination "_9"
+      Address
+        Place "_1"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:9:5 written
+      Destination "_3"
+      Use
+        Copy "_9"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:9:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:9:5 generated
+    Branch a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:9 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:9 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:17 written
+      Destination "_11"
+      Address
+        Place "_2"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:12 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_11"
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:12 written
+      Destination "_12"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:12 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:10:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:11:5 generated
+    Call a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:11:5 written "fill" "bb5"
+      Copy "_3"
+  Block "bb5"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:11:5 generated
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:12:12 written
+      Destination "_13"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Operation a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call.c:12:12 generated
+    Return

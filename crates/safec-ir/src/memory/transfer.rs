@@ -362,6 +362,8 @@ impl Allocations<'_> {
                     stored_through: false,
                     may_be_null: false,
                     vouched: false,
+                    // A constant or an address carried by a store is no grant. See ADR-0105.
+                    alone: None,
                 },
             ),
         }
@@ -1361,6 +1363,8 @@ impl Allocations<'_> {
                 // one (#931).
                 may_be_null: true,
                 vouched: false,
+                // A load names nothing for certain until a block's record says so (#1061).
+                alone: None,
             },
         );
         // What could be named as this was read. See `Held::named_at_read`.
@@ -2496,6 +2500,8 @@ impl Analysis for Allocations<'_> {
                         stored_through: false,
                         may_be_null: false,
                         vouched: false,
+                        // Nothing is certain at entry.
+                        alone: None,
                     },
                 ),
                 self.locals,
@@ -2611,6 +2617,8 @@ impl Analysis for Allocations<'_> {
                     // pass none (#931).
                     may_be_null: function.nonnull(parameter).is_none(),
                     vouched: false,
+                    // A parameter's memory is the caller's; nothing certain.
+                    alone: None,
                 },
             );
             known.points_to[parameter].hold(Site::of(LocalIdx::of(parameter)), At::Bytes(0));
@@ -3483,6 +3491,8 @@ impl Analysis for Allocations<'_> {
                                     stored_through: false,
                                     may_be_null: false,
                                     vouched: false,
+                                    // A constant names nothing. See ADR-0105.
+                                    alone: None,
                                 },
                             ),
                         );
@@ -3562,6 +3572,15 @@ impl Analysis for Allocations<'_> {
                                     stored_through: false,
                                     may_be_null: false,
                                     vouched: false,
+                                    // **Certainly the local**, where what was taken is the whole of it or
+                                    // a one-level array's start: the one grant of the fact besides an
+                                    // allocation. `&arr[k]` and `&m[0][0]` grant nothing. See ADR-0105.
+                                    alone: (taken.projection.is_empty()
+                                        || matches!(
+                                            taken.projection.as_slice(),
+                                            [Projection::Index(Operand::Constant(0))]
+                                        ))
+                                    .then(|| Referent::Local(LocalIdx::of(taken.local))),
                                 },
                             ),
                         );

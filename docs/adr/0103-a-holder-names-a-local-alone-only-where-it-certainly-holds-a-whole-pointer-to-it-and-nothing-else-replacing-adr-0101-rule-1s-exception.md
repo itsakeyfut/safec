@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "superseded by ADR-0105"
 date: 2026-11-18
 decision-makers: itsakeyfut
 ---
@@ -82,7 +82,7 @@ Rule 2, measured on #1038's branch: `Cell::poured` never marking a null, or
 `a_local_a_block_named_before_a_null_overwrote_it_is_not_believed_written_by_a_later_call`
 and `a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call`.
 A load takes its null from what it reads, so a copy of a pointer naming its
-local alone marks none (`a_pointer_copied_into_a_block_names_its_local_alone_to_a_call`
+local alone marks none (`a_local_a_pointer_copied_into_a_block_names_is_doubted_after_a_call_handed_the_block`
 is doubted when every load may be null) and a copy of one that may be null
 does (`a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call`
 is silent when none may be). Memory a caller handed over is never replaced, so

@@ -1,0 +1,31 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another.c:6:5 ]
+   │
+ 6 │     fill(&b[1]);
+   │     ─────┬─────  
+   │          ╰─────── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0411]: `*b` may be read before anything was assigned to it
+   ╭─[ a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another.c:7:12 ]
+   │
+ 7 │     return b[0] != 0;
+   │            ────┬────  
+   │                ╰────── read here
+───╯
+  = note: C17 7.22.3.1 p2 and 7.22.3.4 p2 leave what `aligned_alloc` and `malloc` allocate indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
+error[SC0402]: this uses `b`, which may have been freed
+   ╭─[ a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another.c:7:12 ]
+   │
+ 7 │     return b[0] != 0;
+   │            ────┬────  
+   │                ╰────── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

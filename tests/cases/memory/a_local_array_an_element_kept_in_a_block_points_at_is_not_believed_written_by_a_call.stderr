@@ -1,0 +1,31 @@
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:9:5 ]
+   │
+ 9 │     *box = &arr[k];
+   │     ───────┬──────  
+   │            ╰──────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:10:5 ]
+    │
+ 10 │     fill3(box);
+    │     ─────┬────  
+    │          ╰────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0411]: this may read a pointer out of memory before anything was assigned to it
+    ╭─[ a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:11:12 ]
+    │
+ 11 │     return arr[0] != 0;
+    │            ─────┬─────  
+    │                 ╰─────── read here
+────╯
+  = note: C17 6.2.4 p6 and 6.7.9 p10 leave a local indeterminate until something writes it, and Annex J.2 lists using that value as undefined
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path before it is read
