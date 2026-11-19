@@ -1833,9 +1833,8 @@ impl Known {
             // whose record may hold a null or names what this check does not
             // model, or names nothing; a local that may be null or names
             // nothing; memory a caller or a pointer this check cannot follow
-            // reaches. Taken as null whatever it read, a copy of a pointer
-            // into a block marked the block as holding a null, and a call
-            // handed it was doubted. See ADR-0103 rule 2.
+            // reaches. Read by `realloc`'s door and the null reports; what a
+            // call writes asks `Held::alone` instead (ADR-0105).
             held.may_be_null = self.load_may_be_null(local, depth, from_caller);
         }
         // **And the locals whose address it may be**, as edges, so a write
@@ -2008,151 +2007,29 @@ impl Known {
     }
 
     /// **The locals a call this check cannot read writes for certain**: those
-    /// some pointer it can find names alone, `handed` and those stored in
-    /// what is exposed, asked what each names. Every other local it may
-    /// reach it may have written, a route this walk does not take among
-    /// them, so a route missed here is a doubt and not a silence. See
-    /// ADR-0101.
+    /// some pointer it can find certainly names, [`Held::alone`], among the
+    /// values it is `handed` and the local holders it finds from what is
+    /// exposed. Every other local it may reach it may have written, so a
+    /// route this walk does not take is a doubt and not a silence (ADR-0101
+    /// rule 1). A local named alone by any of them is believed written, the
+    /// output-parameter idiom (#782).
     ///
-    /// **A pointer that may name two places writes one of them.** `fill(p)` with `p`
-    /// either `&a` or `&b` was believed to write both, and a read of `a`
-    /// built silent where the store `*p = &x;` is `SC0411`. Found by the
-    /// architecture review of 2026-11-13; on `main` too.
+    /// **Asked of the must-fact and of nothing else.** Read off how few
+    /// places a may-set named, "alone" needed one exclusion per door that
+    /// left the set small while handing nothing over: a null, a path that
+    /// assigned nothing, a fill, an element, a block a loop made, a block
+    /// holding a null or what this check does not follow (#950 to #1046).
+    /// A block's record carries no such fact yet, so a pointer found in a
+    /// block names nothing alone until #1061. See ADR-0105.
     ///
-    /// **What this check does not model is another place** a pointer may
-    /// name: `fill(p, &x)` with `p` either `&a` or what an earlier call
-    /// filled in was believed to write `a`, and a read of `a` built silent,
-    /// found by review. **And of what a block holds** (#938): a block whose
-    /// record names what this check does not model, a caller's memory or
-    /// an address stored where this check cannot place it, names nothing
-    /// alone. That gives up the belief that such a block still hands its
-    /// local over, by the owner's decision: two output-parameter programs
-    /// through such memory are doubted. See ADR-0103 rule 3.
-    ///
-    /// **Nor is a null one place**: a pointer that is `&a` on one path and
-    /// null on the other hands `a`'s address over on one path only, so the
-    /// call may not have written it, and `p = 0; if (k) p = &a; fill(p);`
-    /// read `a` in silence (#950). A pointer tested not null first names
-    /// `a` alone again, as `if (p) fill(p);` does. **Nor a block that may
-    /// hold a null** (#1038): one whose address of `a` was overwritten by a
-    /// null, `*out = &x; *out = 0; other();`, kept naming `x`, since a store
-    /// into a block it does not replace adds to what it holds. See ADR-0103
-    /// rule 2.
-    ///
-    /// **`handed` is the values the call is handed, however spelled**: a
-    /// pointer handed through a projection, `fill(*pp)` or `fill(q[0])`, is
-    /// asked as what a load of it holds, as a pointer handed as a local is
-    /// asked as what the local holds. Asked of locals alone, a projected
-    /// argument was never asked, and `fill(*pp)` with `*pp` either `&a` or
-    /// `&b` believed both written (#949). **What it costs**: a pointer read
-    /// out of an array element or a block is a load, so `fill(ps[0])` and
-    /// `fill(*box)` with the slot certainly `&a` doubt the call wrote `a`,
-    /// as `t = ps[0]; fill(t);` already did; and a null test of `*pp` does
-    /// not reach `p`, so `if (*pp) fill(*pp);` doubts it where `t = *pp;
-    /// if (t) fill(t);` does not.
-    ///
-    /// **Nor is one element of an array the array**: a pointer at an element
-    /// this check cannot count, `&arr[k]`, names the array beside its other
-    /// elements, so the call may have written one and missed the rest, and
-    /// each is a may-write, as a store through the same pointer is
-    /// (ADR-0094 rule 3). Believed to write the whole array, `fill(&arr[k],
-    /// &x); return arr[0] == 0;` was quiet at the read (#951). A pointer at
-    /// the array's start, `fill(arr)`, still hands the whole array over. A
-    /// block cannot say which element it points at, so `&arr[k]` kept in a
-    /// block is still taken as the whole array (#938).
-    ///
-    /// **A local named alone by any of them is believed written**, the
-    /// output-parameter idiom (#782): `stash(&p); p = m; tick();` reaches `m`
-    /// through `p` alone. One no pointer it can find names, an address an
-    /// earlier call kept or one stored where this check cannot place it, is
-    /// not: `keep(p); other();` with `p` either `&x` or `&y` believed `x`
-    /// written at `other`, and an indeterminate `x` was read without
-    /// `SC0411` (#1028).
-    pub(super) fn named_alone(
-        &self,
-        handed: &[(Held, bool)],
-        is_array: impl Fn(LocalIdx) -> bool,
-        before: &Table<Storage, PlaceInit>,
-        one_block: impl Fn(Site) -> bool,
-    ) -> BTreeSet<LocalIdx> {
-        // **Whether a holder may hold anything but a whole pointer**, asked
-        // of what it held before the call exposed it: an exposure marks what
-        // it reaches written by code this check cannot read, so asked after
-        // it a block a store wrote on one path only read as written. See
-        // ADR-0103 rule 1.
-        let not_whole =
-            |storage: Storage| !matches!(before[storage].whole(), Init::Written(Whole::Pointer));
+    /// [`Held::alone`]: super::parts::Held::alone
+    pub(super) fn named_alone(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
-        let mut alone = BTreeSet::new();
-        // A local beside another storage, or beside what this check does
-        // not model, is left out: a may-write, which is what a local outside
-        // `alone` is.
-        let mut ask = |sites: Vec<Site>, locals: Vec<LocalIdx>, unmodelled: bool| {
-            if let (0, [local], false) = (sites.len(), locals.as_slice(), unmodelled) {
-                alone.insert(*local);
-            }
-        };
-        // **One question per value, however it was found**, so the value a
-        // call is handed and one it finds in a local cannot be asked
-        // differently. A pointer at an element it cannot count names an
-        // array beside its other elements; and what it names besides the
-        // array is beside the array, never alone: split off without saying
-        // so, `p` either `&b` or `&arr[k]` left `b` named alone and believed
-        // written. Found by review.
-        //
-        // **Nor is a holder that may hold anything but a whole pointer**, one
-        // nothing may have assigned on some path among them: there it holds
-        // no address, as a null holds none, but a value no write reached
-        // takes no part in the join, so `if (c) h = &a; fill(&h);` left `h`
-        // naming `a` alone and `a` believed written where `c` is zero. Found
-        // by review of #1028. See ADR-0103 rule 1.
-        {
-            let mut ask_value = |held: &Held, unassigned: bool| {
-                let in_part = held.element.is_none() || held.array_edge;
-                let (arrays, rest): (Vec<LocalIdx>, Vec<LocalIdx>) =
-                    held.locals().partition(|&local| in_part && is_array(local));
-                ask(
-                    held.sites().collect(),
-                    rest,
-                    held.beyond().any_unknown()
-                        || held.may_be_null
-                        || unassigned
-                        || !arrays.is_empty(),
-                );
-                ask(Vec::new(), arrays, true);
-            };
-            // A value the call is handed, with whether it is a local that may
-            // hold anything but a whole pointer before the call: `memset(&h,
-            // 0, 8); fill(h);` left `h` naming `a`, since a fill of zeros
-            // pours no value, and `a` was believed written (#1037). See
-            // ADR-0103 rule 1.
-            for (held, not_whole) in handed {
-                ask_value(held, *not_whole);
-            }
-            for &holder in &reached.locals {
-                ask_value(&self.points_to[holder], not_whole(Storage::Local(holder)));
-            }
-        }
-        // **And a block holder, by the same question** (#1036): asked with
-        // `false`, a block a store wrote on one path only named its local
-        // alone, and `if (c) *b = &a; fill(b);` read `a` in silence where `c`
-        // is zero, where the local spelling was `SC0411`. **Only a site that
-        // stands for one block**, `one_block`: the write state and the record
-        // are kept per site, so a store through one block a loop made wrote
-        // the site, and a call handed another of its blocks found the local
-        // named alone. Found by review.
-        for &container in &reached.sites {
-            let cell = &self.contents[container];
-            ask(
-                cell.sites().collect(),
-                cell.locals().collect(),
-                not_whole(Storage::Heap(container))
-                    || !one_block(container)
-                    || cell.may_hold_null()
-                    || !cell.names_only_modelled(),
-            );
-        }
-        alone
+        handed
+            .iter()
+            .chain(reached.locals.iter().map(|&holder| &self.points_to[holder]))
+            .filter_map(|held| held.alone.and_then(Referent::local))
+            .collect()
     }
 
     /// The walk [`Self::locals_named_by_unknown_code`] and
@@ -2660,39 +2537,21 @@ impl Known {
     }
 
     /// **A block an argument names is believed written only where some
-    /// argument names it alone**: that one site and nothing else, not
-    /// possibly null, and a site that stands for one block (`one_block`).
-    /// Every other block an argument names keeps what it held `before` the
-    /// exposure, may-written, as a store through the same pointer leaves
-    /// it: `p = 0; if (c) p = b; fill(p); return *b != 0;` read `*b`
-    /// indeterminate in silence where `c` is zero (#1046). Blocks reached
-    /// only through other blocks keep [`Self::expose`]'s belief. See
-    /// ADR-0104.
+    /// argument certainly names it**, [`Held::alone`]: an allocation's result
+    /// whose site stands for one block, copied as it is. Every other block
+    /// an argument names keeps what it held `before` the exposure,
+    /// may-written, as a store through the same pointer leaves it: `p = 0;
+    /// if (c) p = b; fill(p); return *b != 0;` read `*b` indeterminate in
+    /// silence where `c` is zero (#1046). Blocks reached only through other
+    /// blocks keep [`Self::expose`]'s belief until #1061. See ADR-0105.
     ///
-    /// **Fewer questions than [`Self::named_alone`] asks of a local's
-    /// holders**: not whether the value names what this check does not
-    /// follow, whether a local holder was assigned on every path, or at
-    /// which element it points. An unassigned holder is reported where it
-    /// is read; a pointer at one element of a block is taken as the whole
-    /// block, as before this rule (#1050).
-    ///
-    /// **No case holds `one_block`**, measured: dropping it leaves the
-    /// suite green, and a block a loop makes again is one this check stops
-    /// following by the next turn, so a read of the earlier one is doubted
-    /// for that. Kept because it can only add a doubt, and because it is
-    /// the condition [`Self::named_alone`] asks of a block holder.
+    /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn believed_written_only_where_named_alone(
         &mut self,
         handed: &[Held],
         before: &Table<Storage, PlaceInit>,
-        one_block: impl Fn(Site) -> bool,
     ) {
-        let names_alone = |held: &Held, site: Site| {
-            !held.may_be_null
-                && held.locals().next().is_none()
-                && held.sites().eq([site])
-                && one_block(site)
-        };
+        let names_alone = |held: &Held, site: Site| held.alone == Some(Referent::Heap(site));
         let alone: BTreeSet<Site> = handed
             .iter()
             .flat_map(|held| held.sites().filter(|&site| names_alone(held, site)))

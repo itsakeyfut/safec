@@ -301,6 +301,7 @@ fails where this table and that file differ.
 | Held | `stored_through` | in doubt | 2 tests named in its row |
 | Held | `may_be_null` | entry fact | 2 tests named in its row |
 | Held | `vouched` | entry fact | 2 tests named in its row |
+| Held | `alone` | in doubt | 2 tests named in its row |
 <!-- fields:end -->
 
 ## Incremental Safety Levels

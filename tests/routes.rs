@@ -745,8 +745,8 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         Field::Exempt {
             why: "whether the value may be null on some path, read where a null test refines a call's result (#931); the nullability check owns null",
             held_by: &[
-                "a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local",
-                "a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local",
+                "a_pointer_read_out_of_what_realloc_of_a_pointer_a_copy_read_returns_is_doubted",
+                "a_pointer_realloc_is_handed_that_may_name_what_this_check_cannot_is_not_read_as_certainly_fresh",
             ],
         },
         Start::Fact(
@@ -765,6 +765,17 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         Start::Fact(
             "no value is read out of memory before the function runs, so nothing is vouched for, and the bounds rule doubts a load that is not",
         ),
+    ),
+    (
+        "alone",
+        Field::Exempt {
+            why: "the one place a value certainly names (ADR-0105), which only an address of a whole local and an allocation grant; asked by what a call this check cannot read writes for certain, and no belief's rows read it",
+            held_by: &[
+                "a_call_handed_a_pointer_to_a_local_or_null_may_have_missed_the_local",
+                "a_local_a_pointer_one_past_it_names_is_not_believed_written_by_a_call",
+            ],
+        },
+        Start::Doubt,
     ),
 ];
 
@@ -3176,16 +3187,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
     ),
     (
-        "fresh_call_d2_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
-        "fresh_call_d2_one",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
-    ),
-    (
         "fresh_element_slot_d0_both",
         Side::Control,
         Why::Cost(ELEMENT_LOST),
@@ -5477,11 +5478,11 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
     (
         "fresh_call_d2_both",
-        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+        "the pointer the call is handed is read out of a block, which names nothing alone until a block's record carries the must-fact (#1061), so the read back is doubted (ADR-0105)",
     ),
     (
         "fresh_call_d2_one",
-        "the call is believed to write what it is handed, so the read back proves nothing indeterminate; see `WRITES_WHAT_IT_IS_HANDED`",
+        "the pointer the call is handed is read out of a block, which names nothing alone until a block's record carries the must-fact (#1061), so the read back is doubted (ADR-0105)",
     ),
     (
         "width_memcpy_d0_both",

@@ -1449,9 +1449,8 @@ pub(super) struct Held {
     /// on a null kept. See ADR-0093 rule 3.
     ///
     /// Read by `realloc`'s door, whose result may be fresh on the path where
-    /// it was handed a null (#708), and by `Known::named_alone`, where a
-    /// value that may be null names nothing alone (ADR-0103); a join needs
-    /// none of it, since a null's own level of [`Self::widths`] is the
+    /// it was handed a null (#708); what a call writes asks [`Self::alone`]
+    /// instead (ADR-0105). A join needs none of it, since a null's own level of [`Self::widths`] is the
     /// identity there ([`Held::null`]).
     pub(super) may_be_null: bool,
     /// **Whether its position was read out of memory a record vouched
@@ -1462,6 +1461,15 @@ pub(super) struct Held {
     /// only where both sides have it, so a path that read nothing vouched
     /// for takes it away. See ADR-0100.
     pub(super) vouched: bool,
+    /// **The one place it certainly names**, where that is shown: taking the
+    /// address of a whole local or of a one-level array's start, and an
+    /// allocation whose site stands for one block, are the only grants, and
+    /// a copy keeps it. A join or a may-write keeps it only where both sides
+    /// agree; every other operation drops it. What a call this check cannot
+    /// read writes for certain asks this and nothing else
+    /// (`Known::named_alone`), since a may-set can be small without handing
+    /// anything over. See ADR-0105.
+    pub(super) alone: Option<Referent>,
 }
 
 /// How many bytes the pointers at one level are believed to point at, at
@@ -1973,6 +1981,8 @@ impl Held {
                 // already. The identity of a join's union, too.
                 may_be_null: false,
                 vouched: false,
+                // Nothing is named.
+                alone: None,
             },
         )
     }
@@ -2005,6 +2015,7 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            alone,
         } = marks;
         let mut held = Held {
             names: Bits::new(Referent::count(sites)),
@@ -2023,6 +2034,7 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            alone,
         };
         for (marked, why) in [
             (lost, Why::Lost),
@@ -2134,9 +2146,11 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            alone,
         } = self;
         *may_be_null = false;
         *vouched = false;
+        *alone = None;
         names.clear_all();
         *fresh_read = false;
         *widths = Levels::new(vec![Width::Nothing]);
@@ -2204,12 +2218,17 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            alone,
         } = self;
         *position = joined_position;
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
         // Vouched for only where every path read it so (ADR-0100).
         *vouched = *vouched && other.vouched;
+        // A must-fact: kept only where both paths agree.
+        if *alone != other.alone {
+            *alone = None;
+        }
         *inner_address = *inner_address || other.inner_address;
         // **The lower of two at every level**, level 0 the proof
         // `believed` is and the rest bounds: a null on one path is the
@@ -2296,7 +2315,12 @@ impl Held {
             // arithmetic on them, and a null moved is no null.
             may_be_null: _,
             vouched: _,
+            alone,
         } = self;
+        // A may-write keeps a must-fact only where both agree.
+        if *alone != other.alone {
+            *alone = None;
+        }
         *inner_address = *inner_address || other.inner_address;
         // `*tab + 1` points into the same memory, which holds what it held,
         // at every level below its own.
@@ -2626,11 +2650,9 @@ pub(super) struct Cell {
     position: Option<Position>,
     /// **Whether a null may have been stored there**, false where nothing
     /// was: a value that may be null, or that names nothing, poured in.
-    /// A union at a join, as the rest of the record is, and kept by nothing
-    /// a load reads, since a load is taken as possibly null whatever memory
-    /// holds (#931). Read where a block is asked whether it names a local
-    /// alone, which it does not where it may hold a null. See ADR-0103
-    /// rule 2.
+    /// A union at a join, as the rest of the record is. Read by a load,
+    /// which takes its null from what it reads (`Known::load_may_be_null`,
+    /// #1038), and so by `realloc`'s door.
     may_hold_null: bool,
 }
 
@@ -2663,7 +2685,7 @@ impl Cell {
         self.position
     }
 
-    /// Whether a null may have been stored there. See ADR-0103 rule 2.
+    /// Whether a null may have been stored there (#1038).
     pub(super) fn may_hold_null(&self) -> bool {
         self.may_hold_null
     }
@@ -2901,6 +2923,7 @@ impl Cell {
             // A load is vouched for by what it reads, never by a mark
             // stored. See ADR-0100.
             vouched: _,
+            alone: _,
             named_at_read: _,
             returned_by: _,
             fresh_read: _,
@@ -2914,9 +2937,8 @@ impl Cell {
             may_be_null: _,
         } = from;
         // **A null stored, or anything that names nothing**, may leave the
-        // slot holding no address: kept, so that a block whose address of a
-        // local was overwritten by a null names it alone to no later call
-        // (#1038). See ADR-0103 rule 2.
+        // slot holding no address: kept, so that a load out of it is
+        // possibly null (#1038).
         poured.may_hold_null = from.may_be_null || from.names.ones().next().is_none();
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
@@ -3013,6 +3035,8 @@ pub(super) struct Marks {
     pub(super) may_be_null: bool,
     /// See [`Held::vouched`].
     pub(super) vouched: bool,
+    /// See [`Held::alone`].
+    pub(super) alone: Option<Referent>,
 }
 
 /// What a value may hold beyond what its sites and its edges name: the one

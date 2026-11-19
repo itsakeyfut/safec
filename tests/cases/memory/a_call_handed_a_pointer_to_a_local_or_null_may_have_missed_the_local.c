@@ -1,8 +1,8 @@
 // A call this check cannot read, handed a pointer that is `&a` on one path
 // and null on the other, hands `a`'s address over on one path only, so it
-// may not have written `a`: each read of `a` below is `SC0411` (#950). A
-// pointer tested not null first is handed `&a` alone, and the call is
-// believed to write `a`, as an output parameter is.
+// may not have written `a`: each read of `a` below is `SC0411` (#950). So
+// is one tested not null first: a null test grants no must-fact, and the
+// join with the null dropped it, by the owner's decision (ADR-0105).
 void fill(int **p);
 void stash(int ***p);
 void tick(void);
