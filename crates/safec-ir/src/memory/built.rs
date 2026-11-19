@@ -2,13 +2,12 @@
 //! where in its allocation it points, which locals a write this check cannot
 //! pin down may have replaced, and the sites out of everything a place reached.
 
-use crate::ir::{BinOp, Function, LocalId, Operand, Place, TranslationUnit, Ty};
+use crate::ir::{BinOp, Function, LocalId, Operand, Place, Shape, TranslationUnit, Ty};
 
 use super::allocations::stored_pointer;
 use super::index::{Idx, LocalIdx, Site};
 use super::known::{ArrayWrite, Known};
 use super::parts::{At, Held, Levels, Marks, Position, Reached, Width};
-use crate::reads::derefs;
 
 /// What the operands of an operation build: a binary one's two, `op` its
 /// operator, or a unary one's one, `op` `None` (#806).
@@ -54,7 +53,14 @@ pub(super) fn built_from(
             // A constant is not a value this check follows. A read through a
             // projection is a place rather than a local, and is followed below
             // as the load it is.
-            Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
+            Operand::Copy(source)
+                if (match source.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) =>
+            {
+                Some(source.local)
+            }
             _ => None,
         })
         .collect();
@@ -82,7 +88,7 @@ pub(super) fn built_from(
     let loads: Vec<&Place> = operands
         .iter()
         .filter_map(|operand| match operand {
-            Operand::Copy(source) if derefs(source) > 0 && may_be_pointer(source) => Some(source),
+            Operand::Copy(source) if source.derefs() > 0 && may_be_pointer(source) => Some(source),
             _ => None,
         })
         .collect();
@@ -109,7 +115,7 @@ pub(super) fn built_from(
     let bytes: Vec<&Place> = operands
         .iter()
         .filter_map(|operand| match operand {
-            Operand::Copy(source) if derefs(source) > 0 && reads_a_byte(source) => Some(source),
+            Operand::Copy(source) if source.derefs() > 0 && reads_a_byte(source) => Some(source),
             _ => None,
         })
         .collect();
@@ -187,9 +193,9 @@ pub(super) fn built_from(
         value.load_into(
             &mut reached,
             load.local,
-            derefs(load),
+            load.derefs(),
             &is_array,
-            reads_caller_memory(load.local, derefs(load)),
+            reads_caller_memory(load.local, load.derefs()),
             // An operand keeps the position its arithmetic gives it, and is
             // never vouched for. See ADR-0100.
             None,
@@ -203,7 +209,10 @@ pub(super) fn built_from(
     // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
     let read_here = operands.iter().any(|operand| match operand {
         Operand::Copy(source) => {
-            !source.projection.is_empty() && (may_be_pointer(source) || reads_a_byte(source))
+            !(match source.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && (may_be_pointer(source) || reads_a_byte(source))
         }
         Operand::Constant(_) => false,
     });
