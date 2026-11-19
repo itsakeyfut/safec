@@ -2586,7 +2586,7 @@ impl Known {
     /// through another**, which no argument names: a block's record carries
     /// no must-fact (#1061), so `*box = p; fill(box);` with `p` either `b`
     /// or a null believed `*b` written where nothing reached it (#1064). See
-    /// ADR-0108.
+    /// ADR-0108 and ADR-0110.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn believed_written_only_where_named_alone(
@@ -2595,11 +2595,54 @@ impl Known {
         before: &Table<Storage, PlaceInit>,
     ) {
         let names_alone = |held: &Held, site: Site| held.certain() == Some(Referent::Heap(site));
-        let alone: BTreeSet<Site> = handed
+        let mut alone: BTreeSet<Site> = handed
             .iter()
             .flat_map(|held| held.sites().filter(|&site| names_alone(held, site)))
             .collect();
-        let handed_sites: Vec<Site> = handed.iter().flat_map(Held::sites).collect();
+        // **And a block a chain of must-facts reaches**, from a local a
+        // handed value certainly names or one an earlier call certainly
+        // kept: `fill(&h)` with `h` certainly `b`, or `keep(&h); h = b;
+        // tick();`, still believes `b` written. See ADR-0110.
+        let mut chain: Vec<LocalIdx> = handed
+            .iter()
+            .filter_map(|held| held.certain().and_then(Referent::local))
+            .chain(
+                self.certainly_exposed
+                    .indices()
+                    .filter(|&local| self.certainly_exposed[local]),
+            )
+            .collect();
+        let mut followed: BTreeSet<LocalIdx> = BTreeSet::new();
+        while let Some(local) = chain.pop() {
+            if followed.insert(local) {
+                match self.points_to[local].certain() {
+                    Some(Referent::Local(next)) => chain.push(next),
+                    Some(Referent::Heap(site)) => {
+                        alone.insert(site);
+                    }
+                    Some(Referent::Unknown(_)) | None => {}
+                }
+            }
+        }
+        // **What it may reach through a local as well as through a block**
+        // (#1070): the sites every local a handed value may name may hold,
+        // through locals, and those every exposed local may hold. A block a
+        // local holder names, `if (c) h = b; fill(&h);` or a holder an
+        // earlier call kept, was in no closure of what the arguments name
+        // and kept the exposure's belief. See ADR-0110.
+        let mut handed_sites: Vec<Site> = handed.iter().flat_map(Held::sites).collect();
+        let mut holders: Vec<LocalIdx> = handed
+            .iter()
+            .flat_map(Held::locals)
+            .chain(self.exposed.locals().filter(|&local| self.exposed[local]))
+            .collect();
+        let mut held_by: BTreeSet<LocalIdx> = BTreeSet::new();
+        while let Some(local) = holders.pop() {
+            if held_by.insert(local) {
+                handed_sites.extend(self.points_to[local].sites());
+                holders.extend(self.points_to[local].locals());
+            }
+        }
         for site in self
             .closure(handed_sites)
             .into_iter()
