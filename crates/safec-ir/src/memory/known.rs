@@ -2576,17 +2576,20 @@ impl Known {
         self.written[site].written_by_unknown_code();
     }
 
-    /// **A block a call reaches from its arguments is believed written only
-    /// where some argument certainly names it**, [`Held::alone`]: an
-    /// allocation's result whose site stands for one block, copied as it
-    /// is. Every other such block keeps what it held `before` the exposure,
-    /// may-written, as a store through the same pointer leaves it: `p = 0;
-    /// if (c) p = b; fill(p); return *b != 0;` read `*b` indeterminate in
-    /// silence where `c` is zero (#1046). **And every block reached only
-    /// through another**, which no argument names: a block's record carries
-    /// no must-fact (#1061), so `*box = p; fill(box);` with `p` either `b`
-    /// or a null believed `*b` written where nothing reached it (#1064). See
-    /// ADR-0108 and ADR-0110.
+    /// **A call this check cannot read is believed to write a block only
+    /// where a chain of must-facts certainly names it; every other block
+    /// code outside may reach after the call is may-written.** Named alone
+    /// means a handed value's [`Held::alone`], an allocation's result whose
+    /// site stands for one block, copied as it is, or a block a chain of
+    /// [`Held::certain`] reaches from a handed value's certain local or
+    /// from a local an earlier call certainly kept. Every other exposed
+    /// block keeps what it held `before` the exposure, may-written, as a
+    /// store through the same pointer leaves it: `p = 0; if (c) p = b;
+    /// fill(p); return *b != 0;` read `*b` indeterminate in silence where
+    /// `c` is zero (#1046), and `*out = b; tick();` let `b` leave unwritten
+    /// in silence (#1077). See ADR-0111.
+    ///
+    /// [`Held::certain`]: super::parts::Held::certain
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn believed_written_only_where_named_alone(
@@ -2602,7 +2605,7 @@ impl Known {
         // **And a block a chain of must-facts reaches**, from a local a
         // handed value certainly names or one an earlier call certainly
         // kept: `fill(&h)` with `h` certainly `b`, or `keep(&h); h = b;
-        // tick();`, still believes `b` written. See ADR-0110.
+        // tick();`, still believes `b` written. See ADR-0111.
         let mut chain: Vec<LocalIdx> = handed
             .iter()
             .filter_map(|held| held.certain().and_then(Referent::local))
@@ -2624,30 +2627,19 @@ impl Known {
                 }
             }
         }
-        // **What it may reach through a local as well as through a block**
-        // (#1070): the sites every local a handed value may name may hold,
-        // through locals, and those every exposed local may hold. A block a
-        // local holder names, `if (c) h = b; fill(&h);` or a holder an
-        // earlier call kept, was in no closure of what the arguments name
-        // and kept the exposure's belief. See ADR-0110.
-        let mut handed_sites: Vec<Site> = handed.iter().flat_map(Held::sites).collect();
-        let mut holders: Vec<LocalIdx> = handed
-            .iter()
-            .flat_map(Held::locals)
-            .chain(self.exposed.locals().filter(|&local| self.exposed[local]))
+        // **Every exposed block, and not a closure of what the arguments
+        // name.** `Self::expose` has just closed `exposed` over everything
+        // code outside may reach, whatever the route: an argument, the
+        // caller's memory a parameter points at, a block an earlier call
+        // kept, a call's result, a local whose address sits in a block.
+        // Seeding a closure from the arguments missed every route it did
+        // not name (#1077). See ADR-0111.
+        let reached: Vec<Site> = self
+            .exposed
+            .sites()
+            .filter(|&site| self.exposed[site] && !alone.contains(&site))
             .collect();
-        let mut held_by: BTreeSet<LocalIdx> = BTreeSet::new();
-        while let Some(local) = holders.pop() {
-            if held_by.insert(local) {
-                handed_sites.extend(self.points_to[local].sites());
-                holders.extend(self.points_to[local].locals());
-            }
-        }
-        for site in self
-            .closure(handed_sites)
-            .into_iter()
-            .filter(|site| !alone.contains(site))
-        {
+        for site in reached {
             let storage = Storage::Heap(site);
             self.written[storage] = before[storage].clone();
             self.written[storage].may_write(Whole::Pointer);

@@ -1,3 +1,13 @@
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+   ╭─[ a_partial_pointer_copied_into_a_typed_block_that_leaves_is_reported_once.c:9:5 ]
+   │
+ 9 │     *pp = q;
+   │     ───┬───  
+   │        ╰───── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
 error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
     ╭─[ a_partial_pointer_copied_into_a_typed_block_that_leaves_is_reported_once.c:10:5 ]
     │

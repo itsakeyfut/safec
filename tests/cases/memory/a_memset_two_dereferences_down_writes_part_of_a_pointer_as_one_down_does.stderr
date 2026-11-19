@@ -8,6 +8,16 @@ warning[SC0413]: this writes less than a pointer into memory that leaves holding
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
+warning[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+    ╭─[ a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:19:5 ]
+    │
+ 19 │     *pp = q;
+    │     ───┬───  
+    │        ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_memset_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 ]
     │

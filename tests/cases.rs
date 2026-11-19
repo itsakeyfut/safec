@@ -914,7 +914,7 @@ cases! {
         // may write through it, and may not: a block reached only through
         // another is may-written, so the read is doubted, the
         // output-parameter idiom through a block given up by the owner's
-        // decision (ADR-0108, #1064; this case was
+        // decision (ADR-0111, #1064; this case was
         // `..._is_not_reported_as_indeterminate`).
         a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Written through two dereferences, `**pp = &q;` with `*pp == box`.
@@ -2014,24 +2014,36 @@ cases! {
         // loses its `SC0411`.
         a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a call reaches only through another, behind a slot that may
-        // hold a null, may not have been written by it (ADR-0108, #1064).
+        // hold a null, may not have been written by it (ADR-0111, #1064).
         // Mutation: may-write only the blocks an argument names; this loses
         // its `SC0411`.
         a_block_a_call_reaches_only_through_another_that_may_hold_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a local holder, one handed by address and one an
         // earlier call kept: a block a local the call may reach names is
-        // may-written too (ADR-0110, #1070). Mutation: seed the closure with
-        // the sites the arguments name only; both lose their `SC0411`.
-        // Mutation: leave the exposed locals out of the seeds; the second
-        // loses it.
+        // may-written too (ADR-0111, #1070). Mutation: may-write only the
+        // blocks an argument names; both lose their `SC0411`.
         a_block_a_call_reaches_through_a_local_holder_that_may_hold_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_later_call_reaches_through_a_holder_an_earlier_call_kept_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block a chain of must-facts reaches, from a local handed by
         // address or one an earlier call certainly kept, is still believed
         // written: the output-parameter idiom through a local holder of a
-        // block (ADR-0110). Mutation: the chain grants no block; each read
+        // block (ADR-0111). Mutation: the chain grants no block; each read
         // gains an `SC0411`.
         a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call is believed to write only a block a must-chain names; every
+        // other exposed block is may-written, whatever route exposed it:
+        // the caller's memory a parameter points at, a block an earlier call
+        // kept, on every path or one, or a local whose address sits in a
+        // block (ADR-0111, #1077). Mutation: may-write only the closure of
+        // what the arguments name and the sites the locals they and the
+        // exposed locals name hold, as before; each loses its `SC0411`.
+        a_block_that_leaves_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_through_an_output_parameter_is_doubted_where_read_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_into_memory_an_earlier_call_kept_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_an_earlier_call_kept_on_one_arm_only_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_a_call_reaches_through_a_local_whose_address_sits_in_a_block_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
@@ -2203,11 +2215,14 @@ cases! {
         a_partial_pointer_copied_into_a_block_of_ints_that_leaves_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Already asked at the copy by the type it was held as: said once.
         // Mutation: push the exit's ask without `push_once`; this is said
-        // twice.
+        // twice. The `SC0411` at the store into `*pp` is a separate doubt,
+        // the block's second slot nothing but `use()` may write (ADR-0111).
         a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int **` destination, whose store departure names a width the
         // deferred ask cannot, found by review. Mutation: push the deferred
         // ask whatever stands at the copy; this is said twice, in two words.
+        // The `SC0411` at the store into `*pp` is a separate doubt, the
+        // block's second slot nothing but `use()` may write (ADR-0111).
         a_partial_pointer_copied_into_a_typed_block_that_leaves_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Handed on twice. Mutation: push the call's ask without the check;
         // this is said twice.

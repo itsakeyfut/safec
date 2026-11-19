@@ -8,3 +8,13 @@ error[SC0413]: this writes less than a pointer into memory that leaves holding p
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
+error[SC0411]: this lets a pointer leave to memory that may not have been written by the time the function returns, and the caller may read pointers out of it
+    ╭─[ a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:11:5 ]
+    │
+ 11 │     *pp = q;
+    │     ───┬───  
+    │        ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
