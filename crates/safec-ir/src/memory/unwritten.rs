@@ -10,10 +10,11 @@ use super::report::{made_where_all_agree, say};
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    Element, FuncId, Function, LocalId, Operand, Operation, Place, Rvalue, Terminator, Ty, TyId,
+    Element, FuncId, Function, LocalId, Operand, Operation, Place, Rvalue, Shape, Terminator, Ty,
+    TyId,
 };
 use crate::library::Callee;
-use crate::reads::{derefs, read_out_of_memory_after, read_out_of_memory_in_terminator_after};
+use crate::reads::{read_out_of_memory_after, read_out_of_memory_in_terminator_after};
 use crate::source::{SourceMap, Span};
 
 use super::allocations::{Allocations, innermost_element, stored_pointer};
@@ -218,8 +219,11 @@ pub(super) fn asked_unwritten_in_terminator(
                     // since it was given its value**, as a load is not: the
                     // copy reads the whole pointer just stored (#914).
                     if let Some(Operand::Copy(source)) = arguments.get(1) {
-                        let depth = derefs(source);
-                        if (source.projection.is_empty() || depth > 0)
+                        let depth = source.derefs();
+                        if ((match source.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) || depth > 0)
                             && !(depth == 0 && known.points_to[source.local].stored_through)
                         {
                             let (sites, locals) = known.levels_below(source.local, depth);
@@ -571,10 +575,13 @@ fn report_returned_unwritten(
     // follow: that is doubted, as a copy's source is
     // (`source_may_be_unwritten`), since what is not proven is `Unknown`. No
     // C reaches it until structs do, so nothing guards that arm.
-    let sites: Option<Vec<Site>> = if place.projection.is_empty() {
+    let sites: Option<Vec<Site>> = if match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    } {
         Some(known.sites_of(place.local).collect())
     } else {
-        match derefs(place) {
+        match place.derefs() {
             0 => None,
             depth => Some(
                 known
@@ -585,7 +592,11 @@ fn report_returned_unwritten(
             ),
         }
     };
-    let named = place.projection.is_empty().then_some(place.local);
+    let named = (match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    })
+    .then_some(place.local);
     // **Whether the caller reads pointers out of it**, by `pointee_width`,
     // which answers only for a pointer, `void *` as `0`; through an array to
     // its element, as `int *(*)[2]` holds pointers too. Found by review.
@@ -790,8 +801,11 @@ fn source_may_be_unwritten(
     // and is doubted. Found by review. **Nothing guards that last arm**: an
     // indexed source, `a[0]` or `a[k]`, reaches the call as a dereference,
     // measured, and no C program found reaches it otherwise.
-    if !from.projection.is_empty() {
-        let depth = derefs(from);
+    if !(match from.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) {
+        let depth = from.derefs();
         if depth == 0 {
             return true;
         }
@@ -854,7 +868,10 @@ pub(super) fn points_at_a_pointer(
     let Operand::Copy(place) = operand else {
         return None;
     };
-    if !place.projection.is_empty() {
+    if !(match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) {
         return None;
     }
     let named = known.written_through(place.local);
@@ -926,7 +943,7 @@ pub(super) fn loaded_indeterminate(
             // own read of an assignment's value among them. Asked there,
             // `void **b = m; *b = x;` after the partial copy was doubted
             // with no read in the source at all, found by review.
-            let rewritten = derefs(&place) == 1 && known.points_to[place.local].stored_through;
+            let rewritten = place.derefs() == 1 && known.points_to[place.local].stored_through;
             if !rewritten && analysis.may_be_pointer(function, &place) {
                 ask_partial(
                     PartialDoor::Load,
@@ -951,7 +968,7 @@ pub(super) fn loaded_indeterminate(
         // **Below the first dereference, what the pointer gone through last
         // may name**, and no name: the slot is not `*l` but a level further,
         // and saying `*m` of `int *r = **m;` named the wrong slot (#768).
-        let depth = derefs(&place);
+        let depth = place.derefs();
         let (reaches_allocation, reaches_local, named) = if depth > 1 {
             let (sites, locals) = known.levels_below(local, depth - 1);
             (!sites.is_empty(), !locals.is_empty(), None)
@@ -1013,7 +1030,7 @@ pub(super) fn loaded_indeterminate(
 /// (#768). **Locals as well as blocks**, since a local array keeps the
 /// partial pointer record too (ADR-0090).
 fn blocks_read(place: &Place, known: &Known) -> Vec<Storage> {
-    let depth = derefs(place);
+    let depth = place.derefs();
     let (sites, locals): (Vec<Site>, Vec<LocalIdx>) = if depth > 1 {
         let (sites, locals) = known.levels_below(place.local, depth - 1);
         (sites.into_iter().collect(), locals.into_iter().collect())
