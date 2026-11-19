@@ -558,6 +558,16 @@ cases! {
         a_copy_into_caller_memory_through_a_char_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_through_a_void_pointer_pointer_local_of_a_pointer_wide_enough_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The width the destination carries is its first level's: `x`, a
+        // level below, is asked at its own `int *`. Mutation: drop the
+        // first-level filter on the locals in `contents_leaving`; `x` is
+        // `SC0413`.
+        a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And only for a local read as a pointer: the `int` is not, so the
+        // copy is asked as part of a pointer and not as `i` leaving.
+        // Mutation: give a local read as nothing the carried width; the
+        // `SC0413` names `i`.
+        an_int_copied_into_caller_memory_through_a_void_pointer_local_is_not_asked_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An allocator's result arrives as no type, and says it holds
         // pointers once it is held as a `void **` (#830). See ADR-0073 rule
         // 4. Mutation: an assignment adds nothing of the local it lands in;

@@ -1,0 +1,69 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:2:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "out"
+  Local "_2" "int *" parameter "y"
+  Local "_3" "int"
+  Local "_4" "int *" "x"
+  Local "_5" "int **" "c"
+  Local "_6" "int **"
+  Local "_7" "void *" "t"
+  Local "_8" "void **" "vo"
+  Local "_9" "int ***"
+  Local "_10" "void *"
+  Block "bb0" entry
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:3:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:3:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:3:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:4:10 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:4:14 generated
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:5:15 written
+      Destination "_6"
+      Address
+        Place "_4"
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:5:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:5:15 generated
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:6:11 written
+      Destination "_7"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:6:15 generated
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:7:12 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:7:17 generated
+    Operation a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:8:16 written
+      Destination "_9"
+      Address
+        Place "_5"
+    ArgumentsEvaluated a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:8:5 generated
+    Call a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:8:5 written "memcpy" "bb4"
+      Destination "_10"
+      Copy "_8"
+      Copy "_9"
+      Constant 8
+  Block "bb4"
+    Sequenced a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width.c:8:5 generated
+    Return
