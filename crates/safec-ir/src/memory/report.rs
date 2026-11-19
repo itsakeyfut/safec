@@ -7,12 +7,11 @@ use std::collections::BTreeSet;
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TyId,
+    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Shape,
+    Terminator, TyId,
 };
 use crate::library::{Callee, Reach};
 use crate::nullability::NullAtTerminators;
-use crate::reads::derefs;
 use crate::source::{SourceMap, Span, inside};
 
 use super::allocations::{Allocations, handed_places, stored_pointer};
@@ -59,7 +58,11 @@ struct Verdict {
 /// asked here: `*p` reads `p`'s own value and goes through it, so [`used`]
 /// names the local for its first level whatever the projection is.
 fn own_local(place: &Place) -> Option<LocalId> {
-    place.projection.is_empty().then_some(place.local)
+    (match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    })
+    .then_some(place.local)
 }
 
 /// [`Finding::local`] for a read carried forwards, by which read it is.
@@ -364,7 +367,12 @@ pub(super) fn reported(
     let reached = Allocations::touching(asked(arguments, null, block), known);
     let offset = asked(arguments, null, block)
         .filter_map(|argument| match argument {
-            Operand::Copy(place) if place.projection.is_empty() => {
+            Operand::Copy(place)
+                if (match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) =>
+            {
                 Some(known.points_to[place.local].position.at)
             }
             // A constant frees nothing and a projection is already a
@@ -398,7 +406,14 @@ pub(super) fn reported(
     // vouched for**, which `interior` then measures though it was read out
     // of memory. A constant or a projection is not. See ADR-0100.
     let vouched = asked(arguments, null, block).all(|argument| match argument {
-        Operand::Copy(place) if place.projection.is_empty() => known.points_to[place.local].vouched,
+        Operand::Copy(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            known.points_to[place.local].vouched
+        }
         Operand::Copy(_) | Operand::Constant(_) => false,
     });
 
@@ -597,7 +612,12 @@ fn asked<'o>(
 /// asked. It is written out so the arm says which rule owns it.
 fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId) -> bool {
     match argument {
-        Operand::Copy(place) if place.projection.is_empty() => {
+        Operand::Copy(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
             null.established_null(block, place.local)
         }
         Operand::Copy(_) | Operand::Constant(_) => false,
@@ -692,7 +712,7 @@ pub(super) fn used(
         )
         .map(|verdict| (verdict, Some(place.local), 0))
         .or_else(|| {
-            (1..derefs(place)).find_map(|depth| {
+            (1..place.derefs()).find_map(|depth| {
                 verdict(
                     sources,
                     Kind::UseAfterFree,
@@ -726,10 +746,7 @@ pub(super) fn used(
         // loses its `SC0407`; key by the first level, and
         // `a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports`
         // loses its `SC0407`.
-        let key = Place {
-            local: place.local,
-            projection: place.projection[..=level].to_vec(),
-        };
+        let key = Place::new(place.local, place.prefix(level + 1).steps().to_vec());
 
         say(
             sources,
@@ -855,11 +872,10 @@ pub(super) fn may_not_fit(
         // **An index is not read**, and is unknown rather than silent: no C
         // reaches one, since the lowering writes `p[i]` as `*(p + i)`, and a
         // frontend that builds one has to be answered for.
-        if place
-            .projection
-            .iter()
-            .any(|step| matches!(step, Projection::Index(_)))
-        {
+        if match place.shape() {
+            Shape::Indexed => true,
+            Shape::Local | Shape::Deref(_) => false,
+        } {
             say_fit(
                 findings,
                 asked,
@@ -873,11 +889,8 @@ pub(super) fn may_not_fit(
         // Each level of dereference: the first asked of the place's own local,
         // and every deeper one of each local the pointer it goes through may
         // have been read from.
-        for level in 1..=place.projection.len() {
-            let through = Place {
-                local,
-                projection: vec![Projection::Deref; level],
-            };
+        for level in 1..=place.steps().len() {
+            let through = Place::new(local, vec![Projection::Deref; level]);
             // A `void` place has no size, and is no access this asks about.
             // Nothing below it is either: the C frontend builds a place of
             // dereferences only, so every level below a `void` one is
@@ -913,10 +926,7 @@ pub(super) fn may_not_fit(
             // (#632). It names no local, since the pointer was read out of
             // memory, and it is keyed by the place's own local, so it says
             // nothing where that local's answer already stands at this caret.
-            let above = Place {
-                local,
-                projection: vec![Projection::Deref; level - 1],
-            };
+            let above = Place::new(local, vec![Projection::Deref; level - 1]);
             if analysis.believed_read(function, &above, known) < width {
                 say_fit(
                     findings,
@@ -1058,7 +1068,10 @@ pub(super) fn reached_by_library(
         };
         // The call reaches through the local itself, which doubts what may
         // have written it unseen, as an access does.
-        let fit = if place.projection.is_empty() {
+        let fit = if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             match width {
                 Some(width) => fits_as_bytes(analysis, function, local, width, known, true),
                 // Anything that holds something is unknown here.
@@ -1114,7 +1127,11 @@ pub(super) fn reached_by_library(
             },
             conclusion,
             at,
-            local: place.projection.is_empty().then_some(local),
+            local: (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            })
+            .then_some(local),
             freed: None,
             made,
             unproven,
@@ -1165,7 +1182,12 @@ fn leaving(
         Rvalue::Use(Operand::Constant(_)) => None,
         // A value leaving doubts nothing unseen, as [`fits`] says. Off its
         // start, unknown: see [`departing_fit`].
-        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+        Rvalue::Use(Operand::Copy(place))
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
             departing_fit(analysis, function, place.local, width, known)
                 .map(|fit| (fit, Some(place.local)))
         }
@@ -1173,7 +1195,7 @@ fn leaving(
         // since a belief is a floor and the object may be wider.
         // Unless it may have been read from a local, which is asked instead
         // ([`through_locals`]), and alone where it certainly was.
-        Rvalue::Use(Operand::Copy(place)) if derefs(place) > 0 => {
+        Rvalue::Use(Operand::Copy(place)) if place.derefs() > 0 => {
             let believed = analysis.believed_read(function, place, known);
             let belief = if believed >= width {
                 Fit::Inside
@@ -1189,7 +1211,12 @@ fn leaving(
             )
         }
         Rvalue::Use(Operand::Copy(_)) => Some((Fit::Unknown, None)),
-        Rvalue::Address(place) if place.projection.is_empty() => {
+        Rvalue::Address(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
             let fit = match analysis.unit.size_of(function.local(place.local)) {
                 Some(size) if size >= width => Fit::Inside,
                 Some(size) => Fit::Outside {
@@ -1440,7 +1467,12 @@ fn contents_leaving(
             // call are one report, `use2(v)` after `put_any(&v)`, rather
             // than two (#636).
             let leaving = match value {
-                Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+                Rvalue::Use(Operand::Copy(place))
+                    if (match place.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) =>
+                {
                     Some(place.local)
                 }
                 Rvalue::Use(_)
@@ -1961,7 +1993,10 @@ pub(super) fn departed_at_call(
         // ADR-0092 rule 6).
         let held_as_pointers = |place: &Place| {
             says_nothing_of_its_pointee(analysis, ty)
-                && place.projection.is_empty()
+                && (match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                })
                 && known
                     .sites_of(place.local)
                     .any(|site| known.held_levels[site] > 0)
@@ -1990,26 +2025,31 @@ pub(super) fn departed_at_call(
             // dereferences has the value `levels_below(local, d)` names, as
             // the `return` reads it.
             let levels = analysis.levels_holding_pointers(ty);
-            let (value, below): (Vec<Site>, Vec<Site>) =
-                match (place.projection.is_empty(), derefs(place)) {
-                    (true, _) => (
-                        known.sites_of(place.local).collect(),
-                        known.levels_below(place.local, 1).0.into_iter().collect(),
-                    ),
-                    (false, 0) => (Vec::new(), Vec::new()),
-                    (false, depth) => (
-                        known
-                            .levels_below(place.local, depth)
-                            .0
-                            .into_iter()
-                            .collect(),
-                        known
-                            .levels_below(place.local, depth + 1)
-                            .0
-                            .into_iter()
-                            .collect(),
-                    ),
-                };
+            let (value, below): (Vec<Site>, Vec<Site>) = match (
+                (match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }),
+                place.derefs(),
+            ) {
+                (true, _) => (
+                    known.sites_of(place.local).collect(),
+                    known.levels_below(place.local, 1).0.into_iter().collect(),
+                ),
+                (false, 0) => (Vec::new(), Vec::new()),
+                (false, depth) => (
+                    known
+                        .levels_below(place.local, depth)
+                        .0
+                        .into_iter()
+                        .collect(),
+                    known
+                        .levels_below(place.local, depth + 1)
+                        .0
+                        .into_iter()
+                        .collect(),
+                ),
+            };
             let mut named = known.held_below(value, levels);
             named.extend(known.held_below(below, levels.saturating_sub(1)));
             ask_partial(
@@ -2080,7 +2120,10 @@ pub(super) fn freed_after_its_read_was_reported(
     }
     match arguments.first() {
         Some(Operand::Copy(place))
-            if place.projection.is_empty() && known.holds_fresh_read(LocalIdx::of(place.local)) =>
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && known.holds_fresh_read(LocalIdx::of(place.local)) =>
         {
             Some(place.local)
         }
@@ -2141,7 +2184,11 @@ pub(super) fn returned(
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
-    if !source.projection.is_empty() && derefs(source) == 0 {
+    if !(match source.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) && source.derefs() == 0
+    {
         return;
     }
 
@@ -2247,7 +2294,11 @@ pub(super) fn stored_away(
     let Written::Value(Rvalue::Use(Operand::Copy(source))) = store.from else {
         return;
     };
-    if !source.projection.is_empty() && derefs(source) == 0 {
+    if !(match source.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) && source.derefs() == 0
+    {
         return;
     }
 
@@ -2338,8 +2389,10 @@ pub(super) fn copied_away(
     let named: Vec<LocalIdx> = held.locals().collect();
     let source = match named.as_slice() {
         [only]
-            if from.projection.is_empty()
-                && held.sites().next().is_none()
+            if (match from.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && held.sites().next().is_none()
                 && matches!(held.position.at, At::Bytes(0))
                 && !held.beyond().any_unknown() =>
         {
@@ -2352,7 +2405,7 @@ pub(super) fn copied_away(
         }
         _ => {
             let mut source = from.clone();
-            source.projection.push(Projection::Deref);
+            source = source.deref();
             source
         }
     };
@@ -2371,7 +2424,10 @@ pub(super) fn copied_away(
     // by the architecture review of 2026-11-13. Since #979 the argument door
     // asks a copy nothing of what it points at, so what this leaves out goes
     // unsaid at the copy.
-    let value_lost = from.projection.is_empty() && known.points_to[source.local].beyond().lost();
+    let value_lost = (match from.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) && known.points_to[source.local].beyond().lost();
     //
     // **Without the `Partial` below keeps** ([`Below::narrowed`]): what is
     // asked here is the value the copy itself reads, and a freed block it
@@ -2521,10 +2577,12 @@ pub(super) fn handed_stored_out(
     // to the first. Found by review.
     let by_name = arguments.iter().find_map(|argument| match argument {
         Operand::Copy(place)
-            if place.projection.is_empty()
-                && known.points_to[place.local]
-                    .sites()
-                    .any(|site| known.stored_out[site].now().is_some()) =>
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && known.points_to[place.local]
+                .sites()
+                .any(|site| known.stored_out[site].now().is_some()) =>
         {
             Some(place)
         }
@@ -2596,7 +2654,7 @@ pub(super) fn copied_through(
     let from = match (store.kind, &store.from) {
         (StoreKind::Copy, Written::Bytes(from)) => {
             let mut from = (*from).clone();
-            from.projection.push(Projection::Deref);
+            from = from.deref();
             from
         }
         // `store_at` makes a copy alone; listed so that a kind added
@@ -2790,15 +2848,7 @@ fn freed_behind(
         analysis.sources,
         findings,
         said,
-        &Place {
-            local: place.local,
-            projection: place
-                .projection
-                .iter()
-                .cloned()
-                .chain([Projection::Deref])
-                .collect(),
-        },
+        &place.deref(),
         Finding {
             function: analysis.function,
             kind,
