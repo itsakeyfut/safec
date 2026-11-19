@@ -1194,8 +1194,8 @@ impl Allocations<'_> {
                 let written_before = value.written.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
-                // And believed written only where an argument names it
-                // alone. See `Known::believed_written_only_where_named_alone`.
+                // And believed written only where a chain of must-facts names
+                // it. See `Known::believed_written_only_where_named_alone`.
                 let handed_values: Vec<Held> = handed
                     .iter()
                     .filter_map(|argument| match argument {
@@ -2188,7 +2188,23 @@ impl Allocations<'_> {
                 }
                 // **And what it returns is exposed**: the callee had the pointer,
                 // and may have kept it where the next call can reach it.
+                //
+                // **Believed written only as the result**: `Known::expose`
+                // believes every exposed block written, and every block but
+                // the result was just answered for by
+                // `Known::believed_written_only_where_named_alone`. Left to
+                // it, `*out = b; tick();` with `tick` returning an `int`
+                // believed `b` written again (#1077). See ADR-0111.
+                let answered = value.written.clone();
                 value.expose(self.sources, [site], Some(origin.span()));
+                let others: Vec<Site> = value
+                    .exposed
+                    .sites()
+                    .filter(|&other| other != site)
+                    .collect();
+                for other in others {
+                    value.written[other] = answered[other].clone();
+                }
             }
             Callee::Frees
             | Callee::Allocates

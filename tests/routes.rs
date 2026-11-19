@@ -3166,6 +3166,7 @@ const RETURNED_MAY_NAME: &str = "a return reports a block nothing wrote as certa
 const RETURNED_ONE_ARM: &str = "a pointer given a call's result on one arm and a null on the other is doubted at its return, since the join keeps no relation between what it names and on which arm a block was written (#923); its hazard is silent by the belief that a call writes what it is handed, as on both arms";
 const ELEMENT_LOST: &str = "a store through a pointer read back out of memory names no element, so it may-writes every element of an array kept per element and writes none for certain, until a pointer loaded keeps its position (ADR-0094 rule 3, #893)";
 const GROWN_THROUGH_MEMORY: &str = "a block `realloc` grew keeps its slots, the ones past the old size unwritten, and a read through a pointer read out of memory names no slot, so it asks the grown tail as well (ADR-0081's limit, #918's review)";
+const RESULT_MAY_BE_UNWRITTEN: &str = "the hazard is silent because a call this check cannot read is believed to write what it is handed, as `WRITES_WHAT_IT_IS_HANDED` says; the control is doubted because the call may return any exposed block (ADR-0066), among them the block the handed one holds, which nothing certainly names and so may not have been written (ADR-0111, #1077)";
 // The door questions' reasons (#801).
 const DEEP_WRITE_LEAVES: &str = "a write more than one dereference below the pointer it goes through is taken as landing where this check cannot place it, and so as leaving, into memory only this function reads too, which both spellings of it answer alike (ADR-0071 rule 2, #802)";
 const ESCAPED_SOURCE: &str = "the address a copy takes of its source local escapes it (ADR-0017), so what the local holds is doubted behind a later call with nothing freed (#345)";
@@ -3401,8 +3402,8 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     ),
     (
         "returned_ret_d0_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+        Side::Both,
+        Why::Belief(RESULT_MAY_BE_UNWRITTEN),
     ),
     (
         "returned_ret_d0_one",
@@ -3411,8 +3412,8 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     ),
     (
         "returned_ret_d1_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+        Side::Both,
+        Why::Belief(RESULT_MAY_BE_UNWRITTEN),
     ),
     (
         "returned_ret_d1_one",
@@ -3421,8 +3422,8 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
     ),
     (
         "returned_ret_d2_both",
-        Side::Hazard,
-        Why::Belief(WRITES_WHAT_IT_IS_HANDED),
+        Side::Both,
+        Why::Belief(RESULT_MAY_BE_UNWRITTEN),
     ),
     (
         "returned_ret_d2_one",
