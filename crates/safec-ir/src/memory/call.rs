@@ -4,8 +4,7 @@
 //! often, so a change to it is read without the rest of `transfer.rs`.
 
 use crate::ir::{
-    BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Projection, Rvalue, Terminator, Ty,
-    TyId,
+    BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Rvalue, Shape, Terminator, Ty, TyId,
 };
 use crate::library::Library;
 use crate::source::Span;
@@ -24,7 +23,6 @@ use super::store::{Landing, StoreKind, Strong};
 use super::transfer::{CopiedPointers, Noted, Pours, ReadAs, believed_width};
 use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Makes};
-use crate::reads::derefs;
 
 impl Allocations<'_> {
     /// A fill of bytes no write made a pointer, landing as `landing`: each
@@ -149,11 +147,14 @@ impl Allocations<'_> {
     /// must-fact with it, and `fill(*r)` believed what `h = *r; fill(h);`
     /// doubted (#1071). See ADR-0105.
     fn handed_value(&self, function: &Function, place: &Place, value: &Known) -> Held {
-        let depth = derefs(place);
-        if place.projection.is_empty() {
+        let depth = place.derefs();
+        if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             return value.points_to[place.local].clone();
         }
-        if depth == place.projection.len() {
+        if depth == place.steps().len() {
             let mut read = LocalIdx::of(place.local);
             let mut steps = 0;
             while steps < depth {
@@ -259,7 +260,11 @@ impl Allocations<'_> {
         // free on the arm where `realloc` was handed `u` (#499). See ADR-0039.
         let realloced: Option<Vec<(Site, Option<Span>)>> = match (kind, arguments) {
             (Callee::Reallocates, [Operand::Copy(old), Operand::Constant(size), ..])
-                if *size != 0 && old.projection.is_empty() =>
+                if *size != 0
+                    && (match old.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) =>
             {
                 let held = &value.points_to[old.local];
                 let old: Vec<(Site, Option<Span>)> = held
@@ -366,10 +371,11 @@ impl Allocations<'_> {
             handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     may_hold_lost(&value.points_to[place.local])
-                        || (!place.projection.is_empty()
-                            && value.marked_below(place.local, derefs(place), |contents| {
-                                contents.lost()
-                            }))
+                        || (!(match place.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) && value
+                            .marked_below(place.local, place.derefs(), |contents| contents.lost()))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -403,7 +409,10 @@ impl Allocations<'_> {
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
                     let held = &value.points_to[place.local];
-                    !place.projection.is_empty() || held.beyond().any_unknown()
+                    !(match place.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) || held.beyond().any_unknown()
                 }
                 Operand::Constant(_) => false,
             })
@@ -435,8 +444,12 @@ impl Allocations<'_> {
             let zero = matches!(arguments.get(1), Some(Operand::Constant(0)));
             if !zero && !matches!(covered, CopiedPointers::NoneWhole) {
                 if let Some(Operand::Copy(dest)) = arguments.first() {
-                    let into_depth = derefs(dest);
-                    if dest.projection.is_empty() || into_depth > 0 {
+                    let into_depth = dest.derefs();
+                    if (match dest.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) || into_depth > 0
+                    {
                         let landing = self.landing(
                             value,
                             dest.local,
@@ -459,8 +472,12 @@ impl Allocations<'_> {
             // Wherever it lands, as a store's write does. See
             // `Self::note_landing`.
             if let Some(Operand::Copy(dest)) = arguments.first() {
-                let into_depth = derefs(dest);
-                if dest.projection.is_empty() || into_depth > 0 {
+                let into_depth = dest.derefs();
+                if (match dest.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) || into_depth > 0
+                {
                     let landing = self.landing(
                         value,
                         dest.local,
@@ -593,7 +610,10 @@ impl Allocations<'_> {
                         let Operand::Copy(place) = argument else {
                             continue;
                         };
-                        if place.projection.is_empty() {
+                        if match place.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        } {
                             value.points_to[place.local].freed = Some(Freeing::new(origin.span()));
                         }
                     }
@@ -735,9 +755,15 @@ impl Allocations<'_> {
                 };
                 if copies {
                     if let [Operand::Copy(dest), Operand::Copy(source), ..] = arguments {
-                        let (into_depth, from_depth) = (derefs(dest), derefs(source));
-                        let placed = (dest.projection.is_empty() || into_depth > 0)
-                            && (source.projection.is_empty() || from_depth > 0);
+                        let (into_depth, from_depth) = (dest.derefs(), source.derefs());
+                        let placed = ((match dest.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) || into_depth > 0)
+                            && ((match source.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) || from_depth > 0);
                         if placed {
                             let (copied, copied_locals) =
                                 value.levels_below(source.local, from_depth + 1);
@@ -954,7 +980,7 @@ impl Allocations<'_> {
                             // `a_whole_copy_answers_as_a_store_over_its_own_program`
                             // fail.
                             let mut as_loaded = source.clone();
-                            as_loaded.projection.push(Projection::Deref);
+                            as_loaded = as_loaded.deref();
                             let width = self.believed_read(function, &as_loaded, value);
                             // What the source's memory recorded, which bounds a
                             // copy into a `void *` local below.
@@ -1316,7 +1342,7 @@ impl Allocations<'_> {
                             function,
                             value,
                             place.local,
-                            derefs(place) + 1,
+                            place.derefs() + 1,
                             lands,
                             true,
                             None,
@@ -1335,7 +1361,12 @@ impl Allocations<'_> {
                 // `fill(m)` after `fill(&m[1])`. Found by review of #667.
                 let handed_whole = |local: LocalIdx| {
                     handed.iter().any(|argument| match argument {
-                        Operand::Copy(place) if place.projection.is_empty() => {
+                        Operand::Copy(place)
+                            if (match place.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) =>
+                        {
                             let held = &value.points_to[place.local];
                             held.names_local(local) && held.element == Some(0) && !held.array_edge
                         }
@@ -1614,7 +1645,7 @@ impl Allocations<'_> {
             // lowering calls into a temporary and stores that, which the
             // store transfer clears for. It is here for a frontend that
             // does not.
-            if derefs(place) > 0 {
+            if place.derefs() > 0 {
                 value.may_write_all_sites(Whole::Pointer);
             }
             // And an escaped local it may land in, as an unplaced store
@@ -1685,7 +1716,12 @@ impl Allocations<'_> {
                     // `memcpy(&a[0], b, 4)` returns a pointer that walks
                     // `a[0]`'s row. Found by review (#947). See
                     // `Self::converted`.
-                    Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                    Some(Operand::Copy(source))
+                        if (match source.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) =>
+                    {
                         let mut held = value.points_to[source.local].clone();
                         if let Some(parameter) = self.unit.function(*callee).parameters().next() {
                             self.converted(
@@ -1912,9 +1948,11 @@ impl Allocations<'_> {
             Some(Leaves::TheOld) => match arguments.first() {
                 Some(Operand::Constant(0)) => true,
                 Some(Operand::Copy(handed)) => {
-                    handed.projection.is_empty()
-                        && (value.names_nothing(handed.local)
-                            || value.names_only_fresh(handed.local, None))
+                    (match handed.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) && (value.names_nothing(handed.local)
+                        || value.names_only_fresh(handed.local, None))
                 }
                 Some(Operand::Constant(_)) | None => false,
             },
@@ -1946,7 +1984,10 @@ impl Allocations<'_> {
         // memory as `malloc` does.
         let carried_from = |handed: &Operand, value: &Known| match handed {
             Operand::Copy(handed)
-                if handed.projection.is_empty() && !value.names_nothing(handed.local) =>
+                if (match handed.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && !value.names_nothing(handed.local) =>
             {
                 Some(Carried {
                     at: origin.span(),
@@ -1979,9 +2020,11 @@ impl Allocations<'_> {
             // returns fresh memory (C17 7.22.3.5 p3): a join unions what the
             // paths name, so the null path names nothing to tell it by, and
             // `Held::may_be_null` says it (#708, ADR-0093 rule 5).
-            if handed.projection.is_empty()
-                && (value.may_name_fresh(handed.local, None)
-                    || value.points_to[handed.local].may_be_null)
+            if (match handed.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && (value.may_name_fresh(handed.local, None)
+                || value.points_to[handed.local].may_be_null)
             {
                 value.written[site].doubt();
                 // Carried only where the old block may be unwritten itself:
@@ -2075,7 +2118,14 @@ impl Allocations<'_> {
                 let old: Vec<Site> = handed
                     .iter()
                     .filter_map(|argument| match argument {
-                        Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
+                        Operand::Copy(source)
+                            if (match source.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) =>
+                        {
+                            Some(source.local)
+                        }
                         Operand::Copy(_) | Operand::Constant(_) => None,
                     })
                     .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
@@ -2087,7 +2137,10 @@ impl Allocations<'_> {
                 // was believed four bytes wide (#632).
                 for argument in handed {
                     if let Operand::Copy(source) = argument {
-                        if source.projection.is_empty() {
+                        if match source.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        } {
                             let handed = value.points_to[source.local].contents_at_most();
                             value.contents[site].bound_stored(&handed);
                         }
@@ -2424,7 +2477,10 @@ impl Allocations<'_> {
             let Operand::Copy(place) = argument else {
                 return false;
             };
-            if place.projection.is_empty() {
+            if match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            } {
                 let held = &value.points_to[place.local];
                 held.beyond().is_from_caller()
                     || self
@@ -2432,7 +2488,7 @@ impl Allocations<'_> {
                         .iter()
                         .any(|&parameter| held.has_site(Site::of(LocalIdx::of(parameter))))
             } else {
-                let depth = derefs(place);
+                let depth = place.derefs();
                 depth > 0 && self.reads_caller_memory(place.local, depth, value)
             }
         })
@@ -2478,8 +2534,10 @@ impl Allocations<'_> {
             // the path that took `&x`, where nothing freed it.
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local];
-                place.projection.is_empty()
-                    && (held.beyond().any_unknown() || held.may_be_a_locals_address())
+                (match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && (held.beyond().any_unknown() || held.may_be_a_locals_address())
             }
         })
     }
@@ -2514,7 +2572,10 @@ impl Allocations<'_> {
     ) {
         let target = self.unit.target();
         let pointer = u64::from(target.pointer_bits() / target.char().bits());
-        let old: Vec<Site> = if handed.projection.is_empty() {
+        let old: Vec<Site> = if match handed.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             value.sites_of(handed.local).collect()
         } else {
             Vec::new()
