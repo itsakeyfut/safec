@@ -5478,11 +5478,11 @@ const UNCERTAIN: &[(&str, &str)] = &[
     ),
     (
         "fresh_call_d2_both",
-        "the pointer the call is handed is read out of a block, which names nothing alone until a block's record carries the must-fact (#1061), so the read back is doubted (ADR-0105)",
+        "the pointer the call is handed is read out of a block, which names nothing alone, so the read back is doubted, a cost the owner accepted (ADR-0105, #1061)",
     ),
     (
         "fresh_call_d2_one",
-        "the pointer the call is handed is read out of a block, which names nothing alone until a block's record carries the must-fact (#1061), so the read back is doubted (ADR-0105)",
+        "the pointer the call is handed is read out of a block, which names nothing alone, so the read back is doubted, a cost the owner accepted (ADR-0105, #1061)",
     ),
     (
         "width_memcpy_d0_both",

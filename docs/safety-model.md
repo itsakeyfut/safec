@@ -621,11 +621,15 @@ after `*p = &x;`; so is `if (p) fill(p);` after a join with a null, since a
 null test grants nothing. A block it is handed is believed written the
 same way, only where an argument certainly names it: `fill(p)` with `p`
 either `b` or a null leaves `*b` possibly unwritten. A pointer read out of
-a block names nothing for certain yet, so the output-parameter idiom through
-a block, `*box = &a; fill(box);`, is doubted where `a` is read until a
-block's record carries the fact
-([#1061](https://github.com/itsakeyfut/safec/issues/1061)), and a block
-reached only through another block is still believed written.
+a block names nothing for certain, so the output-parameter idiom through a
+block, `*box = &a; fill(box);`, is doubted where `a` is read
+(`a_local_a_pointer_copied_into_a_block_names_is_doubted_after_a_call_handed_the_block`),
+a cost the owner accepted: a block's record carrying the fact was tried and dropped,
+since every write that changes a record's bytes would have to drop it, and
+review found three that did not
+([#1061](https://github.com/itsakeyfut/safec/issues/1061)). A block reached
+only through another block is still believed written
+([#1064](https://github.com/itsakeyfut/safec/issues/1064)).
 Saying what a
 callee writes is the declaration the `owner` sketch above would carry, not
 a reading of the caller. A store or a library

@@ -1132,9 +1132,8 @@ cases! {
         // alone nowhere, and `m[0]` is doubted: the belief that it wrote it is
         // given up (#938; this case was
         // `a_pointer_a_call_wrote_after_a_local_array_left_may_write_it`).
-        // Held for now because nothing in a block's record names a place
-        // alone (ADR-0105); a record that carries the must-fact (#1061) must
-        // keep caller memory out of it.
+        // Held because nothing in a block's record names a place alone
+        // (ADR-0105).
         a_local_array_left_through_caller_memory_is_doubted_where_read_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place, through a pointer a call may have
         // aimed at `t`, may put there the array's address it makes nameable
@@ -1883,16 +1882,13 @@ cases! {
         // (ADR-0105).
         a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // So does a block a store wrote on one path only, asked as it was
-        // before the call exposed it (#1036). Held for now because nothing
-        // in a block's record names a place alone (ADR-0105); a record that
-        // carries the must-fact (#1061) must keep a store on one path from
-        // granting it.
+        // before the call exposed it (#1036). Held because nothing in a
+        // block's record names a place alone (ADR-0105).
         a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A site a loop makes stands for every block it made, so a store
         // through one of them says nothing of another a call is handed.
-        // Found by review. Held for now because nothing in a block's record
-        // names a place alone (ADR-0105); #1061 must keep a site a loop
-        // makes from granting it.
+        // Found by review. Held because nothing in a block's record names a
+        // place alone (ADR-0105).
         a_local_one_of_a_loops_blocks_names_is_not_believed_written_by_a_call_handed_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer a fill of zeros wrote holds no address of what it named
         // before, so a call handed it, or handed its address, writes nothing
@@ -1907,16 +1903,16 @@ cases! {
         a_local_a_copy_of_a_zeroed_pointer_named_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block that may hold a null names nothing alone: one whose address
         // of the local was overwritten by a null, and one that holds a null on
-        // one path (#1038). Held for now because nothing in a block's
-        // record names a place alone (ADR-0105); #1061 must keep a null
-        // stored there from leaving the fact.
+        // one path (#1038). Held because nothing in a block's record names
+        // a place alone (ADR-0105).
         a_local_a_block_named_before_a_null_overwrote_it_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer copied into a block and read back names its local alone
-        // only once a block's record carries the must-fact (#1061): until
-        // then the first is doubted, where a store through the pointer kept
-        // in a local is believed (ADR-0105). The second is doubted either
-        // way, its pointer possibly null.
+        // nowhere, since nothing in a block's record does (ADR-0105): the
+        // first is doubted, where a store through the pointer kept in a
+        // local is believed, a cost the owner accepted when a record's
+        // must-fact was dropped (#1061). The second is doubted either way,
+        // its pointer possibly null.
         a_local_a_pointer_copied_into_a_block_names_is_doubted_after_a_call_handed_the_block: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Memory a caller handed over is never replaced, so a null stored
@@ -1927,22 +1923,23 @@ cases! {
         a_local_stored_into_caller_memory_after_a_null_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Caller memory stored into on one path names what this check does
         // not model beside the local, so it names nothing alone (#938).
-        // Held for now because nothing in a block's record names a place alone (ADR-0105); a record that carries the must-fact (#1061) must keep caller memory out of it.
+        // Held because nothing in a block's record names a place alone
+        // (ADR-0105).
         a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two calls of one function give blocks that share a site, which a
         // loop's cycle test does not see; each is a callee's, whose record
         // names what this check does not model, so neither names the local
-        // alone (#1039). Held for now because nothing in a block's record
-        // names a place alone (ADR-0105); #1061 must keep a callee's block
-        // out of it.
+        // alone (#1039). Held because nothing in a block's record names a
+        // place alone (ADR-0105).
         a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A constant null stored through a pointer to a holder is a null,
         // as `h = 0` is, so the holder may be null and names the local
         // nothing alone (#1045): on one path, in a loop whose head joins
         // it, and copied into a block the call is handed. Mutation:
         // `Held::joined` takes the other path's must-fact where its own has
-        // none; the first two lose their `SC0411` (ADR-0105). The third is a block holder: nothing in a
-        // block's record names a place alone until #1061.
+        // none; the first two lose their `SC0411` (ADR-0105). The third is a
+        // block holder, and nothing in a block's record names a place
+        // alone.
         a_local_a_null_stored_through_a_pointer_to_its_holder_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1968,8 +1965,8 @@ cases! {
         // zeroed block (#1049), an element kept in a block and a pointer one
         // past a local (#1050), a pointer read out of a local array element
         // that may be null (#1052), and an element of a block. The first, the
-        // second and the fourth go through a block, which names nothing alone
-        // until #1061; the mutations that hold the others are named below.
+        // second and the fourth go through a block, which names nothing
+        // alone; the mutations that hold the others are named below.
         a_local_a_pointer_loaded_out_of_a_zeroed_block_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: arithmetic keeps its pointer operand's fact; this loses
@@ -2949,9 +2946,9 @@ cases! {
         // argument; this is reported.
         a_local_array_handed_to_a_call_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Doubted where read since a pointer found in a block names nothing
-        // alone (ADR-0105); a block's record carrying the must-fact (#1061)
-        // restores the belief. `expose_locals` asked before `expose`, which
-        // this held, is held meanwhile by
+        // alone (ADR-0105), a cost the owner accepted when a record's
+        // must-fact was dropped (#1061). `expose_locals` asked before
+        // `expose`, which this held, is held meanwhile by
         // `a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call`
         // and the block cases beside it, measured.
         a_local_array_stored_in_memory_a_call_was_handed_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2964,8 +2961,8 @@ cases! {
         // An address placed in memory that only memory already handed over
         // reaches, rather than in that memory itself. Doubted where read
         // since a pointer found in a block names nothing alone (ADR-0105),
-        // until #1061. The walk starting from `reachable_now()`, which this
-        // held, is held meanwhile by
+        // a cost the owner accepted (#1061). The walk starting from
+        // `reachable_now()`, which this held, is held meanwhile by
         // `a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves`
         // and the cases beside it, measured.
         a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2976,9 +2973,8 @@ cases! {
         // records it in every allocation such code can reach beside what it
         // does not model, so a later call names it alone nowhere and may not
         // have written it: the belief that it did is given up (#938; this
-        // case was `..._is_not_reported_as_indeterminate`). Held for now
-        // because nothing in a block's record names a place alone
-        // (ADR-0105); #1061 must keep what this check cannot place out of it.
+        // case was `..._is_not_reported_as_indeterminate`). Held because
+        // nothing in a block's record names a place alone (ADR-0105).
         a_local_array_stored_where_this_check_cannot_place_is_doubted_where_read_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the opaque arm skips `levels_below` for an argument
         // read through a dereference; this is reported.
