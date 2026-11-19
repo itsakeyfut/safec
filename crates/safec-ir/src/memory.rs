@@ -1669,10 +1669,7 @@ mod tests {
                         origin: Origin::Written(self.at),
                     }),
                     Element::Assign(Operation {
-                        place: Place {
-                            local: self.t,
-                            projection: vec![Projection::Deref],
-                        },
+                        place: Place::new(self.t, vec![Projection::Deref]),
                         value: Rvalue::Use(Operand::Copy(Place::local(self.address))),
                         origin: Origin::Written(self.at),
                     }),
