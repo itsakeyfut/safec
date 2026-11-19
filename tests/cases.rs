@@ -2044,6 +2044,18 @@ cases! {
         a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_an_earlier_call_kept_on_one_arm_only_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_reaches_through_a_local_whose_address_sits_in_a_block_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call that returns a value exposes its result after the rule has
+        // answered for every other block, and that exposure believes every
+        // exposed block written; it is kept to the result (ADR-0111, found
+        // by review). Mutation: expose the result without restoring what
+        // the other blocks held; the first two lose their `SC0411`.
+        a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_block_an_earlier_call_kept_on_one_arm_only_is_doubted_where_read_after_a_later_call_that_returns_a_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block stored through a pointer a call returned, the route the
+        // arguments' closure never reached (ADR-0111, found by review).
+        // Mutation: may-write only the closure of what the arguments name;
+        // this loses its `SC0411`.
+        a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Only an exposed block is may-written: one no call may reach keeps
         // what it held, so its read stays certain (ADR-0111). Mutation:
         // may-write every block, exposed or not; this says "may be read".

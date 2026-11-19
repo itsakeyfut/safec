@@ -472,11 +472,11 @@ returned_restored_d1_both hazard=1:SC0411 control=0:- allowed=0:SC0411
 returned_restored_d1_one hazard=1:SC0411 control=0:- allowed=0:SC0411
 returned_restored_d2_both hazard=1:SC0403,SC0411 control=1:SC0403,SC0411 allowed=0:SC0403,SC0411
 returned_restored_d2_one hazard=1:SC0403,SC0411 control=1:SC0403,SC0411 allowed=0:SC0403,SC0411
-returned_ret_d0_both hazard=1:SC0406,SC0413 control=1:SC0406,SC0413 allowed=0:SC0406,SC0413
+returned_ret_d0_both hazard=1:SC0406,SC0413 control=1:SC0406,SC0411,SC0413 allowed=0:SC0406,SC0413
 returned_ret_d0_one hazard=1:SC0406,SC0413 control=1:SC0406,SC0411,SC0413 allowed=0:SC0406,SC0413
-returned_ret_d1_both hazard=1:SC0406,SC0413 control=1:SC0406,SC0413 allowed=0:SC0406,SC0413
+returned_ret_d1_both hazard=1:SC0406,SC0413 control=1:SC0406,SC0411,SC0413 allowed=0:SC0406,SC0413
 returned_ret_d1_one hazard=1:SC0406,SC0413 control=1:SC0406,SC0411,SC0413 allowed=0:SC0406,SC0413
-returned_ret_d2_both hazard=1:SC0403,SC0406,SC0413,SC0414 control=1:SC0403,SC0406,SC0413,SC0414 allowed=0:SC0403,SC0406,SC0413,SC0414
+returned_ret_d2_both hazard=1:SC0403,SC0406,SC0413,SC0414 control=1:SC0403,SC0406,SC0411,SC0413,SC0414 allowed=0:SC0403,SC0406,SC0413,SC0414
 returned_ret_d2_one hazard=1:SC0403,SC0406,SC0413,SC0414 control=1:SC0403,SC0406,SC0411,SC0413,SC0414 allowed=0:SC0403,SC0406,SC0413,SC0414
 returned_store_as_memcpy_block_d0_both hazard=1:SC0406,SC0411 control=1:SC0406 allowed=0:SC0406,SC0411
 returned_store_as_memcpy_block_d0_one hazard=1:SC0406,SC0411 control=1:SC0406 allowed=0:SC0406,SC0411
@@ -584,7 +584,7 @@ stored_freed_ret_d0_both hazard=1:SC0407,SC0413,SC0414 control=1:SC0407 allowed=
 stored_freed_ret_d0_one hazard=1:SC0407,SC0413,SC0414 control=1:SC0407 allowed=1:SC0407,SC0413,SC0414
 stored_freed_ret_d1_both hazard=1:SC0402,SC0407,SC0413,SC0414 control=1:SC0407,SC0413 allowed=1:SC0402,SC0407,SC0413,SC0414
 stored_freed_ret_d1_one hazard=1:SC0402,SC0407,SC0413,SC0414 control=1:SC0407,SC0413 allowed=1:SC0402,SC0407,SC0413,SC0414
-stored_freed_ret_d2_both hazard=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414 control=1:SC0403,SC0407,SC0413,SC0414 allowed=1:SC0402,SC0403,SC0407,SC0412,SC0413,SC0414
+stored_freed_ret_d2_both hazard=1:SC0402,SC0403,SC0407,SC0411,SC0412,SC0413,SC0414 control=1:SC0403,SC0407,SC0413,SC0414 allowed=1:SC0402,SC0403,SC0407,SC0411,SC0412,SC0413,SC0414
 stored_freed_ret_d2_one hazard=1:SC0402,SC0403,SC0407,SC0411,SC0412,SC0413,SC0414 control=1:SC0403,SC0407,SC0413,SC0414 allowed=1:SC0402,SC0403,SC0407,SC0411,SC0412,SC0413,SC0414
 stored_freed_store_as_memcpy_block_d0_both hazard=1:SC0414 control=0:- allowed=0:SC0414
 stored_freed_store_as_memcpy_block_d0_one hazard=1:SC0414 control=0:- allowed=0:SC0414
@@ -640,7 +640,7 @@ stored_out_ret_d0_both hazard=1:SC0401,SC0413,SC0414 control=1:SC0401 allowed=0:
 stored_out_ret_d0_one hazard=1:SC0401,SC0413,SC0414 control=1:SC0401 allowed=0:SC0401,SC0413,SC0414
 stored_out_ret_d1_both hazard=1:SC0401,SC0402,SC0413,SC0414 control=1:SC0401,SC0413 allowed=0:SC0401,SC0402,SC0413,SC0414
 stored_out_ret_d1_one hazard=1:SC0401,SC0402,SC0413,SC0414 control=1:SC0401,SC0413 allowed=0:SC0401,SC0402,SC0413,SC0414
-stored_out_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414 control=1:SC0401,SC0403,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0412,SC0413,SC0414
+stored_out_ret_d2_both hazard=1:SC0401,SC0402,SC0403,SC0411,SC0412,SC0413,SC0414 control=1:SC0401,SC0403,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0411,SC0412,SC0413,SC0414
 stored_out_ret_d2_one hazard=1:SC0401,SC0402,SC0403,SC0411,SC0412,SC0413,SC0414 control=1:SC0401,SC0403,SC0413,SC0414 allowed=0:SC0401,SC0402,SC0403,SC0411,SC0412,SC0413,SC0414
 stored_out_store_as_memcpy_block_d0_both hazard=1:SC0414 control=0:- allowed=0:SC0414
 stored_out_store_as_memcpy_block_d0_one hazard=1:SC0401,SC0414 control=1:SC0401 allowed=0:SC0401,SC0414

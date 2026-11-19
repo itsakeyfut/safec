@@ -48,6 +48,13 @@ call's exposure, may-written, unless a handed value certainly names it or a
 chain of `Held::certain` reaches it from a handed value's certain local or
 from a local an earlier call certainly kept (`certainly_exposed`).
 
+**And a call's result is exposed without undoing that.** A call that returns
+a value exposes its result after the rule has answered, and
+`Known::expose` believes every exposed block written, so `*out = b; tick();`
+with `tick` returning an `int` believed `b` written again. The result's
+exposure keeps every other block as the rule left it, as a store that
+exposes what it carries already does. Found by review.
+
 Widening the seeds gave the same output on the corpus and on every program
 the hunt found, and was rejected because it keeps one door per route: the
 next route nobody names is a silence again.
@@ -82,6 +89,14 @@ unchanged.
   local gives
   `a_block_a_call_reaches_through_two_local_holders_that_certainly_name_it_is_not_reported_as_indeterminate`
   one, and nothing else.
+* Exposing a call's result without restoring what the other blocks held
+  loses the `SC0411` of
+  `a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves`
+  and
+  `a_block_an_earlier_call_kept_on_one_arm_only_is_doubted_where_read_after_a_later_call_that_returns_a_value`.
+* The rule before this also loses the `SC0411` of
+  `a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call`,
+  the route through a call's result.
 * May-writing every block, exposed or not, turns the certain read in
   `a_block_no_call_may_reach_is_still_read_unwritten_for_certain_after_a_call`
   into a doubt, and nothing else.
@@ -92,9 +107,16 @@ Measured when this was written.
 
 * Good, because a route by which code outside may reach a block no longer
   needs naming for the block to stop counting as written by a call.
-* Bad, because eleven corpus cases gain one `SC0411` at the store that lets a
-  16-byte block leave, `*pp = q; use();`. Each block has a slot nothing but
-  the call may write, so each doubt is true. Two of them are named
+* Bad, because eleven corpus cases gain one `SC0411` where a block leaves
+  before a call, `*pp = q; use();`. Ten hold a 16-byte block with a slot
+  nothing but the call may write; the eleventh,
+  `a_copy_of_part_of_a_pointer_through_a_void_pointer_destination_is_asked_by_its_source`,
+  copies half a pointer to a 4-byte block nothing writes. Each doubt is true.
+* Bad, because three route matrix controls, `returned_ret_d0_both` to
+  `returned_ret_d2_both`, gain an `SC0411` where they return what
+  `pass(x)` returned: the call may return any exposed block (ADR-0066),
+  among them the 4-byte block `*x` holds, which nothing certainly names.
+  Before this the result's exposure believed that block written again. Two of them are named
   `..._is_reported_once`, which is about the partial-pointer report, and keep
   their names.
 * What would reverse this: a must-fact a block's record can keep honestly,
