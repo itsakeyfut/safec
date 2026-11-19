@@ -18,8 +18,8 @@ use crate::source::{SourceMap, Span, inside};
 use super::allocations::{Allocations, handed_places, stored_pointer};
 use super::built::named;
 use super::fit::{
-    Fit, fits, fits_as_bytes, folded, only_if_certain, pointee, pointee_width, read_from_locals,
-    slots_leaving, through_locals,
+    Fit, carried_width, fits, fits_as_bytes, folded, only_if_certain, pointee, pointee_width,
+    read_from_locals, slot_width, slots_leaving, through_locals,
 };
 use super::index::{Idx, LocalIdx, Site, Storage};
 use super::known::Known;
@@ -1432,9 +1432,7 @@ fn contents_leaving(
     });
     if let (Some(receiver), Some(width)) = (
         receiver,
-        stored_pointer(analysis.unit, read_as)
-            .and_then(|stored| pointee_width(analysis, stored))
-            .map(|width| width.max(carried.unwrap_or(0))),
+        slot_width(analysis, read_as).map(|width| width.max(carried.unwrap_or(0))),
     ) {
         if arrived.narrower_than(&receiver) {
             // **Named by the local that leaves, where one does**, so that
@@ -1472,9 +1470,7 @@ fn contents_leaving(
         // A local that holds no pointer, read as none, has nothing a reader
         // believes of it; a `void *` is asked whether it starts an object.
         let own = pointee_width(analysis, function.local(local));
-        let receiver = read_as
-            .and_then(|ty| stored_pointer(analysis.unit, ty))
-            .and_then(|ty| pointee_width(analysis, ty));
+        let receiver = read_as.and_then(|ty| slot_width(analysis, ty));
         // **And only for a local read as a pointer at all**, by its own type
         // or the receiver's: an `int` the source names is read as nothing,
         // whatever the destination's memory carries.
@@ -1520,8 +1516,7 @@ fn contents_leaving(
         // A `void *` receiver believes only a start, which the store that put
         // each pointer here asked; and memory recorded to hold nothing says
         // nothing.
-        let Some(width) = stored_pointer(analysis.unit, read_as)
-            .and_then(|ty| pointee_width(analysis, ty))
+        let Some(width) = slot_width(analysis, read_as)
             .max(carried)
             .filter(|&width| width > 0)
         else {
@@ -1857,12 +1852,7 @@ pub(super) fn departed_at_call(
                 Some(Operand::Constant(_)) | None => None,
             };
             let into_ty = into.and_then(|place| analysis.unit.place_ty(function, place));
-            let carried = into.and_then(|place| {
-                match analysis.contents_read(function, place, known).at(0) {
-                    Width::AtMost(width) if width > 0 => Some(width),
-                    Width::AtMost(_) | Width::AsTyped | Width::Unbounded | Width::Nothing => None,
-                }
-            });
+            let carried = into.and_then(|place| carried_width(analysis, function, place, known));
             if let (Some(source), Some(into_ty), false) = (arguments.get(1), into_ty, stays) {
                 contents_leaving(
                     findings,

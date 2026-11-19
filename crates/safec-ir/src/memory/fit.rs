@@ -9,10 +9,10 @@ use crate::ir::{Function, LocalId, Operand, Place, Rvalue, Ty, TyId};
 use crate::reads::derefs;
 use crate::source::Span;
 
-use super::allocations::{Allocations, innermost_element};
-use super::index::{LocalIdx, Site};
+use super::allocations::{Allocations, innermost_element, stored_pointer};
+use super::index::{LocalIdx, Site, Storage};
 use super::known::Known;
-use super::parts::{At, Extent, SiteState, same};
+use super::parts::{At, Extent, SiteState, Width, same};
 
 /// What this check can say about whether an access fits the object its
 /// pointer reaches.
@@ -582,6 +582,46 @@ pub(super) fn slots_from(
         }
     }
     (asked_locals, asked_sites, untyped_sites)
+}
+
+/// How wide a reader of memory read as `read_as` reads what a pointer stored
+/// there points at: `4` for memory of `int *`, `0` for memory of `void *`,
+/// and `None` where the memory holds no pointer. The width a block records
+/// for its reader outside (`Known::receiver_width`), and the one the sites a
+/// departure lets leave are asked at (`report::contents_leaving`).
+pub(super) fn slot_width(analysis: &Allocations<'_>, read_as: TyId) -> Option<u64> {
+    stored_pointer(analysis.unit, read_as).and_then(|ty| pointee_width(analysis, ty))
+}
+
+/// The width a reader outside reads what a pointer stored through `pointer`
+/// points at, where the memory says so rather than `pointer`'s type: the
+/// larger of what `pointer`'s value carries from the type it arrived as
+/// (`Allocations::contents_read`, #1079) and what the blocks it may name
+/// record (`Known::receiver_width`, #1082). `None` where neither says a
+/// width. **One answer for every door that asks a departure through a
+/// place**, so that two cannot ask the same memory differently. See
+/// ADR-0112.
+pub(super) fn carried_width(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    pointer: &Place,
+    known: &Known,
+) -> Option<u64> {
+    let carried = match analysis.contents_read(function, pointer, known).at(0) {
+        Width::AtMost(width) => width,
+        Width::AsTyped | Width::Unbounded | Width::Nothing => 0,
+    };
+    let recorded = if pointer.projection.is_empty() {
+        let held = &known.points_to[pointer.local];
+        known.receiver_width_of(
+            held.sites()
+                .map(Storage::Heap)
+                .chain(held.locals().map(Storage::Local)),
+        )
+    } else {
+        0
+    };
+    Some(carried.max(recorded)).filter(|&width| width > 0)
 }
 
 /// The type `ty` points to, where it is a pointer or an array of them, and

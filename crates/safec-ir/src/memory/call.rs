@@ -12,7 +12,7 @@ use crate::source::Span;
 
 use super::allocations::{Allocations, handed_places, innermost_element, stored_pointer};
 use super::built::named;
-use super::fit::{Fit, fits, slots_from, slots_leaving};
+use super::fit::{Fit, fits, slot_width, slots_from, slots_leaving};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ArrayWrite, ELEMENTS_KEPT, Known, WrittenBy};
@@ -695,6 +695,7 @@ impl Allocations<'_> {
                     // Read, by `Known::held_below`, for how far down that
                     // marking goes.
                     held_levels: _,
+                    receiver_width: _,
                     // Through `Known::note_part_written` and
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
@@ -2053,6 +2054,7 @@ impl Allocations<'_> {
                     stored_out: _,
                     left_at: _,
                     held_levels: _,
+                    receiver_width: _,
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,
@@ -2307,6 +2309,12 @@ impl Allocations<'_> {
         if self.untyped_below(read_as) {
             remember(&mut value.handed_untyped[local], Some(read_as));
         }
+        // **And how wide the callee reads the pointers stored there**, so a
+        // later copy into the local through a `void **` alias is asked at it
+        // (#1085, found by review). See `Known::receiver_width`.
+        let place = Storage::Local(LocalIdx::of(local));
+        let width = slot_width(self, read_as).unwrap_or(0);
+        value.receiver_width[place] = value.receiver_width[place].max(width);
         let (width, levels) = self.handed_bounds(Some(read_as));
         value.handed_at_most[local]
             .bound_by(&levels.stored_under(Width::AtMost(width), usize::MAX));
