@@ -1878,8 +1878,9 @@ cases! {
         // named beside another written, as before #1028; the `SC0411` goes.
         a_local_kept_on_one_path_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A holder nothing may have assigned on some path names nothing there,
-        // as a null does. Found by review. Mutation: `Held::joined` keeps
-        // one side's must-fact; the `SC0411` goes (ADR-0105).
+        // as a null does. Found by review. Mutation: `Held::joined` takes the
+        // other path's must-fact where its own has none; the `SC0411` goes
+        // (ADR-0105).
         a_local_reached_through_a_holder_assigned_on_one_path_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // So does a block a store wrote on one path only, asked as it was
         // before the call exposed it (#1036). Held for now because nothing
@@ -1939,8 +1940,8 @@ cases! {
         // as `h = 0` is, so the holder may be null and names the local
         // nothing alone (#1045): on one path, in a loop whose head joins
         // it, and copied into a block the call is handed. Mutation:
-        // `Held::joined` keeps one side's must-fact; the first two lose their
-        // `SC0411` (ADR-0105). The third is a block holder: nothing in a
+        // `Held::joined` takes the other path's must-fact where its own has
+        // none; the first two lose their `SC0411` (ADR-0105). The third is a block holder: nothing in a
         // block's record names a place alone until #1061.
         a_local_a_null_stored_through_a_pointer_to_its_holder_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1950,8 +1951,9 @@ cases! {
         // doubted where it is read or returned (#1046). Mutation: drop the
         // may-write in `Known::believed_written_only_where_named_alone`, so
         // every handed block is written again; all four lose their
-        // `SC0411`. Mutation: `Held::joined` keeps one side's must-fact; the
-        // first and third lose it (ADR-0105).
+        // `SC0411`. Mutation: `Held::joined` takes the other path's
+        // must-fact where its own has none; the first and third lose it
+        // (ADR-0105).
         a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_was_handed_through_a_pointer_that_may_name_another_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_call_was_handed_through_a_pointer_that_may_be_null_is_doubted_where_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1965,16 +1967,17 @@ cases! {
         // reported only for another reason: a pointer loaded out of a
         // zeroed block (#1049), an element kept in a block and a pointer one
         // past a local (#1050), a pointer read out of a local array element
-        // that may be null (#1052), and an element of a block. Mutations are
-        // named on the cases below that hold each door.
+        // that may be null (#1052), and an element of a block. The first, the
+        // second and the fourth go through a block, which names nothing alone
+        // until #1061; the mutations that hold the others are named below.
         a_local_a_pointer_loaded_out_of_a_zeroed_block_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: arithmetic keeps its pointer operand's fact; this loses
         // its `SC0411`.
         a_local_a_pointer_one_past_it_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_block_a_pointer_read_out_of_a_local_array_element_may_name_beside_a_null_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: an address grants the fact at any projection, and
-        // arithmetic keeps it; this loses its `SC0411`.
+        // Mutation: arithmetic keeps its pointer operand's fact; this loses
+        // its `SC0411`.
         a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store this check cannot place may overwrite a holder whose
         // address escaped, so the holder names what this check does not

@@ -3592,7 +3592,7 @@ mod tests {
         At, Cell, Extent, Freeing, Held, Init, Inits, Levels, PlaceInit, Position, Row, SiteState,
         Whole, Why, Width, earlier,
     };
-    use crate::memory::index::{Idx, LocalIdx, Site};
+    use crate::memory::index::{Idx, LocalIdx, Referent, Site};
     use crate::source::inside;
     use crate::source::{FileId, SourceMap, Span};
 
@@ -3897,8 +3897,9 @@ mod tests {
     /// Mutation: have `clear` leave any one of `may_be_null`, `fresh_read`,
     /// `widths`, `inner_address`, `element`, `site_element`, `array_edge`,
     /// `stored_through`, `returned_by`, `named_at_read`, `stale_read`,
-    /// `from_caller`, `lost` or `loaded`. This fails; no corpus case did for
-    /// the first eleven, measured in #918's review.
+    /// `from_caller`, `lost`, `loaded` or `alone`. This fails; no corpus case
+    /// did for the first eleven, measured in #918's review, nor for `alone`,
+    /// measured in #1060's.
     #[test]
     fn clearing_a_local_drops_every_mark_it_had() {
         let mut held = Held::none(4);
@@ -3912,6 +3913,7 @@ mod tests {
         held.stored_through = true;
         held.returned_by = Some(Site::at(2));
         held.named_at_read.set(LocalIdx::at(1));
+        held.alone = Some(Referent::Local(LocalIdx::at(1)));
         held.name_unknown(Why::StaleRead);
         held.name_unknown(Why::FromCaller);
         held.name_unknown(Why::Lost);
