@@ -608,6 +608,15 @@ cases! {
         // is the box's slot, which the copy through `void **` is not believed
         // to write.
         a_copy_into_a_block_two_levels_below_what_left_is_asked_at_its_own_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And the other side of the walk: `b`, a level below the box that
+        // left, is recorded at all, and a three-byte pointer copied into it
+        // is asked. Found by review. Mutation: `mark_leaving` records the
+        // first level only; this goes silent.
+        a_copy_into_a_block_a_level_below_what_left_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block a library copy let leave records its reader too. Found by
+        // review. Mutation: the copy door passes `mark_leaving` no type; this
+        // goes silent.
+        a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The width the destination carries is its first level's: `x`, a
         // level below, is asked at its own `int *`. Mutation: drop the
         // first-level filter on the locals in `contents_leaving`; `x` is
