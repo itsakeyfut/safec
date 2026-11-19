@@ -631,26 +631,33 @@ pub(super) fn carried_width(
         }
         Some(_) | None => 0,
     };
-    // **Not where the landing was found through memory whose record is not
-    // all it may hold**, `Landing::through_unrecorded`: its places are the
-    // ones this check recorded, not the ones the write lands in, and the
-    // widest of them belongs to some other reader. `*t = m;` with `t` read
-    // out of a caller's `int ****` asked a four-byte `m` at the eight bytes
-    // that parameter's own memory is read at. Mutation: read the record
-    // here too; three cases a store through such a pointer used to pass
-    // gain a false `SC0413`, among them
+    // **Not a parameter's own memory where the landing was found through
+    // memory whose record is not all it may hold**,
+    // `Landing::through_unrecorded`: a pointer read out of a caller's memory
+    // is placed among every parameter's memory this check recorded, and the
+    // widest of those belongs to another parameter's reader. `*t = m;` with
+    // `t` read out of a caller's `int ****` asked a four-byte `m` at the
+    // eight bytes that parameter's own memory is read at. A block this
+    // function made, or a local, is still read: dropping those too let a
+    // copy through a pointer read back out of caller memory into a block
+    // that left go silent (found by review). Mutation: read every place
+    // here; three cases gain a false `SC0413`, among them
     // `a_store_this_check_cannot_place_may_write_a_block_a_kept_local_points_at`.
-    let recorded = if landing.through_unrecorded {
-        0
-    } else {
-        known.receiver_width_of(
-            landing
-                .containers
-                .iter()
-                .map(|&site| Storage::Heap(site))
-                .chain(landing.targets.iter().map(|&local| Storage::Local(local))),
-        )
+    // Mutation: skip every place here; the case through a pointer read back
+    // out of caller memory goes silent.
+    let parameter_memory = |site: Site| {
+        function
+            .parameters()
+            .any(|parameter| Site::of(LocalIdx::of(parameter)) == site)
     };
+    let recorded = known.receiver_width_of(
+        landing
+            .containers
+            .iter()
+            .filter(|&&site| !(landing.through_unrecorded && parameter_memory(site)))
+            .map(|&site| Storage::Heap(site))
+            .chain(landing.targets.iter().map(|&local| Storage::Local(local))),
+    );
     Some(carried.max(recorded)).filter(|&width| width > 0)
 }
 

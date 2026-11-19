@@ -632,6 +632,13 @@ cases! {
         // for a landing one dereference down; both go silent on width.
         a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_a_block_that_left_through_a_pointer_read_out_of_memory_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through a pointer read back out of caller memory the landing is not
+        // all recorded, but the block that left is this function's own and
+        // its record is read; only a parameter's own memory is skipped
+        // there. Found by review. Mutation: skip every place on such a
+        // landing; both go silent, the copy where `main` reported it.
+        a_copy_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The width the destination carries is its first level's: `x`, a
         // level below, is asked at its own `int *`. Mutation: drop the
         // first-level filter on the locals in `contents_leaving`; `x` is
