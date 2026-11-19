@@ -648,6 +648,8 @@ impl Allocations<'_> {
                     // Through `Known::expose`: what the call is handed, as at
                     // any call of this family.
                     exposed: _,
+                    // Keeps no address; see `Known::exposed`.
+                    certainly_exposed: _,
                     // Through `Known::pour` and the walk: what the
                     // destination's blocks may contain gains what the source's
                     // do.
@@ -1335,6 +1337,11 @@ impl Allocations<'_> {
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
                 let alone = value.named_alone(&handed_values);
+                // **What it certainly found it certainly keeps**, for a later
+                // call to find. See `Known::certainly_exposed`.
+                for &local in &alone {
+                    value.certainly_exposed[local] = true;
+                }
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
@@ -1997,6 +2004,8 @@ impl Allocations<'_> {
                     // The new block's is cleared by `Known::reborn`, and
                     // nothing is carried from the old.
                     exposed: _,
+                    // Keeps no address; see `Known::exposed`.
+                    certainly_exposed: _,
                     // The new block holds what the old held, by `Known::pour`
                     // here (C17 7.22.3.5 p2).
                     contents: _,

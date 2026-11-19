@@ -103,6 +103,14 @@ pub(super) struct Known {
     /// it**, as it was until the memory model was rebuilt on #924: the two
     /// were joined, cleared and read by separate lines that said the same.
     pub(super) exposed: Table<Referent, bool>,
+    /// **Per local, whether a call this check cannot read certainly holds
+    /// its address**: a value it was handed certainly named it, or a local
+    /// so named certainly held it (`Known::named_alone`'s chain). A must-fact,
+    /// so an intersection at a join, where [`Self::exposed`] is a union: a
+    /// local a call may only have been handed, `if (c) keep(&h);`, is exposed
+    /// and not certainly, and a later call that finds it through it writes
+    /// nothing for certain (#1063). See ADR-0107.
+    pub(super) certainly_exposed: Table<LocalIdx, bool>,
     /// Per site, what its memory holds: the cell, a [`Held`] read as the
     /// value a pointer stored there may be, and [`Held::none`] where nothing
     /// was stored (#780). A store pours into it by [`Cell::absorb`]; a load
@@ -660,6 +668,8 @@ impl Known {
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`); a site's lives as long as its block.
             exposed: _,
+            // Answered by `Self::storage_live`, which runs this first.
+            certainly_exposed: _,
             contents: _,
             realloced: _,
             // What reads the local next is its next lifetime, which
@@ -717,6 +727,7 @@ impl Known {
             escaped: _,
             handed_away: _,
             exposed,
+            certainly_exposed,
             contents: _,
             realloced: _,
             written,
@@ -757,6 +768,8 @@ impl Known {
         // the next a write of a new `m`, and a read nothing wrote was
         // silent. See `Known::exposed` of a local.
         exposed[local] = false;
+        // Nor certainly held, a new lifetime's address being no earlier one's.
+        certainly_exposed[local] = false;
         // Nor was it handed to one untyped, for the same reason.
         // See `Known::handed_untyped`. No case tells this from
         // keeping the mark, measured: what the mark reaches is
@@ -2007,29 +2020,51 @@ impl Known {
     }
 
     /// **The locals a call this check cannot read writes for certain**: those
-    /// some pointer it can find certainly names, [`Held::alone`], among the
-    /// values it is `handed` and the local holders it finds from what is
-    /// exposed. Every other local it may reach it may have written, so a
-    /// route this walk does not take is a doubt and not a silence (ADR-0101
-    /// rule 1). A local named alone by any of them is believed written, the
-    /// output-parameter idiom (#782).
+    /// some pointer it certainly finds certainly names, [`Held::alone`].
+    /// Every other local it may reach it may have written, so a route this
+    /// walk does not take is a doubt and not a silence (ADR-0101 rule 1). A
+    /// local named alone is believed written, the output-parameter idiom
+    /// (#782).
     ///
     /// **Asked of the must-fact and of nothing else.** Read off how few
     /// places a may-set named, "alone" needed one exclusion per door that
     /// left the set small while handing nothing over: a null, a path that
     /// assigned nothing, a fill, an element, a block a loop made, a block
     /// holding a null or what this check does not follow (#950 to #1046).
-    /// A block's record carries no such fact yet, so a pointer found in a
-    /// block names nothing alone. See ADR-0105.
+    /// A block's record carries no such fact, so a pointer found in a block
+    /// names nothing alone. See ADR-0105.
+    ///
+    /// **And only of a pointer it certainly finds**: a value it is `handed`,
+    /// a local such a value certainly names, followed as a chain (`fill(&h)`
+    /// with `h = m` names `h` and `m`), or a holder an earlier call certainly
+    /// kept, [`Self::certainly_exposed`] (`stash(&p); p = m; tick();`). The
+    /// walk that exposes is a may-walk, and [`Self::exposed`] a union: `p`
+    /// either `&h` or a null found `h` and named `m` alone though the call
+    /// may have been handed nothing, and so did `h` an earlier call may only
+    /// have been handed, `if (c) keep(&h); h = m; tick();` (#1063). See
+    /// ADR-0107.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
     pub(super) fn named_alone(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
-        handed
+        let mut chain: Vec<LocalIdx> = handed
             .iter()
-            .chain(reached.locals.iter().map(|&holder| &self.points_to[holder]))
+            .chain(
+                reached
+                    .locals
+                    .iter()
+                    .filter(|&&holder| self.certainly_exposed[holder])
+                    .map(|&holder| &self.points_to[holder]),
+            )
             .filter_map(|held| held.certain().and_then(Referent::local))
-            .collect()
+            .collect();
+        let mut alone = BTreeSet::new();
+        while let Some(local) = chain.pop() {
+            if alone.insert(local) {
+                chain.extend(self.points_to[local].certain().and_then(Referent::local));
+            }
+        }
+        alone
     }
 
     /// The walk [`Self::locals_named_by_unknown_code`] and
@@ -2302,6 +2337,8 @@ impl Known {
             // A local's, as `escaped` is, and a site being reborn is not.
             handed_away: _,
             exposed,
+            // Of locals; a site made again has no address a call kept.
+            certainly_exposed: _,
             contents,
             realloced,
             // Not fresh, whatever it was, and kept whole: the caller says

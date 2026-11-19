@@ -268,6 +268,7 @@ fails where this table and that file differ.
 | Known | `escaped` | entry fact | beliefs `Width`, `Unreplaced`, `LeftBehind`, `PartLocal` |
 | Known | `handed_away` | entry fact | 1 test named in its row |
 | Known | `exposed` | in doubt | 2 tests named in its row |
+| Known | `certainly_exposed` | in doubt | 2 tests named in its row |
 | Known | `contents` | in doubt | beliefs `Width`, `Lost`, `Stale`, `Caller` |
 | Known | `realloced` | entry fact | 2 tests named in its row |
 | Known | `written` | in doubt | beliefs `Fresh`, `PartLocal`, `Returned` |
@@ -618,7 +619,13 @@ So one handed `p`, either `&a` or `&b`, `&a` or a null, `&a` on one path
 and nothing assigned on the other, or `&a` moved by arithmetic, may have
 missed `a`, and a read of `a` after `fill(p, &x)` is reported as it is
 after `*p = &x;`; so is `if (p) fill(p);` after a join with a null, since a
-null test grants nothing. A block it is handed is believed written the
+null test grants nothing. Nor is a holder it may reach only through such
+a pointer one it certainly finds: `p` either `&h` or a null, with `h = m`,
+leaves `m` possibly unwritten, and so does one an earlier call may only
+have been handed, `if (c) keep(&h); h = m; tick();`, where a holder an
+earlier call certainly kept is found
+([ADR-0107](adr/0107-a-call-writes-for-certain-only-what-a-pointer-it-certainly-finds-certainly-names.md)).
+A block it is handed is believed written the
 same way, only where an argument certainly names it: `fill(p)` with `p`
 either `b` or a null leaves `*b` possibly unwritten. A pointer read out of
 a block names nothing for certain, so the output-parameter idiom through a

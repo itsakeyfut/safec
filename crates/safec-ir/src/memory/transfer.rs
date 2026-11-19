@@ -1246,6 +1246,7 @@ impl Allocations<'_> {
             // Read: what code this check cannot read may name, for
             // `Held::named_at_read`.
             exposed: _,
+            certainly_exposed: _,
             // Read: what memory holds where it is read, by
             // `Known::load_into`.
             contents: _,
@@ -1979,6 +1980,7 @@ impl Allocations<'_> {
             escaped,
             handed_away,
             exposed,
+            certainly_exposed,
             contents,
             written,
             realloced,
@@ -2227,6 +2229,11 @@ impl Allocations<'_> {
         // allocation may hold on either arm it may hold after them. A union,
         // for the reason `escaped` is one, for a block and for a local whose
         // address a call on one arm may have kept alike. See ADR-0039.
+        // A must-fact, so an intersection: a local a call certainly holds
+        // on one path only may not be held on the other. See ADR-0107.
+        for (here, there) in certainly_exposed.iter_mut().zip(&from.certainly_exposed) {
+            *here = *here && *there;
+        }
         for (here, there) in exposed.iter_mut().zip(&from.exposed) {
             *here = *here || *there;
         }
@@ -2515,6 +2522,7 @@ impl Analysis for Allocations<'_> {
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, Referent::count(self.locals)),
+            certainly_exposed: Table::filled(false, self.locals),
             contents: Table::filled(Cell::none(self.locals), self.locals),
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
@@ -2823,6 +2831,8 @@ impl Analysis for Allocations<'_> {
                     // in may contain, and what an unplaced store exposes.
                     contents: _,
                     exposed: _,
+                    // A store keeps no address for code this check cannot read.
+                    certainly_exposed: _,
                     // Through `Known::noticed`, where what it stores reaches
                     // memory a pending read or call may see.
                     pending: _,
