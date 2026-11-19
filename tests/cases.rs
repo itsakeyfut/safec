@@ -558,13 +558,25 @@ cases! {
         a_copy_into_caller_memory_through_a_char_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_into_caller_memory_through_a_void_pointer_pointer_local_of_a_pointer_wide_enough_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through memory: what the copy takes is a pointer a block
+        // holds, asked by the block's record at the carried width. Found by
+        // review. Mutation: pass no carried width in `contents_leaving`'s
+        // loop over the sites; this goes silent.
+        a_pointer_a_box_holds_copied_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the source is memory the caller handed in, asked by what
+        // it is believed to hold against the receiver's first level raised
+        // to the carried width. Found by review. Mutation: build the
+        // receiver from the destination's type alone; this goes silent.
+        caller_memory_copied_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_destination_arrived_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The width the destination carries is its first level's: `x`, a
         // level below, is asked at its own `int *`. Mutation: drop the
         // first-level filter on the locals in `contents_leaving`; `x` is
         // `SC0413`.
         a_pointer_below_what_a_copy_puts_into_caller_memory_is_asked_at_its_own_width: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And only for a local read as a pointer: the `int` is not, so the
-        // copy is asked as part of a pointer and not as `i` leaving.
+        // copy is asked as part of a pointer and not as `i` leaving. The
+        // `SC0402` is the caller's memory after `keep`, which may have freed
+        // it (ADR-0066), and is not this case's question.
         // Mutation: give a local read as nothing the carried width; the
         // `SC0413` names `i`.
         an_int_copied_into_caller_memory_through_a_void_pointer_local_is_not_asked_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

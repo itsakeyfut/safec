@@ -1418,9 +1418,23 @@ fn contents_leaving(
             Levels::default()
         }
     };
+    // **The receiver's first level at least as wide as `carried`**, where
+    // its memory says so rather than its type (#1079): `memcpy(vo, in, 8)`
+    // with `vo` a `void **` made from an `int **` reads what `in` holds as
+    // `int *`s. The width said is raised with it, since a `void *` receiver
+    // has none of its own and would skip the ask.
+    let receiver = analysis.type_levels(ty).map(|mut levels| {
+        if let Some(carried) = carried {
+            let first = levels.at(0).bound().unwrap_or(0).max(carried);
+            levels.set_first(Width::AtMost(first));
+        }
+        levels
+    });
     if let (Some(receiver), Some(width)) = (
-        analysis.type_levels(ty),
-        stored_pointer(analysis.unit, read_as).and_then(|stored| pointee_width(analysis, stored)),
+        receiver,
+        stored_pointer(analysis.unit, read_as)
+            .and_then(|stored| pointee_width(analysis, stored))
+            .map(|width| width.max(carried.unwrap_or(0))),
     ) {
         if arrived.narrower_than(&receiver) {
             // **Named by the local that leaves, where one does**, so that
