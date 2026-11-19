@@ -2028,7 +2028,7 @@ impl Known {
         handed
             .iter()
             .chain(reached.locals.iter().map(|&holder| &self.points_to[holder]))
-            .filter_map(|held| held.alone.and_then(Referent::local))
+            .filter_map(|held| held.certain().and_then(Referent::local))
             .collect()
     }
 
@@ -2551,7 +2551,7 @@ impl Known {
         handed: &[Held],
         before: &Table<Storage, PlaceInit>,
     ) {
-        let names_alone = |held: &Held, site: Site| held.alone == Some(Referent::Heap(site));
+        let names_alone = |held: &Held, site: Site| held.certain() == Some(Referent::Heap(site));
         let alone: BTreeSet<Site> = handed
             .iter()
             .flat_map(|held| held.sites().filter(|&site| names_alone(held, site)))

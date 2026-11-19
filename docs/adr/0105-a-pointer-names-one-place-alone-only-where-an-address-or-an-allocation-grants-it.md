@@ -53,7 +53,12 @@ Chosen option: "A must-fact on a value", by the owner's decision.
    result other than an allocation's, an assignment of anything else. A null
    test grants nothing.
 4. `Known::named_alone` and `Known::believed_written_only_where_named_alone`
-   ask this fact and nothing else, so their exclusions are gone.
+   ask this fact and nothing else, so their exclusions are gone. They ask it
+   through `Held::certain`, which answers it only where what the value may
+   name is that one place: a door that adds to the may-set without dropping
+   the fact, as a store this check cannot place does to every escaped local,
+   leaves it doubted rather than believed. That reads the may-set only to
+   take a fact away, never to grant one.
 
 Members of the set were rejected because they remove only the null and
 unassigned exclusions, and the element, the one-block site and the write
@@ -70,6 +75,9 @@ alone" meaning this fact.
 * Arithmetic keeping its pointer operand's fact silences
   `a_local_a_pointer_one_past_it_names_is_not_believed_written_by_a_call` and
   `a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another`.
+* `Held::certain` answering the fact without asking the may-set silences
+  `a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call`
+  and its form for a holder a later call finds.
 * A fill keeping the fact silences
   `a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_it`.
 

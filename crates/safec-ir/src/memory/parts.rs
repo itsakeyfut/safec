@@ -2105,6 +2105,21 @@ impl Held {
         }
     }
 
+    /// [`Self::alone`] where what it may name agrees: that one place and
+    /// nothing else. The fact is granted and dropped by the doors that
+    /// build a value, and this asks it against the may-set as well, so a
+    /// door that adds to what a value may name without dropping the fact,
+    /// or takes away the place it names, leaves it doubted rather than
+    /// believed: a store this check cannot place marks every escaped local
+    /// as naming what it does not follow and left the fact standing, and a
+    /// call handed such a holder was believed to write the local. Found by
+    /// review. See ADR-0105.
+    pub(super) fn certain(&self) -> Option<Referent> {
+        let one = self.alone?;
+        let mut named = self.names.ones();
+        (named.next() == Some(one) && named.next().is_none()).then_some(one)
+    }
+
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = Site> + '_ {
         self.names.ones().filter_map(Referent::site)

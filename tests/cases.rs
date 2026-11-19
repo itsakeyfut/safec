@@ -1976,6 +1976,14 @@ cases! {
         // Mutation: an address grants the fact at any projection, and
         // arithmetic keeps it; this loses its `SC0411`.
         a_block_a_call_was_handed_an_element_of_is_doubted_where_read_at_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store this check cannot place may overwrite a holder whose
+        // address escaped, so the holder names what this check does not
+        // follow beside the local, and a call handed it, or one that finds
+        // it, may have missed the local. Found by review. Mutation:
+        // `Held::certain` answers `alone` without asking what the value may
+        // name; both lose their `SC0411`.
+        a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_a_holder_a_store_this_check_cannot_place_may_have_overwritten_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
