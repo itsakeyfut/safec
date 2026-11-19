@@ -648,6 +648,8 @@ impl Allocations<'_> {
                     // Through `Known::expose`: what the call is handed, as at
                     // any call of this family.
                     exposed: _,
+                    // Keeps no address; see `Known::exposed`.
+                    certainly_exposed: _,
                     // Through `Known::pour` and the walk: what the
                     // destination's blocks may contain gains what the source's
                     // do.
@@ -1176,9 +1178,6 @@ impl Allocations<'_> {
                 // `Known::believed_written_only_where_named_alone` restores
                 // for a block the call may have missed. See ADR-0105.
                 let written_before = value.written.clone();
-                // And what it was exposed to, which `Known::named_alone` asks
-                // of a holder it finds. See ADR-0107.
-                let exposed_before = value.exposed.clone();
                 value.expose(self.sources, reach, Some(origin.span()));
                 value.unproved_exposed();
                 // And believed written only where an argument names it
@@ -1337,7 +1336,12 @@ impl Allocations<'_> {
                 let pending = value.array_writes_before(partial);
                 // What each argument hands over, however it is spelled. See
                 // `Known::named_alone`.
-                let alone = value.named_alone(&handed_values, &exposed_before);
+                let alone = value.named_alone(&handed_values);
+                // **What it certainly found it certainly keeps**, for a later
+                // call to find. See `Known::certainly_exposed`.
+                for &local in &alone {
+                    value.certainly_exposed[local] = true;
+                }
                 value.replaced(
                     |_| true,
                     |local| may_write[local],
@@ -2000,6 +2004,8 @@ impl Allocations<'_> {
                     // The new block's is cleared by `Known::reborn`, and
                     // nothing is carried from the old.
                     exposed: _,
+                    // Keeps no address; see `Known::exposed`.
+                    certainly_exposed: _,
                     // The new block holds what the old held, by `Known::pour`
                     // here (C17 7.22.3.5 p2).
                     contents: _,

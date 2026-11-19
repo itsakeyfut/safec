@@ -103,6 +103,14 @@ pub(super) struct Known {
     /// it**, as it was until the memory model was rebuilt on #924: the two
     /// were joined, cleared and read by separate lines that said the same.
     pub(super) exposed: Table<Referent, bool>,
+    /// **Per local, whether a call this check cannot read certainly holds
+    /// its address**: a value it was handed certainly named it, or a local
+    /// so named certainly held it (`Known::named_alone`'s chain). A must-fact,
+    /// so an intersection at a join, where [`Self::exposed`] is a union: a
+    /// local a call may only have been handed, `if (c) keep(&h);`, is exposed
+    /// and not certainly, and a later call that finds it through it writes
+    /// nothing for certain (#1063). See ADR-0107.
+    pub(super) certainly_exposed: Table<LocalIdx, bool>,
     /// Per site, what its memory holds: the cell, a [`Held`] read as the
     /// value a pointer stored there may be, and [`Held::none`] where nothing
     /// was stored (#780). A store pours into it by [`Cell::absorb`]; a load
@@ -660,6 +668,8 @@ impl Known {
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`); a site's lives as long as its block.
             exposed: _,
+            // Answered by `Self::storage_live`, which runs this first.
+            certainly_exposed: _,
             contents: _,
             realloced: _,
             // What reads the local next is its next lifetime, which
@@ -717,6 +727,7 @@ impl Known {
             escaped: _,
             handed_away: _,
             exposed,
+            certainly_exposed,
             contents: _,
             realloced: _,
             written,
@@ -757,6 +768,8 @@ impl Known {
         // the next a write of a new `m`, and a read nothing wrote was
         // silent. See `Known::exposed` of a local.
         exposed[local] = false;
+        // Nor certainly held, a new lifetime's address being no earlier one's.
+        certainly_exposed[local] = false;
         // Nor was it handed to one untyped, for the same reason.
         // See `Known::handed_untyped`. No case tells this from
         // keeping the mark, measured: what the mark reaches is
@@ -2023,20 +2036,16 @@ impl Known {
     ///
     /// **And only of a pointer it certainly finds**: a value it is `handed`,
     /// a local such a value certainly names, followed as a chain (`fill(&h)`
-    /// with `h = m` names `h` and `m`), or a holder exposed before this call,
-    /// `exposed_before`, which an earlier call or an escape put where code
-    /// this check cannot read keeps it (`stash(&p); p = m; tick();`). A
-    /// holder this call exposes for the first time is found only through
-    /// the chain: the walk that exposes is a may-walk, and `p` either `&h`
-    /// or a null found `h` and named `m` alone though the call may have
-    /// been handed nothing (#1063). See ADR-0107.
+    /// with `h = m` names `h` and `m`), or a holder an earlier call certainly
+    /// kept, [`Self::certainly_exposed`] (`stash(&p); p = m; tick();`). The
+    /// walk that exposes is a may-walk, and [`Self::exposed`] a union: `p`
+    /// either `&h` or a null found `h` and named `m` alone though the call
+    /// may have been handed nothing, and so did `h` an earlier call may only
+    /// have been handed, `if (c) keep(&h); h = m; tick();` (#1063). See
+    /// ADR-0107.
     ///
     /// [`Held::alone`]: super::parts::Held::alone
-    pub(super) fn named_alone(
-        &self,
-        handed: &[Held],
-        exposed_before: &Table<Referent, bool>,
-    ) -> BTreeSet<LocalIdx> {
+    pub(super) fn named_alone(&self, handed: &[Held]) -> BTreeSet<LocalIdx> {
         let reached = self.unknown_code_reaches();
         let mut chain: Vec<LocalIdx> = handed
             .iter()
@@ -2044,7 +2053,7 @@ impl Known {
                 reached
                     .locals
                     .iter()
-                    .filter(|&&holder| exposed_before[holder])
+                    .filter(|&&holder| self.certainly_exposed[holder])
                     .map(|&holder| &self.points_to[holder]),
             )
             .filter_map(|held| held.certain().and_then(Referent::local))
@@ -2328,6 +2337,8 @@ impl Known {
             // A local's, as `escaped` is, and a site being reborn is not.
             handed_away: _,
             exposed,
+            // Of locals; a site made again has no address a call kept.
+            certainly_exposed: _,
             contents,
             realloced,
             // Not fresh, whatever it was, and kept whole: the caller says

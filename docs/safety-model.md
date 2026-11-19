@@ -268,6 +268,7 @@ fails where this table and that file differ.
 | Known | `escaped` | entry fact | beliefs `Width`, `Unreplaced`, `LeftBehind`, `PartLocal` |
 | Known | `handed_away` | entry fact | 1 test named in its row |
 | Known | `exposed` | in doubt | 2 tests named in its row |
+| Known | `certainly_exposed` | in doubt | 2 tests named in its row |
 | Known | `contents` | in doubt | beliefs `Width`, `Lost`, `Stale`, `Caller` |
 | Known | `realloced` | entry fact | 2 tests named in its row |
 | Known | `written` | in doubt | beliefs `Fresh`, `PartLocal`, `Returned` |
@@ -620,7 +621,9 @@ missed `a`, and a read of `a` after `fill(p, &x)` is reported as it is
 after `*p = &x;`; so is `if (p) fill(p);` after a join with a null, since a
 null test grants nothing. Nor is a holder it may reach only through such
 a pointer one it certainly finds: `p` either `&h` or a null, with `h = m`,
-leaves `m` possibly unwritten, where a holder an earlier call kept is found
+leaves `m` possibly unwritten, and so does one an earlier call may only
+have been handed, `if (c) keep(&h); h = m; tick();`, where a holder an
+earlier call certainly kept is found
 ([ADR-0107](adr/0107-a-call-writes-for-certain-only-what-a-pointer-it-certainly-finds-certainly-names.md)).
 A block it is handed is believed written the
 same way, only where an argument certainly names it: `fill(p)` with `p`

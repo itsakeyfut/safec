@@ -463,6 +463,17 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         },
         Start::Doubt,
     ),
+    (
+        "certainly_exposed",
+        Field::Exempt {
+            why: "whether a call this check cannot read certainly holds a local's address (ADR-0107); a must-fact asked of a holder a later call finds, and no belief's rows read it",
+            held_by: &[
+                "a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_doubted_where_read",
+                "a_local_a_holder_an_earlier_call_may_have_kept_names_is_not_believed_written_by_a_later_call",
+            ],
+        },
+        Start::Doubt,
+    ),
     // What an exposed parameter points at is marked as the caller's, so a
     // load out of it after a call is one this check stopped following
     // (#482).

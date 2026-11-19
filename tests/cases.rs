@@ -1991,6 +1991,12 @@ cases! {
         // their `SC0411`.
         a_local_a_holder_a_call_may_reach_only_through_a_possibly_null_pointer_names_is_not_believed_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_a_holder_an_earlier_call_may_have_kept_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same with the holder given the local's address after the
+        // earlier call, which only a fact that the call certainly kept it
+        // tells apart (`Known::certainly_exposed`). Found by review.
+        // Mutation: ask every holder `unknown_code_reaches` finds; this loses
+        // its `SC0411`.
+        a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // #938's own program, a block holding a caller's pointer beside the
         // local. Rule 3 does not hold it alone: the caller's pointer is read
         // as possibly null (rule 2, #1038), which marks the block. Mutation:
@@ -2975,9 +2981,13 @@ cases! {
         // `a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves`
         // and the cases beside it, measured.
         a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `exposed` of a local joined by intersection; this is
-        // reported.
-        a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call that kept the local on one arm only does not certainly hold
+        // it, so a later call writes nothing for certain through it, and
+        // `m[0]` is doubted where it is read; the belief that it wrote it is
+        // given up (ADR-0107, #1063; this case was
+        // `..._is_not_reported_as_indeterminate`). Mutation:
+        // `certainly_exposed` joined by union; this goes quiet.
+        a_local_array_put_in_a_local_a_call_kept_on_one_arm_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An address stored through a pointer this check cannot place, which
         // records it in every allocation such code can reach beside what it
         // does not model, so a later call names it alone nowhere and may not
