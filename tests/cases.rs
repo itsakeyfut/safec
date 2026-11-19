@@ -2939,8 +2939,10 @@ cases! {
         a_local_array_handed_to_a_call_is_not_reported_as_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Doubted where read since a pointer found in a block names nothing
         // alone (ADR-0105); a block's record carrying the must-fact (#1061)
-        // restores the belief. Until then it holds no mutation of the walk:
-        // `expose_locals` asked before `expose` was its guard.
+        // restores the belief. `expose_locals` asked before `expose`, which
+        // this held, is held meanwhile by
+        // `a_local_a_block_names_on_one_path_only_is_not_believed_written_by_a_call`
+        // and the block cases beside it, measured.
         a_local_array_stored_in_memory_a_call_was_handed_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: the walk does not step through what a local holds;
         // this is reported.
@@ -2951,8 +2953,10 @@ cases! {
         // An address placed in memory that only memory already handed over
         // reaches, rather than in that memory itself. Doubted where read
         // since a pointer found in a block names nothing alone (ADR-0105),
-        // until #1061; the walk starting from `reachable_now()` was its
-        // guard.
+        // until #1061. The walk starting from `reachable_now()`, which this
+        // held, is held meanwhile by
+        // `a_block_copied_out_through_a_parameter_is_proved_unwritten_where_it_leaves`
+        // and the cases beside it, measured.
         a_local_array_stored_in_memory_reached_from_memory_already_handed_away_is_doubted_where_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `exposed` of a local joined by intersection; this is
         // reported.

@@ -92,8 +92,9 @@ was written. Those that held a rule about a block holder are held, until
 * Bad, because the output-parameter idiom through a block, `*box = &a;
   fill(box);`, and through `*pp`, is doubted until a block's record carries
   the fact (#1061): three corpus cases and two route rows
-  (`fresh_call_d2_both`, `fresh_call_d2_one`) moved to a doubt, and two of
-  those cases no longer hold the walk's mutations they held.
+  (`fresh_call_d2_both`, `fresh_call_d2_one`) moved to a doubt. Two of
+  those cases held mutations of the walk that finds what a call reaches;
+  other cases still fail under each, measured.
 * Bad, because `if (p) fill(p);` after a join with a null, and a pointer
   moved off a local and back, are doubted.
 * What would reverse this: #1061 restores the block idiom; a measurement
