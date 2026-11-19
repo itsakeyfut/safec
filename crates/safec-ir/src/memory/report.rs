@@ -1371,16 +1371,22 @@ fn say_leaving(
 /// departing value arrived as and from what was stored there
 /// ([`Held::contents_at_most`](super::parts::Held::contents_at_most),
 /// a cell's `stored_levels`, #632). See ADR-0060.
+///
+/// **And at the first level at least as wide as `left`'s last field says**,
+/// where the receiver's memory carries a width rather than its type: a
+/// library copy into memory a pointer arrived pointing at is read there as
+/// the type it arrived as, whatever local the copy is spelled through
+/// (#1079). `None` everywhere else.
 fn contents_leaving(
     findings: &mut Vec<Finding>,
     departed: &mut Vec<(Span, Departure, Option<LocalId>, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
-    left: (Span, Departure, TyId),
+    left: (Span, Departure, TyId, Option<u64>),
     value: &Rvalue,
     known: &Known,
 ) {
-    let (at, how, ty) = left;
+    let (at, how, ty, carried) = left;
     // **Only a pointer lets anything leave with it.** An integer can hold
     // edges, since a call this check cannot read may return any escaped
     // local's address and its result is followed whatever its type, and
@@ -1440,15 +1446,28 @@ fn contents_leaving(
             );
         }
     }
+    // **`carried` is the first level's**, what the destination's own
+    // memory holds; the slots below it are read as the types below. The walk
+    // reads each level as the pointee of the one above, so a slot read as
+    // `read_as` itself is one at the first level: no type is its own
+    // pointee.
+    let top = read_as;
     let (locals, sites, _) = slots_leaving(analysis, function, read_as, value, known);
     for (local, read_as) in locals {
+        let carried = carried.filter(|_| read_as == Some(top));
         // A local that holds no pointer, read as none, has nothing a reader
         // believes of it; a `void *` is asked whether it starts an object.
         let own = pointee_width(analysis, function.local(local));
         let receiver = read_as
             .and_then(|ty| stored_pointer(analysis.unit, ty))
             .and_then(|ty| pointee_width(analysis, ty));
-        let Some(width) = own.max(receiver) else {
+        // **And only for a local read as a pointer at all**, by its own type
+        // or the receiver's: an `int` the source names is read as nothing,
+        // whatever the destination's memory carries.
+        let Some(width) = own
+            .max(receiver)
+            .map(|width| width.max(carried.unwrap_or(0)))
+        else {
             continue;
         };
         // Reached through its address, so its escape is not doubted, as
@@ -1483,11 +1502,13 @@ fn contents_leaving(
         );
     }
     for (site, read_as) in sites {
+        let carried = carried.filter(|_| read_as == top);
         // A `void *` receiver believes only a start, which the store that put
         // each pointer here asked; and memory recorded to hold nothing says
         // nothing.
         let Some(width) = stored_pointer(analysis.unit, read_as)
             .and_then(|ty| pointee_width(analysis, ty))
+            .max(carried)
             .filter(|&width| width > 0)
         else {
             continue;
@@ -1681,7 +1702,7 @@ pub(super) fn departed_in_element(
         departed,
         analysis,
         function,
-        (at, how, ty),
+        (at, how, ty, None),
         &operation.value,
         known,
     );
@@ -1797,7 +1818,7 @@ pub(super) fn departed_at_call(
                     departed,
                     analysis,
                     function,
-                    (at, Departure::Store, source_ty),
+                    (at, Departure::Store, source_ty, None),
                     &Rvalue::Use(source.clone()),
                     known,
                 );
@@ -1810,17 +1831,31 @@ pub(super) fn departed_at_call(
             // narrower than the source asks no less than before. A `void **`
             // destination asks a `void *`'s start, as the source's type
             // does. See ADR-0060.
-            let into_ty = match arguments.first() {
-                Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
+            //
+            // **Or what the destination's memory is believed to hold, where
+            // that is wider**: memory a pointer arrived pointing at holds the
+            // type it arrived as through any conversion, so `void *t = out;
+            // void **vo = t; memcpy(vo, &c, 8);` with `out` an `int **` lets
+            // `c` leave where an `int`'s width is believed, which asking at
+            // `void **` alone let through with three bytes behind it (#1079).
+            let into = match arguments.first() {
+                Some(Operand::Copy(place)) => Some(place),
                 Some(Operand::Constant(_)) | None => None,
             };
+            let into_ty = into.and_then(|place| analysis.unit.place_ty(function, place));
+            let carried = into.and_then(|place| {
+                match analysis.contents_read(function, place, known).at(0) {
+                    Width::AtMost(width) if width > 0 => Some(width),
+                    Width::AtMost(_) | Width::AsTyped | Width::Unbounded | Width::Nothing => None,
+                }
+            });
             if let (Some(source), Some(into_ty), false) = (arguments.get(1), into_ty, stays) {
                 contents_leaving(
                     findings,
                     departed,
                     analysis,
                     function,
-                    (at, Departure::Store, into_ty),
+                    (at, Departure::Store, into_ty, carried),
                     &Rvalue::Use(source.clone()),
                     known,
                 );
@@ -1893,7 +1928,7 @@ pub(super) fn departed_at_call(
                 departed,
                 analysis,
                 function,
-                (at, Departure::Argument, ty),
+                (at, Departure::Argument, ty, None),
                 &Rvalue::Use(argument.clone()),
                 known,
             );
