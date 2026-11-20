@@ -39,11 +39,17 @@ Chosen option: "one variant", by the owner's decision on #615.
 * Replacing the two variants is `E0004` at every site that answers for an
   integer, which is the point: each says again what an integer of any width
   is to it.
+* `Rank` and `Sign` hold only what a program can write, `Char` and `Int`,
+  `Plain` and `Signed` since #1111, and grow with each sub-issue that reads
+  one more. A rank declared before anything builds it is answered at every
+  site already, so the sub-issue that makes it reachable is pointed at none
+  of them; found in review of #1111, where the three ranks #1112 adds were
+  first declared ahead of it.
 * `_Bool` is not a rank here. It is Phase 9's unless a sub-issue needs it.
 
 ### Confirmation
 
-Proposed until #1112 lands the rest. Since #1111, a sixth `Rank` is
+Proposed until #1112 lands the rest. Since #1111, a third `Rank` is
 `E0004` at 25 sites in `safec-ir` and `safec-llvm` before the frontend is
 compiled, measured in a scratch build, and
 `every_target_is_what_clang_says_it_is` reads `int` and `char` through

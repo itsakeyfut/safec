@@ -278,15 +278,16 @@ impl Target {
     ///
     /// # Panics
     ///
-    /// For any type but `int` and plain `char`, which are the two this
-    /// compiler reads until #1112 measures the rest.
+    /// For `signed char`, which #1112 measures, and for `Plain` with a rank
+    /// other than `char`, which is no type at all.
     pub fn integer(self, rank: Rank, sign: Sign) -> Integer {
         match (rank, sign) {
             (Rank::Int, Sign::Signed) => self.int,
             (Rank::Char, Sign::Plain) => self.character,
-            (Rank::Char, Sign::Signed | Sign::Unsigned)
-            | (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, _) => {
-                unreachable!("{sign:?} {rank:?} is measured by #1112, and nothing builds it yet")
+            (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
+                unreachable!(
+                    "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
+                )
             }
         }
     }

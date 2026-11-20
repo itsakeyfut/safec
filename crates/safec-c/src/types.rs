@@ -701,7 +701,7 @@ impl Checker<'_> {
                         current = *returns;
                     }
                     Type::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     }
                     | Type::Void => break,
@@ -1027,7 +1027,7 @@ impl Checker<'_> {
                 }
                 Type::Array { .. } => continue,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Pointer(_)
@@ -1105,7 +1105,7 @@ impl Checker<'_> {
                 match ast.ty(declaration.ty) {
                     Type::Function { .. } => {}
                     Type::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     }
                     | Type::Void
@@ -1516,7 +1516,7 @@ impl Checker<'_> {
             // Complete where the array is written (C17 6.7.2.1 p8).
             Type::Struct { .. } => !self.resolution.complete(ast, element),
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Type::Pointer(_)
@@ -1577,7 +1577,7 @@ impl Checker<'_> {
             !matches!(
                 ast.ty(ty),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _
                 }
             )
@@ -1730,7 +1730,7 @@ impl Checker<'_> {
                 (arrow && matches!(ast.ty(*element), Type::Struct { .. })).then_some(*element)
             }
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Type::Void
@@ -2181,7 +2181,7 @@ impl Checker<'_> {
                 // after the type check reads the tree once it has reported,
                 // so no later stage speaks about the missing type.
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Void
@@ -2237,7 +2237,7 @@ impl Checker<'_> {
                 // is an integer type; a floating type would split it.
                 let takes = match ast.ty(ty) {
                     Type::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     } => true,
                     // `decayed` answers neither an array nor a function, and
@@ -2389,7 +2389,7 @@ impl Checker<'_> {
             match ast.ty(ty) {
                 Type::Pointer(pointee) => Some(*pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Void
@@ -2725,11 +2725,11 @@ impl Checker<'_> {
         let paired = match (ast.ty(left), ast.ty(right)) {
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => Some(self.int),
@@ -2779,13 +2779,13 @@ impl Checker<'_> {
             (
                 Type::Pointer(_),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => nulls.1.then_some(left),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 Type::Pointer(_),
@@ -2794,7 +2794,7 @@ impl Checker<'_> {
             // be the pointer it decays to if it did.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -2803,7 +2803,7 @@ impl Checker<'_> {
             | (
                 Type::Void,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -2873,7 +2873,7 @@ impl Checker<'_> {
                 Type::Void | Type::Struct { .. } => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Array { .. }
@@ -2934,7 +2934,7 @@ impl Checker<'_> {
             }
             Type::Function { .. } => ast.push_type(Type::Pointer(ty)),
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Type::Void
@@ -3217,7 +3217,7 @@ impl Checker<'_> {
             (
                 Type::Pointer(pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) if matches!(op, BinOp::Add | BinOp::Sub) => {
@@ -3231,7 +3231,7 @@ impl Checker<'_> {
         let (primary, secondary) = if !matches!(
             ast.ty(source),
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _
             }
         ) {
@@ -3294,18 +3294,18 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => Some(true),
             (
                 Type::Pointer(pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => match op {
@@ -3339,7 +3339,7 @@ impl Checker<'_> {
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Pointer(_)
@@ -3349,7 +3349,7 @@ impl Checker<'_> {
             | (
                 Type::Void,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => Some(false),
@@ -3399,7 +3399,7 @@ impl Checker<'_> {
     ) {
         match ast.ty(ty) {
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => return,
             Type::Void
@@ -3820,7 +3820,7 @@ impl Checker<'_> {
             // whether it does.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Void
@@ -3855,11 +3855,11 @@ impl Checker<'_> {
             // ordinary C rather than a mismatch.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => Some(true),
@@ -3879,13 +3879,13 @@ impl Checker<'_> {
             (
                 Type::Pointer(_),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
             ) => Some(source_is_null),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 Type::Pointer(_),
@@ -3897,7 +3897,7 @@ impl Checker<'_> {
             // returning `int` build in silence.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -3917,7 +3917,7 @@ impl Checker<'_> {
             ),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Struct { .. },
@@ -4211,7 +4211,7 @@ impl OperandClass {
     fn of(ast: &Ast, ty: TypeId) -> Option<Self> {
         match ast.ty(ty) {
             Type::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => Some(Self::Arithmetic),
             Type::Pointer(pointee) => Some(Self::Pointer(*pointee)),
@@ -4246,7 +4246,7 @@ fn unsteppable(
             (!complete(pointee)).then_some("a struct that is not complete here has no size")
         }
         Type::Integer {
-            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            rank: Rank::Char | Rank::Int,
             sign: _,
         }
         | Type::Pointer(_)

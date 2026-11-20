@@ -466,7 +466,7 @@ impl Allocations<'_> {
                     Ty::Pointer(pointee) => Some(self.unit.size_of(pointee)),
                     Ty::Array { element, .. } => Some(self.unit.size_of(element)),
                     Ty::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     }
                     | Ty::Void => None,
@@ -690,7 +690,7 @@ impl Allocations<'_> {
             Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
             Ty::Pointer(_) => Some(1),
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Ty::Void => None,
@@ -740,7 +740,7 @@ impl Allocations<'_> {
             Some(Ty::Pointer(_)) | None => true,
             Some(
                 Ty::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Ty::Void,
@@ -753,7 +753,7 @@ impl Allocations<'_> {
                 match self.unit.ty(innermost_element(self.unit, element)) {
                     Ty::Pointer(_) => true,
                     Ty::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     }
                     | Ty::Void => false,
@@ -773,7 +773,7 @@ impl Allocations<'_> {
             Ty::Pointer(pointee) => Some(self.unit.size_of(pointee).unwrap_or(0)),
             // An array is not a pointer, so a place of one points at nothing.
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Ty::Void
@@ -808,7 +808,7 @@ impl Allocations<'_> {
                     self.unit.size_of(inner).unwrap_or(0)
                 }
                 Ty::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Ty::Void => 0,
@@ -1099,7 +1099,7 @@ impl Allocations<'_> {
             Some(Ty::Pointer(pointee)) => self.unit.size_of(pointee),
             Some(
                 Ty::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Ty::Void
@@ -1304,10 +1304,6 @@ impl Allocations<'_> {
                 rank: Rank::Int,
                 sign: _,
             }) => false,
-            Some(Ty::Integer {
-                rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
-                sign: _,
-            }) => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
             Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. }) | None => false,
         }
     }

@@ -100,7 +100,7 @@ pub(crate) fn read_as_library(
         .map(|parameter| match unit.ty(function.local(parameter)) {
             Ty::Pointer(_) => Some(Shape::Pointer),
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => Some(Shape::Integer),
             Ty::Void | Ty::Array { .. } => None,

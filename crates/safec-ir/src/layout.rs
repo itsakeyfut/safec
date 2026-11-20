@@ -17,7 +17,7 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
     match unit.ty(ty) {
         Ty::Array { element, .. } => innermost_element(unit, element),
         Ty::Integer {
-            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            rank: Rank::Char | Rank::Int,
             sign: _,
         }
         | Ty::Void
@@ -55,7 +55,7 @@ pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
     match unit.ty(ty) {
         Ty::Pointer(pointee) => 1 + pointer_depth(unit, pointee),
         Ty::Integer {
-            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            rank: Rank::Char | Rank::Int,
             sign: _,
         }
         | Ty::Void => 0,

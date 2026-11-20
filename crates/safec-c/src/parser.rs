@@ -1794,7 +1794,7 @@ impl Parser<'_> {
                 }
                 Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Void

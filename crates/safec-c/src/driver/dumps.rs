@@ -247,7 +247,7 @@ fn dump_fields(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &m
                 }
                 Type::Struct { members: None, .. }
                 | Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 }
                 | Type::Void => {

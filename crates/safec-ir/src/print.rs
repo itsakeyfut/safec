@@ -444,10 +444,9 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                 break match (rank, sign) {
                     (Rank::Int, Sign::Signed) => "int",
                     (Rank::Char, Sign::Plain) => "char",
-                    (Rank::Char, Sign::Signed | Sign::Unsigned)
-                    | (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, _) => {
+                    (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
                         unreachable!(
-                            "{sign:?} {rank:?} is spelled by #1112, and nothing builds it yet"
+                            "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
                         )
                     }
                 };
@@ -460,7 +459,7 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                 inner = match unit.ty(pointee) {
                     Ty::Array { .. } => format!("(*{inner})"),
                     Ty::Integer {
-                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        rank: Rank::Char | Rank::Int,
                         sign: _,
                     }
                     | Ty::Void

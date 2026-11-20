@@ -76,31 +76,31 @@ pub const DOES_NOT_RETURN: &[(&str, &str)] = &[
 
 /// An integer type's rank, C17 6.3.1.1 p1, from the lowest: what an integer
 /// type is, before the target says how wide it is. See ADR-0116.
+///
+/// **Only the ranks a program can write**, so that the one #1112 adds is
+/// `error[E0004]` at every site that answers for an integer, which is where
+/// each has to say what a wider one is to it: a rank no program could write
+/// yet was answered at every site already, and gave the next one nothing to
+/// be asked.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Rank {
-    /// `char`, `signed char` and `unsigned char`.
+    /// `char`.
     Char,
-    /// `short`.
-    Short,
     /// `int`.
     Int,
-    /// `long`.
-    Long,
-    /// `long long`.
-    LongLong,
 }
 
-/// How an integer type was signed: `Plain` is `char` alone, which C17 6.2.5
+/// How an integer type is signed: `Plain` is `char` alone, which C17 6.2.5
 /// p15 makes a third type beside `signed char` and `unsigned char`, signed or
-/// not as the target says.
+/// not as the target says; every other integer type is `Signed` unless
+/// written `unsigned`, whether or not `signed` was written. Only the signs a
+/// program can write, for the reason [`Rank`] gives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Sign {
-    /// Plain `char`.
+    /// Plain `char`, and nothing else.
     Plain,
-    /// `signed`, written or not.
+    /// Signed, written or not.
     Signed,
-    /// `unsigned`.
-    Unsigned,
 }
 
 impl Ty {
@@ -205,7 +205,7 @@ pub enum Ty {
     Integer {
         /// Which of C's standard integer types, by rank (6.3.1.1 p1).
         rank: Rank,
-        /// Whether it was written `signed`, `unsigned` or neither.
+        /// How it is signed: see [`Sign`].
         sign: Sign,
     },
     /// `void`, which is what a function returns when it returns nothing.
@@ -247,7 +247,7 @@ impl Ty {
         match self {
             Ty::Pointer(_) => true,
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Ty::Void

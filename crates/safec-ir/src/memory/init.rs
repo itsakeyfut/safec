@@ -391,10 +391,6 @@ impl Allocations<'_> {
                         rank: Rank::Int,
                         sign: _,
                     }) => false,
-                    Some(Ty::Integer {
-                        rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
-                        sign: _,
-                    }) => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
                     Some(Ty::Void | Ty::Pointer(_) | Ty::Array { .. }) => false,
                 }
             }

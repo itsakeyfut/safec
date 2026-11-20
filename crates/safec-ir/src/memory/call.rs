@@ -127,7 +127,7 @@ impl Allocations<'_> {
         };
         match self.unit.ty(innermost_element(self.unit, pointee)) {
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => true,
             Ty::Void | Ty::Pointer(_) => false,
@@ -2437,7 +2437,7 @@ impl Allocations<'_> {
             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
             Ty::Void
             | Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => 0,
             Ty::Array { .. } => {
@@ -2504,10 +2504,6 @@ impl Allocations<'_> {
                         rank: Rank::Int,
                         sign: _,
                     } => false,
-                    Ty::Integer {
-                        rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
-                        sign: _,
-                    } => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
                     Ty::Pointer(_) | Ty::Array { .. } => {
                         unreachable!("the loop strips every pointer and array")
                     }
@@ -2515,7 +2511,7 @@ impl Allocations<'_> {
             }
             Ty::Void
             | Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             } => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
@@ -2748,7 +2744,7 @@ impl Allocations<'_> {
         let copied = match self.unit.ty(innermost_element(self.unit, side_ty)) {
             Ty::Pointer(copied) => innermost_element(self.unit, copied),
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Ty::Void => return usize::MAX,
@@ -2757,7 +2753,7 @@ impl Allocations<'_> {
         match self.unit.ty(copied) {
             Ty::Pointer(_) => self.levels_holding_pointers(copied),
             Ty::Integer {
-                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                rank: Rank::Char | Rank::Int,
                 sign: _,
             }
             | Ty::Void => usize::MAX,

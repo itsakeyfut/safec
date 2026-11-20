@@ -109,7 +109,7 @@ pub enum Type {
     Integer {
         /// Which of C's standard integer types, by rank.
         rank: Rank,
-        /// Whether it was written `signed`, `unsigned` or neither.
+        /// How it is signed: see [`Sign`].
         sign: Sign,
     },
     /// `void`.
@@ -1272,7 +1272,7 @@ impl Ast {
             // different from everything including itself.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    rank: Rank::Char | Rank::Int,
                     sign: _,
                 },
                 _,
@@ -1389,10 +1389,6 @@ impl Ast {
                 rank: Rank::Int,
                 sign: _,
             } => false,
-            Type::Integer {
-                rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
-                sign: _,
-            } => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
             Type::Void
             | Type::Pointer(_)
             | Type::Array { .. }
@@ -1437,10 +1433,9 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
                 let spelled = match (rank, sign) {
                     (Rank::Int, Sign::Signed) => "int",
                     (Rank::Char, Sign::Plain) => "char",
-                    (Rank::Char, Sign::Signed | Sign::Unsigned)
-                    | (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, _) => {
+                    (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
                         unreachable!(
-                            "{sign:?} {rank:?} is spelled by #1112, and nothing builds it yet"
+                            "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
                         )
                     }
                 };
@@ -1540,7 +1535,7 @@ fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
     match ty {
         Type::Array { .. } | Type::Function { .. } => true,
         Type::Integer {
-            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            rank: Rank::Char | Rank::Int,
             sign: _,
         }
         | Type::Void
