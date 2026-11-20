@@ -8963,6 +8963,9 @@ cases! {
         // dump's `Do` arm; it does not build. Print the condition first; the
         // children swap.
         do_statement: ["--emit", "ast"],
+        // Each a node with no children. Mutation: have the dump's arm for
+        // them write nothing; the next node runs onto their line.
+        break_and_continue_statements: ["--emit", "ast"],
     }
 
     "preprocessor" => {
