@@ -1,0 +1,26 @@
+error[SC0402]: this uses `q` after it was freed
+   ╭─[ a_use_after_a_free_through_a_pointer_to_const_is_proved.c:7:5 ]
+   │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     return *q;
+   │     ─────┬────  
+   │          ╰────── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference `q` while it is null
+   ╭─[ a_use_after_a_free_through_a_pointer_to_const_is_proved.c:7:5 ]
+   │
+ 7 │     return *q;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

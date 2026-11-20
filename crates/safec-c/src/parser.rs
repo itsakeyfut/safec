@@ -6,7 +6,7 @@
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
-//! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `sizeof`, the type qualifiers but `const`, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -286,6 +286,9 @@ enum Derivation {
     Pointer {
         /// Which one, and where.
         nullability: Option<Nullability>,
+        /// Whether `const` was written after the `*`, qualifying the pointer
+        /// itself rather than what it points to.
+        constant: bool,
     },
     /// C17 6.7.6.2.
     Array {
@@ -333,7 +336,8 @@ fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
 /// them stop agreeing, and two spellings of one decision have already left a
 /// case here answered by neither.
 fn begins_specifiers(kind: TokenKind) -> bool {
-    type_specifier_keyword(kind).is_some() || kind == TokenKind::Keyword(Keyword::Struct)
+    type_specifier_keyword(kind).is_some()
+        || matches!(kind, TokenKind::Keyword(Keyword::Struct | Keyword::Const))
 }
 
 /// Where a parse failed, which decides what C would have allowed there.
@@ -399,7 +403,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", &[FileScope]),
         Keyword::Auto => ("`auto`", "6.7.1", AUTOMATIC),
         Keyword::Register => ("`register`", "6.7.1", &[BlockScope, Parameter, ForInit]),
-        Keyword::Const => ("`const`", "6.7.3", SPECIFIER),
         Keyword::Volatile => ("`volatile`", "6.7.3", SPECIFIER),
         // The qualifier's clause. `Parser::refuse_unread` cites 6.7.2.4 instead
         // where a `(` follows, which C17 6.7.2.4 p4 makes the type specifier.
@@ -1146,9 +1149,34 @@ impl Parser<'_> {
             return None;
         }
 
+        // C17 6.7 p2 takes the specifiers in any order, so `const` may come
+        // before the type specifier or after it, and a qualifier written twice
+        // is one (6.7.3 p5).
+        let mut constant = self.eat_consts();
+        let ty = self.type_specifier(at, diagnostics)?;
+        constant |= self.eat_consts();
+        let ty = if constant {
+            self.ast.push_const(ty)
+        } else {
+            ty
+        };
+        self.no_unread_specifier_after(ty, at, diagnostics)
+    }
+
+    /// Every `const` here, and whether there was one.
+    fn eat_consts(&mut self) -> bool {
+        let mut any = false;
+        while self.eat(TokenKind::Keyword(Keyword::Const)) {
+            any = true;
+        }
+        any
+    }
+
+    /// The one type specifier [`Parser::specifiers`] reads: a keyword
+    /// [`type_specifier_keyword`] names, or a `struct`.
+    fn type_specifier(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         if self.check(TokenKind::Keyword(Keyword::Struct)) {
-            let ty = self.struct_specifier(diagnostics)?;
-            return self.no_unread_specifier_after(ty, at, diagnostics);
+            return self.struct_specifier(diagnostics);
         }
 
         let Some(ty) = type_specifier_keyword(self.peek().kind) else {
@@ -1164,8 +1192,7 @@ impl Parser<'_> {
         };
 
         self.advance();
-        let ty = self.ast.push_type(ty);
-        self.no_unread_specifier_after(ty, at, diagnostics)
+        Some(self.ast.push_type(ty))
     }
 
     /// `ty`, unless what follows it is a second specifier C allows here and this
@@ -1362,14 +1389,14 @@ impl Parser<'_> {
             // reads it. A second is left for `core`, which refuses it.
             let nullability = self.nullability(diagnostics)?;
             // C17 6.7.6.1 lets a pointer carry qualifiers after its `*`, and
-            // this parser reads none. Asked once, after the nullability, which
-            // is enough: a qualifier before it leaves the nullability unread
-            // and is the token here, and one after it is the token here too.
+            // this parser reads `const` of them. The rest are asked once,
+            // after the nullability and any `const`, which is enough: a
+            // qualifier before the nullability leaves it unread and is the
+            // token here, and one after it is the token here too.
+            let constant = self.eat_consts();
             if matches!(
                 self.peek().kind,
-                TokenKind::Keyword(
-                    Keyword::Const | Keyword::Volatile | Keyword::Restrict | Keyword::Atomic
-                )
+                TokenKind::Keyword(Keyword::Volatile | Keyword::Restrict | Keyword::Atomic)
             ) {
                 self.report_unread(
                     Unread {
@@ -1380,7 +1407,10 @@ impl Parser<'_> {
                 );
                 return None;
             }
-            derivations.push(Derivation::Pointer { nullability });
+            derivations.push(Derivation::Pointer {
+                nullability,
+                constant,
+            });
         }
 
         let (name, inner) = self.core(named, diagnostics)?;
@@ -1676,7 +1706,10 @@ impl Parser<'_> {
             // makes the parameter's type. `apply` refuses one written anywhere
             // else, so this is the only one there is to keep.
             let nullability = match derivations.last() {
-                Some(Derivation::Pointer { nullability }) => *nullability,
+                Some(Derivation::Pointer {
+                    nullability,
+                    constant: _,
+                }) => *nullability,
                 _ => None,
             };
             let (written, _) =
@@ -1777,8 +1810,16 @@ impl Parser<'_> {
 
         let mut ty = base;
         for derivation in derivations {
+            if let Derivation::Pointer { constant: true, .. } = derivation {
+                let pointer = self.ast.push_type(Type::Pointer(ty));
+                ty = self.ast.push_const(pointer);
+                continue;
+            }
             ty = self.ast.push_type(match derivation {
-                Derivation::Pointer { nullability: _ } => Type::Pointer(ty),
+                Derivation::Pointer {
+                    nullability: _,
+                    constant: _,
+                } => Type::Pointer(ty),
                 Derivation::Array { length, written } => Type::Array {
                     element: ty,
                     length,
@@ -1827,6 +1868,7 @@ impl Parser<'_> {
             let refused = match derivation {
                 Derivation::Pointer {
                     nullability: Some(written),
+                    constant: _,
                 } => match declares {
                     Declares::Parameter if own => None,
                     Declares::Parameter => Some((
@@ -1859,7 +1901,10 @@ impl Parser<'_> {
                         .find_map(|parameter| parameter.nullability)
                         .map(|written| (written, label))
                 }
-                Derivation::Pointer { nullability: None }
+                Derivation::Pointer {
+                    nullability: None,
+                    constant: _,
+                }
                 | Derivation::Array { .. }
                 | Derivation::Function(_) => None,
             };

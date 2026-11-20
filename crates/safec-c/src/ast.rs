@@ -998,9 +998,35 @@ pub struct Ast {
     stmts: Vec<Stmt>,
     items: Vec<Item>,
     types: Vec<Type>,
+    /// Which types are `const`-qualified, by id. See [`Ast::push_const`].
+    consts: std::collections::HashSet<TypeId>,
 }
 
 impl Ast {
+    /// `ty`, `const`-qualified (C17 6.7.3): a new id whose [`Type`] is a copy
+    /// of `ty`'s, which [`Ast::is_const`] says is qualified. `ty` itself when
+    /// it already is, since a qualifier written twice is written once (p5).
+    ///
+    /// **Beside the type and not a variant of it**, by the owner's decision on
+    /// #1108. A `Type::Const` wrapper is a compile error where a type is
+    /// matched whole, and an answer nobody gave wherever one is asked with
+    /// `matches!` or `if let`: `int *const p` would be no pointer to each of
+    /// them, in silence. As a copy, every question about a type answers as it
+    /// did, and only the few that are about `const` ask.
+    pub fn push_const(&mut self, ty: TypeId) -> TypeId {
+        if self.is_const(ty) {
+            return ty;
+        }
+        let copy = self.push_type(self.ty(ty).clone());
+        self.consts.insert(copy);
+        copy
+    }
+
+    /// Whether `ty` is `const`-qualified. See [`Ast::push_const`].
+    pub fn is_const(&self, ty: TypeId) -> bool {
+        self.consts.contains(&ty)
+    }
+
     /// An empty translation unit.
     pub fn new() -> Self {
         Self::default()
@@ -1124,6 +1150,11 @@ impl Ast {
         right: TypeId,
         same_struct: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
+        // C17 6.7.3 p11: "both shall have the identically qualified version
+        // of a compatible type", at every level the comparison descends to.
+        if self.is_const(left) != self.is_const(right) {
+            return false;
+        }
         match (self.ty(left), self.ty(right)) {
             (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
             (Type::Pointer(left), Type::Pointer(right)) => {
@@ -1164,6 +1195,50 @@ impl Ast {
         }
     }
 
+    /// [`Ast::compatible`], with the qualifiers of the two types themselves
+    /// left out: C17 6.7.6.3 p15 compares each parameter "taken as having the
+    /// unqualified version of its declared type", so `void f(const int);`
+    /// and `void f(int);` declare one function.
+    pub fn compatible_unqualified(
+        &self,
+        left: TypeId,
+        right: TypeId,
+        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+    ) -> bool {
+        if self.is_const(left) == self.is_const(right) {
+            return self.compatible(left, right, same_struct);
+        }
+        // Each id is a copy of the other's type, so compare the copies'
+        // children with the qualifier set aside: the one that is `const`
+        // stands in for its unqualified twin.
+        let (qualified, plain) = if self.is_const(left) {
+            (left, right)
+        } else {
+            (right, left)
+        };
+        self.compatible_ignoring(qualified, plain, same_struct)
+    }
+
+    /// Whether `qualified`, a `const` type, is compatible with `plain` once
+    /// its own qualifier is set aside.
+    fn compatible_ignoring(
+        &self,
+        qualified: TypeId,
+        plain: TypeId,
+        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+    ) -> bool {
+        match (self.ty(qualified), self.ty(plain)) {
+            (Type::Pointer(left), Type::Pointer(right)) => {
+                self.compatible(*left, *right, same_struct)
+            }
+            (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
+                self.compatible(*left, *right, same_struct)
+            }
+            (Type::Struct { .. }, Type::Struct { .. }) => same_struct(qualified, plain),
+            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
+        }
+    }
+
     /// Whether two parameter lists are compatible, C17 6.7.6.3 p15.
     ///
     /// Two prototypes agree parameter by parameter. A prototype and an empty
@@ -1190,10 +1265,9 @@ impl Ast {
         match (left, right) {
             (Parameters::Prototype(left), Parameters::Prototype(right)) => {
                 left.len() == right.len()
-                    && left
-                        .iter()
-                        .zip(right)
-                        .all(|(left, right)| self.compatible(left.ty, right.ty, same_struct))
+                    && left.iter().zip(right).all(|(left, right)| {
+                        self.compatible_unqualified(left.ty, right.ty, same_struct)
+                    })
             }
             (Parameters::Unspecified, Parameters::Unspecified) => true,
             (Parameters::Prototype(parameters), Parameters::Unspecified)
@@ -1250,7 +1324,13 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
     let mut inner = String::new();
 
     loop {
+        // `const` before a base and after the `*` of a pointer, as clang
+        // spells `const int *` and `int *const`.
+        let constant = if ast.is_const(id) { "const " } else { "" };
         let base = match ast.ty(id) {
+            Type::Int if ast.is_const(id) => "const int",
+            Type::Char if ast.is_const(id) => "const char",
+            Type::Void if ast.is_const(id) => "const void",
             Type::Int => "int",
             Type::Char => "char",
             Type::Void => "void",
@@ -1259,7 +1339,7 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             // spacing as the others below.
             Type::Struct { tag, .. } => {
                 let tag = tag.map_or("(anonymous)", |tag| sources.snippet(tag));
-                let spelled = format!("struct {tag}");
+                let spelled = format!("{constant}struct {tag}");
                 return if inner.is_empty() || inner.starts_with('[') {
                     format!("{spelled}{inner}")
                 } else {
@@ -1267,10 +1347,15 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
                 };
             }
             Type::Pointer(pointee) => {
+                let star = match (constant.is_empty(), inner.is_empty()) {
+                    (true, _) => "*".to_owned(),
+                    (false, true) => "*const".to_owned(),
+                    (false, false) => "*const ".to_owned(),
+                };
                 inner = if binds_tighter_than_a_pointer(ast.ty(*pointee)) {
-                    format!("(*{inner})")
+                    format!("({star}{inner})")
                 } else {
-                    format!("*{inner}")
+                    format!("{star}{inner}")
                 };
                 id = *pointee;
                 continue;

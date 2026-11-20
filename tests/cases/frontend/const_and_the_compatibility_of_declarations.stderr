@@ -1,0 +1,11 @@
+error[SC0313]: conflicting types for `g`
+   ╭─[ const_and_the_compatibility_of_declarations.c:4:6 ]
+   │
+ 3 │ void g(const int *a);
+   │      ┬  
+   │      ╰── previously declared as `void (const int *)`
+ 4 │ void g(int *a);
+   │      ┬  
+   │      ╰── declared here as `void (int *)`
+───╯
+  = note: C17 6.7 p4

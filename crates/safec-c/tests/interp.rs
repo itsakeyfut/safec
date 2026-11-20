@@ -385,6 +385,19 @@ fn a_case_belongs_to_the_innermost_switch() {
     assert_eq!(nested, Ok(Value::Int(21)));
 }
 
+/// A `const` object is read as the type it qualifies, whatever that is.
+///
+/// Mutation: have `Ast::push_const` copy `int` rather than the type it is
+/// given; the `const char` and the `const` pointer are read as `int`, and
+/// this fails.
+#[test]
+fn a_const_object_is_read_as_its_type() {
+    let read = ran(
+        "int main(void) {\n    const char c = 200;\n    int v;\n    int *const p = &v;\n    const int *q = p;\n    v = 3;\n    return c + *q;\n}\n",
+    );
+    assert_eq!(read, Ok(Value::Int(-53)));
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.

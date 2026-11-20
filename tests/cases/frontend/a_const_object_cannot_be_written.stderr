@@ -1,0 +1,40 @@
+error[SC0318]: the left operand of `=` cannot be written to
+   ╭─[ a_const_object_cannot_be_written.c:5:5 ]
+   │
+ 5 │     x = 2;
+   │     ┬  
+   │     ╰── this is `const int`
+───╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the left operand of `+=` cannot be written to
+   ╭─[ a_const_object_cannot_be_written.c:6:5 ]
+   │
+ 6 │     x += 1;
+   │     ┬  
+   │     ╰── this is `const int`
+───╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the operand of `++` cannot be written to
+   ╭─[ a_const_object_cannot_be_written.c:7:5 ]
+   │
+ 7 │     x++;
+   │     ┬  
+   │     ╰── this is `const int`
+───╯
+  = note: C17 6.5.2.4 p1 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the operand of `--` cannot be written to
+   ╭─[ a_const_object_cannot_be_written.c:8:7 ]
+   │
+ 8 │     --x;
+   │       ┬  
+   │       ╰── this is `const int`
+───╯
+  = note: C17 6.5.3.1 p1 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the left operand of `=` cannot be written to
+   ╭─[ a_const_object_cannot_be_written.c:9:5 ]
+   │
+ 9 │     p = 0;
+   │     ┬  
+   │     ╰── this is `int *const`
+───╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)

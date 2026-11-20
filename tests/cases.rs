@@ -3751,6 +3751,10 @@ cases! {
         a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `const` qualifier changes nothing the memory check reads: a use
+        // after a free through a `const int *` is proved as through an
+        // `int *`.
+        a_use_after_a_free_through_a_pointer_to_const_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `do` body runs before its condition is asked, so a free in it has
         // happened by the time the loop is left, whatever the condition says:
         // proved. Mutation: lower `do` as `while`, asking before the body;
@@ -9015,6 +9019,23 @@ cases! {
         unterminated_string_literal: ["--emit", "tokens"],
         void_is_not_the_only_parameter: ["--emit", "ast"],
         while_statement: ["--emit", "ast"],
+        // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
+        // `++` and `--` to a `const` object, and an assignment to a `const`
+        // pointer, are each `SC0318`; what it points to may be written.
+        // Mutation: have `refuse_unwritable` not ask `Ast::is_const`; every
+        // report goes.
+        a_const_object_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.16.1 p1: a pointer to `const` may not become a pointer to
+        // what is not, and may be made from one. Mutation: drop the
+        // qualifier rule from `assignable`; the `SC0302` goes. Require the
+        // qualifiers to be equal; the conversion that adds one is refused.
+        a_conversion_cannot_discard_const: ["--emit", "ast"],
+        // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
+        // of the function's type, and one on what a pointer points to is.
+        // Mutation: have `compatible` not ask `Ast::is_const`; the second pair
+        // is accepted. Have `compatible_unqualified` keep the qualifier; the
+        // first is refused.
+        const_and_the_compatibility_of_declarations: ["--emit", "ast"],
         // The body before the condition, as they run. Mutation: drop the
         // dump's `Do` arm; it does not build. Print the condition first; the
         // children swap.

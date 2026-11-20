@@ -2684,10 +2684,10 @@ impl Checker<'_> {
     /// lvalue, which `what` (the left operand of `=`, the operand of `++`)
     /// has to be by `clause`, and answer whether it was reported.
     ///
-    /// A modifiable lvalue is an lvalue that is not an array and not of an
-    /// incomplete type (C17 6.3.2.1 p1), and there is no `const` to ask
-    /// about here. A struct not complete where it is written is `SC0315`'s,
-    /// which says it cannot be modified, and is not reported twice.
+    /// A modifiable lvalue is an lvalue that is not an array, not of an
+    /// incomplete type and not `const`-qualified (C17 6.3.2.1 p1). A struct
+    /// not complete where it is written is `SC0315`'s, which says it cannot
+    /// be modified, and is not reported twice.
     fn refuse_unwritable(
         &self,
         ast: &Ast,
@@ -2702,10 +2702,13 @@ impl Checker<'_> {
                 let Some(ty) = self.types[operand.index()] else {
                     return false;
                 };
-                if !matches!(ast.ty(ty), Type::Array { .. }) {
+                if ast.is_const(ty) {
+                    format!("this is `{}`", self.spelled(ast, ty))
+                } else if matches!(ast.ty(ty), Type::Array { .. }) {
+                    format!("this is `{}`, an array", self.spelled(ast, ty))
+                } else {
                     return false;
                 }
-                format!("this is `{}`, an array", self.spelled(ast, ty))
             }
             Designates::Function => "this is a function".to_owned(),
             Designates::Value => self.not_an_object(ast, operand),
@@ -3350,6 +3353,13 @@ impl Checker<'_> {
     /// built once the lowering read arrays, and `clang` refuses it (#621).
     /// A length with no value, a variable one or none written, is compatible
     /// with any, as p6 says.
+    /// [`Checker::compatible`], with the qualifiers of the two types
+    /// themselves set aside, as 6.5.16.1 p1 sets aside the left operand's.
+    fn compatible_unqualified(&self, ast: &Ast, left: TypeId, right: TypeId) -> bool {
+        ast.compatible_unqualified(left, right, &|a, b| self.resolution.same_struct(a, b))
+            && self.lengths_agree(ast, left, right)
+    }
+
     fn compatible(&self, ast: &Ast, left: TypeId, right: TypeId) -> bool {
         ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
             && self.lengths_agree(ast, left, right)
@@ -3423,12 +3433,16 @@ impl Checker<'_> {
             // Both arithmetic: the value is converted, and `char c; c = 1;` is
             // ordinary C rather than a mismatch.
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
-            // p1's pointer case, with the `void *` half of it. Qualifiers are
-            // a thing this compiler cannot yet write.
+            // p1's pointer case, with the `void *` half of it, and the
+            // qualifier rule both halves share: what the target points to has
+            // every qualifier of what the source points to, so a conversion
+            // never discards `const`. The pointers' own qualifiers are not
+            // asked: p1 takes the left operand's unqualified type.
             (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => Some(
-                self.compatible(ast, target, source)
-                    || matches!(ast.ty(*target_pointee), Type::Void)
-                    || matches!(ast.ty(*source_pointee), Type::Void),
+                (!ast.is_const(*source_pointee) || ast.is_const(*target_pointee))
+                    && (self.compatible_unqualified(ast, *target_pointee, *source_pointee)
+                        || matches!(ast.ty(*target_pointee), Type::Void)
+                        || matches!(ast.ty(*source_pointee), Type::Void)),
             ),
             // 6.3.2.3 p3: only a null pointer constant may be assigned to a
             // pointer from an integer.
@@ -3448,8 +3462,9 @@ impl Checker<'_> {
             // once the lowering read arrays, and the first dereferenced an
             // `int` as a pointer with nothing said (#621).
             (Type::Pointer(target_pointee), Type::Array { element, .. }) => Some(
-                self.compatible(ast, *target_pointee, *element)
-                    || matches!(ast.ty(*target_pointee), Type::Void),
+                (!ast.is_const(*element) || ast.is_const(*target_pointee))
+                    && (self.compatible_unqualified(ast, *target_pointee, *element)
+                        || matches!(ast.ty(*target_pointee), Type::Void)),
             ),
             (Type::Int | Type::Char | Type::Struct { .. }, Type::Array { .. }) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
@@ -3457,7 +3472,7 @@ impl Checker<'_> {
             // p1: a structure type compatible with the target's, which two
             // structs are when they are one tag, and nothing else.
             (Type::Struct { .. }, Type::Struct { .. }) => {
-                Some(self.compatible(ast, target, source))
+                Some(self.compatible_unqualified(ast, target, source))
             }
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
         }
