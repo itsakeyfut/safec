@@ -9021,7 +9021,9 @@ cases! {
         while_statement: ["--emit", "ast"],
         // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
         // `++` and `--` to a `const` object, and an assignment to a `const`
-        // pointer, are each `SC0318`; what it points to may be written.
+        // pointer, are each `SC0318`; what it points to may be written. A
+        // `const` after the type specifier is one too. Mutation: read only a
+        // `const` before it; this fails.
         // Mutation: have `refuse_unwritable` not ask `Ast::is_const`; every
         // report goes.
         a_const_object_cannot_be_written: ["--emit", "ast"],
