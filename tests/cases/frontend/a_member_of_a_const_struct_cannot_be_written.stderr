@@ -1,24 +1,32 @@
 error[SC0318]: the left operand of `=` cannot be written to
-   ╭─[ a_member_of_a_const_struct_cannot_be_written.c:8:5 ]
-   │
- 8 │     s.a = 1;
-   │     ─┬─  
-   │      ╰─── this is `const int`
-───╯
-  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
-error[SC0318]: the left operand of `=` cannot be written to
-   ╭─[ a_member_of_a_const_struct_cannot_be_written.c:9:5 ]
-   │
- 9 │     ps->a = 2;
-   │     ──┬──  
-   │       ╰──── this is `const int`
-───╯
-  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
-error[SC0318]: the left operand of `=` cannot be written to
-    ╭─[ a_member_of_a_const_struct_cannot_be_written.c:10:5 ]
+    ╭─[ a_member_of_a_const_struct_cannot_be_written.c:11:5 ]
     │
- 10 │     s.arr[0] = 3;
+ 11 │     s.a = 1;
+    │     ─┬─  
+    │      ╰─── this is `const int`
+────╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the left operand of `=` cannot be written to
+    ╭─[ a_member_of_a_const_struct_cannot_be_written.c:12:5 ]
+    │
+ 12 │     ps->a = 2;
+    │     ──┬──  
+    │       ╰──── this is `const int`
+────╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the left operand of `=` cannot be written to
+    ╭─[ a_member_of_a_const_struct_cannot_be_written.c:13:5 ]
+    │
+ 13 │     s.arr[0] = 3;
     │     ────┬───  
     │         ╰───── this is `const int`
+────╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0318]: the left operand of `=` cannot be written to
+    ╭─[ a_member_of_a_const_struct_cannot_be_written.c:16:5 ]
+    │
+ 16 │     x = y;
+    │     ┬  
+    │     ╰── this is `struct T`, which has a `const` member
 ────╯
   = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)

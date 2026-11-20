@@ -1,27 +1,35 @@
-Declaration a_member_of_a_const_struct_cannot_be_written.c:1:1 "struct S"
-  Field a_member_of_a_const_struct_cannot_be_written.c:2:5 "a" "int"
-  Field a_member_of_a_const_struct_cannot_be_written.c:3:5 "arr" "int[2]"
-Function a_member_of_a_const_struct_cannot_be_written.c:5:1 "main" "int (void)"
-  Compound a_member_of_a_const_struct_cannot_be_written.c:5:16
-    Declaration a_member_of_a_const_struct_cannot_be_written.c:6:5 "s" "const struct S"
-    Declaration a_member_of_a_const_struct_cannot_be_written.c:7:5 "ps" "const struct S *"
-    Expression a_member_of_a_const_struct_cannot_be_written.c:8:5
-      Assign a_member_of_a_const_struct_cannot_be_written.c:8:5 "="
-        Member a_member_of_a_const_struct_cannot_be_written.c:8:5 "." "a"
-          Identifier a_member_of_a_const_struct_cannot_be_written.c:8:5 "s"
-        Number a_member_of_a_const_struct_cannot_be_written.c:8:11 "1"
-    Expression a_member_of_a_const_struct_cannot_be_written.c:9:5
-      Assign a_member_of_a_const_struct_cannot_be_written.c:9:5 "="
-        Member a_member_of_a_const_struct_cannot_be_written.c:9:5 "->" "a"
-          Identifier a_member_of_a_const_struct_cannot_be_written.c:9:5 "ps"
-        Number a_member_of_a_const_struct_cannot_be_written.c:9:13 "2"
-    Expression a_member_of_a_const_struct_cannot_be_written.c:10:5
-      Assign a_member_of_a_const_struct_cannot_be_written.c:10:5 "="
-        Subscript a_member_of_a_const_struct_cannot_be_written.c:10:5
-          Member a_member_of_a_const_struct_cannot_be_written.c:10:5 "." "arr"
-            Identifier a_member_of_a_const_struct_cannot_be_written.c:10:5 "s"
-          Number a_member_of_a_const_struct_cannot_be_written.c:10:11 "0"
-        Number a_member_of_a_const_struct_cannot_be_written.c:10:16 "3"
-    Return a_member_of_a_const_struct_cannot_be_written.c:11:5
-      Member a_member_of_a_const_struct_cannot_be_written.c:11:12 "." "a"
-        Identifier a_member_of_a_const_struct_cannot_be_written.c:11:12 "s"
+Declaration a_member_of_a_const_struct_cannot_be_written.c:1:1 "struct T"
+  Field a_member_of_a_const_struct_cannot_be_written.c:2:5 "c" "const int"
+Declaration a_member_of_a_const_struct_cannot_be_written.c:4:1 "struct S"
+  Field a_member_of_a_const_struct_cannot_be_written.c:5:5 "a" "int"
+  Field a_member_of_a_const_struct_cannot_be_written.c:6:5 "arr" "int[2]"
+Function a_member_of_a_const_struct_cannot_be_written.c:8:1 "main" "int (void)"
+  Compound a_member_of_a_const_struct_cannot_be_written.c:8:16
+    Declaration a_member_of_a_const_struct_cannot_be_written.c:9:5 "s" "const struct S"
+    Declaration a_member_of_a_const_struct_cannot_be_written.c:10:5 "ps" "const struct S *"
+    Expression a_member_of_a_const_struct_cannot_be_written.c:11:5
+      Assign a_member_of_a_const_struct_cannot_be_written.c:11:5 "="
+        Member a_member_of_a_const_struct_cannot_be_written.c:11:5 "." "a"
+          Identifier a_member_of_a_const_struct_cannot_be_written.c:11:5 "s"
+        Number a_member_of_a_const_struct_cannot_be_written.c:11:11 "1"
+    Expression a_member_of_a_const_struct_cannot_be_written.c:12:5
+      Assign a_member_of_a_const_struct_cannot_be_written.c:12:5 "="
+        Member a_member_of_a_const_struct_cannot_be_written.c:12:5 "->" "a"
+          Identifier a_member_of_a_const_struct_cannot_be_written.c:12:5 "ps"
+        Number a_member_of_a_const_struct_cannot_be_written.c:12:13 "2"
+    Expression a_member_of_a_const_struct_cannot_be_written.c:13:5
+      Assign a_member_of_a_const_struct_cannot_be_written.c:13:5 "="
+        Subscript a_member_of_a_const_struct_cannot_be_written.c:13:5
+          Member a_member_of_a_const_struct_cannot_be_written.c:13:5 "." "arr"
+            Identifier a_member_of_a_const_struct_cannot_be_written.c:13:5 "s"
+          Number a_member_of_a_const_struct_cannot_be_written.c:13:11 "0"
+        Number a_member_of_a_const_struct_cannot_be_written.c:13:16 "3"
+    Declaration a_member_of_a_const_struct_cannot_be_written.c:14:5 "x" "struct T"
+    Declaration a_member_of_a_const_struct_cannot_be_written.c:15:5 "y" "struct T"
+    Expression a_member_of_a_const_struct_cannot_be_written.c:16:5
+      Assign a_member_of_a_const_struct_cannot_be_written.c:16:5 "="
+        Identifier a_member_of_a_const_struct_cannot_be_written.c:16:5 "x"
+        Identifier a_member_of_a_const_struct_cannot_be_written.c:16:9 "y"
+    Return a_member_of_a_const_struct_cannot_be_written.c:17:5
+      Member a_member_of_a_const_struct_cannot_be_written.c:17:12 "." "a"
+        Identifier a_member_of_a_const_struct_cannot_be_written.c:17:12 "s"

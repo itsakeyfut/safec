@@ -1,0 +1,16 @@
+Function a_nullability_is_read_before_or_after_const.c:1:1 "g" "int (int *const)"
+  Parameter a_nullability_is_read_before_or_after_const.c:1:7 "p" "int *const" _Nonnull
+  Compound a_nullability_is_read_before_or_after_const.c:1:30
+    Return a_nullability_is_read_before_or_after_const.c:2:5
+      Unary a_nullability_is_read_before_or_after_const.c:2:12 "*"
+        Identifier a_nullability_is_read_before_or_after_const.c:2:13 "p"
+Function a_nullability_is_read_before_or_after_const.c:4:1 "h" "int (int *const)"
+  Parameter a_nullability_is_read_before_or_after_const.c:4:7 "p" "int *const" _Nonnull
+  Compound a_nullability_is_read_before_or_after_const.c:4:30
+    Return a_nullability_is_read_before_or_after_const.c:5:5
+      Unary a_nullability_is_read_before_or_after_const.c:5:12 "*"
+        Identifier a_nullability_is_read_before_or_after_const.c:5:13 "p"
+Function a_nullability_is_read_before_or_after_const.c:7:1 "main" "int (void)"
+  Compound a_nullability_is_read_before_or_after_const.c:7:16
+    Return a_nullability_is_read_before_or_after_const.c:8:5
+      Number a_nullability_is_read_before_or_after_const.c:8:12 "0"

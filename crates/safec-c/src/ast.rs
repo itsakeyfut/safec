@@ -1135,7 +1135,7 @@ impl Ast {
     /// values `types.rs` gives a constant expression:
     /// `array_length_is_not_evaluated` in the corpus is a case that says so
     /// by name. So `int[2]` and `int[3]` answer "compatible" here, and
-    /// `types.rs`'s `Checker::compatible` is what compares the lengths
+    /// `types.rs`'s `Checker::compatible_unqualified` is what compares the lengths
     /// wherever a program is type-checked, so `int (*p)[3]; int a[2]; p =
     /// &a;` is refused as `clang` refuses it (#621). What still answers
     /// without the lengths is `sema.rs`'s comparison of two declarations of

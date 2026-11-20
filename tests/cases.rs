@@ -9031,8 +9031,27 @@ cases! {
         // `.` or `->`, is `const`, and so is an element of its array member
         // (6.7.3 p10). Mutation: leave a member access's type unqualified;
         // the three reports go. Qualify only the array, not its elements;
-        // the third goes. Found by review.
+        // the third goes. A structure with a `const` member is no
+        // modifiable lvalue either (6.3.2.1 p1). Mutation: have
+        // `has_const_member` answer false; the last report goes. Found by
+        // review.
         a_member_of_a_const_struct_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.15 p3 and p6, after the lvalue conversion of 6.3.2.1 p2:
+        // a `const struct S` arm beside a `struct S` and an `int *const` arm
+        // beside an `int *` are accepted, and a `void *` arm beside a
+        // `const int *` gives a `const void *`, which `int *` may not take.
+        // Mutation: give the `void *` arm's type unqualified; the `SC0302`
+        // goes. Compare struct arms with their qualifiers; the first is
+        // refused. Found by review.
+        a_conditional_reads_its_arms_after_lvalue_conversion: ["--emit", "ast"],
+        // C17 J.2 leaves a `const void` parameter list undefined and clang
+        // refuses it; refused here, not read as `(void)`. Mutation: drop the
+        // check; the report goes. Found by review.
+        a_const_void_parameter_list_is_refused: ["--emit", "ast"],
+        // A nullability specifier after a pointer's `const`, as clang reads
+        // it, and before it. Mutation: read one only before the `const`;
+        // the first is refused. Found by review.
+        a_nullability_is_read_before_or_after_const: ["--emit", "ast"],
         // C17 6.5.6 p3, 6.5.8 p2, 6.5.9 p2 and 6.5.15 p3 take pointers to
         // qualified or unqualified versions of compatible types: nothing
         // here is reported. Mutation: ask `compatible` rather than

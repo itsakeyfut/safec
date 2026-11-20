@@ -1,0 +1,7 @@
+error[SC0201]: the `void` of an empty parameter list cannot be `const`
+   ╭─[ a_const_void_parameter_list_is_refused.c:1:7 ]
+   │
+ 1 │ int f(const void);
+   │       ─────┬────  
+   │            ╰────── write `void` alone here
+───╯

@@ -1387,13 +1387,19 @@ impl Parser<'_> {
             self.advance();
             // One, and only directly after the `*`, which is where `clang`
             // reads it. A second is left for `core`, which refuses it.
-            let nullability = self.nullability(diagnostics)?;
+            let mut nullability = self.nullability(diagnostics)?;
             // C17 6.7.6.1 lets a pointer carry qualifiers after its `*`, and
             // this parser reads `const` of them. The rest are asked once,
             // after the nullability and any `const`, which is enough: a
             // qualifier before the nullability leaves it unread and is the
             // token here, and one after it is the token here too.
             let constant = self.eat_consts();
+            // clang reads a nullability after the qualifiers as well as
+            // before them, `*const _Nonnull`, and headers write both. Found
+            // by review.
+            if constant && nullability.is_none() {
+                nullability = self.nullability(diagnostics)?;
+            }
             if matches!(
                 self.peek().kind,
                 TokenKind::Keyword(Keyword::Volatile | Keyword::Restrict | Keyword::Atomic)
@@ -1750,6 +1756,19 @@ impl Parser<'_> {
             && parameters[0].name.is_none()
             && matches!(self.ast.ty(parameters[0].ty), Type::Void)
         {
+            // C17 J.2 leaves a qualified `void` there undefined, and clang
+            // refuses it, so it is refused rather than read as `(void)`.
+            // Found by review.
+            if self.ast.is_const(parameters[0].ty) {
+                self.report_at(
+                    parameters[0].span,
+                    EXPECTED,
+                    "the `void` of an empty parameter list cannot be `const`",
+                    "write `void` alone here",
+                    diagnostics,
+                );
+                return None;
+            }
             return Some(Parameters::Prototype(Vec::new()));
         }
 
