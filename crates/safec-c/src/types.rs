@@ -43,15 +43,12 @@ const MALFORMED_CONSTANT: Code = Code::new("SC0106");
 
 /// A constant this compiler has no type for, C17 6.4.4 p2.
 ///
-/// One code for three messages, because they are one rule met three ways:
-/// 6.4.4.1 p5 picks a constant's type from a list, and this compiler has only
-/// `int` on it. A value too large, a suffix, and a floating constant are the
-/// three ways to ask for an entry that is not there. Same arrangement as
-/// `MISMATCH` below, for the same reason.
-///
-/// Every one of the three is a program `clang` compiles, which is what makes
-/// the code's wording this compiler's own gap rather than the program's
-/// fault. The spelling that is no constant at all is the other code.
+/// One code for two messages, because they are one rule met two ways: a
+/// constant has to have a type that holds it. A value no type in its 6.4.4.1
+/// p5 list holds is the program's fault, and `clang` refuses it too; a
+/// floating constant is this compiler's gap, because it has no floating type
+/// to give one. Same arrangement as `MISMATCH` below, for the same reason.
+/// The spelling that is no constant at all is the other code.
 const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.

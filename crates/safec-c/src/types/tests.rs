@@ -145,8 +145,8 @@ fn returning(spelling: &str) -> Checked {
 /// because a table that works the expectation out the
 /// way the code does agrees with the code however wrong both are.
 ///
-/// Every row is unsuffixed, because a suffix is refused rather than read:
-/// `a_suffix_asks_for_a_type_this_compiler_does_not_have` is that half.
+/// Every row is unsuffixed: what a suffix decides is the type, which
+/// `a_constant_takes_the_first_type_that_holds_it` holds.
 ///
 /// Mutation: give the hexadecimal arm radix ten. `0x10` is ten and this
 /// fails. Mutation: give the octal arm radix ten. `010` is ten and this
@@ -486,18 +486,15 @@ fn every_shape_of_expression_has_the_type_c_gives_it() {
 /// Both halves in one test, because a test for the silence alone passes
 /// against a compiler that checks nothing.
 ///
-/// The suffixed zeros `0u`, `0L` and `0UL` are C's null pointer constants
-/// too and are not here, because a suffix is refused before this rule is
-/// reached: `a_suffix_asks_for_a_type_this_compiler_does_not_have` holds
-/// that, and holds those three spellings by name so that what left this
-/// list is findable from where it went.
+/// The suffixed zeros are C's null pointer constants too, being integer
+/// constant expressions of value 0 (C17 6.3.2.3 p3) whatever their type.
 ///
 /// Mutation: have `is_null_pointer_constant` answer `false` always. The
 /// first program starts reporting and this fails. Mutation: have it answer
 /// `true` always. The second stops and this fails.
 #[test]
 fn a_pointer_takes_a_zero_and_not_a_one() {
-    for zero in ["0", "0x0", "0X0", "00", "000"] {
+    for zero in ["0", "0x0", "0X0", "00", "000", "0u", "0L", "0UL", "0ll"] {
         let checked = checked(&format!(
             "int main(void) {{ int *p; p = {zero}; return 0; }}\n"
         ));
