@@ -1,0 +1,40 @@
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_write_to_a_string_literal_is_unproven.c:5:5 ]
+   │
+ 5 │     s[0] = 120;
+   │     ─────┬────  
+   │          ╰────── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_write_to_a_string_literal_is_unproven.c:9:5 ]
+   │
+ 9 │     memset(s, 0, 2);
+   │     ───────┬───────  
+   │            ╰───────── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_write_to_a_string_literal_is_unproven.c:12:5 ]
+    │
+ 12 │     w("ab");
+    │     ───┬───  
+    │        ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_write_to_a_string_literal_is_unproven.c:15:5 ]
+    │
+ 15 │     return "ab";
+    │     ──────┬─────  
+    │           ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

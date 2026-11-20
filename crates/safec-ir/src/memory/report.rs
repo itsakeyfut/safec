@@ -238,6 +238,8 @@ fn verdict(
         // Never asked: it is built from its element in `memory.rs`, about no
         // free.
         Kind::Reinterpreted => true,
+        // Never asked: it is built by `memory::read_only`, about no free.
+        Kind::WritesReadOnly => true,
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,

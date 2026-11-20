@@ -1,0 +1,108 @@
+Target "x86_64-pc-windows-msvc"
+Static ".str.0" "char[3]" internal bytes 97 98 0
+Static ".str.1" "char[3]" internal bytes 97 98 0
+Static ".str.2" "char[3]" internal bytes 97 98 0
+Static ".str.3" "char[3]" internal bytes 97 98 0
+Function a_write_to_a_string_literal_is_unproven.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "int" parameter "c"
+  Local "_3" "unsigned long long" parameter "n"
+Function a_write_to_a_string_literal_is_unproven.c:2:6 "w" declared
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "s"
+Function a_write_to_a_string_literal_is_unproven.c:3:6 "stored"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "char"
+  Block "bb0" entry
+    Operation a_write_to_a_string_literal_is_unproven.c:4:15 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_write_to_a_string_literal_is_unproven.c:4:15 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_write_to_a_string_literal_is_unproven.c:4:11 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_write_to_a_string_literal_is_unproven.c:4:15 generated
+    Operation a_write_to_a_string_literal_is_unproven.c:5:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 120
+    Operation a_write_to_a_string_literal_is_unproven.c:5:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_write_to_a_string_literal_is_unproven.c:5:5 generated
+    Return
+Function a_write_to_a_string_literal_is_unproven.c:7:6 "filled"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Operation a_write_to_a_string_literal_is_unproven.c:8:15 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_write_to_a_string_literal_is_unproven.c:8:15 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_write_to_a_string_literal_is_unproven.c:8:11 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_write_to_a_string_literal_is_unproven.c:8:15 generated
+    ArgumentsEvaluated a_write_to_a_string_literal_is_unproven.c:9:5 generated
+    Call a_write_to_a_string_literal_is_unproven.c:9:5 written "memset" "bb1"
+      Destination "_4"
+      Copy "_1"
+      Constant 0
+      Constant 2
+  Block "bb1"
+    Sequenced a_write_to_a_string_literal_is_unproven.c:9:5 generated
+    Return
+Function a_write_to_a_string_literal_is_unproven.c:11:6 "handed_to_a_writer"
+  Local "_0" "void" return
+  Local "_1" "char (*)[3]"
+  Local "_2" "char *"
+  Block "bb0" entry
+    Operation a_write_to_a_string_literal_is_unproven.c:12:7 generated
+      Destination "_1"
+      Static ".str.2"
+    Operation a_write_to_a_string_literal_is_unproven.c:12:7 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    ArgumentsEvaluated a_write_to_a_string_literal_is_unproven.c:12:5 generated
+    Call a_write_to_a_string_literal_is_unproven.c:12:5 written "w" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_write_to_a_string_literal_is_unproven.c:12:5 generated
+    Return
+Function a_write_to_a_string_literal_is_unproven.c:14:7 "returned"
+  Local "_0" "char *" return
+  Local "_1" "char (*)[3]"
+  Local "_2" "char *"
+  Block "bb0" entry
+    Operation a_write_to_a_string_literal_is_unproven.c:15:12 generated
+      Destination "_1"
+      Static ".str.3"
+    Operation a_write_to_a_string_literal_is_unproven.c:15:12 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_write_to_a_string_literal_is_unproven.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_write_to_a_string_literal_is_unproven.c:15:12 generated
+    Return

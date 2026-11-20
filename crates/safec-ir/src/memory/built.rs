@@ -165,6 +165,7 @@ pub(super) fn built_from(
             may_be_null: false,
             vouched: false,
             // Arithmetic names nothing for certain. See ADR-0105.
+            read_only: false,
             alone: None,
         },
     );

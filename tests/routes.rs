@@ -791,6 +791,19 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         ),
     ),
     (
+        "read_only",
+        Field::Exempt {
+            why: "whether the value may name storage the program may not modify (ADR-0120); asked where a write is made rather than read back by a belief's rows",
+            held_by: &[
+                "a_write_that_may_reach_a_const_object_is_unproven",
+                "a_write_to_a_string_literal_is_unproven",
+            ],
+        },
+        Start::Fact(
+            "no value names a `const` static before the function runs; a parameter that may is asked at the call that hands it",
+        ),
+    ),
+    (
         "alone",
         Field::Exempt {
             why: "the one place a value certainly names (ADR-0105), which only an address of a whole local and an allocation grant; asked by what a call this check cannot read writes for certain, and no belief's rows read it",

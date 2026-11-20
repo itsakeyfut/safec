@@ -75,6 +75,7 @@ mod index;
 mod init;
 mod known;
 mod parts;
+mod read_only;
 mod report;
 mod store;
 mod transfer;
@@ -246,6 +247,12 @@ pub enum Kind {
     /// check does not know which objects those are. Always `Unknown`, at the
     /// cast. See ADR-0117.
     Reinterpreted,
+    /// A write that may land in storage the program may not modify: a static
+    /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
+    /// 6.4.5 p7), by a store through a pointer or a call handed one for a
+    /// parameter that is no pointer to `const`. Always `Unknown`, at the
+    /// store or the call. See ADR-0120.
+    WritesReadOnly,
     /// A pointer local read where no path to the read assigned it, which C17
     /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
     /// a read some paths assigned is [`Kind::SometimesUnassigned`] or
@@ -1112,9 +1119,28 @@ fn findings_within(
                         });
                     }
                 }
+                read_only::written_read_only(
+                    &mut findings,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                    func,
+                );
+                read_only::returned_read_only(&mut findings, function, element, &known, func);
                 analysis.element(function, element, &mut known);
             }
 
+            // Before the call runs, as every question about what it is
+            // handed is. See ADR-0120.
+            read_only::handed_read_only(
+                &mut findings,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
+                func,
+            );
             asked_unwritten_in_terminator(
                 &ask,
                 &mut findings,

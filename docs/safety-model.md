@@ -303,6 +303,7 @@ fails where this table and that file differ.
 | Held | `stored_through` | in doubt | 2 tests named in its row |
 | Held | `may_be_null` | entry fact | 2 tests named in its row |
 | Held | `vouched` | entry fact | 2 tests named in its row |
+| Held | `read_only` | entry fact | 2 tests named in its row |
 | Held | `alone` | in doubt | 2 tests named in its row |
 <!-- fields:end -->
 
@@ -341,6 +342,14 @@ through a pointer to freed memory, so the memory check reports it, as
 pointer read out of an allocation or a local whose address is taken, which
 nothing wrote. The second is reported where it is read, whatever it is read
 for, since Annex J.2 lists any use of it.
+
+**So is a write to storage the program may not modify.** A store through a
+pointer, or a call handed one for a parameter that is no pointer to `const`,
+that may land in a static or a local defined `const`, or in a string literal,
+is `SC0417`, `Unknown` where it is written (C17 6.7.3 p6, 6.4.5 p7). The
+object is followed rather than the cast that reached it, so every spelling of
+the pointer is asked. See
+[ADR-0120](adr/0120-a-write-that-may-reach-storage-the-program-may-not-modify-is-unproven.md).
 
 At levels 1 to 4, a level says **which checks run**, and nothing else. It does
 not decide how

@@ -113,6 +113,14 @@ const ENTERED_INSIDE: Code = Code::new("SC0415");
 /// about this check, which follows no allocation through an integer, and the
 /// fix is to keep the value a pointer. See ADR-0117.
 const REINTERPRETED: Code = Code::new("SC0416");
+
+/// A write that may land in storage the program may not modify.
+///
+/// Not any code above, which are each about whether an object is live or
+/// how far an access reaches: this is about whether the object may be
+/// written at all, and the fix is in the pointer's type or in what it is
+/// made to point at. See ADR-0120.
+const WRITES_READ_ONLY: Code = Code::new("SC0417");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -892,6 +900,13 @@ pub(super) fn memory_finding(
             ),
             "nothing about this function's memory is proved",
             "jump to the top of the loop instead",
+        ),
+        // Built only `Unknown`, at the store or the call.
+        (Kind::WritesReadOnly, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            WRITES_READ_ONLY,
+            "this may write storage the program may not modify".to_owned(),
+            "a `const` object or a string literal may be here",
+            "keep `const` on the pointer, or write to a copy",
         ),
         // Built only `Unknown`, at the cast, as the rows above are.
         (Kind::Reinterpreted, Conclusion::Unknown | Conclusion::Unsafe, _) => (

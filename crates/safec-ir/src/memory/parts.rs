@@ -1461,6 +1461,13 @@ pub(super) struct Held {
     /// only where both sides have it, so a path that read nothing vouched
     /// for takes it away. See ADR-0100.
     pub(super) vouched: bool,
+    /// **Whether it may name storage the program may not modify**, a static
+    /// defined `const` or a string literal (C17 6.7.3 p6, 6.4.5 p7): set by
+    /// [`crate::ir::Rvalue::Static`] of a read-only static, kept by a union at
+    /// every join and carried wherever the value is, so that a write through
+    /// it is asked whatever spelling reached it. A local is not marked here,
+    /// being named. See ADR-0120.
+    pub(super) read_only: bool,
     /// **The one place it certainly names**, where that is shown: taking the
     /// address of a whole local or of a one-level array's start, and an
     /// allocation whose site stands for one block, are the only grants, and
@@ -1982,6 +1989,7 @@ impl Held {
                 may_be_null: false,
                 vouched: false,
                 // Nothing is named.
+                read_only: false,
                 alone: None,
             },
         )
@@ -2015,6 +2023,7 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            read_only,
             alone,
         } = marks;
         let mut held = Held {
@@ -2034,6 +2043,7 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            read_only,
             alone,
         };
         for (marked, why) in [
@@ -2161,10 +2171,12 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            read_only,
             alone,
         } = self;
         *may_be_null = false;
         *vouched = false;
+        *read_only = false;
         *alone = None;
         names.clear_all();
         *fresh_read = false;
@@ -2233,11 +2245,14 @@ impl Held {
             stored_through,
             may_be_null,
             vouched,
+            read_only,
             alone,
         } = self;
         *position = joined_position;
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
+        // A may-fact too: read-only storage on either path may be written.
+        *read_only = *read_only || other.read_only;
         // Vouched for only where every path read it so (ADR-0100).
         *vouched = *vouched && other.vouched;
         // A must-fact: kept only where both paths agree.
@@ -2330,8 +2345,12 @@ impl Held {
             // arithmetic on them, and a null moved is no null.
             may_be_null: _,
             vouched: _,
+            read_only,
             alone,
         } = self;
+        // A may-write may leave what either side names, read-only storage
+        // among it.
+        *read_only = *read_only || other.read_only;
         // A may-write keeps a must-fact only where both agree.
         if *alone != other.alone {
             *alone = None;
@@ -2669,6 +2688,12 @@ pub(super) struct Cell {
     /// which takes its null from what it reads (`Known::load_may_be_null`,
     /// #1038), and so by `realloc`'s door.
     may_hold_null: bool,
+    /// **Whether a pointer stored there may name storage the program may not
+    /// modify**, [`Held::read_only`] poured in. A union at a join, and taken
+    /// by every load through the block (`Known::read_only_on_the_way`), so a
+    /// pointer to a `const` object read back out of memory is still one. See
+    /// ADR-0120.
+    may_hold_read_only: bool,
 }
 
 impl Cell {
@@ -2681,6 +2706,7 @@ impl Cell {
             names: Bits::new(Referent::count(locals)),
             position: None,
             may_hold_null: false,
+            may_hold_read_only: false,
         }
     }
 
@@ -2703,6 +2729,12 @@ impl Cell {
     /// Whether a null may have been stored there (#1038).
     pub(super) fn may_hold_null(&self) -> bool {
         self.may_hold_null
+    }
+
+    /// Whether a pointer to read-only storage may have been stored there.
+    /// See ADR-0120.
+    pub(super) fn may_hold_read_only(&self) -> bool {
+        self.may_hold_read_only
     }
 
     /// Whether everything a pointer stored there may name is storage this
@@ -2787,6 +2819,7 @@ impl Cell {
             // `Known::reborn` keeps or drops whole.
             position: _,
             may_hold_null: _,
+            may_hold_read_only: _,
         } = self;
         // **What the site's own cell keeps when it names a new
         // allocation**, field by field, so that a field added to `Held`
@@ -2834,6 +2867,9 @@ impl Cell {
             position: _,
             // Not taken: a load is possibly null whatever memory holds.
             may_hold_null: _,
+            // Taken by `Known::load_into` through `Known::read_only_on_the_way`,
+            // which asks every block and local on the way, once.
+            may_hold_read_only: _,
         } = self;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
@@ -2950,11 +2986,15 @@ impl Cell {
             // Recorded below as the block's `may_hold_null`, which no load
             // reads back.
             may_be_null: _,
+            // Recorded below as the block's `may_hold_read_only`, which a
+            // load takes back. See ADR-0120.
+            read_only: _,
         } = from;
         // **A null stored, or anything that names nothing**, may leave the
         // slot holding no address: kept, so that a load out of it is
         // possibly null (#1038).
         poured.may_hold_null = from.may_be_null || from.names.ones().next().is_none();
+        poured.may_hold_read_only = from.read_only;
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
             (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
@@ -2997,9 +3037,11 @@ impl Cell {
             widths,
             position,
             may_hold_null,
+            may_hold_read_only,
         } = other;
         // A may-fact, so a union, as the names are.
         self.may_hold_null = self.may_hold_null || *may_hold_null;
+        self.may_hold_read_only = self.may_hold_read_only || *may_hold_read_only;
         // **Joined as a value's is**, each side's names saying whether it
         // names storage, so a null stored takes no part, and widened at a
         // loop's back edge (ADR-0099); nothing stored is the identity.
@@ -3050,6 +3092,8 @@ pub(super) struct Marks {
     pub(super) may_be_null: bool,
     /// See [`Held::vouched`].
     pub(super) vouched: bool,
+    /// See [`Held::read_only`].
+    pub(super) read_only: bool,
     /// See [`Held::alone`].
     pub(super) alone: Option<Referent>,
 }

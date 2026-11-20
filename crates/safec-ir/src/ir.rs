@@ -613,6 +613,10 @@ pub struct Static {
     pub linkage: Linkage,
     /// What it holds before the program begins (6.7.9 p10).
     pub init: StaticInit,
+    /// Whether the program may not modify it: one defined `const` at its
+    /// innermost element (C17 6.7.3 p6), or a string literal (6.4.5 p7).
+    /// See ADR-0120.
+    pub read_only: bool,
 }
 
 /// What another translation unit may name an object with static storage
@@ -1209,6 +1213,11 @@ pub struct Parameter {
     /// its `_Nonnull` promises come from too, so `int g(int a); int g(int b);`
     /// names it `b` while [`Function::name`] is the first `g`.
     pub name: Option<Span>,
+    /// Whether it is a pointer to `const`, so that a call cannot write
+    /// through it (C17 6.7.3 p6 makes doing so after a cast undefined where
+    /// the object is `const`). What a call handed read-only storage is
+    /// asked by. See ADR-0120.
+    pub reads_only: bool,
 }
 
 /// Why a pointer a function takes or returns is believed not to be null, which
@@ -1237,6 +1246,7 @@ fn unannotated(ty: TyId) -> Parameter {
         ty,
         nonnull: None,
         name: None,
+        reads_only: false,
     }
 }
 
@@ -1255,6 +1265,8 @@ pub struct Function {
     names: Vec<Option<Span>>,
     /// One per parameter, in the order they were declared.
     nonnull: Vec<Option<Promise>>,
+    /// One per parameter: [`Parameter::reads_only`].
+    reads_only: Vec<bool>,
     /// Whether this is a hatch.
     hatch: bool,
     /// Whether its name has internal linkage, `static` in C (C17 6.2.2 p3),
@@ -1262,6 +1274,12 @@ pub struct Function {
     internal: bool,
     /// Whether the pointer it returns is promised not to be null.
     return_promise: Option<Promise>,
+    /// The locals the program may not modify, each defined `const` at its
+    /// innermost element (C17 6.7.3 p6). See ADR-0120.
+    read_only: Vec<LocalId>,
+    /// Whether what it returns is a pointer to `const`, so that a caller
+    /// cannot write through it: [`Parameter::reads_only`] for the result.
+    returns_reads_only: bool,
     body: Body,
 }
 
@@ -1293,10 +1311,12 @@ impl Function {
         let mut locals = vec![returns];
         let mut names = vec![None];
         let mut nonnull = Vec::new();
+        let mut reads_only = Vec::new();
         for parameter in parameters {
             locals.push(parameter.ty);
             names.push(parameter.name);
             nonnull.push(parameter.nonnull);
+            reads_only.push(parameter.reads_only);
         }
 
         Self {
@@ -1304,9 +1324,12 @@ impl Function {
             locals,
             names,
             nonnull,
+            reads_only,
             hatch: false,
             internal: false,
             return_promise: None,
+            read_only: Vec::new(),
+            returns_reads_only: false,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1452,6 +1475,34 @@ impl Function {
         self.locals.push(ty);
         self.names.push(None);
         id
+    }
+
+    /// Whether the parameter at `index`, counted from 0, points at `const`,
+    /// so a call cannot write through it. `false` past the last, where an
+    /// argument has no parameter to say so. See ADR-0120.
+    pub fn reads_only_through(&self, index: usize) -> bool {
+        self.reads_only.get(index).copied().unwrap_or(false)
+    }
+
+    /// Say that what this returns is a pointer to `const`. See ADR-0120.
+    pub fn mark_returns_reads_only(&mut self) {
+        self.returns_reads_only = true;
+    }
+
+    /// Whether what this returns is a pointer to `const`.
+    pub fn returns_reads_only(&self) -> bool {
+        self.returns_reads_only
+    }
+
+    /// Say that `local` may not be modified, being defined `const`. See
+    /// ADR-0120.
+    pub fn mark_read_only(&mut self, local: LocalId) {
+        self.read_only.push(local);
+    }
+
+    /// Whether `local` may not be modified, being defined `const`.
+    pub fn read_only(&self, local: LocalId) -> bool {
+        self.read_only.contains(&local)
     }
 
     /// Add a local written with the name at `name`, and hand back its id.
