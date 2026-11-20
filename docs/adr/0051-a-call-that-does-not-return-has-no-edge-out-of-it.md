@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its bullet on `static` superseded by ADR-0118)"
 date: 2026-10-05
 decision-makers: itsakeyfut
 ---

@@ -8202,6 +8202,31 @@ cases! {
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
         a_second_storage_class_is_refused: ["--emit", "ast"],
+        // C17 6.2.2 p7: one identifier with both linkages is undefined, and
+        // `clang` refuses each of these three. Mutation: skip
+        // `Resolver::linked`; nothing is reported.
+        a_static_after_an_external_declaration_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration with `extern` and no initializer defines nothing, so
+        // its type may be completed elsewhere, at either scope. Mutation:
+        // keep it in the type checker's incomplete-object walk; three
+        // `SC0315`s.
+        an_extern_of_an_incomplete_type_is_a_declaration: ["--emit", "ast"],
+        // C17 6.9.2 p3. Mutation: skip the internal-linkage loop in the
+        // type checker's incomplete-object walk; this builds.
+        a_static_tentative_definition_of_an_incomplete_type_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0118. Mutation: call `Resolver::define` for no `static`
+        // definition; this builds, and `exit` is believed not to return.
+        a_static_function_named_exit_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Both declarations have linkage, which C17 6.7 p3 is not about.
+        // Mutation: drop `both_linked` in `Resolver::declare_in`; `SC0312`.
+        a_repeated_extern_in_a_block_is_one_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A struct's members are read between a declaration's specifiers.
+        // Mutation: write each half of `Parser::specifiers` straight into
+        // `Parser::storage`; all three lose their storage class.
+        a_storage_class_before_a_struct_definition_is_kept: ["--emit", "ast"],
+        // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
+        // the first half in `Parser::specifiers`; `SC0201`.
+        a_storage_class_after_the_type_is_read: ["--emit", "ast"],
         // C17 6.8.5 p3 lets a `for` declare only `auto` and `register`
         // objects. Mutation: drop the storage test in the type checker's
         // `for` walk; nothing is reported and the loop builds.
@@ -9639,6 +9664,18 @@ cases! {
         // declarations. Mutation: drop the type comparison in
         // `Lowering::block_static`; `g` is read as a `char`.
         an_extern_in_a_block_with_another_type_is_not_compiled: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p10 by way of 6.5.16.1 p2: 300 as a `char` is 44 here.
+        // Mutation: drop the conversion in `Lowering::static_init`; `c`
+        // starts with 300.
+        a_static_starts_with_its_value_as_its_type_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: answer every count with the bare name in
+        // `Lowering::block_static`; both are `main.a`.
+        two_block_statics_of_one_name_are_two_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.2.2 p5: a function declared with no storage class takes the
+        // linkage already given. Mutation: drop the `internal` insert for a
+        // prototype in `Lowering::file_objects`; `h` is printed without
+        // `internal`.
+        a_static_prototype_gives_its_definition_internal_linkage: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.9.1 p10: a parameter's length is evaluated on entry, so the
         // store of `2` to `n` comes before the body, and a marker after it.
         // Mutation: refuse a length that is not a constant again; this is

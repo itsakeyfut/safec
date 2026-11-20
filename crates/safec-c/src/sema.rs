@@ -24,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Type, TypeId, spell_type,
+    StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
@@ -62,6 +62,11 @@ const REDEFINED: Code = Code::new("SC0312");
 /// Two declarations of one name in one scope whose types are not compatible,
 /// which C17 6.7 p4 forbids: "All declarations in the same scope that refer
 /// to the same object or function shall specify compatible types."
+///
+/// And two file-scope declarations of one name whose linkages disagree, a
+/// `static` one and one with external linkage, which 6.2.2 p7 makes
+/// undefined and `clang` refuses: two declarations that disagree about
+/// what a thing is.
 ///
 /// Its own code rather than [`REDEFINED`]'s: one thing given twice and two
 /// declarations that disagree about what a thing is are different faults,
@@ -478,6 +483,9 @@ pub fn resolve(
         completed: HashSet::new(),
         step: 0,
         definitions: HashMap::new(),
+        linkages: HashMap::new(),
+        linking: None,
+        linked: HashSet::new(),
         labels: HashMap::new(),
         gotos: Vec::new(),
         stacked: None,
@@ -562,6 +570,14 @@ struct Resolver<'a> {
     /// forty thousand distinct functions take thirty seconds in a debug
     /// build.
     definitions: HashMap<String, Span>,
+    /// Whether each file-scope name's first declaration gave it internal
+    /// linkage, and where that declaration was. See [`Resolver::linked`].
+    linkages: HashMap<String, (bool, Span)>,
+    /// The scope whose declaration being walked says `extern`, while one is.
+    /// See [`Resolver::declare_in`].
+    linking: Option<usize>,
+    /// The block-scope declarations that said `extern`, which have linkage.
+    linked: HashSet<BindingId>,
     /// The labels of the function being walked, by spelling, each with where
     /// its name is. C17 6.2.1 p3 gives a label function scope, and 6.2.3 a
     /// name space of its own, so these are kept apart from `spelled`.
@@ -585,7 +601,8 @@ impl Resolver<'_> {
                     self.attribute(attribute, diagnostics);
                 }
                 self.walk_declarator(function.ty, diagnostics);
-                self.define(function.name, diagnostics);
+                self.linked(function.name, function.storage, true, diagnostics);
+                self.define(function.name, function.storage, diagnostics);
 
                 self.open_scope();
                 self.parameters(function.ty, diagnostics);
@@ -622,11 +639,21 @@ impl Resolver<'_> {
             Item::Declaration {
                 declarators,
                 specified,
+                storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
                 self.declarators(declarators, diagnostics);
                 self.defined_objects(declarators, diagnostics);
+                for declarator in declarators {
+                    if let Some(name) = declarator.declaration.name {
+                        let function = matches!(
+                            self.ast.ty(declarator.declaration.ty),
+                            Type::Function { .. }
+                        );
+                        self.linked(name, *storage, function, diagnostics);
+                    }
+                }
             }
             Item::Error { .. } => {}
         }
@@ -682,6 +709,50 @@ impl Resolver<'_> {
                 self.expr(init, diagnostics);
             }
         }
+    }
+
+    /// Hold a file-scope declaration's linkage to the first one's, C17 6.2.2
+    /// p7: a `static` after a declaration with external linkage, or a
+    /// declaration of an object with no storage class after a `static`, gives
+    /// one identifier both, which is undefined. `extern` takes the linkage
+    /// already given (p4), and so does a function declared with no storage
+    /// class (p5); an object with none has external linkage (p5).
+    ///
+    /// Mutation: skip this; `a_static_after_an_external_declaration_is_refused`
+    /// exits zero.
+    fn linked(
+        &mut self,
+        name: Span,
+        storage: Option<Storage>,
+        function: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let spelled = self.sources.snippet(name);
+        let internal = storage == Some(Storage::Static);
+        let Some(&(first_internal, first)) = self.linkages.get(spelled) else {
+            self.linkages.insert(spelled.to_owned(), (internal, name));
+            return;
+        };
+        let (message, label) = if internal && !first_internal {
+            (
+                format!("static declaration of `{spelled}` follows non-static declaration"),
+                "declared `static` here",
+            )
+        } else if first_internal && storage.is_none() && !function {
+            (
+                format!("non-static declaration of `{spelled}` follows static declaration"),
+                "declared with external linkage here",
+            )
+        } else {
+            return;
+        };
+        diagnostics.report(
+            Diagnostic::error(message)
+                .with_code(CONFLICTING)
+                .with_label(Label::primary(name, label))
+                .with_label(Label::secondary(first, "first declared here"))
+                .with_note("C17 6.2.2 p7 makes one identifier with internal and external linkage undefined"),
+        );
     }
 
     /// Count each file-scope object a declaration gives an initializer, which
@@ -1046,10 +1117,15 @@ impl Resolver<'_> {
             Stmt::Declaration {
                 declarators,
                 specified,
+                storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
+                if *storage == Some(Storage::Extern) {
+                    self.linking = Some(self.scopes.len() - 1);
+                }
                 self.declarators(declarators, diagnostics);
+                self.linking = None;
             }
             Stmt::Return { value, .. } | Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
@@ -1475,7 +1551,10 @@ impl Resolver<'_> {
             let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
             let latest = self.resolution.binding(earlier.latest);
             let standing = self.resolution.binding(earlier.standing.id);
-            if scope > 0 && !(function(latest.ty) && function(ty)) {
+            // Two `extern` declarations of one object in a block both have
+            // linkage, which p3's rule is not about.
+            let both_linked = self.linking == Some(scope) && self.linked.contains(&earlier.latest);
+            if scope > 0 && !(function(latest.ty) && function(ty)) && !both_linked {
                 diagnostics.report(redefined(
                     spelled,
                     name,
@@ -1498,6 +1577,9 @@ impl Resolver<'_> {
         let id = BindingId(self.resolution.bindings.len() as u32);
         self.resolution.bindings.push(Binding { name, ty });
         self.scopes[scope].push(id);
+        if self.linking == Some(scope) {
+            self.linked.insert(id);
+        }
         // A declaration that conflicts is not what the next one is compared
         // with, so a later line that agrees with the earlier ones is not
         // blamed for the one that did not, which is how `clang` reads it too.
@@ -1605,14 +1687,15 @@ impl Resolver<'_> {
     /// The second is still declared and its body still walked by the caller,
     /// so that a name inside it that is undeclared is reported as well, as it
     /// would be in a body nothing was wrong with.
-    fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
+    fn define(&mut self, name: Span, storage: Option<Storage>, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
         // Every function this frontend reads is at file scope, so a
-        // definition of one of these is one C17 7.1.3 p1 reserves, `static`
-        // or not: its file-scope reservation holds wherever the header is
-        // included, and this does not ask which header was. A local or a
-        // parameter of the name has no linkage and never reaches here. See
-        // ADR-0051.
+        // definition of one of these is one C17 7.1.3 p1 reserves where it
+        // has external linkage, and where it is `static` and the name's
+        // header is included, which this compiler does not ask. So a `static`
+        // one is refused too, rather than believed to be the library's or
+        // read as the program's. A local or a parameter of the name has no
+        // linkage and never reaches here. See ADR-0051 and ADR-0118.
         // See [`DOES_NOT_RETURN`].
         //
         // **And every name the memory check reads by name**, where that check
@@ -1640,10 +1723,18 @@ impl Resolver<'_> {
                 ))
                 .with_code(RESERVED_DEFINITION)
                 .with_label(Label::primary(name, "defined here"))
-                .with_note(format!(
-                    "C17 7.1.3 p2 makes a program that defines it undefined, and this compiler \
-                     believes the library's: {believed}, so rename this function"
-                )),
+                .with_note(if storage == Some(Storage::Static) {
+                    format!(
+                        "C17 7.1.3 p1 reserves it at file scope wherever its header is included, \
+                         which this compiler does not ask, and this compiler believes the \
+                         library's: {believed}, so rename this function"
+                    )
+                } else {
+                    format!(
+                        "C17 7.1.3 p2 makes a program that defines it undefined, and this compiler \
+                         believes the library's: {believed}, so rename this function"
+                    )
+                }),
             );
         }
         match self.definitions.get(spelled) {

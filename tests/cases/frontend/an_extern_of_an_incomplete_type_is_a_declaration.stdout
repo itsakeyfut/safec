@@ -1,0 +1,8 @@
+Declaration an_extern_of_an_incomplete_type_is_a_declaration.c:1:1 "struct S"
+Declaration an_extern_of_an_incomplete_type_is_a_declaration.c:2:1 extern "s" "struct S"
+Declaration an_extern_of_an_incomplete_type_is_a_declaration.c:3:1 extern "a" "int[]"
+Function an_extern_of_an_incomplete_type_is_a_declaration.c:4:1 "main" "int (void)"
+  Compound an_extern_of_an_incomplete_type_is_a_declaration.c:4:16
+    Declaration an_extern_of_an_incomplete_type_is_a_declaration.c:5:5 extern "t" "struct S"
+    Return an_extern_of_an_incomplete_type_is_a_declaration.c:6:5
+      Number an_extern_of_an_incomplete_type_is_a_declaration.c:6:12 "0"

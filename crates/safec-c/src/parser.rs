@@ -1172,11 +1172,19 @@ impl Parser<'_> {
         // `static` and `extern` likewise, at file scope and in a block, which
         // is where C17 6.7.1 lets a declaration name a storage class; one per
         // declaration (p2).
-        self.storage = None;
+        //
+        // **Held here and handed over at the end**, because a struct's body
+        // is read between the two halves and each member's specifiers are
+        // read by this function too: kept in the parser throughout, a member
+        // cleared the outer `static` of `static struct S { int a; } *p;`.
+        // Mutation: write each half straight into `Parser::storage`;
+        // `a_storage_class_before_a_struct_definition_is_kept` fails.
         let scoped = matches!(at, Position::FileScope | Position::BlockScope);
-        let mut constant = self.eat_qualifiers_and_storage(scoped, diagnostics)?;
+        let mut storage = None;
+        let mut constant = self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
         let ty = self.type_specifier(at, diagnostics)?;
-        constant |= self.eat_qualifiers_and_storage(scoped, diagnostics)?;
+        constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+        self.storage = storage;
         let ty = if constant {
             self.ast.push_const(ty)
         } else {
@@ -1186,12 +1194,13 @@ impl Parser<'_> {
     }
 
     /// Every `const` here, and every storage class where `scoped` says one
-    /// may stand, recorded in [`Parser::storage`]; whether there was a
-    /// `const`. A second storage class is a constraint violation (C17 6.7.1
-    /// p2), reported where it is written.
+    /// may stand, recorded in `storage`; whether there was a `const`. A
+    /// second storage class is a constraint violation (C17 6.7.1 p2),
+    /// reported where it is written.
     fn eat_qualifiers_and_storage(
         &mut self,
         scoped: bool,
+        storage: &mut Option<Storage>,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<bool> {
         let mut constant = false;
@@ -1200,12 +1209,12 @@ impl Parser<'_> {
                 constant = true;
                 continue;
             }
-            let storage = match self.peek().kind {
+            let written = match self.peek().kind {
                 TokenKind::Keyword(Keyword::Static) if scoped => Storage::Static,
                 TokenKind::Keyword(Keyword::Extern) if scoped => Storage::Extern,
                 _ => return Some(constant),
             };
-            if self.storage.is_some() {
+            if storage.is_some() {
                 self.report(
                     "a declaration names at most one storage class",
                     "a second storage class",
@@ -1214,7 +1223,7 @@ impl Parser<'_> {
                 return None;
             }
             self.advance();
-            self.storage = Some(storage);
+            *storage = Some(written);
         }
     }
 

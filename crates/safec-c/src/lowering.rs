@@ -761,6 +761,7 @@ impl Lowering<'_> {
     /// what it truthfully is.
     fn declare(&mut self, diagnostics: &mut DiagnosticSink) {
         let mut objects: Vec<FileObject> = Vec::new();
+        let mut by_name: HashMap<String, usize> = HashMap::new();
         for item in self.ast.items() {
             match item {
                 Item::Function(function) => {
@@ -777,7 +778,12 @@ impl Lowering<'_> {
                     storage,
                     ..
                 } => {
-                    self.file_objects(declarators, *storage, &mut objects, diagnostics);
+                    self.file_objects(
+                        declarators,
+                        *storage,
+                        (&mut objects, &mut by_name),
+                        diagnostics,
+                    );
                     // **A declaration that declares nothing still defines**:
                     // `struct S { int (*fp)(...); };` writes a prototype that
                     // no declarator's type carries, and a later `struct S s;`
@@ -843,7 +849,9 @@ impl Lowering<'_> {
 
     /// Every object a file-scope declaration declares, gathered into
     /// `objects` by spelling, since `int g; int g = 1;` is one object
-    /// declared twice (C17 6.9.2 p2).
+    /// declared twice (C17 6.9.2 p2). `by_name` is each spelling's index
+    /// there, a map rather than a scan per declarator, which the
+    /// `definitions` map in `sema.rs` says a scan cost.
     ///
     /// The first declaration's linkage stands (6.2.2 p4): `static` gives
     /// internal linkage, and a later one without it agrees rather than
@@ -860,7 +868,7 @@ impl Lowering<'_> {
         &mut self,
         declarators: &[InitDeclarator],
         storage: Option<Storage>,
-        objects: &mut Vec<FileObject>,
+        (objects, by_name): (&mut Vec<FileObject>, &mut HashMap<String, usize>),
         diagnostics: &mut DiagnosticSink,
     ) {
         for declarator in declarators {
@@ -885,9 +893,10 @@ impl Lowering<'_> {
                 None => None,
             };
             let spelled = self.sources.snippet(name);
-            let object = match objects.iter_mut().find(|object| object.name == spelled) {
-                Some(object) => object,
+            let index = match by_name.get(spelled) {
+                Some(&index) => index,
                 None => {
+                    by_name.insert(spelled.to_owned(), objects.len());
                     objects.push(FileObject {
                         name: spelled.to_owned(),
                         ty,
@@ -896,9 +905,10 @@ impl Lowering<'_> {
                         init: StaticInit::Zero,
                         declared: Vec::new(),
                     });
-                    objects.last_mut().expect("just pushed")
+                    objects.len() - 1
                 }
             };
+            let object = &mut objects[index];
             object.defined |= storage != Some(Storage::Extern) || init.is_some();
             if let Some(init) = init {
                 object.init = init;

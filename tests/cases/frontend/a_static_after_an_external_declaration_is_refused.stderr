@@ -1,0 +1,33 @@
+error[SC0313]: static declaration of `g` follows non-static declaration
+   ╭─[ a_static_after_an_external_declaration_is_refused.c:2:12 ]
+   │
+ 1 │ int g;
+   │     ┬  
+   │     ╰── first declared here
+ 2 │ static int g;
+   │            ┬  
+   │            ╰── declared `static` here
+───╯
+  = note: C17 6.2.2 p7 makes one identifier with internal and external linkage undefined
+error[SC0313]: non-static declaration of `h` follows static declaration
+   ╭─[ a_static_after_an_external_declaration_is_refused.c:4:5 ]
+   │
+ 3 │ static int h;
+   │            ┬  
+   │            ╰── first declared here
+ 4 │ int h;
+   │     ┬  
+   │     ╰── declared with external linkage here
+───╯
+  = note: C17 6.2.2 p7 makes one identifier with internal and external linkage undefined
+error[SC0313]: static declaration of `f` follows non-static declaration
+   ╭─[ a_static_after_an_external_declaration_is_refused.c:6:12 ]
+   │
+ 5 │ int f(void);
+   │     ┬  
+   │     ╰── first declared here
+ 6 │ static int f(void) {
+   │            ┬  
+   │            ╰── declared `static` here
+───╯
+  = note: C17 6.2.2 p7 makes one identifier with internal and external linkage undefined

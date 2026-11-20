@@ -1,0 +1,7 @@
+Declaration a_storage_class_after_the_type_is_read.c:1:1 static "g" "int"
+Function a_storage_class_after_the_type_is_read.c:2:1 "main" "int (void)"
+  Compound a_storage_class_after_the_type_is_read.c:2:16
+    Declaration a_storage_class_after_the_type_is_read.c:3:5 static "x" "const int"
+      Number a_storage_class_after_the_type_is_read.c:3:26 "1"
+    Return a_storage_class_after_the_type_is_read.c:4:5
+      Identifier a_storage_class_after_the_type_is_read.c:4:12 "x"

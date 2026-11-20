@@ -1636,26 +1636,6 @@ fn a_discarded_dereference_is_not_a_read() {
     assert_eq!(answer, Ok(Value::Int(0)));
 }
 
-/// Reaching a place whose scope has ended still stops the run, even where
-/// nothing is read out of it.
-///
-/// C17 6.5.3.2 p4 makes the unary `*` undefined for a pointer that is no longer
-/// valid, and its footnote names an address after the end of its object's
-/// lifetime. Whether anybody wanted the value is not part of that, so the
-/// evaluation asks the two questions `store` asks: whether the frame is still
-/// the frame the pointer was taken in, and whether the local still has storage.
-///
-/// `resolve` answers neither. It checks each frame it loads *through* and hands
-/// back the last location unchecked, which is what `store`'s doc comment says
-/// rather than claiming a check already happened. An arm that stopped
-/// at `resolve` would be the careless half of the pair a second time.
-///
-/// Mutation: delete the `Slot::Dead` check after `resolve` in the
-/// `Element::Evaluate` arm. The run finishes and this fails. **The other check
-/// is the other test below**, and saying "the two checks" here was wrong: a
-/// review measured it and found that replacing `live` with `at.depth` leaves
-/// this one green, because a scope ending inside one frame never asks which
-/// frame it is.
 /// A global is one object for the whole run, written by one call and read
 /// by the next, and starts as zero where nothing initializes it (C17 6.7.9
 /// p10).
@@ -1684,6 +1664,26 @@ fn a_static_local_keeps_its_value_between_calls() {
     assert_eq!(ran(text), Ok(Value::Int(13)));
 }
 
+/// Reaching a place whose scope has ended still stops the run, even where
+/// nothing is read out of it.
+///
+/// C17 6.5.3.2 p4 makes the unary `*` undefined for a pointer that is no longer
+/// valid, and its footnote names an address after the end of its object's
+/// lifetime. Whether anybody wanted the value is not part of that, so the
+/// evaluation asks the two questions `store` asks: whether the frame is still
+/// the frame the pointer was taken in, and whether the local still has storage.
+///
+/// `resolve` answers neither. It checks each frame it loads *through* and hands
+/// back the last location unchecked, which is what `store`'s doc comment says
+/// rather than claiming a check already happened. An arm that stopped
+/// at `resolve` would be the careless half of the pair a second time.
+///
+/// Mutation: delete the `Slot::Dead` check after `resolve` in the
+/// `Element::Evaluate` arm. The run finishes and this fails. **The other check
+/// is the other test below**, and saying "the two checks" here was wrong: a
+/// review measured it and found that replacing `live` with `at.depth` leaves
+/// this one green, because a scope ending inside one frame never asks which
+/// frame it is.
 #[test]
 fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
     let reached = ran(

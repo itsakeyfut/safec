@@ -1,0 +1,8 @@
+error[SC0315]: `a` has incomplete type `int[]`
+   ╭─[ a_static_tentative_definition_of_an_incomplete_type_is_refused.c:1:12 ]
+   │
+ 1 │ static int a[];
+   │            ┬  
+   │            ╰── declared here
+───╯
+  = note: a tentative definition with internal linkage has a complete type where it is written (C17 6.9.2 p3)

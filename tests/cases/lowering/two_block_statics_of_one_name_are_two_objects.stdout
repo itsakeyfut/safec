@@ -1,0 +1,21 @@
+Target "x86_64-pc-windows-msvc"
+Static "main.a" "int" internal 2
+Static "main.a.1" "int" internal 3
+Function two_block_statics_of_one_name_are_two_objects.c:1:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Block "bb0" entry
+    Operation two_block_statics_of_one_name_are_two_objects.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation two_block_statics_of_one_name_are_two_objects.c:7:16 generated
+      Destination "_1"
+      Static "main.a.1"
+    Operation two_block_statics_of_one_name_are_two_objects.c:7:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced two_block_statics_of_one_name_are_two_objects.c:7:16 generated
+    Return

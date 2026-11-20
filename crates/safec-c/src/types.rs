@@ -1158,15 +1158,45 @@ impl Checker<'_> {
     /// and in `check_argument`.
     fn check_complete_objects(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         // Each with whether it is at file scope and whether it is initialized.
+        //
+        // **An `extern` with no initializer is left out**, at either scope: it
+        // declares an object with linkage and defines nothing (C17 6.9.2 p1),
+        // so neither 6.7 p7, which is about an object with no linkage, nor
+        // 6.9.2 p2, which is about a tentative definition, asks its type to
+        // be complete. `extern int a[];` is how a header names an array
+        // another unit defines. Mutation: keep it; `an_extern_of_an_incomplete_type_is_a_declaration`
+        // reports `SC0315`.
+        //
+        // **A `static` one at file scope is held to its declarator**: 6.9.2
+        // p3 forbids a tentative definition with internal linkage an
+        // incomplete type, where one with external linkage may be completed
+        // later in the unit.
+        let declares_only = |storage: &Option<Storage>, d: &InitDeclarator| {
+            *storage == Some(Storage::Extern) && d.init.is_none()
+        };
         let mut objects: Vec<(&Declaration, bool, bool)> = Vec::new();
+        let mut internal: Vec<&Declaration> = Vec::new();
         for item in ast.items() {
             match item {
-                Item::Declaration { declarators, .. } => {
+                Item::Declaration {
+                    declarators,
+                    storage,
+                    ..
+                } => {
                     objects.extend(
                         declarators
                             .iter()
+                            .filter(|d| !declares_only(storage, d))
                             .map(|d| (&d.declaration, true, d.init.is_some())),
                     );
+                    if *storage == Some(Storage::Static) {
+                        internal.extend(
+                            declarators
+                                .iter()
+                                .filter(|d| d.init.is_none())
+                                .map(|d| &d.declaration),
+                        );
+                    }
                 }
                 Item::Function(function) => {
                     let Type::Function {
@@ -1187,13 +1217,45 @@ impl Checker<'_> {
             }
         }
         for id in ast.stmt_ids() {
-            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+            if let Stmt::Declaration {
+                declarators,
+                storage,
+                ..
+            } = ast.stmt(id)
+            {
                 objects.extend(
                     declarators
                         .iter()
+                        .filter(|d| !declares_only(storage, d))
                         .map(|d| (&d.declaration, false, d.init.is_some())),
                 );
             }
+        }
+        // Mutation: skip this loop; `a_static_tentative_definition_of_an_incomplete_type_is_refused`
+        // exits zero.
+        for declaration in internal {
+            let ty = declaration.ty;
+            let incomplete = match ast.ty(ty) {
+                Type::Array { length: None, .. } => true,
+                Type::Struct { .. } => !self.resolution.complete(ast, ty),
+                _ => false,
+            };
+            if !incomplete {
+                continue;
+            }
+            let at = declaration.name.unwrap_or(declaration.span);
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`{}` has incomplete type `{}`",
+                    self.sources.snippet(at),
+                    self.spelled(ast, ty)
+                ))
+                .with_code(INCOMPLETE_OBJECT)
+                .with_label(Label::primary(at, "declared here"))
+                .with_note(
+                    "a tentative definition with internal linkage has a complete type where it is written (C17 6.9.2 p3)",
+                ),
+            );
         }
         for (declaration, at_file_scope, initialized) in objects {
             let ty = declaration.ty;
@@ -1222,9 +1284,6 @@ impl Checker<'_> {
                 // gap, under `SC0304`.
                 // One whose element 6.7.6.2 p1 forbids is already refused, under
                 // `SC0309`, and a second report would be about the same fault.
-                // A block's object has no linkage only while `extern` is not
-                // read; one declared `extern` may be completed elsewhere
-                // (6.2.5 p22), and will need leaving out here.
                 Type::Array {
                     length: None,
                     element,

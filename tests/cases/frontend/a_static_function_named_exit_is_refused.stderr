@@ -1,0 +1,8 @@
+error[SC0319]: this defines `exit`, which C reserves for the library
+   ╭─[ a_static_function_named_exit_is_refused.c:1:13 ]
+   │
+ 1 │ static void exit(int status) {
+   │             ──┬─  
+   │               ╰─── defined here
+───╯
+  = note: C17 7.1.3 p1 reserves it at file scope wherever its header is included, which this compiler does not ask, and this compiler believes the library's: `exit` does not return (7.22.4.4), so rename this function
