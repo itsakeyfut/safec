@@ -58,6 +58,11 @@ the place it is written rather than as a silence after it.
   `Rvalue::Reinterpret`, and the memory check reports each one `Unknown`,
   `SC0416`, at the cast. What it gives names nothing the check follows and
   may be null.
+* So does a cast between pointers that drops `const` from what the result
+  points at, found by review: before casts, no conversion C allows could
+  drop it, and a write through the result to an object defined `const` is
+  undefined (C17 6.7.3 p6), which this check cannot tell from a write to
+  one that is not.
 
 The rejected options fail in the wrong place. Making `(char *)p` a value
 the check does not follow doubts every program that reads memory in bytes,
@@ -70,8 +75,10 @@ without an escape rule is row 6: the free above is believed.
 `a_use_after_free_through_a_char_cast_is_reported` and
 `a_char_cast_reads_the_allocation_in_bytes` change when a pointer cast lowers
 as `Rvalue::Reinterpret`; `a_null_pointer_cast_is_null` does when `(int *)0`
-does; and `a_cast_between_a_pointer_and_an_integer_is_unproven` goes silent
-when `memory.rs` pushes no finding for a `Reinterpret`. A new reader of an
+does; `a_cast_between_a_pointer_and_an_integer_is_unproven` goes silent
+when `memory.rs` pushes no finding for a `Reinterpret`; and
+`a_cast_that_drops_const_is_unproven` goes silent when that cast lowers as
+`Rvalue::Use`. A new reader of an
 `Rvalue` is `E0004`.
 
 ### Consequences

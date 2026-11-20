@@ -1,0 +1,6 @@
+Function sizeof_a_type_larger_than_the_target_can_address_is_refused.c:1:1 "f" "unsigned int (void)"
+  Compound sizeof_a_type_larger_than_the_target_can_address_is_refused.c:1:22
+    Return sizeof_a_type_larger_than_the_target_can_address_is_refused.c:2:5
+      Binary sizeof_a_type_larger_than_the_target_can_address_is_refused.c:2:12 "+"
+        SizeofType sizeof_a_type_larger_than_the_target_can_address_is_refused.c:2:12 "int[0x3fffffff]"
+        SizeofType sizeof_a_type_larger_than_the_target_can_address_is_refused.c:2:38 "int[0x40000000]"

@@ -1,0 +1,8 @@
+error[SC0317]: the initializer of `gl` is not a constant
+   ╭─[ a_pointer_cast_is_no_integer_constant.c:1:18 ]
+   │
+ 1 │ static long gl = (long)(int *)0;
+   │                  ───────┬──────  
+   │                         ╰──────── not a constant expression
+───╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)

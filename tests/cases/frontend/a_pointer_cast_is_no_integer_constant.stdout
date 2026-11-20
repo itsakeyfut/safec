@@ -1,0 +1,4 @@
+Declaration a_pointer_cast_is_no_integer_constant.c:1:1 static "gl" "long"
+  Cast a_pointer_cast_is_no_integer_constant.c:1:18 "long"
+    Cast a_pointer_cast_is_no_integer_constant.c:1:24 "int *"
+      Number a_pointer_cast_is_no_integer_constant.c:1:31 "0"

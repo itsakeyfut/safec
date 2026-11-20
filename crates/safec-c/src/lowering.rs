@@ -949,6 +949,16 @@ impl Lowering<'_> {
                 .map_or(value, |int| int.convert(value));
             return Some(StaticInit::Int(value));
         }
+        // A null pointer however it is cast, `(int *)0` or `(void *)0`:
+        // C17 6.3.2.3 p3 and p4 make each a null pointer. Mutation: answer
+        // none; `a_null_pointer_cast_initializes_a_static` is refused.
+        let mut id = init;
+        while let Expr::Cast { operand, .. } = self.ast.expr(id) {
+            id = *operand;
+        }
+        if id != init && self.types.value(id) == Some(0) {
+            return Some(StaticInit::Int(0));
+        }
         if !diagnostics.has_errors() {
             diagnostics.report(
                 Diagnostic::error("cannot compile this initializer yet")
@@ -4291,6 +4301,12 @@ impl Lowering<'_> {
     /// - A null pointer constant to a pointer type is the null it is.
     /// - Between a pointer and an integer otherwise, [`Rvalue::Reinterpret`],
     ///   which the memory check reports unproven where it is written.
+    /// - Between two pointer types where what the result points at is not
+    ///   `const` and what the operand points at is, the same: a write
+    ///   through it to an object defined `const` is undefined (C17 6.7.3
+    ///   p6), and nothing here knows which objects those are. Mutation:
+    ///   lower it as `Rvalue::Use`; `a_cast_that_drops_const_is_unproven`
+    ///   goes silent.
     fn cast(
         &mut self,
         builder: &mut Builder,
@@ -4317,6 +4333,7 @@ impl Lowering<'_> {
             pointer(self.types.of(operand), self.ast),
         );
         let rvalue = match (to, from, &value) {
+            (true, true, _) if self.drops_const(id, operand) => Rvalue::Reinterpret(value),
             (true, false, Operand::Constant(0)) | (true, true, _) | (false, false, _) => {
                 Rvalue::Use(value)
             }
@@ -4330,6 +4347,18 @@ impl Lowering<'_> {
         });
         values.push(Operand::Copy(Place::local(into)));
         Some(())
+    }
+
+    /// Whether the cast `id` of `operand`, both pointers, gives a pointer to
+    /// something not `const` from one to something that is.
+    fn drops_const(&self, id: ExprId, operand: ExprId) -> bool {
+        let pointee = |ty: Option<TypeId>| match ty.map(|ty| self.ast.ty(ty)) {
+            Some(Type::Pointer(pointee)) => Some(self.ast.is_const(*pointee)),
+            // An array operand points at its elements once it is read.
+            Some(Type::Array { element, .. }) => Some(self.ast.is_const(*element)),
+            _ => None,
+        };
+        pointee(self.types.of(operand)) == Some(true) && pointee(self.types.of(id)) == Some(false)
     }
 
     fn temporary(

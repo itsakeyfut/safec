@@ -201,6 +201,37 @@ fn sizeof_is_what_clang_says_it_is() {
     }
 }
 
+/// A comma's result is a value, so an array on its right is a pointer there
+/// (C17 6.3.2.1 p3): `sizeof(0, a)` is a pointer's size, 8 here, where
+/// `sizeof a` is the array's 100.
+///
+/// Mutation: type a comma as its right operand undecayed; this answers 100.
+#[test]
+fn sizeof_of_a_comma_is_a_pointer_s_size() {
+    let checked =
+        checked("int f(void) {\n    char a[100];\n    return sizeof(0, a) + sizeof a;\n}\n");
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+    assert_eq!(checked.value_of("sizeof(0, a)"), Some(8));
+    assert_eq!(checked.value_of("sizeof a"), Some(100));
+}
+
+/// `(void *)0` is a null pointer constant (C17 6.3.2.3 p3), so beside a
+/// pointer in `?:` the result has the other operand's type (6.5.15 p6), and
+/// it may be compared with a pointer to a function (6.5.9 p2).
+///
+/// Mutation: answer `false` in `Checker::void_null`; each `?:` is a `void *`
+/// and its `*` is refused. Mutation: drop the null arms of the conditional;
+/// the same.
+#[test]
+fn void_pointer_zero_is_a_null_pointer_constant() {
+    let checked = checked(
+        "int f(int c, int *p, int (*fp)(int)) {\n    return *(c ? p : (void *)0) + *(c ? (void *)0 : p) + (fp == (void *)0);\n}\n",
+    );
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+    assert_eq!(checked.spelling("c ? p : (void *)0"), "int *");
+    assert_eq!(checked.spelling("c ? (void *)0 : p"), "int *");
+}
+
 /// A cast to an integer type is a constant where its operand is one, at
 /// the type it converts to (C17 6.6 p6, 6.3.1.3): `(char)300` is 44,
 /// `(unsigned char)-1` 255, and `(long)-1` -1.

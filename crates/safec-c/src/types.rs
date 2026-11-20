@@ -953,6 +953,14 @@ impl Checker<'_> {
                     rhs,
                     ..
                 } if constant(rhs) => lhs,
+                // 6.6 p9: an integer constant cast to a pointer type is an
+                // address constant, and a pointer cast of one is one.
+                Expr::Cast { ty, operand, .. } if matches!(ast.ty(ty), Type::Pointer(_)) => {
+                    if constant(operand) {
+                        return true;
+                    }
+                    operand
+                }
                 // An array or a function is a pointer once it is read, and
                 // is an address constant when it designates something with
                 // static storage duration.
@@ -1754,8 +1762,12 @@ impl Checker<'_> {
             }
             Expr::Binary { lhs, rhs, .. } => known(lhs) && known(rhs),
             // 6.6 p6 allows a cast of an arithmetic operand to an integer
-            // type, and `sizeof` of anything this check sizes.
-            Expr::Cast { operand, .. } => known(operand),
+            // type, and `sizeof` of anything this check sizes. A cast to a
+            // pointer is no integer constant at all, so it has no value
+            // rather than an undefined one.
+            Expr::Cast { ty, operand, .. } => {
+                matches!(ast.ty(ty), Type::Integer { .. }) && known(operand)
+            }
             Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => true,
             Expr::Conditional {
                 condition,
@@ -2217,8 +2229,15 @@ impl Checker<'_> {
                 self.types[place.index()]
             }
             // 6.5.17 p2: the result of a comma is the value of the right
-            // operand, and its type.
-            Expr::Comma { rhs, .. } => self.types[rhs.index()],
+            // operand, and its type, which is a value's: an array is a
+            // pointer there (6.3.2.1 p3), since the comma and not `sizeof`
+            // is its operator, so `sizeof(0, a)` is a pointer's size.
+            // Mutation: give the right operand's type undecayed;
+            // `sizeof_of_a_comma_is_a_pointer_s_size` answers the array's.
+            Expr::Comma { rhs, .. } => {
+                let ty = self.types[rhs.index()]?;
+                Some(self.decayed(ast, ty))
+            }
             Expr::Subscript { base, index, .. } => self.subscript(ast, base, index, diagnostics),
             Expr::Call {
                 callee, arguments, ..
@@ -2307,6 +2326,22 @@ impl Checker<'_> {
             );
             return None;
         };
+        // No object is as large, as `report_array` holds a declared one to,
+        // so its size has no value in `size_t`. Mutation: skip this;
+        // `sizeof_a_type_larger_than_the_target_can_address_is_refused`
+        // is accepted.
+        let limit = 1u128 << self.target.pointer_bits().min(61);
+        if bytes >= limit {
+            diagnostics.report(
+                Diagnostic::error("`sizeof` a type larger than this target can address")
+                    .with_code(DECLARATOR)
+                    .with_label(Label::primary(span, format!("this is {bytes} bytes")))
+                    .with_note(format!(
+                        "an object here is smaller than {limit} bytes, the most this target can address"
+                    )),
+            );
+            return None;
+        }
         let size = self.integer_type(ast, self.target.size_type());
         self.values[id.index()] = Some(
             i128::try_from(bytes)
@@ -2727,8 +2762,8 @@ impl Checker<'_> {
             return (!reported && !matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
         };
         let nulls = (
-            self.is_null_pointer_constant(lhs),
-            self.is_null_pointer_constant(rhs),
+            self.is_null_pointer_constant(ast, lhs),
+            self.is_null_pointer_constant(ast, rhs),
         );
         if let Some(Err(refused)) = self.binary_operable(ast, op, left, right, nulls) {
             self.report_operands(ast, op, refused, (lhs, left), (rhs, right), diagnostics);
@@ -3032,8 +3067,12 @@ impl Checker<'_> {
             // side, which C17 6.2.5 p1 makes every type but a function.
             BinOp::Eq | BinOp::Ne => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
+                // A null pointer constant beside any pointer, `(void *)0`
+                // included, which is a pointer itself (p2's last item).
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    self.compatible_unqualified(ast, left, right)
+                    left_is_null
+                        || right_is_null
+                        || self.compatible_unqualified(ast, left, right)
                         || is_void_beside_an_object(ast, left, right)
                         || is_void_beside_an_object(ast, right, left)
                 }
@@ -3085,8 +3124,8 @@ impl Checker<'_> {
         let left = self.decayed(ast, self.types[then.index()]?);
         let right = self.decayed(ast, self.types[otherwise.index()]?);
         let nulls = (
-            self.is_null_pointer_constant(then),
-            self.is_null_pointer_constant(otherwise),
+            self.is_null_pointer_constant(ast, then),
+            self.is_null_pointer_constant(ast, otherwise),
         );
 
         let paired = match (ast.ty(left), ast.ty(right)) {
@@ -3105,6 +3144,12 @@ impl Checker<'_> {
                 Some(self.integer_type(ast, common))
             }
             (Type::Void, Type::Void) => Some(left),
+            // p6: beside a null pointer constant, `(void *)0` included, the
+            // result is the other operand's type, before the rule for a
+            // pointer to `void` is asked. Mutation: drop these two arms;
+            // `void_pointer_zero_is_a_null_pointer_constant` fails.
+            (Type::Pointer(_), Type::Pointer(_)) if nulls.1 => Some(left),
+            (Type::Pointer(_), Type::Pointer(_)) if nulls.0 => Some(right),
             (Type::Pointer(left_pointee), Type::Pointer(right_pointee)) => {
                 // p3 pairs a pointer to `void` only with a pointer to an
                 // object type, which a function is not.
@@ -3537,7 +3582,12 @@ impl Checker<'_> {
             return;
         };
 
-        if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
+        if self.assignable(
+            ast,
+            target,
+            source,
+            self.is_null_pointer_constant(ast, value),
+        ) != Some(false)
         {
             return;
         }
@@ -3934,7 +3984,12 @@ impl Checker<'_> {
             }
         };
 
-        if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
+        if self.assignable(
+            ast,
+            target,
+            source,
+            self.is_null_pointer_constant(ast, value),
+        ) != Some(false)
         {
             return;
         }
@@ -4125,7 +4180,7 @@ impl Checker<'_> {
         let Some(source) = self.types[argument.index()] else {
             return;
         };
-        let null = self.is_null_pointer_constant(argument);
+        let null = self.is_null_pointer_constant(ast, argument);
         // C17 6.5.2.2 p2 holds an argument to what may be assigned to its
         // parameter, and nothing may be assigned to `void` (6.5.16.1 p1).
         // `assignable` leaves a `void` target unanswered, for the reason its
@@ -4352,8 +4407,21 @@ impl Checker<'_> {
     /// one place a spelling is turned into a number, so `0x0`, `00` and `0u`
     /// are zero here because they are zero there. A second reading of the
     /// text would be a second answer to drift from the first.
-    fn is_null_pointer_constant(&self, value: ExprId) -> bool {
-        self.values[value.index()] == Some(0)
+    fn is_null_pointer_constant(&self, ast: &Ast, value: ExprId) -> bool {
+        self.values[value.index()] == Some(0) || self.void_null(ast, value)
+    }
+
+    /// Whether `id` is an integer constant expression of value 0 cast to
+    /// `void *`, the second spelling of a null pointer constant (C17 6.3.2.3
+    /// p3) and how `NULL` is commonly defined. Mutation: answer `false`;
+    /// `void_pointer_zero_is_a_null_pointer_constant` fails.
+    fn void_null(&self, ast: &Ast, id: ExprId) -> bool {
+        let Expr::Cast { ty, operand, .. } = *ast.expr(id) else {
+            return false;
+        };
+        matches!(ast.ty(ty), Type::Pointer(pointee)
+            if matches!(ast.ty(*pointee), Type::Void) && !ast.is_const(*pointee))
+            && self.values[operand.index()] == Some(0)
     }
 
     /// The value of an integer constant expression, C17 6.6 p6, or `None`.
