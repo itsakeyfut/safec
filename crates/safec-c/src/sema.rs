@@ -551,10 +551,12 @@ struct Resolver<'a> {
     /// expression and a definition are numbered by. See
     /// [`Resolution::complete_at`].
     step: u32,
-    /// Where every function defined so far was named, by its spelling, which
-    /// is what a second definition of one is compared with. A declaration,
-    /// `int f(void);`, is never here: 6.9 p5 counts definitions, and a
-    /// prototype before or after its definition is the same function.
+    /// Where every function and file-scope object defined so far was named,
+    /// by its spelling, which is what a second definition of one is compared
+    /// with. A declaration, `int f(void);`, is never here: 6.9 p5 counts
+    /// definitions, and a prototype before or after its definition is the
+    /// same function. Nor is a tentative definition, `int g;`, which 6.9.2 p2
+    /// lets stand beside the one with an initializer.
     ///
     /// A map rather than a list scanned per definition, which made a file of
     /// forty thousand distinct functions take thirty seconds in a debug
@@ -624,6 +626,7 @@ impl Resolver<'_> {
             } => {
                 self.specified(declarators, *specified, diagnostics);
                 self.declarators(declarators, diagnostics);
+                self.defined_objects(declarators, diagnostics);
             }
             Item::Error { .. } => {}
         }
@@ -677,6 +680,38 @@ impl Resolver<'_> {
             self.declaration(&declarator.declaration, diagnostics);
             if let Some(init) = declarator.init {
                 self.expr(init, diagnostics);
+            }
+        }
+    }
+
+    /// Count each file-scope object a declaration gives an initializer, which
+    /// is what makes it a definition rather than a tentative one (C17 6.9.2
+    /// p1), so that `int g = 1; int g = 2;` is `SC0312` while `int g; int g =
+    /// 1;` is one object (p2). An `extern` with an initializer defines too.
+    /// Mutation: skip this; `two_definitions_of_one_object_are_reported`
+    /// fails.
+    fn defined_objects(
+        &mut self,
+        declarators: &[InitDeclarator],
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        for declarator in declarators {
+            let declaration = &declarator.declaration;
+            let (Some(name), Some(_)) = (declaration.name, declarator.init) else {
+                continue;
+            };
+            // A function with an initializer is the type checker's to refuse.
+            if matches!(self.ast.ty(declaration.ty), Type::Function { .. }) {
+                continue;
+            }
+            let spelled = self.sources.snippet(name);
+            match self.definitions.get(spelled) {
+                Some(&first) => {
+                    diagnostics.report(redefined(spelled, name, first, "defined", "C17 6.9 p5"))
+                }
+                None => {
+                    self.definitions.insert(spelled.to_owned(), name);
+                }
             }
         }
     }
@@ -1327,13 +1362,15 @@ impl Resolver<'_> {
     /// no linkage, there shall be no more than one declaration of the
     /// identifier ... with the same scope and in the same name space".
     ///
-    /// Outside file scope only, because every name there has linkage while
-    /// `static` and `extern` are not read: `int x; int x;` at file scope is
-    /// two tentative definitions of one object. Inside a block, a function
-    /// declaration has external linkage and an object or a parameter has
-    /// none, so two declarations are allowed only when both are of functions.
-    /// The second is declared all the same, so a use after it resolves as
-    /// before.
+    /// Outside file scope only, because every name there has linkage: `int x;
+    /// int x;` at file scope is two tentative definitions of one object, and
+    /// a definition is counted apart, by [`Resolver::defined_objects`]. Inside
+    /// a block, a function declaration has external linkage and an object or
+    /// a parameter has none, so two declarations are allowed only when both
+    /// are of functions. A block-scope `extern` object has linkage as well
+    /// and is not asked apart, so `extern int x; extern int x;` in one block
+    /// is refused although C allows it. The second is declared all the same,
+    /// so a use after it resolves as before.
     ///
     /// Two declarations that are allowed refer to one entity, and 6.7 p4
     /// wants their types compatible. The new one is compared with the name's
@@ -1570,11 +1607,12 @@ impl Resolver<'_> {
     /// would be in a body nothing was wrong with.
     fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
-        // Every function this frontend reads is at file scope and has external
-        // linkage, since there is no `static`, so a definition of one of these
-        // is one C17 7.1.3 p1 reserves. A local or a parameter of the name has
-        // no linkage and never reaches here. When `static` is read, this has
-        // to ask linkage, and the lowering's belief with it: see ADR-0051.
+        // Every function this frontend reads is at file scope, so a
+        // definition of one of these is one C17 7.1.3 p1 reserves, `static`
+        // or not: its file-scope reservation holds wherever the header is
+        // included, and this does not ask which header was. A local or a
+        // parameter of the name has no linkage and never reaches here. See
+        // ADR-0051.
         // See [`DOES_NOT_RETURN`].
         //
         // **And every name the memory check reads by name**, where that check
@@ -2632,6 +2670,33 @@ mod tests {
     #[test]
     fn compatible_declarations_of_one_name_are_not_reported() {
         let resolved = resolved("int f(int a);\nint f(int b);\nint f();\nint x;\nint x;\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// C17 6.9 p5 allows one definition of an object, and an initializer is
+    /// what makes a file-scope declaration one (6.9.2 p1), `extern` or not.
+    ///
+    /// Mutation: skip `Resolver::defined_objects`; nothing is reported and
+    /// this fails.
+    #[test]
+    fn two_definitions_of_one_object_are_reported() {
+        for text in [
+            "int g = 1;\nint g = 2;\n",
+            "int g = 1;\nextern int g = 2;\n",
+        ] {
+            assert_eq!(resolved(text).messages(), ["redefinition of `g`"], "{text}");
+        }
+    }
+
+    /// A tentative definition and the definition after it, or before it, are
+    /// one object (C17 6.9.2 p2), and so is an `extern` declaration of it.
+    ///
+    /// Mutation: count a declaration with no initializer as a definition in
+    /// `Resolver::defined_objects`; `g` is reported and this fails.
+    #[test]
+    fn a_tentative_definition_and_a_definition_are_one_object() {
+        let resolved = resolved("int g;\nint g = 1;\nint g;\nextern int g;\n");
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
     }

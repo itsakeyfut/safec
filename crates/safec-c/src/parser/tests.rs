@@ -253,16 +253,16 @@ fn recovery_ends_a_struct_at_its_semicolon_not_its_brace() {
 }
 
 /// A body's `}` ends its item where what follows begins one the parser
-/// refuses, such as a `static` function, and not only where it begins one the
+/// refuses, such as an `inline` function, and not only where it begins one the
 /// parser reads; otherwise the next item is swallowed and its own error is
 /// never reported.
 ///
 /// Mutation: in `Parser::resync`, do not count a keyword `unread_keyword`
-/// names at file scope as beginning an item. The `static` function's report
+/// names at file scope as beginning an item. The `inline` function's report
 /// goes, and this sees two.
 #[test]
 fn recovery_ends_a_body_before_an_item_the_parser_refuses() {
-    let parsed = parsed("int f(void) { int x = ; }\nstatic int g(void) { return 1; }\nint y = ;\n");
+    let parsed = parsed("int f(void) { int x = ; }\ninline int g(void) { return 1; }\nint y = ;\n");
     let reported: Vec<_> = parsed
         .diagnostics
         .diagnostics()
@@ -611,8 +611,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
         ("typedef int T;\n", "`typedef`", "6.7.8"),
-        ("extern int x;\n", "`extern`", "6.7.1"),
-        ("static int x;\n", "`static`", "6.7.1"),
         ("_Thread_local int x;\n", "`_Thread_local`", "6.7.1"),
         ("int main(void) { auto int x; }\n", "`auto`", "6.7.1"),
         (
@@ -672,7 +670,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ),
         // Each kind of keyword in each other position it is allowed in.
         ("int main(void) { typedef int T; }\n", "`typedef`", "6.7.8"),
-        ("int main(void) { static int x; }\n", "`static`", "6.7.1"),
         (
             "int main(void) { inline int f(void); }\n",
             "`inline`",
@@ -712,7 +709,11 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ),
         // A second specifier, after one this parser reads.
         ("int unsigned x;\n", "`unsigned`", "6.7.2"),
-        ("int main(void) { int static x; }\n", "`static`", "6.7.1"),
+        (
+            "int main(void) { int register x; }\n",
+            "`register`",
+            "6.7.1",
+        ),
         // The token pairs.
         (
             "int main(void) { return L'a'; }\n",
@@ -775,7 +776,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         "int main(void) { default: return 0; }\n",
         "int main(void) { int x = else; }\n",
         "int main(void) { if (1) const int y = 0; }\n",
-        "int main(void) { for (static int i = 0; i; ) ; }\n",
         "void f(typedef int a);\n",
         "void f(static int a);\n",
         "struct S { static int a; };\n",
@@ -928,8 +928,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
 
     let keywords: &[(&str, &str, &[At])] = &[
         ("typedef", "6.7.8", &[FileScope, BlockScope]),
-        ("extern", "6.7.1", &[FileScope, BlockScope]),
-        ("static", "6.7.1", &[FileScope, BlockScope]),
         ("_Thread_local", "6.7.1", &[FileScope]),
         ("auto", "6.7.1", &[BlockScope, ForInit]),
         ("register", "6.7.1", &[BlockScope, Parameter, ForInit]),

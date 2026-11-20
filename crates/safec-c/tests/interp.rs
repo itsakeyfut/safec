@@ -1656,6 +1656,34 @@ fn a_discarded_dereference_is_not_a_read() {
 /// review measured it and found that replacing `live` with `at.depth` leaves
 /// this one green, because a scope ending inside one frame never asks which
 /// frame it is.
+/// A global is one object for the whole run, written by one call and read
+/// by the next, and starts as zero where nothing initializes it (C17 6.7.9
+/// p10).
+///
+/// Mutation: lower each use of a static to a fresh local of its type, in
+/// `Lowering::begin_place`. The read of `count` finds nothing written and the
+/// run stops.
+#[test]
+fn a_global_keeps_its_value_between_calls() {
+    let text = "int count;\nint bump(void) {\n    count = count + 1;\n    return count;\n}\nint main(void) {\n    bump();\n    bump();\n    return bump();\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(3)));
+}
+
+/// A `static` local is one object across calls too, and starts with its
+/// initializer once, before the program does, rather than at each entry to
+/// its block (C17 6.2.4 p3).
+///
+/// Mutation: the same as above; the run stops. Mutation: give the
+/// interpreter's statics zero whatever their initializer; this answers 3.
+/// Mutation: lower a block-scope `static` as an automatic local, by matching
+/// only `Storage::Extern` in `lower_stmt`'s declaration arm; the read of
+/// `calls` finds nothing written and the run stops.
+#[test]
+fn a_static_local_keeps_its_value_between_calls() {
+    let text = "int tick(void) {\n    static int calls = 10;\n    calls = calls + 1;\n    return calls;\n}\nint main(void) {\n    tick();\n    tick();\n    return tick();\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(13)));
+}
+
 #[test]
 fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
     let reached = ran(

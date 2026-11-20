@@ -623,6 +623,8 @@ pub enum Stmt {
         /// The only type a declaration with no declarator has, and what the
         /// type checker asks of one.
         specified: TypeId,
+        /// The storage-class specifier written, if one was.
+        storage: Option<Storage>,
         /// The specifiers through the `;`.
         span: Span,
     },
@@ -750,6 +752,17 @@ pub enum Stmt {
     },
 }
 
+/// A storage-class specifier this compiler reads, C17 6.7.1.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Storage {
+    /// `static`: at file scope, internal linkage; in a block, static storage
+    /// duration (6.2.2 p3, 6.2.4 p3).
+    Static,
+    /// `extern`: the object or function another declaration, perhaps in
+    /// another unit, defines (6.2.2 p4).
+    Extern,
+}
+
 /// A function definition.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Function {
@@ -781,6 +794,9 @@ pub struct Function {
     /// Not on [`Type::Function`]: types are compared for compatibility, and a
     /// specifier is not part of the type (ADR-0037).
     pub return_nullability: Option<Nullability>,
+    /// The storage-class specifier written, if one was: `static` gives the
+    /// function internal linkage (C17 6.2.2 p3).
+    pub storage: Option<Storage>,
 }
 
 /// `__attribute__((name("argument")))`, written before a function definition.
@@ -818,6 +834,8 @@ pub enum Item {
         declarators: Vec<InitDeclarator>,
         /// What the specifiers named, as [`Stmt::Declaration::specified`].
         specified: TypeId,
+        /// The storage-class specifier written, if one was.
+        storage: Option<Storage>,
         /// The specifiers through the `;`.
         span: Span,
     },

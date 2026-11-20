@@ -1,0 +1,7 @@
+error[SC0201]: a declaration names at most one storage class
+   ╭─[ a_second_storage_class_is_refused.c:1:8 ]
+   │
+ 1 │ static extern int x;
+   │        ───┬──  
+   │           ╰──── a second storage class
+───╯

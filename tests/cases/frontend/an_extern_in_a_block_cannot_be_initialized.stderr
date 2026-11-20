@@ -1,0 +1,8 @@
+error[SC0310]: an `extern` in a block cannot be initialized
+   ╭─[ an_extern_in_a_block_cannot_be_initialized.c:3:20 ]
+   │
+ 3 │     extern int g = 1;
+   │                    ┬  
+   │                    ╰── this initializes it
+───╯
+  = note: C17 6.7.9 p5: a block-scope name with linkage has no initializer

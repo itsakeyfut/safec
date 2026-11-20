@@ -25,7 +25,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, BinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Type, TypeId, UnOp, spell_type,
+    StmtId, Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -615,6 +615,7 @@ impl Checker<'_> {
                 Item::Declaration {
                     declarators,
                     specified,
+                    storage: _,
                     span,
                 } => push(
                     declarators,
@@ -630,6 +631,7 @@ impl Checker<'_> {
             if let Stmt::Declaration {
                 declarators,
                 specified,
+                storage: _,
                 span,
             } = ast.stmt(id)
             {
@@ -697,10 +699,10 @@ impl Checker<'_> {
         }
     }
 
-    /// Report every initializer of an object at file scope that is not a
-    /// constant expression, under [`NOT_CONSTANT`]: C17 6.7.9 p4 asks one
-    /// of an object with static storage duration, which is every object at
-    /// file scope here. It may be an integer constant expression, whose
+    /// Report every initializer of an object at file scope, or of a `static`
+    /// one in a block, that is not a constant expression, under
+    /// [`NOT_CONSTANT`]: C17 6.7.9 p4 asks one of an object with static
+    /// storage duration, which is those two. It may be an integer constant expression, whose
     /// value `values` holds, a null pointer constant among them, or an
     /// address constant ([`Checker::address_constant`]). One that is constant
     /// in shape and has no defined value is told so (6.6 p4), as a
@@ -708,11 +710,48 @@ impl Checker<'_> {
     /// as `NOT_YET` unless the run has already failed, since the lowering
     /// drops the initializer unread and would otherwise build the program.
     /// A function given one is `INITIALIZED`'s.
+    ///
+    /// A block-scope `extern` with an initializer is refused here as well,
+    /// under [`INITIALIZED`]: 6.7.9 p5 forbids one to a block-scope name with
+    /// linkage, and the lowering takes the object from file scope and would
+    /// drop it unread.
     fn check_static_initializers(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        for item in ast.items() {
-            let Item::Declaration { declarators, .. } = item else {
-                continue;
-            };
+        let at_file_scope = ast.items().iter().filter_map(|item| match item {
+            Item::Declaration { declarators, .. } => Some((declarators, true)),
+            Item::Function(_) | Item::Error { .. } => None,
+        });
+        let mut in_a_block = Vec::new();
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration {
+                declarators,
+                storage: Some(storage),
+                ..
+            } = ast.stmt(id)
+            {
+                match storage {
+                    Storage::Static => in_a_block.push((declarators, false)),
+                    Storage::Extern => {
+                        for declarator in declarators {
+                            let Some(init) = declarator.init else {
+                                continue;
+                            };
+                            diagnostics.report(
+                                Diagnostic::error("an `extern` in a block cannot be initialized")
+                                    .with_code(INITIALIZED)
+                                    .with_label(Label::primary(
+                                        ast.expr(init).span(),
+                                        "this initializes it",
+                                    ))
+                                    .with_note(
+                                        "C17 6.7.9 p5: a block-scope name with linkage has no initializer",
+                                    ),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        for (declarators, file_scope) in at_file_scope.chain(in_a_block) {
             for declarator in declarators {
                 let Some(init) = declarator.init else {
                     continue;
@@ -764,9 +803,11 @@ impl Checker<'_> {
                 } else {
                     Diagnostic::error(format!("the initializer of `{name}` is not a constant"))
                         .with_label(Label::primary(span, "not a constant expression"))
-                        .with_note(
-                            "an object at file scope is initialized with a constant expression (C17 6.7.9 p4)",
-                        )
+                        .with_note(if file_scope {
+                            "an object at file scope is initialized with a constant expression (C17 6.7.9 p4)"
+                        } else {
+                            "a `static` object is initialized with a constant expression (C17 6.7.9 p4)"
+                        })
                 };
                 diagnostics.report(diagnostic.with_code(NOT_CONSTANT));
             }
@@ -991,11 +1032,26 @@ impl Checker<'_> {
             let Stmt::Declaration {
                 declarators,
                 specified,
+                storage,
                 span,
             } = ast.stmt(*declaration)
             else {
                 unreachable!("a `for` begins with a statement that is not a declaration")
             };
+            // p3 again: an object of storage class `auto` or `register` only,
+            // so neither `static` nor `extern`.
+            if let Some(storage) = storage {
+                let written = match storage {
+                    Storage::Static => "static",
+                    Storage::Extern => "extern",
+                };
+                diagnostics.report(
+                    Diagnostic::error(format!("a `for` may not declare an object `{written}`"))
+                        .with_code(FOR_DECLARATION)
+                        .with_label(Label::primary(*span, format!("this is `{written}`")))
+                        .with_note("C17 6.8.5 p3"),
+                );
+            }
             // A tag and nothing else, `for (struct S; ...)`: the identifier it
             // declares is a tag, which is not an object either.
             if declarators.is_empty() {

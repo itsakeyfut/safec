@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId, Type,
-    TypeId, spell_type,
+    Ast, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId,
+    Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::Diagnostic;
 use crate::token::Token;
@@ -146,12 +146,13 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
         Item::Declaration {
             declarators,
             specified,
+            storage,
             span,
         } => {
             dump_declarators(
                 sources,
                 ast,
-                (declarators, *specified),
+                (declarators, *specified, *storage),
                 item.name(),
                 *span,
                 depth,
@@ -177,7 +178,7 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
 fn dump_declarators(
     sources: &SourceMap,
     ast: &Ast,
-    (declarators, specified): (&[InitDeclarator], TypeId),
+    (declarators, specified, storage): (&[InitDeclarator], TypeId, Option<Storage>),
     name: &'static str,
     span: Span,
     depth: usize,
@@ -194,6 +195,12 @@ fn dump_declarators(
             dump_node(sources, name, span, depth, out);
         }
 
+        // The storage class on each declarator's line, which it applies to.
+        match storage {
+            Some(Storage::Static) => out.push_str(" static"),
+            Some(Storage::Extern) => out.push_str(" extern"),
+            None => {}
+        }
         dump_declaration(sources, ast, &declarator.declaration, out);
         dump_parameters(sources, ast, declarator.declaration.ty, depth + 1, out);
         if let Some(init) = declarator.init {
@@ -333,12 +340,13 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
         Stmt::Declaration {
             declarators,
             specified,
+            storage,
             span,
         } => {
             dump_declarators(
                 sources,
                 ast,
-                (declarators, *specified),
+                (declarators, *specified, *storage),
                 stmt.name(),
                 *span,
                 depth,

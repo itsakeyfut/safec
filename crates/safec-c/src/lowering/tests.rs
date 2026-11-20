@@ -899,17 +899,17 @@ fn a_type_the_ir_cannot_hold_is_reported() {
     assert!(!function(&lowered, "f").is_defined());
 }
 
-/// A name that is not a local is reported where it is used.
-///
-/// Every place the IR can name starts at a local, so an object at file
-/// scope has nothing to be until #74.
+/// A name that is neither a local nor an object with static storage
+/// duration is reported where it is used: a file-scope object whose type the
+/// IR cannot hold, a pointer to a function, is passed over where it is
+/// declared and has nothing to be.
 ///
 /// Mutation: give a use with no local the return place instead. Nothing is
 /// reported, `f` gains a body that writes to the wrong place, and this
 /// fails.
 #[test]
 fn a_name_the_ir_cannot_reach_is_reported() {
-    let lowered = lowered("int g;\n\nint f(void) {\n    return g;\n}\n");
+    let lowered = lowered("int (*g)(void);\n\nint f(void) {\n    return g == 0;\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }

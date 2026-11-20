@@ -1,0 +1,8 @@
+error[SC0317]: the initializer of `kept` is not a constant
+   ╭─[ a_static_local_is_initialized_with_a_constant.c:2:23 ]
+   │
+ 2 │     static int kept = n;
+   │                       ┬  
+   │                       ╰── not a constant expression
+───╯
+  = note: a `static` object is initialized with a constant expression (C17 6.7.9 p4)

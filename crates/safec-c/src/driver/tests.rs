@@ -1625,6 +1625,7 @@ fn a_node_is_placed_against_the_file_its_span_names() {
         span: Span::new(first, 0, 29),
         attribute: None,
         return_nullability: None,
+        storage: None,
     }));
 
     let mut out = String::new();
