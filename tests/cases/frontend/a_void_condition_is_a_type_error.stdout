@@ -20,5 +20,11 @@ Function a_void_condition_is_a_type_error.c:4:1 "f" "int (void)"
       Compound a_void_condition_is_a_type_error.c:11:18
         Return a_void_condition_is_a_type_error.c:12:9
           Number a_void_condition_is_a_type_error.c:12:16 "3"
-    Return a_void_condition_is_a_type_error.c:14:5
-      Number a_void_condition_is_a_type_error.c:14:12 "0"
+    Do a_void_condition_is_a_type_error.c:14:5
+      Compound a_void_condition_is_a_type_error.c:14:8
+        Return a_void_condition_is_a_type_error.c:15:9
+          Number a_void_condition_is_a_type_error.c:15:16 "4"
+      Call a_void_condition_is_a_type_error.c:16:14
+        Identifier a_void_condition_is_a_type_error.c:16:14 "h"
+    Return a_void_condition_is_a_type_error.c:17:5
+      Number a_void_condition_is_a_type_error.c:17:12 "0"

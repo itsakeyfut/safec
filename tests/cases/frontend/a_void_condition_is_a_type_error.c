@@ -11,5 +11,8 @@ int f(void) {
     for (; h();) {
         return 3;
     }
+    do {
+        return 4;
+    } while (h());
     return 0;
 }

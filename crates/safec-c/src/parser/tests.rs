@@ -611,7 +611,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
         ("int main(void) { switch (1) { } }\n", "`switch`", "6.8.4.2"),
-        ("int main(void) { do ; while (0); }\n", "`do`", "6.8.5.2"),
         (
             "int main(void) { goto l; l: return 0; }\n",
             "`goto`",
@@ -957,7 +956,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
 
     let keywords: &[(&str, &str, &[At])] = &[
         ("switch", "6.8.4.2", &[Statement]),
-        ("do", "6.8.5.2", &[Statement]),
         ("goto", "6.8.6.1", &[Statement]),
         ("continue", "6.8.6.2", &[Statement]),
         ("break", "6.8.6.3", &[Statement]),

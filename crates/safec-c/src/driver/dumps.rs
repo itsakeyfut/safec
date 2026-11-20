@@ -377,6 +377,14 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
             dump_expr(sources, ast, *condition, depth + 1, out);
             child(*body, out);
         }
+        // The order the source has them, which is the order they run in.
+        Stmt::Do {
+            body, condition, ..
+        } => {
+            out.push('\n');
+            child(*body, out);
+            dump_expr(sources, ast, *condition, depth + 1, out);
+        }
         Stmt::For {
             start,
             condition,

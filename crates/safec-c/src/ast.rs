@@ -6,8 +6,8 @@
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
 //! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
-//! here is `switch`, `do`, `goto`, a labelled statement, `break`, `continue`,
-//! and structs. The siblings of the issues that added the rest fill those in,
+//! here is `switch`, `goto`, a labelled statement, `break`, `continue`, and
+//! structs. The siblings of the issues that added the rest fill those in,
 //! and each of them adds variants here rather than changing the shape.
 //!
 //! **A statement tree is bounded and an expression tree is not.** Every place a
@@ -640,7 +640,7 @@ pub enum Stmt {
     /// `then` points at the brace that broke it. So a walker may not assume a
     /// child sits inside its parent, and a diagnostic underlining a whole
     /// statement has to say which of the two it means. The same holds of
-    /// `While` and `For`.
+    /// `While`, `Do` and `For`.
     If {
         /// What is asked. 6.8.4.1 p1 makes it a constraint that this has scalar
         /// type, which `types.rs` checks.
@@ -659,6 +659,15 @@ pub enum Stmt {
         /// What runs while it holds.
         body: StmtId,
         /// The keyword through the body.
+        span: Span,
+    },
+    /// `do`, whose body runs before its condition is first asked. C17 6.8.5.2.
+    Do {
+        /// What runs on every turn, the first included.
+        body: StmtId,
+        /// What is asked after each turn.
+        condition: ExprId,
+        /// The keyword through the `;` after the condition.
         span: Span,
     },
     /// `for`, in either of the forms C17 6.8.5 p1 gives: a first clause that
@@ -869,6 +878,7 @@ impl Stmt {
             Self::Expression { .. } => "Expression",
             Self::If { .. } => "If",
             Self::While { .. } => "While",
+            Self::Do { .. } => "Do",
             Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
@@ -882,6 +892,7 @@ impl Stmt {
             | Self::Expression { span, .. }
             | Self::If { span, .. }
             | Self::While { span, .. }
+            | Self::Do { span, .. }
             | Self::For { span, .. }
             | Self::Declaration { span, .. }
             | Self::Error { span } => *span,
