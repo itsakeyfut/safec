@@ -68,6 +68,7 @@ impl Allocations<'_> {
                 may_be_null: false,
                 vouched: false,
                 // No place for certain. See ADR-0105.
+                read_only: false,
                 alone: None,
             },
         );
@@ -1736,6 +1737,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
+                            read_only: false,
                             alone: None,
                         },
                     ),
@@ -1802,6 +1804,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
+                            read_only: false,
                             alone: None,
                         },
                     ),
@@ -1854,6 +1857,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
+                            read_only: false,
                             alone: None,
                         },
                     ),
@@ -1928,6 +1932,7 @@ impl Allocations<'_> {
                     vouched: false,
                     // **An allocation's result is certainly its one block**, where its
                     // site stands for one; nothing else a call returns is. See ADR-0105.
+                    read_only: false,
                     alone: (matches!(kind, Callee::Allocates) && self.made_once[site.local()])
                         .then_some(Referent::Heap(site)),
                 },

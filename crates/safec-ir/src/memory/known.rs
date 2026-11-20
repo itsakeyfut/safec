@@ -1753,6 +1753,23 @@ impl Known {
         !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
+    /// Whether a value read `depth` dereferences through `local` may name
+    /// storage the program may not modify: a block on the way may hold such a
+    /// pointer (`Cell::may_hold_read_only`), or a local on the way holds one.
+    /// What a load takes, and what a write through a loaded pointer asks.
+    /// See ADR-0120.
+    pub(super) fn read_only_on_the_way(&self, local: LocalId, depth: usize) -> bool {
+        (0..depth).any(|level| {
+            let (sites, locals) = self.levels_below(local, level);
+            sites
+                .iter()
+                .any(|&site| self.contents[site].may_hold_read_only())
+                || locals
+                    .iter()
+                    .any(|&read_from| self.points_to[read_from].read_only)
+        })
+    }
+
     /// Whether a load `depth` dereferences through `local` may read a null,
     /// from what it reads: see `Self::load_into`.
     fn load_may_be_null(&self, local: LocalId, depth: usize, from_caller: bool) -> bool {
@@ -1898,6 +1915,9 @@ impl Known {
             // call writes asks `Held::alone` instead (ADR-0105).
             held.may_be_null = self.load_may_be_null(local, depth, from_caller);
         }
+        // **A pointer to read-only storage read back is still one**, out of
+        // a block or a local alike: `*(int **)&c` with `c` holding `&k`.
+        held.read_only = held.read_only || self.read_only_on_the_way(local, depth);
         // **And the locals whose address it may be**, as edges, so a write
         // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not
         // all of them, since the set is a lower bound. See ADR-0045.

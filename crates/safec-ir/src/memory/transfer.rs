@@ -392,6 +392,7 @@ impl Allocations<'_> {
                         may_be_null: false,
                         vouched: false,
                         // A constant or an address carried by a store is no grant. See ADR-0105.
+                        read_only: false,
                         alone: None,
                     },
                 )
@@ -1484,6 +1485,7 @@ impl Allocations<'_> {
                 may_be_null: true,
                 vouched: false,
                 // A load names nothing for certain: a block's record keeps no such fact.
+                read_only: false,
                 alone: None,
             },
         );
@@ -2662,6 +2664,7 @@ impl Analysis for Allocations<'_> {
                         may_be_null: false,
                         vouched: false,
                         // Nothing is certain at entry.
+                        read_only: false,
                         alone: None,
                     },
                 ),
@@ -2781,6 +2784,7 @@ impl Analysis for Allocations<'_> {
                     may_be_null: function.nonnull(parameter).is_none(),
                     vouched: false,
                     // A parameter's memory is the caller's; nothing certain.
+                    read_only: false,
                     alone: None,
                 },
             );
@@ -3715,6 +3719,7 @@ impl Analysis for Allocations<'_> {
                                     may_be_null: false,
                                     vouched: false,
                                     // A constant names nothing. See ADR-0105.
+                                    read_only: false,
                                     alone: None,
                                 },
                             ),
@@ -3771,6 +3776,7 @@ impl Analysis for Allocations<'_> {
                                     may_be_null: false,
                                     vouched: true,
                                     // Nothing this check follows. See ADR-0105.
+                                    read_only: self.unit.static_object(*id).read_only,
                                     alone: None,
                                 },
                             ),
@@ -3857,6 +3863,7 @@ impl Analysis for Allocations<'_> {
                                     // **Certainly the local**, where what was taken is the whole of it or
                                     // a one-level array's start: the one grant of the fact besides an
                                     // allocation. `&arr[k]` and `&m[0][0]` grant nothing. See ADR-0105.
+                                    read_only: false,
                                     alone: ((match taken.shape() {
                                         Shape::Local => true,
                                         Shape::Deref(_) | Shape::Indexed => false,
