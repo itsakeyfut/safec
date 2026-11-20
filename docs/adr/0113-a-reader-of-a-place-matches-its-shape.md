@@ -53,9 +53,19 @@ misread member would be a false report or a silence.
 ### Confirmation
 
 * `every_reader_of_a_place_answers_every_shape` fails on a `matches!` whose
-  subject is a place's shape, or that names a `Projection`, in `safec-ir`,
+  subject is a place's shape or that names a `Projection`, on an `if let`,
+  `while let` or `let ... else` naming a `Shape` or a `Projection`, and on a
+  comparison of a place's steps outside a test module, in `safec-ir`,
   `safec-c` or `safec-llvm`. Mutation: write `matches!(place.shape(),
-  Shape::Local)` in `Strong::assigned`; it fails and names `store.rs`.
+  Shape::Local)`, or `if let Shape::Local = place.shape()`, in
+  `Strong::assigned`; it fails and names `store.rs`. It cannot see a shape
+  bound to a name and then matched with `matches!` by that name; review
+  does.
+* A reader that asks a prefix of the steps, not their shape, reads the steps:
+  `reads::first_of_two_derefs` and the lowering's array decay, each found
+  answering differently for a place with an `Index` after the rewrite.
+  `the_first_of_two_dereferences_is_read_whatever_follows` holds the first;
+  the second is not reachable from C and is held by nothing.
 * Adding a variant to `Shape` was measured at 121 `E0004` sites in `safec-ir`
   alone, where a new `Projection` had made none in `memory`.
 * A direct read of `projection` outside `ir` is `E0616`.

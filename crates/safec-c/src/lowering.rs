@@ -2618,19 +2618,22 @@ impl Lowering<'_> {
         };
         let pointer = self.unit.push_type(Ty::Pointer(element));
         let first = builder.function.push_local(pointer);
-        let value = match place.shape() {
-            Shape::Local => Rvalue::Address(Place::new(
-                place.local,
-                vec![Projection::Index(Operand::Constant(0))],
-            )),
-            Shape::Deref(_) => Rvalue::Use(Operand::Copy(
-                place
-                    .without_last_deref()
-                    .expect("a place of dereferences ends in one"),
-            )),
-            Shape::Indexed => {
-                unreachable!("the lowering builds an `Index` only under `Rvalue::Address`")
-            }
+        // **By the last step**, whatever precedes it: an array reached
+        // through a pointer decays to that pointer. Asked of the shape
+        // instead, `[Index, Deref]` would have been an `Indexed` place and
+        // unreachable, where the last `Deref` is what decides (found by
+        // review of #1092).
+        let value = match place.without_last_deref() {
+            Some(pointer) => Rvalue::Use(Operand::Copy(pointer)),
+            None => match place.shape() {
+                Shape::Local => Rvalue::Address(Place::new(
+                    place.local,
+                    vec![Projection::Index(Operand::Constant(0))],
+                )),
+                Shape::Deref(_) | Shape::Indexed => {
+                    unreachable!("the lowering builds an `Index` only under `Rvalue::Address`")
+                }
+            },
         };
         builder.push(Operation {
             place: Place::local(first),

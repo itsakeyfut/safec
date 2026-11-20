@@ -827,8 +827,11 @@ fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
 /// names and lets a new one through in silence, which the compiler cannot see,
 /// so the sources are read for one. See ADR-0113.
 ///
-/// Mutation: write `matches!(place.shape(), Shape::Local)` in any reader in
-/// `safec-ir`, `safec-c` or `safec-llvm`; this fails and names the file.
+/// Mutation: write `matches!(place.shape(), Shape::Local)`, or `if let
+/// Shape::Local = place.shape()`, in any reader in `safec-ir`, `safec-c` or
+/// `safec-llvm`; this fails and names the file. **What it cannot see** is a
+/// shape bound to a variable and then matched with `matches!` by that name,
+/// which only review catches.
 #[test]
 fn every_reader_of_a_place_answers_every_shape() {
     fn sources(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
@@ -890,8 +893,17 @@ fn every_reader_of_a_place_answers_every_shape() {
             }
             rest = &tail[end..];
         }
+        // And an `if let`, `while let` or `let ... else` naming one shape or
+        // step, and a comparison of the steps, outside a test module, where
+        // a hand-built place is spelled out on purpose. Found by review.
+        let test_module = file.file_name().is_some_and(|name| name == "tests.rs");
         for line in text.lines() {
-            if line.contains("let Projection::") || line.contains(".shape() else") {
+            if line.contains("let Projection::")
+                || line.contains("let Shape::")
+                || line.contains("let crate::ir::Shape::")
+                || line.contains(".shape() else")
+                || (!test_module && line.contains(".steps() =="))
+            {
                 evasions.push(format!("{}: {}", file.display(), line.trim()));
             }
         }
@@ -904,5 +916,30 @@ fn every_reader_of_a_place_answers_every_shape() {
             "
 "
         )
+    );
+}
+
+/// `*l` is read on the way to `**l` whatever steps follow, so the first of
+/// two leading dereferences is found for a place that goes on to an `Index`
+/// as well. Mutation: answer it from `Shape::Deref` alone, which is `Indexed`
+/// for this place; it answers `None` and this fails.
+#[test]
+fn the_first_of_two_dereferences_is_read_whatever_follows() {
+    let l = LocalId(1);
+    let place = Place::new(
+        l,
+        vec![
+            Projection::Deref,
+            Projection::Deref,
+            Projection::Index(Operand::Constant(0)),
+        ],
+    );
+    assert_eq!(
+        crate::reads::first_of_two_derefs(&place),
+        Some(Place::local(l).deref())
+    );
+    assert_eq!(
+        crate::reads::first_of_two_derefs(&Place::local(l).deref()),
+        None
     );
 }

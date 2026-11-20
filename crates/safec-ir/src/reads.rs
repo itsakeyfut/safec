@@ -431,9 +431,20 @@ fn read_as_value(place: &Place) -> Vec<Place> {
 
 /// The `*l` reaching a place reads on the way, read or written: the first
 /// of two dereferences at its start.
-fn first_of_two_derefs(place: &Place) -> Option<Place> {
-    match place.shape() {
-        Shape::Deref(depth) if depth >= 2 => Some(Place::local(place.local).deref()),
-        Shape::Local | Shape::Deref(_) | Shape::Indexed => None,
+///
+/// **A prefix, whatever follows it**: `**l` and `**l` followed by any step
+/// both read `*l` on the way, so this asks the first two steps and not the
+/// place's [`Shape`], which is `Indexed` for `[Deref, Deref, Index]` (found by
+/// review of #1092). Mutation: answer it from `Shape::Deref` alone;
+/// `the_first_of_two_dereferences_is_read_whatever_follows` fails.
+pub(crate) fn first_of_two_derefs(place: &Place) -> Option<Place> {
+    let [first, second, ..] = place.steps() else {
+        return None;
+    };
+    match (first, second) {
+        (Projection::Deref, Projection::Deref) => Some(Place::local(place.local).deref()),
+        (Projection::Deref | Projection::Index(_), Projection::Deref | Projection::Index(_)) => {
+            None
+        }
     }
 }
