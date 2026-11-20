@@ -524,8 +524,9 @@ null pointer constant and no other integer, so those answer alike too.
 
 **An initializer at file scope is a constant expression.** C17 6.7.9 p4 asks
 it of an object with static storage duration, which every object at file
-scope is, and `types.rs::Checker::check_static_initializers` refuses one that
-is not under `SC0317`: an integer constant expression, a null pointer
+scope is and a `static` one in a block is too, and
+`types.rs::Checker::check_static_initializers` refuses one that is not under
+`SC0317`: an integer constant expression, a null pointer
 constant, an address constant (6.6 p9) and one of those plus or minus an
 integer constant (6.6 p7) are what it accepts. An address constant is made
 through `[]`, `.`, `->`, `&` and `*`, so `&a2[1][2]`, `s.m` and `*f` are
@@ -698,7 +699,9 @@ a declaration. They are gaps rather than decisions, and each one is a program
 |---|---|
 | `int a[n];`, an array whose length is no constant, or any function or struct type | the IR holds `int`, `char`, `void`, and pointers to them and arrays of them with a constant length (#621) |
 | `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
-| `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
+| `int *p = &g;`, an object with static storage duration whose initializer is an address | what a static starts with is a number or a null pointer (ADR-0115) |
+| `extern char g;` in a block, where the file-scope `g` is an `int` | C17 6.2.7 p2 makes it undefined, and nothing before the lowering compares a block's `extern` with the file scope's declaration |
+| a file-scope object of a type the IR cannot hold, used inside a function | it is passed over where it is declared, so the use names nothing |
 | `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`), until #638 |
 
 The reason a refusal is reported rather than lowered around is that the IR has

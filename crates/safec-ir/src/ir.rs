@@ -27,12 +27,12 @@
 //! analysis can therefore say what a pointer outlived rather than only where it
 //! came from. See [ADR-0012].
 //!
-//! **Every place is still rooted at a local**, so an object with static storage
-//! duration cannot be named at all. That is the other half of what a lifetime
-//! analysis eventually needs, it changes what a [`Place`] is rooted at rather
-//! than adding a variant beside the ones here, and #85 is where it is decided.
-//! It waits on the frontend: the parser does not read the storage classes, so
-//! no C program can ask for one yet.
+//! **Every place is still rooted at a local**, and an object with static
+//! storage duration is reached through its address: [`Rvalue::Static`] puts
+//! it in a local of pointer type, and the place is `*t`. The objects are the
+//! unit's, [`TranslationUnit::statics`], each with what it starts with, so a
+//! global and a local of one type are two different things to every reader
+//! of the IR. See ADR-0115.
 //!
 //! Nothing here reads an IR. `crates/safec-c/src/lowering.rs` builds one from
 //! the typed AST; the printer is [`crate::print`] and the interpreter is
@@ -503,6 +503,56 @@ impl BinOp {
     }
 }
 
+/// Where an object with static storage duration is in a [`TranslationUnit`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct StaticId(u32);
+
+impl StaticId {
+    /// Where this id points in the unit's table.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// An object with static storage duration: C17 6.2.4 p3, an object declared
+/// at file scope or with `static`, or a string literal (6.4.5 p6). It lives
+/// as long as the program does, so no function's frame holds it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Static {
+    /// The name the backend gives its symbol: the name a file-scope object was
+    /// declared with, or one made unique for a `static` local.
+    pub name: String,
+    /// Its type.
+    pub ty: TyId,
+    /// What other translation units may name it as.
+    pub linkage: Linkage,
+    /// What it holds before the program begins (6.7.9 p10).
+    pub init: StaticInit,
+}
+
+/// What another translation unit may name an object with static storage
+/// duration as. C17 6.2.2.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Linkage {
+    /// Defined here, and other units may name it.
+    External,
+    /// Defined here, and only this unit names it: `static` at file scope, a
+    /// `static` local, a string literal.
+    Internal,
+    /// Named here with `extern` and defined in another unit.
+    Declared,
+}
+
+/// What an object with static storage duration holds before the program
+/// begins.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StaticInit {
+    /// Zero, which is what one with no initializer holds (C17 6.7.9 p10).
+    Zero,
+    /// An integer constant, converted to the object's type.
+    Int(i128),
+}
+
 /// What an operation computes.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Rvalue {
@@ -540,6 +590,11 @@ pub enum Rvalue {
     /// lifetime analysis will start here: everything that can outlive what it
     /// points at came through this.
     Address(Place),
+    /// The address of an object with static storage duration, a global, a
+    /// `static` local or a string literal, which is how every use of one is
+    /// reached: `g = 1` is `t = Static(g); *t = 1`. Never null, and pointing
+    /// to storage no function owns. See ADR-0115.
+    Static(StaticId),
 }
 
 impl Rvalue {
@@ -550,6 +605,7 @@ impl Rvalue {
             Self::Unary { .. } => "Unary",
             Self::Binary { .. } => "Binary",
             Self::Address(_) => "Address",
+            Self::Static(_) => "Static",
         }
     }
 }
@@ -1105,6 +1161,9 @@ pub struct Function {
     nonnull: Vec<Option<Promise>>,
     /// Whether this is a hatch.
     hatch: bool,
+    /// Whether its name has internal linkage, `static` in C (C17 6.2.2 p3),
+    /// so that no other unit's function of the name is this one.
+    internal: bool,
     /// Whether the pointer it returns is promised not to be null.
     return_promise: Option<Promise>,
     body: Body,
@@ -1150,6 +1209,7 @@ impl Function {
             names,
             nonnull,
             hatch: false,
+            internal: false,
             return_promise: None,
             body: Body::Defined(Vec::new()),
         }
@@ -1178,6 +1238,17 @@ impl Function {
     /// Whether this is a hatch.
     pub fn hatch(&self) -> bool {
         self.hatch
+    }
+
+    /// This function, with internal linkage.
+    pub fn with_internal_linkage(mut self) -> Self {
+        self.internal = true;
+        self
+    }
+
+    /// Whether its name has internal linkage.
+    pub fn internal_linkage(&self) -> bool {
+        self.internal
     }
 
     /// This function, promising that the pointer it returns is not null.
@@ -1527,6 +1598,8 @@ impl Function {
 pub struct TranslationUnit {
     target: Target,
     functions: Vec<Function>,
+    /// The objects with static storage duration, by [`StaticId`].
+    statics: Vec<Static>,
     types: Vec<Ty>,
     /// So that one type has one id. Not part of the shape: an implementation
     /// detail of [`Self::push_type`].
@@ -1539,9 +1612,29 @@ impl TranslationUnit {
         Self {
             target,
             functions: Vec::new(),
+            statics: Vec::new(),
             types: Vec::new(),
             interned: HashMap::new(),
         }
+    }
+
+    /// Add an object with static storage duration and say where it went.
+    pub fn push_static(&mut self, object: Static) -> StaticId {
+        let id = StaticId(u32::try_from(self.statics.len()).expect("fewer than 2^32 statics"));
+        self.statics.push(object);
+        id
+    }
+
+    /// The object with static storage duration an id names.
+    pub fn static_object(&self, id: StaticId) -> &Static {
+        &self.statics[id.index()]
+    }
+
+    /// Every object with static storage duration, in the order they were
+    /// added.
+    pub fn statics(&self) -> impl Iterator<Item = StaticId> + '_ {
+        (0..self.statics.len())
+            .map(|index| StaticId(u32::try_from(index).expect("fewer than 2^32 statics")))
     }
 
     /// The machine this unit is for.

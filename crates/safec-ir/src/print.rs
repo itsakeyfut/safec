@@ -221,6 +221,32 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
     write!(out, " {:?}", unit.target().triple()).expect("writing to a string cannot fail");
     out.push('\n');
 
+    // Each object with static storage duration, before the functions that
+    // reach it, with what it holds before the program begins.
+    for id in unit.statics() {
+        let object = unit.static_object(id);
+        dump_line("Static", 0, out);
+        let linkage = match object.linkage {
+            crate::ir::Linkage::External => "external",
+            crate::ir::Linkage::Internal => "internal",
+            crate::ir::Linkage::Declared => "declared",
+        };
+        write!(
+            out,
+            " {:?} {:?} {linkage}",
+            object.name,
+            spell_ty(unit, object.ty)
+        )
+        .expect("writing to a string cannot fail");
+        match &object.init {
+            crate::ir::StaticInit::Zero => out.push_str(" zero"),
+            crate::ir::StaticInit::Int(value) => {
+                write!(out, " {value}").expect("writing to a string cannot fail");
+            }
+        }
+        out.push('\n');
+    }
+
     for id in unit.functions() {
         let function = unit.function(id);
         dump_node(sources, "Function", function.name, 0, out);
@@ -236,6 +262,11 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
         // See ADR-0038.
         if function.hatch() {
             out.push_str(" hatch");
+        }
+        // Two units may each have one of these by the same name, which is
+        // not true of any other function.
+        if function.internal_linkage() {
+            out.push_str(" internal");
         }
         out.push('\n');
 
@@ -310,7 +341,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                         out.push('\n');
 
                         dump_place(sources, "Destination", &operation.place, 3, out);
-                        dump_rvalue(sources, &operation.value, 3, out);
+                        dump_rvalue(sources, unit, &operation.value, 3, out);
                     }
                     // The `Operation` shape without a destination, because
                     // there is none: the value went nowhere and the place is
@@ -466,7 +497,13 @@ fn dump_operand(sources: &SourceMap, operand: &Operand, depth: usize, out: &mut 
 }
 
 /// What an operation computes, and what it reads to compute it.
-fn dump_rvalue(sources: &SourceMap, value: &Rvalue, depth: usize, out: &mut String) {
+fn dump_rvalue(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    value: &Rvalue,
+    depth: usize,
+    out: &mut String,
+) {
     dump_line(value.name(), depth, out);
 
     match value {
@@ -488,6 +525,13 @@ fn dump_rvalue(sources: &SourceMap, value: &Rvalue, depth: usize, out: &mut Stri
         Rvalue::Address(place) => {
             out.push('\n');
             dump_place(sources, "Place", place, depth + 1, out);
+        }
+        // By name, as a callee is: the id is an index into a table this
+        // artifact does not show.
+        Rvalue::Static(id) => {
+            write!(out, " {:?}", unit.static_object(*id).name)
+                .expect("writing to a string cannot fail");
+            out.push('\n');
         }
     }
 }

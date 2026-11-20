@@ -28,8 +28,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, Item, Parameters, Stmt, StmtId,
-    Type,
+    Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters,
+    Stmt, StmtId, Storage, Type,
 };
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
@@ -38,9 +38,9 @@ use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
-    Between, BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
-    Parameter, Place, Projection, Promise, Rvalue, Shape, Terminator, TranslationUnit, Ty, TyId,
-    UnOp,
+    Between, BinOp, Block, BlockId, Element, FuncId, Function, Linkage, LocalId, Operand,
+    Operation, Origin, Parameter, Place, Projection, Promise, Rvalue, Shape, Static, StaticId,
+    StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -326,6 +326,10 @@ pub fn lower(
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
         refused: HashSet::new(),
+        statics: HashMap::new(),
+        file_statics: HashMap::new(),
+        block_statics: HashMap::new(),
+        internal: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
         root: None,
@@ -416,6 +420,20 @@ struct Lowering<'a> {
     /// reported again: the caller wrote an ordinary call and the fault is in a
     /// declaration somewhere else.
     refused: HashSet<String>,
+    /// The object with static storage duration each declaration names, by the
+    /// span of the name it declares, which is what a use resolves to. Every
+    /// file-scope declaration of one object, and every block-scope `extern`
+    /// naming it, maps to the same one. See ADR-0115.
+    statics: HashMap<Span, StaticId>,
+    /// The file-scope objects by spelling, which is how a block-scope
+    /// `extern` finds the one it names (C17 6.2.2 p4).
+    file_statics: HashMap<String, StaticId>,
+    /// How many block-scope `static` objects each spelling has had in each
+    /// function, so that each gets a name of its own.
+    block_statics: HashMap<String, u32>,
+    /// The functions some file-scope declaration of which says `static`,
+    /// which C17 6.2.2 p3 gives internal linkage.
+    internal: HashSet<String>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -720,6 +738,20 @@ fn sequences(expr: &Expr) -> bool {
     }
 }
 
+/// One file-scope object as [`Lowering::file_objects`] gathers it, over
+/// every declaration of it.
+struct FileObject {
+    name: String,
+    ty: TyId,
+    /// Whether its first declaration said `static`.
+    internal: bool,
+    /// Whether a declaration defines it, tentatively or not.
+    defined: bool,
+    init: StaticInit,
+    /// The span of the name in each declaration of it.
+    declared: Vec<Span>,
+}
+
 impl Lowering<'_> {
     /// Give every function a [`FuncId`] before any body is built.
     ///
@@ -728,18 +760,30 @@ impl Lowering<'_> {
     /// second. Until a body arrives the function is a declaration, which is
     /// what it truthfully is.
     fn declare(&mut self, diagnostics: &mut DiagnosticSink) {
+        let mut objects: Vec<FileObject> = Vec::new();
+        let mut by_name: HashMap<String, usize> = HashMap::new();
         for item in self.ast.items() {
             match item {
                 Item::Function(function) => {
                     let (name, ty, written) =
                         (function.name, function.ty, function.return_nullability);
+                    if function.storage == Some(Storage::Static) {
+                        self.internal.insert(self.sources.snippet(name).to_owned());
+                    }
                     self.declare_one(name, ty, written, true, diagnostics);
                 }
                 Item::Declaration {
                     declarators,
                     specified,
+                    storage,
                     ..
                 } => {
+                    self.file_objects(
+                        declarators,
+                        *storage,
+                        (&mut objects, &mut by_name),
+                        diagnostics,
+                    );
                     // **A declaration that declares nothing still defines**:
                     // `struct S { int (*fp)(...); };` writes a prototype that
                     // no declarator's type carries, and a later `struct S s;`
@@ -754,19 +798,9 @@ impl Lowering<'_> {
                         let _ = self.prototypes_lose_nothing(*specified, &mut walked, diagnostics);
                     }
                     for declarator in declarators {
-                        // A declaration of an object rather than a function is
-                        // not in the IR at all: every place is rooted at a
-                        // local, so there is nothing for a global to be. A use
-                        // of one is reported where it is used, which is where a
-                        // reader can see what it cost.
-                        //
-                        // **`declarator.init` is read and dropped here**, so
-                        // `int g = 5;` at file scope emits nothing and says
-                        // nothing. That is contained only because a use of `g`
-                        // is refused: there is no way to observe the value
-                        // that went missing. #85 is where a global gets
-                        // somewhere to live, and it is the change that has to
-                        // come back for this initializer.
+                        // An object is [`Lowering::file_objects`]'s, above,
+                        // and becomes a static; what is asked here is of a
+                        // function, which `declare_one` passes over an object.
                         let declaration = &declarator.declaration;
                         if let Some(name) = declaration.name {
                             let (ty, written) = (declaration.ty, declaration.nullability);
@@ -790,6 +824,236 @@ impl Lowering<'_> {
                 Item::Error { .. } => {}
             }
         }
+
+        for object in objects {
+            // C17 6.9.2 p2: a tentative definition and no definition is a
+            // definition with zero, which `StaticInit::Zero` already says;
+            // only a unit that defines it nowhere leaves it to another.
+            let linkage = match (object.defined, object.internal) {
+                (false, _) => Linkage::Declared,
+                (true, true) => Linkage::Internal,
+                (true, false) => Linkage::External,
+            };
+            let id = self.unit.push_static(Static {
+                name: object.name.clone(),
+                ty: object.ty,
+                linkage,
+                init: object.init,
+            });
+            self.file_statics.insert(object.name, id);
+            for span in object.declared {
+                self.statics.insert(span, id);
+            }
+        }
+    }
+
+    /// Every object a file-scope declaration declares, gathered into
+    /// `objects` by spelling, since `int g; int g = 1;` is one object
+    /// declared twice (C17 6.9.2 p2). `by_name` is each spelling's index
+    /// there, a map rather than a scan per declarator, which the
+    /// `definitions` map in `sema.rs` says a scan cost.
+    ///
+    /// The first declaration's linkage stands (6.2.2 p4): `static` gives
+    /// internal linkage, and a later one without it agrees rather than
+    /// changing it. A declaration with an initializer, or without `extern`,
+    /// defines it, the second tentatively (6.9.2 p1, p2).
+    ///
+    /// **An object whose type this compiler cannot hold is passed over in
+    /// silence**, its type asked into a sink nobody reads: a use of it is
+    /// refused where it is written, as every global's was before this, and an
+    /// unused one costs nothing. One whose initializer is not a number is
+    /// refused here, since dropping it would build a program that starts
+    /// with the wrong value.
+    fn file_objects(
+        &mut self,
+        declarators: &[InitDeclarator],
+        storage: Option<Storage>,
+        (objects, by_name): (&mut Vec<FileObject>, &mut HashMap<String, usize>),
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        for declarator in declarators {
+            let declaration = &declarator.declaration;
+            let Some(name) = declaration.name else {
+                continue;
+            };
+            if matches!(self.ast.ty(declaration.ty), Type::Function { .. }) {
+                if storage == Some(Storage::Static) {
+                    self.internal.insert(self.sources.snippet(name).to_owned());
+                }
+                continue;
+            }
+            let Some(ty) = self.ty(name, declaration.ty, &mut DiagnosticSink::new()) else {
+                continue;
+            };
+            let init = match declarator.init {
+                Some(init) => match self.static_init(init, ty, diagnostics) {
+                    Some(init) => Some(init),
+                    None => continue,
+                },
+                None => None,
+            };
+            let spelled = self.sources.snippet(name);
+            let index = match by_name.get(spelled) {
+                Some(&index) => index,
+                None => {
+                    by_name.insert(spelled.to_owned(), objects.len());
+                    objects.push(FileObject {
+                        name: spelled.to_owned(),
+                        ty,
+                        internal: storage == Some(Storage::Static),
+                        defined: false,
+                        init: StaticInit::Zero,
+                        declared: Vec::new(),
+                    });
+                    objects.len() - 1
+                }
+            };
+            let object = &mut objects[index];
+            object.defined |= storage != Some(Storage::Extern) || init.is_some();
+            if let Some(init) = init {
+                object.init = init;
+            }
+            object.declared.push(name);
+        }
+    }
+
+    /// What an object with static storage duration starts with: the value of
+    /// its initializer, as its type holds it (C17 6.7.9 p10 by way of
+    /// 6.5.16.1 p2), or `None` where it has none this can write.
+    ///
+    /// The type checker has refused one that is not a constant (6.7.9 p4).
+    /// What is left without a value is an address constant, `int *p = &g;`,
+    /// which C allows and a static here cannot hold yet; or one already
+    /// reported, which is not reported twice.
+    fn static_init(
+        &mut self,
+        init: ExprId,
+        ty: TyId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<StaticInit> {
+        if let Some(value) = self.types.value(init) {
+            let value = self
+                .unit
+                .integer(ty)
+                .map_or(value, |int| int.convert(value));
+            return Some(StaticInit::Int(value));
+        }
+        if !diagnostics.has_errors() {
+            diagnostics.report(
+                Diagnostic::error("cannot compile this initializer yet")
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(
+                        self.ast.expr(init).span(),
+                        "an address, which an object with static storage duration cannot start with so far",
+                    ))
+                    .with_note("an initializer that is a number or a null pointer is all this compiler holds"),
+            );
+        }
+        None
+    }
+
+    /// The object with static storage duration the identifier `id` names, if
+    /// it names one.
+    fn static_named(&self, id: ExprId) -> Option<StaticId> {
+        self.resolution
+            .resolved(id)
+            .map(|binding| self.resolution.binding(binding).name)
+            .and_then(|name| self.statics.get(&name).copied())
+    }
+
+    /// The place a use of a static is: `*t`, where `t` is a temporary holding
+    /// its address. See ADR-0115.
+    fn reach_static(&mut self, builder: &mut Builder, object: StaticId, span: Span) -> Place {
+        let ty = self.unit.static_object(object).ty;
+        let pointer = self.unit.push_type(Ty::Pointer(ty));
+        let address = builder.function.push_local(pointer);
+        builder.push(Operation {
+            place: Place::local(address),
+            value: Rvalue::Static(object),
+            origin: Origin::Generated(span),
+        });
+        Place::new(address, vec![Projection::Deref])
+    }
+
+    /// A block-scope declaration that names a storage class: a `static`
+    /// object, which is a static of its own whose name no other function's
+    /// shares, or an `extern` one, which is the file-scope object of that
+    /// name (C17 6.2.2 p4), or one declared for another unit to define.
+    ///
+    /// Nothing runs where it is written. Its initializer is its starting
+    /// value, given before the program begins (5.1.2 p1), so the declaration
+    /// is no assignment, and no storage begins or ends with the block.
+    fn block_static(
+        &mut self,
+        builder: &Builder,
+        declarator: &InitDeclarator,
+        storage: Storage,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let declaration = &declarator.declaration;
+        let Some(name) = declaration.name else {
+            return Some(());
+        };
+        let ty = self.ty(declaration.span, declaration.ty, diagnostics)?;
+        let spelled = self.sources.snippet(name).to_owned();
+        let id = match storage {
+            Storage::Static => {
+                let init = match declarator.init {
+                    Some(init) => self.static_init(init, ty, diagnostics)?,
+                    None => StaticInit::Zero,
+                };
+                // `.` is in no C identifier, so no file-scope name and no
+                // other function's static is spelled the same.
+                let function = self.sources.snippet(builder.function.name);
+                let base = format!("{function}.{spelled}");
+                let count = self.block_statics.entry(base.clone()).or_insert(0);
+                let unique = match *count {
+                    0 => base,
+                    n => format!("{base}.{n}"),
+                };
+                *count += 1;
+                self.unit.push_static(Static {
+                    name: unique,
+                    ty,
+                    linkage: Linkage::Internal,
+                    init,
+                })
+            }
+            Storage::Extern => {
+                let id = match self.file_statics.get(&spelled) {
+                    Some(&id) => id,
+                    None => {
+                        let id = self.unit.push_static(Static {
+                            name: spelled.clone(),
+                            ty,
+                            linkage: Linkage::Declared,
+                            init: StaticInit::Zero,
+                        });
+                        self.file_statics.insert(spelled.clone(), id);
+                        id
+                    }
+                };
+                // C17 6.2.7 p2 makes two declarations of one object with
+                // incompatible types undefined, and the type checker compares
+                // only declarations in one scope. A read through the wrong
+                // type would be built in silence, so it is refused.
+                if self.unit.static_object(id).ty != ty {
+                    diagnostics.report(
+                        Diagnostic::error("cannot compile this declaration yet")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(
+                                name,
+                                format!("`{spelled}` is declared with another type outside this block"),
+                            ))
+                            .with_note("C17 6.2.7 p2 makes two declarations of one object with incompatible types undefined"),
+                    );
+                    return None;
+                }
+                id
+            }
+        };
+        self.statics.insert(name, id);
+        Some(())
     }
 
     /// One name out of [`Lowering::declare`]'s walk.
@@ -1357,9 +1621,12 @@ impl Lowering<'_> {
             let Some(id) = self.functions.get(self.sources.snippet(name)).copied() else {
                 continue;
             };
-            let Some(built) = self.body(name, ty, body, hatch, written, diagnostics) else {
+            let Some(mut built) = self.body(name, ty, body, hatch, written, diagnostics) else {
                 continue;
             };
+            if self.internal.contains(self.sources.snippet(name)) {
+                built = built.with_internal_linkage();
+            }
 
             self.unit.fill_function(id, built);
         }
@@ -1825,6 +2092,15 @@ impl Lowering<'_> {
                 // test is needed. See ADR-0012.
                 self.leave_scopes(builder, 0, span);
                 builder.end(Terminator::Return);
+            }
+            Stmt::Declaration {
+                declarators,
+                storage: Some(storage),
+                ..
+            } => {
+                for declarator in declarators {
+                    self.block_static(builder, declarator, *storage, diagnostics)?;
+                }
             }
             Stmt::Declaration { declarators, .. } => {
                 for declarator in declarators {
@@ -2615,7 +2891,7 @@ impl Lowering<'_> {
                     self.begin_value(id, &mut tasks, &mut values, diagnostics)?;
                 }
                 Task::Place(id) => {
-                    self.begin_place(id, &mut tasks, &mut places, diagnostics)?;
+                    self.begin_place(builder, id, &mut tasks, &mut places, diagnostics)?;
                 }
                 Task::Finish(id) => {
                     self.finish_value(builder, id, &mut values, &mut places, diagnostics)?;
@@ -3006,6 +3282,7 @@ impl Lowering<'_> {
     /// Push what an expression needs before the place it names can be built.
     fn begin_place(
         &mut self,
+        builder: &mut Builder,
         id: ExprId,
         tasks: &mut Vec<Task>,
         places: &mut Vec<Place>,
@@ -3017,9 +3294,10 @@ impl Lowering<'_> {
 
         match self.ast.expr(id) {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
-            Expr::Identifier { .. } => {
-                places.push(Place::local(self.local(id, diagnostics)?));
-            }
+            Expr::Identifier { span, .. } => match self.static_named(id) {
+                Some(object) => places.push(self.reach_static(builder, object, *span)),
+                None => places.push(Place::local(self.local(id, diagnostics)?)),
+            },
             Expr::Unary {
                 op: AstUnOp::Deref,
                 operand,

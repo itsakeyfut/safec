@@ -25,7 +25,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, BinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Type, TypeId, UnOp, spell_type,
+    StmtId, Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -615,6 +615,7 @@ impl Checker<'_> {
                 Item::Declaration {
                     declarators,
                     specified,
+                    storage: _,
                     span,
                 } => push(
                     declarators,
@@ -630,6 +631,7 @@ impl Checker<'_> {
             if let Stmt::Declaration {
                 declarators,
                 specified,
+                storage: _,
                 span,
             } = ast.stmt(id)
             {
@@ -697,10 +699,10 @@ impl Checker<'_> {
         }
     }
 
-    /// Report every initializer of an object at file scope that is not a
-    /// constant expression, under [`NOT_CONSTANT`]: C17 6.7.9 p4 asks one
-    /// of an object with static storage duration, which is every object at
-    /// file scope here. It may be an integer constant expression, whose
+    /// Report every initializer of an object at file scope, or of a `static`
+    /// one in a block, that is not a constant expression, under
+    /// [`NOT_CONSTANT`]: C17 6.7.9 p4 asks one of an object with static
+    /// storage duration, which is those two. It may be an integer constant expression, whose
     /// value `values` holds, a null pointer constant among them, or an
     /// address constant ([`Checker::address_constant`]). One that is constant
     /// in shape and has no defined value is told so (6.6 p4), as a
@@ -708,11 +710,48 @@ impl Checker<'_> {
     /// as `NOT_YET` unless the run has already failed, since the lowering
     /// drops the initializer unread and would otherwise build the program.
     /// A function given one is `INITIALIZED`'s.
+    ///
+    /// A block-scope `extern` with an initializer is refused here as well,
+    /// under [`INITIALIZED`]: 6.7.9 p5 forbids one to a block-scope name with
+    /// linkage, and the lowering takes the object from file scope and would
+    /// drop it unread.
     fn check_static_initializers(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        for item in ast.items() {
-            let Item::Declaration { declarators, .. } = item else {
-                continue;
-            };
+        let at_file_scope = ast.items().iter().filter_map(|item| match item {
+            Item::Declaration { declarators, .. } => Some((declarators, true)),
+            Item::Function(_) | Item::Error { .. } => None,
+        });
+        let mut in_a_block = Vec::new();
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration {
+                declarators,
+                storage: Some(storage),
+                ..
+            } = ast.stmt(id)
+            {
+                match storage {
+                    Storage::Static => in_a_block.push((declarators, false)),
+                    Storage::Extern => {
+                        for declarator in declarators {
+                            let Some(init) = declarator.init else {
+                                continue;
+                            };
+                            diagnostics.report(
+                                Diagnostic::error("an `extern` in a block cannot be initialized")
+                                    .with_code(INITIALIZED)
+                                    .with_label(Label::primary(
+                                        ast.expr(init).span(),
+                                        "this initializes it",
+                                    ))
+                                    .with_note(
+                                        "C17 6.7.9 p5: a block-scope name with linkage has no initializer",
+                                    ),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        for (declarators, file_scope) in at_file_scope.chain(in_a_block) {
             for declarator in declarators {
                 let Some(init) = declarator.init else {
                     continue;
@@ -764,9 +803,11 @@ impl Checker<'_> {
                 } else {
                     Diagnostic::error(format!("the initializer of `{name}` is not a constant"))
                         .with_label(Label::primary(span, "not a constant expression"))
-                        .with_note(
-                            "an object at file scope is initialized with a constant expression (C17 6.7.9 p4)",
-                        )
+                        .with_note(if file_scope {
+                            "an object at file scope is initialized with a constant expression (C17 6.7.9 p4)"
+                        } else {
+                            "a `static` object is initialized with a constant expression (C17 6.7.9 p4)"
+                        })
                 };
                 diagnostics.report(diagnostic.with_code(NOT_CONSTANT));
             }
@@ -991,11 +1032,26 @@ impl Checker<'_> {
             let Stmt::Declaration {
                 declarators,
                 specified,
+                storage,
                 span,
             } = ast.stmt(*declaration)
             else {
                 unreachable!("a `for` begins with a statement that is not a declaration")
             };
+            // p3 again: an object of storage class `auto` or `register` only,
+            // so neither `static` nor `extern`.
+            if let Some(storage) = storage {
+                let written = match storage {
+                    Storage::Static => "static",
+                    Storage::Extern => "extern",
+                };
+                diagnostics.report(
+                    Diagnostic::error(format!("a `for` may not declare an object `{written}`"))
+                        .with_code(FOR_DECLARATION)
+                        .with_label(Label::primary(*span, format!("this is `{written}`")))
+                        .with_note("C17 6.8.5 p3"),
+                );
+            }
             // A tag and nothing else, `for (struct S; ...)`: the identifier it
             // declares is a tag, which is not an object either.
             if declarators.is_empty() {
@@ -1102,15 +1158,45 @@ impl Checker<'_> {
     /// and in `check_argument`.
     fn check_complete_objects(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         // Each with whether it is at file scope and whether it is initialized.
+        //
+        // **An `extern` with no initializer is left out**, at either scope: it
+        // declares an object with linkage and defines nothing (C17 6.9.2 p1),
+        // so neither 6.7 p7, which is about an object with no linkage, nor
+        // 6.9.2 p2, which is about a tentative definition, asks its type to
+        // be complete. `extern int a[];` is how a header names an array
+        // another unit defines. Mutation: keep it; `an_extern_of_an_incomplete_type_is_a_declaration`
+        // reports `SC0315`.
+        //
+        // **A `static` one at file scope is held to its declarator**: 6.9.2
+        // p3 forbids a tentative definition with internal linkage an
+        // incomplete type, where one with external linkage may be completed
+        // later in the unit.
+        let declares_only = |storage: &Option<Storage>, d: &InitDeclarator| {
+            *storage == Some(Storage::Extern) && d.init.is_none()
+        };
         let mut objects: Vec<(&Declaration, bool, bool)> = Vec::new();
+        let mut internal: Vec<&Declaration> = Vec::new();
         for item in ast.items() {
             match item {
-                Item::Declaration { declarators, .. } => {
+                Item::Declaration {
+                    declarators,
+                    storage,
+                    ..
+                } => {
                     objects.extend(
                         declarators
                             .iter()
+                            .filter(|d| !declares_only(storage, d))
                             .map(|d| (&d.declaration, true, d.init.is_some())),
                     );
+                    if *storage == Some(Storage::Static) {
+                        internal.extend(
+                            declarators
+                                .iter()
+                                .filter(|d| d.init.is_none())
+                                .map(|d| &d.declaration),
+                        );
+                    }
                 }
                 Item::Function(function) => {
                     let Type::Function {
@@ -1131,13 +1217,45 @@ impl Checker<'_> {
             }
         }
         for id in ast.stmt_ids() {
-            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+            if let Stmt::Declaration {
+                declarators,
+                storage,
+                ..
+            } = ast.stmt(id)
+            {
                 objects.extend(
                     declarators
                         .iter()
+                        .filter(|d| !declares_only(storage, d))
                         .map(|d| (&d.declaration, false, d.init.is_some())),
                 );
             }
+        }
+        // Mutation: skip this loop; `a_static_tentative_definition_of_an_incomplete_type_is_refused`
+        // exits zero.
+        for declaration in internal {
+            let ty = declaration.ty;
+            let incomplete = match ast.ty(ty) {
+                Type::Array { length: None, .. } => true,
+                Type::Struct { .. } => !self.resolution.complete(ast, ty),
+                _ => false,
+            };
+            if !incomplete {
+                continue;
+            }
+            let at = declaration.name.unwrap_or(declaration.span);
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`{}` has incomplete type `{}`",
+                    self.sources.snippet(at),
+                    self.spelled(ast, ty)
+                ))
+                .with_code(INCOMPLETE_OBJECT)
+                .with_label(Label::primary(at, "declared here"))
+                .with_note(
+                    "a tentative definition with internal linkage has a complete type where it is written (C17 6.9.2 p3)",
+                ),
+            );
         }
         for (declaration, at_file_scope, initialized) in objects {
             let ty = declaration.ty;
@@ -1166,9 +1284,6 @@ impl Checker<'_> {
                 // gap, under `SC0304`.
                 // One whose element 6.7.6.2 p1 forbids is already refused, under
                 // `SC0309`, and a second report would be about the same fault.
-                // A block's object has no linkage only while `extern` is not
-                // read; one declared `extern` may be completed elsewhere
-                // (6.2.5 p22), and will need leaving out here.
                 Type::Array {
                     length: None,
                     element,

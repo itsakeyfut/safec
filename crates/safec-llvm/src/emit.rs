@@ -16,8 +16,8 @@
 use std::fmt::Write as _;
 
 use safec_ir::ir::{
-    BinOp, BlockId, Element, FuncId, Function, Operand, Operation, Place, Projection, Rvalue,
-    Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Place, Projection,
+    Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
@@ -111,6 +111,10 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         next_temp: 0,
         at: None,
     };
+
+    for id in unit.statics() {
+        emitter.global(id, out);
+    }
 
     for id in unit.functions() {
         emitter.function(id, out);
@@ -245,6 +249,43 @@ impl Emitter<'_> {
         } else {
             format!("@\"{}\"", escaped(spelled))
         }
+    }
+
+    /// An object with static storage duration's symbol, quoted as a function's
+    /// name is where it holds what LLVM's unquoted set does not: a `static`
+    /// local's name is made unique with a `.`, which that set has.
+    fn global_name(&self, id: StaticId) -> String {
+        let name = &self.unit.static_object(id).name;
+        if plain(name) {
+            format!("@{name}")
+        } else {
+            format!("@\"{}\"", escaped(name))
+        }
+    }
+
+    /// One object with static storage duration, as a global: defined with what
+    /// it holds before the program begins, or declared for another unit to
+    /// define. A value this cannot write is a refusal, and the global is then
+    /// declared, so a function that reaches it still reads.
+    fn global(&mut self, id: StaticId, out: &mut String) {
+        self.at = None;
+        let object = self.unit.static_object(id);
+        let name = self.global_name(id);
+        let spelled = self.spell(object.ty);
+        let init = match &object.init {
+            StaticInit::Zero => Ok("zeroinitializer".to_owned()),
+            StaticInit::Int(value) => self.constant(*value, object.ty),
+        };
+        let line = match (object.linkage, init) {
+            (Linkage::Declared, _) | (_, Err(_)) => {
+                format!("{name} = external global {spelled}")
+            }
+            (Linkage::External, Ok(init)) => format!("{name} = global {spelled} {init}"),
+            (Linkage::Internal, Ok(init)) => {
+                format!("{name} = internal global {spelled} {init}")
+            }
+        };
+        writeln!(out, "{line}").expect("writing to a string cannot fail");
     }
 
     /// Where a place is, as a `ptr`.
@@ -758,6 +799,14 @@ impl Emitter<'_> {
                 }
                 self.address(function, place, out)?
             }
+            // A global's symbol is its address, as LLVM spells a pointer.
+            Rvalue::Static(id) => {
+                if !matches!(self.unit.ty(to), Ty::Pointer(_)) {
+                    let wanted = self.spell(to);
+                    return self.refuse(format!("an address written into a `{wanted}`"));
+                }
+                self.global_name(*id)
+            }
         };
 
         let address = self.address(function, &operation.place, out)?;
@@ -1032,8 +1081,19 @@ impl Emitter<'_> {
                     .enumerate()
                     .map(|(index, ty)| format!("{ty} %arg{index}"))
                     .collect();
-                writeln!(out, "define {returns} {name}({}) {{", named.join(", "))
-                    .expect("writing to a string cannot fail");
+                // `internal` is what C17 6.2.2 p3's internal linkage is to
+                // LLVM: a symbol no other module's reference resolves to.
+                let linkage = if function.internal_linkage() {
+                    "internal "
+                } else {
+                    ""
+                };
+                writeln!(
+                    out,
+                    "define {linkage}{returns} {name}({}) {{",
+                    named.join(", ")
+                )
+                .expect("writing to a string cannot fail");
                 out.push_str(&body);
                 out.push_str("}\n");
             }

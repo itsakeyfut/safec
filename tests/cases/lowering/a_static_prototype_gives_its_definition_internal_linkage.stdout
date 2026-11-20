@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_static_prototype_gives_its_definition_internal_linkage.c:5:5 "h" internal
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_static_prototype_gives_its_definition_internal_linkage.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_static_prototype_gives_its_definition_internal_linkage.c:6:12 generated
+    Return
+Function a_static_prototype_gives_its_definition_internal_linkage.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Operation a_static_prototype_gives_its_definition_internal_linkage.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_static_prototype_gives_its_definition_internal_linkage.c:3:12 generated
+    Call a_static_prototype_gives_its_definition_internal_linkage.c:3:12 written "h" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Operation a_static_prototype_gives_its_definition_internal_linkage.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_static_prototype_gives_its_definition_internal_linkage.c:3:12 generated
+    Return

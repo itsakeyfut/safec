@@ -1,0 +1,20 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:5:5 ]
+   │
+ 5 │     free(kept);
+   │     ─────┬────  
+   │          ╰────── this was read out of memory, which this check does not follow
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+error[SC0402]: this uses `p`, which may have been freed
+    ╭─[ a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:15:5 ]
+    │
+ 15 │     *p = 1;
+    │     ───┬──  
+    │        ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

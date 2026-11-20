@@ -1,0 +1,4 @@
+Target "x86_64-pc-windows-msvc"
+Static "g" "int" external zero
+Function an_extern_in_a_block_with_another_type_is_not_compiled.c:2:5 "main" declared
+  Local "_0" "int" return

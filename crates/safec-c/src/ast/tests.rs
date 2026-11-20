@@ -472,6 +472,7 @@ fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
             span: s,
             attribute: None,
             return_nullability: None,
+            storage: None,
         })
         .name(),
         "Function"

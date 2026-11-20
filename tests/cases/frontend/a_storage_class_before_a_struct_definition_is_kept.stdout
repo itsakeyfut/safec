@@ -1,0 +1,10 @@
+Declaration a_storage_class_before_a_struct_definition_is_kept.c:1:1 static "p" "struct S *"
+  Field a_storage_class_before_a_struct_definition_is_kept.c:2:5 "a" "int"
+Declaration a_storage_class_before_a_struct_definition_is_kept.c:4:1 extern "e" "struct U *"
+  Field a_storage_class_before_a_struct_definition_is_kept.c:5:5 "a" "int"
+Function a_storage_class_before_a_struct_definition_is_kept.c:7:1 "f" "int (void)"
+  Compound a_storage_class_before_a_struct_definition_is_kept.c:7:13
+    Declaration a_storage_class_before_a_struct_definition_is_kept.c:8:5 static "l" "struct V *"
+      Field a_storage_class_before_a_struct_definition_is_kept.c:9:9 "a" "int"
+    Return a_storage_class_before_a_struct_definition_is_kept.c:11:5
+      Number a_storage_class_before_a_struct_definition_is_kept.c:11:12 "0"

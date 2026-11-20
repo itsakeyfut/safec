@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile this initializer yet
+   ╭─[ an_address_is_no_initializer_for_a_static_yet.c:2:10 ]
+   │
+ 2 │ int *p = &g;
+   │          ─┬  
+   │           ╰── an address, which an object with static storage duration cannot start with so far
+───╯
+  = note: an initializer that is a number or a null pointer is all this compiler holds

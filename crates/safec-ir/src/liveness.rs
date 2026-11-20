@@ -74,6 +74,9 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                             reads_of_operand(lhs, &mut read, &written);
                             reads_of_operand(rhs, &mut read, &written);
                         }
+                        // The address of an object no frame holds reads no
+                        // local.
+                        Rvalue::Static(_) => {}
                         Rvalue::Address(place) => {
                             always[place.local.index()] = true;
                             reads_of_operand(&Operand::Copy(place.clone()), &mut read, &written);

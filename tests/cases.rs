@@ -4550,6 +4550,12 @@ cases! {
         //
         // The row that proves it.
         a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A global is reached through its address, which is never null, as
+        // `&x` is not (ADR-0115), so reading an `int` global is no
+        // dereference to doubt. Mutation: answer `Rvalue::Static` as
+        // `Nullness::Unknown` in `nullability.rs`; each read of `count` is
+        // `SC0403`.
+        a_global_read_is_not_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two parameters' lengths are unsequenced (C17 6.7.6 p3), so `*p` in
         // `b` may follow `p = 0` in `a`. A length's value is read only once
         // every length is lowered, so the read meets the null. Mutation:
@@ -5312,6 +5318,17 @@ cases! {
         // Reported, each a use after free or a double free for some definition
         // of the callees C permits.
         what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A global is storage code outside this function reads, so a pointer
+        // stored in one and then freed is `SC0414`, and what is read back out
+        // of it is doubted rather than followed (ADR-0115). Mutation: lower a
+        // use of a static as the address of a fresh local in
+        // `Lowering::reach_static`; the store no longer escapes and the
+        // report changes.
+        a_pointer_kept_in_a_global_and_freed_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And any call may free what a global holds, so `p` is doubted after
+        // `drop` frees it through `kept`. Mutation: the same; `p` never
+        // escapes, and the report changes.
+        a_pointer_kept_in_a_global_may_be_freed_by_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -6454,6 +6471,18 @@ cases! {
         // Whether an access fits the object its pointer reaches, `SC0412`.
         // See ADR-0060, whose Confirmation names the mutation each of these
         // fails under.
+        //
+        // An object with static storage duration is as wide as its type, and
+        // an access, a library copy or a hand-off wider than that is doubted
+        // (ADR-0115). Mutation: give `Rvalue::Static` no marks in the memory
+        // check's transfer; all three exit zero.
+        memset_past_a_global_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_written_through_a_chars_global_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_global_handed_where_a_wider_object_is_believed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a call does not end that belief, since no call frees a static's
+        // storage. Mutation: mark `Rvalue::Static` as from the caller instead;
+        // both reads are `SC0402`.
+        a_global_read_beside_a_call_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         //
         // The issue's own program: a null test on the moved pointer took away
         // the `SC0403` that had been standing in for this. Mutation: answer
@@ -8169,6 +8198,48 @@ cases! {
         a_block_declaration_carries_its_initializer: ["--emit", "ast"],
         a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
         a_braced_initializer_is_refused: ["--emit", "ast"],
+        // C17 6.7.1 p2: one storage class per declaration. Mutation: let a
+        // second replace the first in `Parser::eat_qualifiers_and_storage`;
+        // nothing is reported.
+        a_second_storage_class_is_refused: ["--emit", "ast"],
+        // C17 6.2.2 p7: one identifier with both linkages is undefined, and
+        // `clang` refuses each of these three. Mutation: skip
+        // `Resolver::linked`; nothing is reported.
+        a_static_after_an_external_declaration_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration with `extern` and no initializer defines nothing, so
+        // its type may be completed elsewhere, at either scope. Mutation:
+        // keep it in the type checker's incomplete-object walk; three
+        // `SC0315`s.
+        an_extern_of_an_incomplete_type_is_a_declaration: ["--emit", "ast"],
+        // C17 6.9.2 p3. Mutation: skip the internal-linkage loop in the
+        // type checker's incomplete-object walk; this builds.
+        a_static_tentative_definition_of_an_incomplete_type_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // ADR-0118. Mutation: call `Resolver::define` for no `static`
+        // definition; this builds, and `exit` is believed not to return.
+        a_static_function_named_exit_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Both declarations have linkage, which C17 6.7 p3 is not about.
+        // Mutation: drop `both_linked` in `Resolver::declare_in`; `SC0312`.
+        a_repeated_extern_in_a_block_is_one_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A struct's members are read between a declaration's specifiers.
+        // Mutation: write each half of `Parser::specifiers` straight into
+        // `Parser::storage`; all three lose their storage class.
+        a_storage_class_before_a_struct_definition_is_kept: ["--emit", "ast"],
+        // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
+        // the first half in `Parser::specifiers`; `SC0201`.
+        a_storage_class_after_the_type_is_read: ["--emit", "ast"],
+        // C17 6.8.5 p3 lets a `for` declare only `auto` and `register`
+        // objects. Mutation: drop the storage test in the type checker's
+        // `for` walk; nothing is reported and the loop builds.
+        a_for_may_not_declare_a_static_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p5. Mutation: drop the `Storage::Extern` arm's report in
+        // `Checker::check_static_initializers`; the initializer is dropped
+        // unread and the program builds.
+        an_extern_in_a_block_cannot_be_initialized: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p4 holds a block-scope `static` to a constant as it
+        // holds a global. Mutation: walk only file-scope declarations in
+        // `Checker::check_static_initializers`; nothing is reported here, and
+        // the lowering refuses it as an address instead.
+        a_static_local_is_initialized_with_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The two codes a constant this compiler cannot read is reported under,
         // and `--emit safety-ir` rather than `--emit ast` because what each one
         // pins is that there is exactly one report on a run asked to go past
@@ -9576,6 +9647,35 @@ cases! {
         // The shape of the Safety IR a program lowers to, where no check and no
         // frontend report is what the case is about.
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every use of an object with static storage duration is `*t` after
+        // `t = Static(..)`, and the statics are listed before the functions
+        // with what they start with: a tentative definition and its
+        // definition are one `g`, the block's `extern` is that `g` too, the
+        // block's `static` is `main.n`, and `static` gives `h` and `twice`
+        // internal linkage. See ADR-0115. Mutation: give a tentative
+        // definition after a definition its own entry; `g` is listed twice.
+        a_global_is_reached_through_its_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.6 p9 allows an address constant, and a static here holds a
+        // number. Mutation: answer `StaticInit::Zero` where the initializer
+        // has no value in `Lowering::static_init`; `p` starts null and this
+        // builds.
+        an_address_is_no_initializer_for_a_static_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.2.7 p2 makes this undefined, and only the lowering sees both
+        // declarations. Mutation: drop the type comparison in
+        // `Lowering::block_static`; `g` is read as a `char`.
+        an_extern_in_a_block_with_another_type_is_not_compiled: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p10 by way of 6.5.16.1 p2: 300 as a `char` is 44 here.
+        // Mutation: drop the conversion in `Lowering::static_init`; `c`
+        // starts with 300.
+        a_static_starts_with_its_value_as_its_type_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: answer every count with the bare name in
+        // `Lowering::block_static`; both are `main.a`.
+        two_block_statics_of_one_name_are_two_objects: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.2.2 p5: a function declared with no storage class takes the
+        // linkage already given. Mutation: drop the `internal` insert for a
+        // prototype in `Lowering::file_objects`; `h` is printed without
+        // `internal`.
+        a_static_prototype_gives_its_definition_internal_linkage: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.9.1 p10: a parameter's length is evaluated on entry, so the
         // store of `2` to `n` comes before the body, and a marker after it.
         // Mutation: refuse a length that is not a constant again; this is

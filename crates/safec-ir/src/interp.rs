@@ -56,8 +56,8 @@
 //! makes redundant.
 
 use crate::ir::{
-    BinOp, BlockId, Element, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TranslationUnit, Ty, UnOp,
+    BinOp, BlockId, Element, FuncId, LocalId, Operand, Place, Projection, Rvalue, StaticId,
+    StaticInit, Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::source::Span;
 use crate::target::Integer;
@@ -109,7 +109,8 @@ pub enum Value {
     /// checks: `rvalue` at an assignment, `enter` at a parameter, and `fits` at
     /// an operation. ADR-0013 is where the widths come from.
     Int(i128),
-    /// A pointer to a local of a frame.
+    /// A pointer to a local of a frame, or to an object with static storage
+    /// duration.
     ///
     /// A resolved place rather than the expression that named one. C17
     /// 6.5.3.2 p3 is the clause: `&*p` is `p`, so what a pointer holds is the
@@ -131,7 +132,18 @@ pub enum Value {
 /// ended, C17 6.2.4 p2 makes its value indeterminate, and `operand` stops a
 /// comparison of it, as it stops every use of one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Location {
+pub enum Location {
+    /// A local of a frame.
+    Local(InFrame),
+    /// An object with static storage duration, which C17 6.2.4 p3 gives
+    /// storage for the whole run: nothing it is pointed at from ends, so no
+    /// question this module asks of a local's storage applies to it.
+    Static(StaticId),
+}
+
+/// A local of a frame, as [`Location::Local`] names it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InFrame {
     /// How deep in the stack the frame sits.
     depth: usize,
     /// Which call filled that depth.
@@ -141,6 +153,33 @@ pub struct Location {
     /// Which entry to the local's block made the storage this names, as the
     /// stamp `Element::StorageLive` gave the slot then.
     instance: u64,
+}
+
+/// The frames of a run, and the objects with static storage duration that
+/// outlive every one of them.
+///
+/// The frames are reached as the stack they are, through `Deref`, so that
+/// every walk of a frame reads as one; the statics are asked for only where a
+/// [`Location::Static`] is.
+struct Stack {
+    frames: Vec<Frame>,
+    /// One value per static, made with its initial value when the run starts
+    /// (C17 5.1.2 p1) and never `Unwritten` or `Dead`.
+    statics: Vec<Value>,
+}
+
+impl std::ops::Deref for Stack {
+    type Target = Vec<Frame>;
+
+    fn deref(&self) -> &Vec<Frame> {
+        &self.frames
+    }
+}
+
+impl std::ops::DerefMut for Stack {
+    fn deref_mut(&mut self) -> &mut Vec<Frame> {
+        &mut self.frames
+    }
 }
 
 /// Why a run stopped.
@@ -235,7 +274,18 @@ struct Frame {
 /// `ir.rs` documents the same class of panic on the accessors this uses.
 pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result<Value, Trap> {
     let mut generation = 0;
-    let mut frames = vec![enter(unit, entry, arguments, generation)?];
+    let mut frames = Stack {
+        frames: vec![enter(unit, entry, arguments, generation)?],
+        // What C17 6.7.9 p10 gives one with no initializer is zero, as an
+        // integer and as a null pointer alike.
+        statics: unit
+            .statics()
+            .map(|id| match unit.static_object(id).init {
+                StaticInit::Zero => Value::Int(0),
+                StaticInit::Int(value) => Value::Int(value),
+            })
+            .collect(),
+    };
     let mut steps = 0;
 
     loop {
@@ -291,8 +341,11 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 Element::Evaluate { place, origin } => {
                     let at =
                         resolve(&frames, current, place).map_err(|trap| trap.at(origin.span()))?;
-                    reached(&frames, at, "an evaluation of")
-                        .map_err(|trap| trap.at(origin.span()))?;
+                    // A static is reached for the whole run.
+                    if let Location::Local(at) = at {
+                        reached(&frames, at, "an evaluation of")
+                            .map_err(|trap| trap.at(origin.span()))?;
+                    }
                 }
                 // **Nothing runs.** A sequence point is a fact about the
                 // order two evaluations may happen in, and this interpreter
@@ -523,7 +576,7 @@ fn enter(
 /// A `Use` is **converted**. C17 6.5.16.1 p2 converts the right operand of an
 /// assignment to the type of the assignment expression, and 6.3.1.3 says what
 /// that gives. Nothing is undefined there, so nothing stops.
-fn rvalue(frames: &[Frame], value: &Rvalue, ty: Option<Integer>) -> Result<Value, Trap> {
+fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, Trap> {
     let current = frames.len() - 1;
 
     Ok(match value {
@@ -535,6 +588,7 @@ fn rvalue(frames: &[Frame], value: &Rvalue, ty: Option<Integer>) -> Result<Value
         // resolved here rather than remembered: what `&p[i]` names is the
         // object it reached, and reaching it again later could reach another.
         Rvalue::Address(place) => Value::Pointer(resolve(frames, current, place)?),
+        Rvalue::Static(id) => Value::Pointer(Location::Static(*id)),
         // C17 6.5.3.3 p5 makes `!E` mean `(0 == E)`, which is defined for a
         // pointer and needs no width: a place is an object, so `!p` is zero.
         Rvalue::Unary {
@@ -690,13 +744,13 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
 /// accessed, by calling it, so that the rule is written once. A dereference
 /// does not come through here: [`resolve`] follows a pointer by [`load`], and
 /// an access through one is `load`'s and `reached`'s to name.
-fn operand(frames: &[Frame], current: usize, operand: &Operand) -> Result<Value, Trap> {
+fn operand(frames: &Stack, current: usize, operand: &Operand) -> Result<Value, Trap> {
     match operand {
         Operand::Constant(value) => Ok(Value::Int(*value)),
         Operand::Copy(place) => {
             let at = resolve(frames, current, place)?;
             let value = load(frames, at)?;
-            if let Value::Pointer(to) = value {
+            if let Value::Pointer(Location::Local(to)) = value {
                 reached(frames, to, "a use of a pointer to")?;
             }
             Ok(value)
@@ -715,13 +769,13 @@ fn operand(frames: &[Frame], current: usize, operand: &Operand) -> Result<Value,
 /// parser bounds when it reads the declarator the place came from. It is not
 /// bounded by anything the program chooses while it runs, which is what makes a
 /// walk safe here and not in [`run`].
-fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, Trap> {
-    let mut at = Location {
+fn resolve(frames: &Stack, current: usize, place: &Place) -> Result<Location, Trap> {
+    let mut at = Location::Local(InFrame {
         depth: current,
         generation: frames[current].generation,
         local: place.local,
         instance: frames[current].instances[place.local.index()],
-    };
+    });
 
     for projection in place.steps() {
         match projection {
@@ -758,7 +812,11 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
 /// here rather than called because this answers one more thing about the slot,
 /// what it holds, and the slot's three states are one `match` the compiler
 /// checks.
-fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
+fn load(frames: &Stack, at: Location) -> Result<Value, Trap> {
+    let at = match at {
+        Location::Static(id) => return Ok(frames.statics[id.index()].clone()),
+        Location::Local(at) => at,
+    };
     let frame = live(frames, at)?;
     same_entry(frames, frame, at, "a read of")?;
     match frames[frame].locals[at.local.index()].clone() {
@@ -798,7 +856,7 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 /// answers one more thing about the slot as well, what it holds, and folding it in would trade
 /// a match arm the compiler checks for a branch nothing could reach. The rule
 /// is stated here and `load` says it is following it.
-fn reached(frames: &[Frame], at: Location, what: &str) -> Result<usize, Trap> {
+fn reached(frames: &[Frame], at: InFrame, what: &str) -> Result<usize, Trap> {
     let frame = live(frames, at)?;
     same_entry(frames, frame, at, what)?;
     if matches!(frames[frame].locals[at.local.index()], Slot::Dead) {
@@ -812,7 +870,14 @@ fn reached(frames: &[Frame], at: Location, what: &str) -> Result<usize, Trap> {
 /// Write a value where a location says, or a stop saying why it cannot be.
 ///
 /// [`reached`] asks what this has to ask before writing, and says why.
-fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
+fn store(frames: &mut Stack, at: Location, value: Value) -> Result<(), Trap> {
+    let at = match at {
+        Location::Static(id) => {
+            frames.statics[id.index()] = value;
+            return Ok(());
+        }
+        Location::Local(at) => at,
+    };
     let frame = reached(frames, at, "a write to")?;
     frames[frame].locals[at.local.index()] = Slot::Held(value);
     Ok(())
@@ -832,7 +897,7 @@ fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
 /// Asked after [`live`], so a pointer into a returned call keeps its own
 /// sentence, and before the slot's state, which a closed block left `Dead`
 /// with the stamp the pointer holds, so that case keeps its sentence too.
-fn same_entry(frames: &[Frame], frame: usize, at: Location, what: &str) -> Result<(), Trap> {
+fn same_entry(frames: &[Frame], frame: usize, at: InFrame, what: &str) -> Result<(), Trap> {
     if frames[frame].instances[at.local.index()] == at.instance {
         return Ok(());
     }
@@ -843,7 +908,7 @@ fn same_entry(frames: &[Frame], frame: usize, at: Location, what: &str) -> Resul
 }
 
 /// Which frame a location names, or a stop saying it names none.
-fn live(frames: &[Frame], at: Location) -> Result<usize, Trap> {
+fn live(frames: &[Frame], at: InFrame) -> Result<usize, Trap> {
     match frames.get(at.depth) {
         Some(frame) if frame.generation == at.generation => Ok(at.depth),
         // The depth is either past the top of the stack or holds another call
@@ -943,6 +1008,79 @@ mod tests {
         let id = unit.push_function(main);
 
         assert_eq!(run(&unit, id, &[]), Ok(Value::Int(1)), "where `p` pointed");
+    }
+
+    /// An object with static storage duration is not a local of the frame
+    /// that reaches it, however alike the two are typed: a write through its
+    /// address leaves a local of `int` alone, and what was written is there
+    /// when it is read back through a second address of it. See ADR-0115.
+    ///
+    /// Mutation: drop the write in `store`'s `Location::Static` arm. The
+    /// second read gives 5 again and this answers 12.
+    #[test]
+    fn a_static_and_a_local_of_one_type_are_distinct() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int main(void);\n");
+        let at = Span::new(file, 4, 8);
+
+        let mut unit = TranslationUnit::new(a_target());
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let g = unit.push_static(crate::ir::Static {
+            name: "g".to_owned(),
+            ty: int,
+            linkage: crate::ir::Linkage::External,
+            init: StaticInit::Int(5),
+        });
+
+        let mut main = Function::new(at, int, []);
+        let x = main.push_local(int);
+        let first = main.push_local(pointer);
+        let second = main.push_local(pointer);
+        let sum = main.push_local(int);
+
+        let write = |place: Place, value: Rvalue| {
+            Element::Assign(Operation {
+                place,
+                value,
+                origin: Origin::Written(at),
+            })
+        };
+        let through = |local| Place::new(local, vec![Projection::Deref]);
+
+        main.push_block(Block {
+            elements: vec![
+                write(Place::local(x), Rvalue::Use(Operand::Constant(2))),
+                write(Place::local(first), Rvalue::Static(g)),
+                // What it started with, before anything wrote it.
+                write(
+                    Place::local(sum),
+                    Rvalue::Use(Operand::Copy(through(first))),
+                ),
+                write(through(first), Rvalue::Use(Operand::Constant(30))),
+                write(Place::local(second), Rvalue::Static(g)),
+                write(
+                    Place::local(sum),
+                    Rvalue::Binary {
+                        op: BinOp::Add,
+                        lhs: Operand::Copy(Place::local(sum)),
+                        rhs: Operand::Copy(through(second)),
+                    },
+                ),
+                write(
+                    Place::local(main.return_place()),
+                    Rvalue::Binary {
+                        op: BinOp::Add,
+                        lhs: Operand::Copy(Place::local(sum)),
+                        rhs: Operand::Copy(Place::local(x)),
+                    },
+                ),
+            ],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(main);
+
+        assert_eq!(run(&unit, id, &[]), Ok(Value::Int(37)), "5 + 30 + 2");
     }
 
     /// A function built by hand, run with no frontend in it.

@@ -462,9 +462,11 @@ fn locals_reached(function: &Function, value: &Rvalue, known: &Known) -> Vec<Loc
                 .filter(|target| held.names_local(LocalIdx::of(target)))
                 .collect()
         }
-        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
-            Vec::new()
-        }
+        Rvalue::Use(_)
+        | Rvalue::Address(_)
+        | Rvalue::Static(_)
+        | Rvalue::Unary { .. }
+        | Rvalue::Binary { .. } => Vec::new(),
     }
 }
 
@@ -530,9 +532,11 @@ pub(super) fn slots_leaving(
                 locals_reached(function, value, known),
             )
         }
-        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
-            (Vec::new(), locals_reached(function, value, known))
-        }
+        Rvalue::Use(_)
+        | Rvalue::Address(_)
+        | Rvalue::Static(_)
+        | Rvalue::Unary { .. }
+        | Rvalue::Binary { .. } => (Vec::new(), locals_reached(function, value, known)),
     };
     let locals: Vec<(LocalId, Option<TyId>)> = seed_locals
         .into_iter()

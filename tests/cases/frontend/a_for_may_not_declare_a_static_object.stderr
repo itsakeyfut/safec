@@ -1,0 +1,8 @@
+error[SC0311]: a `for` may not declare an object `static`
+   ╭─[ a_for_may_not_declare_a_static_object.c:2:10 ]
+   │
+ 2 │     for (static int i = 0; i < 1; i = i + 1) {
+   │          ────────┬────────  
+   │                  ╰────────── this is `static`
+───╯
+  = note: C17 6.8.5 p3

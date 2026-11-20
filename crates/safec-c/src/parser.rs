@@ -6,7 +6,7 @@
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
-//! `sizeof`, the type qualifiers but `const`, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `sizeof`, the type qualifiers but `const`, the storage classes but `static` and `extern`, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and a string literal, a primary expression the
 //! lexer already hands it. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -29,7 +29,7 @@
 
 use crate::ast::{
     Ast, Attribute, BinOp, Declaration, Expr, ExprId, ForStart, Function, InitDeclarator, Item,
-    Nullability, Parameters, Specifier, Stmt, StmtId, Type, TypeId, UnOp,
+    Nullability, Parameters, Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -241,6 +241,8 @@ struct Declared {
     /// What the declaration declares, which every later declarator in it
     /// shares.
     declares: Declares,
+    /// The storage-class specifier written, if one was.
+    storage: Option<Storage>,
 }
 
 /// What a declaration's specifiers were followed by.
@@ -337,7 +339,12 @@ fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
 /// case here answered by neither.
 fn begins_specifiers(kind: TokenKind) -> bool {
     type_specifier_keyword(kind).is_some()
-        || matches!(kind, TokenKind::Keyword(Keyword::Struct | Keyword::Const))
+        || matches!(
+            kind,
+            TokenKind::Keyword(
+                Keyword::Struct | Keyword::Const | Keyword::Static | Keyword::Extern
+            )
+        )
 }
 
 /// Where a parse failed, which decides what C would have allowed there.
@@ -379,7 +386,7 @@ struct Unread {
 /// One table, so every position asks the same question. Each row says which
 /// positions C allows the keyword in, because one that is C in one place is a
 /// constraint violation in another: `typedef` in a parameter list breaks
-/// C17 6.7.6.3 p2, and `static` in a `for` breaks 6.8.5 p3. Those keep
+/// C17 6.7.6.3 p2, and `typedef` in a `for` breaks 6.8.5 p3. Those keep
 /// [`EXPECTED`]. So does `_Imaginary`, which only Annex G gives a meaning;
 /// `case` and `default` outside a `switch` are [`Parser::case_statement`]'s. `restrict` has no row: 6.7.3 p2 allows it only on a
 /// pointer to an object, so leading a declaration it is C only before a
@@ -396,8 +403,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
         Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
-        Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
-        Keyword::Static => ("`static`", "6.7.1", STORAGE),
         // At file scope only: C17 6.7.1 p3 wants `static` or `extern` beside
         // it in a block, which the one token asked about here cannot see.
         Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", &[FileScope]),
@@ -586,6 +591,7 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         depth: 0,
         loops: 0,
         switches: 0,
+        storage: None,
     }
     .run(diagnostics)
 }
@@ -637,6 +643,10 @@ struct Parser<'a> {
     /// How many `switch` bodies are being read right now, which is where a
     /// `case`, a `default` and a `break` that is in no loop may stand.
     switches: usize,
+    /// The storage-class specifier the last [`Parser::specifiers`] read, which
+    /// [`Parser::declared`] takes before anything nested in the declarator
+    /// can read specifiers of its own.
+    storage: Option<Storage>,
 }
 
 impl Parser<'_> {
@@ -716,7 +726,7 @@ impl Parser<'_> {
                     depth -= 1;
                     let next = self.tokens.get(end).copied();
                     // What begins an item includes what the parser refuses
-                    // at the start of one, `static` and `typedef` among them,
+                    // at the start of one, `inline` and `typedef` among them,
                     // or a `}` before one swallowed it. Found by review. Not
                     // a name, which is a struct's declarator here.
                     let ends_here = next.is_none_or(|next| {
@@ -839,12 +849,14 @@ impl Parser<'_> {
                 return Item::Declaration {
                     declarators: Vec::new(),
                     specified,
+                    storage: None,
                     span,
                 };
             }
             None => return Item::Error { span: first },
         };
         let specified = declared.base;
+        let storage = declared.storage;
 
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
             let Some(body) = self.compound(diagnostics) else {
@@ -859,6 +871,7 @@ impl Parser<'_> {
                 span,
                 attribute,
                 return_nullability: declared.return_nullability,
+                storage,
             });
         }
 
@@ -892,6 +905,7 @@ impl Parser<'_> {
         Item::Declaration {
             declarators,
             specified,
+            storage,
             span,
         }
     }
@@ -911,6 +925,7 @@ impl Parser<'_> {
             Declares::Parameter => Position::Parameter,
         };
         let base = self.specifiers(at, diagnostics)?;
+        let storage = self.storage.take();
         // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
         // struct with a tag is the one this compiler reads. In a member list
         // any struct goes back to `members`, which tells an anonymous member
@@ -953,6 +968,7 @@ impl Parser<'_> {
             ty,
             return_nullability: returns,
             declares,
+            storage,
         }))
     }
 
@@ -1009,6 +1025,7 @@ impl Parser<'_> {
             mut ty,
             return_nullability: mut returns,
             declares,
+            storage: _,
         } = declared;
         let mut declarators = Vec::new();
 
@@ -1152,15 +1169,62 @@ impl Parser<'_> {
         // C17 6.7 p2 takes the specifiers in any order, so `const` may come
         // before the type specifier or after it, and a qualifier written twice
         // is one (6.7.3 p5).
-        let mut constant = self.eat_consts();
+        // `static` and `extern` likewise, at file scope and in a block, which
+        // is where C17 6.7.1 lets a declaration name a storage class; one per
+        // declaration (p2).
+        //
+        // **Held here and handed over at the end**, because a struct's body
+        // is read between the two halves and each member's specifiers are
+        // read by this function too: kept in the parser throughout, a member
+        // cleared the outer `static` of `static struct S { int a; } *p;`.
+        // Mutation: write each half straight into `Parser::storage`;
+        // `a_storage_class_before_a_struct_definition_is_kept` fails.
+        let scoped = matches!(at, Position::FileScope | Position::BlockScope);
+        let mut storage = None;
+        let mut constant = self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
         let ty = self.type_specifier(at, diagnostics)?;
-        constant |= self.eat_consts();
+        constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+        self.storage = storage;
         let ty = if constant {
             self.ast.push_const(ty)
         } else {
             ty
         };
         self.no_unread_specifier_after(ty, at, diagnostics)
+    }
+
+    /// Every `const` here, and every storage class where `scoped` says one
+    /// may stand, recorded in `storage`; whether there was a `const`. A
+    /// second storage class is a constraint violation (C17 6.7.1 p2),
+    /// reported where it is written.
+    fn eat_qualifiers_and_storage(
+        &mut self,
+        scoped: bool,
+        storage: &mut Option<Storage>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<bool> {
+        let mut constant = false;
+        loop {
+            if self.eat(TokenKind::Keyword(Keyword::Const)) {
+                constant = true;
+                continue;
+            }
+            let written = match self.peek().kind {
+                TokenKind::Keyword(Keyword::Static) if scoped => Storage::Static,
+                TokenKind::Keyword(Keyword::Extern) if scoped => Storage::Extern,
+                _ => return Some(constant),
+            };
+            if storage.is_some() {
+                self.report(
+                    "a declaration names at most one storage class",
+                    "a second storage class",
+                    diagnostics,
+                );
+                return None;
+            }
+            self.advance();
+            *storage = Some(written);
+        }
     }
 
     /// Every `const` here, and whether there was one.
@@ -1291,6 +1355,7 @@ impl Parser<'_> {
                 ty,
                 return_nullability,
                 declares,
+                storage: _,
             } = declared;
             let end = self.previous().span;
             members.push(Declaration {
@@ -2007,12 +2072,14 @@ impl Parser<'_> {
                 return self.ast.push_stmt(Stmt::Declaration {
                     declarators: Vec::new(),
                     specified,
+                    storage: None,
                     span,
                 });
             }
             None => return self.ast.push_stmt(Stmt::Error { span: start }),
         };
         let specified = declared.base;
+        let storage = declared.storage;
 
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
@@ -2029,6 +2096,7 @@ impl Parser<'_> {
         self.ast.push_stmt(Stmt::Declaration {
             declarators,
             specified,
+            storage,
             span,
         })
     }

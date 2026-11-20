@@ -857,6 +857,56 @@ fn arrays_and_pointer_arithmetic_compute_what_c_says() {
     }
 }
 
+/// Objects with static storage duration and functions with internal linkage
+/// keep what C says across two units: a global defined in one and declared
+/// `extern` in the other, a tentative definition, a `static` local that keeps
+/// its count, and a `static` object and function of one name in each unit,
+/// which are two of each rather than a clash at the link.
+///
+/// Mutation: write `zeroinitializer` whatever the initializer, in the
+/// backend's `global`. `shared` is zero and this answers 212. Mutation: give
+/// no function internal linkage, by dropping `internal ` from the backend's
+/// `define`. The link finds `helper` twice and fails.
+#[test]
+fn globals_and_statics_keep_what_c_says_across_units() {
+    if !clang_or_skip("what a program with globals answers") {
+        return;
+    }
+
+    let scratch = Scratch::new("statics");
+    scratch.source(
+        "lib.c",
+        "int shared = 40;\nstatic int hidden = 1;\nstatic int helper(void) {\n    return hidden;\n}\nint from_lib(void) {\n    return helper();\n}\n",
+    );
+    scratch.source(
+        "main.c",
+        "extern int shared;\nstatic int hidden = 2;\nint count;\nint count;\nstatic int helper(void) {\n    return hidden;\n}\nint from_lib(void);\nint tick(void) {\n    static int calls;\n    calls = calls + 1;\n    return calls;\n}\nint main(void) {\n    tick();\n    count = count + tick();\n    return shared + from_lib() * 10 + helper() * 100 + count;\n}\n",
+    );
+    let program = scratch
+        .path()
+        .join(if cfg!(windows) { "prog.exe" } else { "prog" });
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "lib.c",
+            "main.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(252), "40 + 1 * 10 + 2 * 100 + 2");
+}
+
 /// A run that names no path leaves the program where `cc` leaves one, and the
 /// plainest invocation there is makes one.
 ///

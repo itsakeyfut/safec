@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Static "c" "char" external 44
+Function a_static_starts_with_its_value_as_its_type_holds_it.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char *"
+  Block "bb0" entry
+    Operation a_static_starts_with_its_value_as_its_type_holds_it.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_static_starts_with_its_value_as_its_type_holds_it.c:3:12 generated
+      Destination "_1"
+      Static "c"
+    Operation a_static_starts_with_its_value_as_its_type_holds_it.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_static_starts_with_its_value_as_its_type_holds_it.c:3:12 generated
+    Return
