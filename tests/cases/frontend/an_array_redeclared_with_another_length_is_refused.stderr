@@ -1,0 +1,67 @@
+error[SC0313]: conflicting types for `g`
+   ╭─[ an_array_redeclared_with_another_length_is_refused.c:2:5 ]
+   │
+ 1 │ extern int g[10];
+   │            ┬  
+   │            ╰── previously declared as `int[10]`
+ 2 │ int g[2];
+   │     ┬  
+   │     ╰── declared here as `int[2]`
+───╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `h`
+   ╭─[ an_array_redeclared_with_another_length_is_refused.c:4:5 ]
+   │
+ 3 │ int h[2][3];
+   │     ┬  
+   │     ╰── previously declared as `int[2][3]`
+ 4 │ int h[2][4];
+   │     ┬  
+   │     ╰── declared here as `int[2][4]`
+───╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `p`
+   ╭─[ an_array_redeclared_with_another_length_is_refused.c:6:7 ]
+   │
+ 5 │ int (*p)[2];
+   │       ┬  
+   │       ╰── previously declared as `int (*)[2]`
+ 6 │ int (*p)[3];
+   │       ┬  
+   │       ╰── declared here as `int (*)[3]`
+───╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `a`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:13:5 ]
+    │
+ 12 │ int a[2];
+    │     ┬  
+    │     ╰── previously declared as `int[2]`
+ 13 │ int a[3];
+    │     ┬  
+    │     ╰── declared here as `int[3]`
+────╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `f`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:15:6 ]
+    │
+ 14 │ void f(int (*q)[2]);
+    │      ┬  
+    │      ╰── previously declared as `void (int (*)[2])`
+ 15 │ void f(int (*q)[3]);
+    │      ┬  
+    │      ╰── declared here as `void (int (*)[3])`
+────╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `n`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:18:16 ]
+    │
+ 16 │ int n[2];
+    │     ┬  
+    │     ╰── previously declared as `int[2]`
+    │ 
+ 18 │     extern int n[3];
+    │                ┬  
+    │                ╰── declared here as `int[3]`
+────╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
