@@ -3796,6 +3796,12 @@ cases! {
         // read. Mutation: resolve a `goto` to the label it names rather than
         // the outermost of a stack; this is `SC0415`. Found by review.
         stacked_labels_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a label and a `case` written together, which the
+        // dispatch and a `goto` both reach: one block, so the loop the
+        // `goto` makes is entered at its top. Mutation: have `land` reserve
+        // a block for every label rather than take the stacked one; this is
+        // `SC0415`. Found by review.
+        a_label_and_a_case_written_together_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A declaration in the body itself, reached a second time by a
         // backward `goto`, makes its value indeterminate again (C17 6.2.4 p6),
         // so the `free` reads a pointer nothing assigned on this pass.

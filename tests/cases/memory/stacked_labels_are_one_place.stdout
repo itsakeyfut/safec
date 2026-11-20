@@ -55,7 +55,19 @@ Function stacked_labels_are_one_place.c:3:5 "f"
     Branch stacked_labels_are_one_place.c:10:17 written "bb7" "bb8"
       Copy "_6"
   Block "bb5"
-    Goto "bb12"
+    StorageLive stacked_labels_are_one_place.c:18:9 generated "_7"
+    Operation stacked_labels_are_one_place.c:18:14 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced stacked_labels_are_one_place.c:18:18 generated
+    Operation stacked_labels_are_one_place.c:19:13 written
+      Destination "_8"
+      Binary "Gt"
+        Copy "_1"
+        Constant 2
+    Branch stacked_labels_are_one_place.c:19:13 written "bb13" "bb14"
+      Copy "_8"
   Block "bb6"
     StorageDead stacked_labels_are_one_place.c:7:16 generated "_4"
     Goto "bb5"
@@ -79,19 +91,7 @@ Function stacked_labels_are_one_place.c:3:5 "f"
     StorageDead stacked_labels_are_one_place.c:13:5 generated "_4"
     Goto "bb5"
   Block "bb12"
-    StorageLive stacked_labels_are_one_place.c:18:9 generated "_7"
-    Operation stacked_labels_are_one_place.c:18:14 written
-      Destination "_7"
-      Use
-        Copy "_2"
-    Sequenced stacked_labels_are_one_place.c:18:18 generated
-    Operation stacked_labels_are_one_place.c:19:13 written
-      Destination "_8"
-      Binary "Gt"
-        Copy "_1"
-        Constant 2
-    Branch stacked_labels_are_one_place.c:19:13 written "bb13" "bb14"
-      Copy "_8"
+    Goto "bb5"
   Block "bb13"
     Sequenced stacked_labels_are_one_place.c:19:13 generated
     StorageDead stacked_labels_are_one_place.c:19:20 generated "_7"

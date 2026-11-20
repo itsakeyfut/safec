@@ -237,6 +237,28 @@ enum Continued {
     Passes,
 }
 
+/// What a jump from `from` to `to` ends and begins, in the order
+/// [`Lowering::jump`] writes them. See there, and ADR-0114.
+fn markers(from: &Point, to: &Point) -> (Vec<LocalId>, Vec<LocalId>) {
+    let shared = from
+        .iter()
+        .zip(to)
+        .take_while(|((left, _), (right, _))| left == right)
+        .count();
+    let ended = from[shared..]
+        .iter()
+        .rev()
+        .flat_map(|(_, declared)| declared.iter().rev().copied())
+        .collect();
+    let skipped = shared.checked_sub(1).map_or(&[][..], |deepest| {
+        let (passed, reached) = (&from[deepest].1, &to[deepest].1);
+        reached.get(passed.len()..).unwrap_or(&[])
+    });
+    let entered = to[shared..].iter().flat_map(|(_, declared)| declared);
+    let begun = skipped.iter().chain(entered).copied().collect();
+    (ended, begun)
+}
+
 /// End the storage of the locals one scope declared, where it closes.
 ///
 /// Reverse order of declaration, which is the order a C++ destructor would run
@@ -297,6 +319,7 @@ pub fn lower(
         scopes: Vec::new(),
         next_scope: 0,
         landings: HashMap::new(),
+        stacked: None,
         labeled: false,
         targets: Vec::new(),
         functions: HashMap::new(),
@@ -345,6 +368,10 @@ struct Lowering<'a> {
     /// Where each labelled statement lowered so far, or named by a `goto`
     /// before it was, begins. See ADR-0114.
     landings: HashMap<StmtId, Landing>,
+    /// The block of the label just lowered, while its statement is another
+    /// label, which takes it rather than reserving its own. See
+    /// [`Lowering::land`].
+    stacked: Option<BlockId>,
     /// Whether the function being lowered has had a label lowered yet, which
     /// is whether a declaration lowered now can be reached again by a
     /// backward `goto`. See the `Declaration` arm.
@@ -1986,20 +2013,7 @@ impl Lowering<'_> {
             Stmt::Labeled { body, .. } => {
                 let body = *body;
                 self.labeled = true;
-                let block = self.landing(builder, id).block;
-                if builder.reachable() {
-                    builder.end(Terminator::Goto(block));
-                }
-                let to = self.point();
-                let landing = self.landings.get_mut(&id).expect("reserved above");
-                landing.at = Some(to.clone());
-                for (pad, from, span) in std::mem::take(&mut landing.waiting) {
-                    builder.switch(pad);
-                    self.jump(builder, &from, &to, span);
-                    builder.end(Terminator::Goto(block));
-                }
-                builder.switch(block);
-                self.stmt(builder, body, diagnostics)?;
+                self.land(builder, id, body, diagnostics)?;
             }
             Stmt::Switch {
                 condition, body, ..
@@ -2011,14 +2025,7 @@ impl Lowering<'_> {
             // to, the way a `goto` jumps to a label. See `Lowering::switch`.
             Stmt::Case { body, .. } | Stmt::Default { body, .. } => {
                 let body = *body;
-                let block = self.landing(builder, id).block;
-                if builder.reachable() {
-                    builder.end(Terminator::Goto(block));
-                }
-                let to = self.point();
-                self.landings.get_mut(&id).expect("reserved above").at = Some(to);
-                builder.switch(block);
-                self.stmt(builder, body, diagnostics)?;
+                self.land(builder, id, body, diagnostics)?;
             }
             Stmt::While {
                 condition, body, ..
@@ -2195,19 +2202,35 @@ impl Lowering<'_> {
             builder.end(Terminator::Goto(after));
         }
 
+        // **One local for every comparison, and a pad only where the edge
+        // has markers to write.** A local and a block per `case` made a
+        // `switch` of 250 take ninety seconds in a debug build and one of
+        // 260 past the memory check's bound, measured by review: what that
+        // check holds grows with blocks times locals squared.
         builder.switch(dispatch);
+        let equal = builder.function.push_local(int);
         let mut default = None;
         let mut pads = Vec::new();
         for &label in self.resolution.labels_of_switch(id) {
-            let pad = builder.function.reserve_block();
-            pads.push((pad, label));
+            let landing = &self.landings[&label];
+            let to = landing
+                .at
+                .clone()
+                .expect("every label of a lowered body was reached");
+            let (ended, begun) = markers(&from, &to);
+            let pad = if ended.is_empty() && begun.is_empty() {
+                landing.block
+            } else {
+                let pad = builder.function.reserve_block();
+                pads.push((pad, landing.block, to, label));
+                pad
+            };
             match self.ast.stmt(label) {
                 Stmt::Case { value, .. } => {
                     let number = self
                         .types
                         .value(*value)
                         .expect("the type check refuses a `case` value that is no constant");
-                    let equal = builder.function.push_local(int);
                     builder.push(Operation {
                         place: Place::local(equal),
                         value: Rvalue::Binary {
@@ -2236,15 +2259,7 @@ impl Lowering<'_> {
         }
         builder.end(Terminator::Goto(default.unwrap_or(after)));
 
-        for (pad, label) in pads {
-            let landing = &self.landings[&label];
-            let (block, to) = (
-                landing.block,
-                landing
-                    .at
-                    .clone()
-                    .expect("every label of a lowered body was reached"),
-            );
+        for (pad, block, to, label) in pads {
             builder.switch(pad);
             self.jump(builder, &from, &to, self.ast.stmt(label).span());
             builder.end(Terminator::Goto(block));
@@ -2271,6 +2286,61 @@ impl Lowering<'_> {
         let lowered = self.stmt(builder, body, diagnostics);
         let target = self.targets.pop().expect("the target this pushed");
         (lowered, target.continued)
+    }
+
+    /// A label, a `case` or a `default`, and the statement it labels: the
+    /// label's block, reached by falling through and by every jump to it,
+    /// with each `goto` that came first written its edge now (ADR-0114).
+    ///
+    /// **Labels written one after another share one block**, whatever kind
+    /// each is. They name one place, and a block apiece made `again: case 1:`
+    /// with a `goto again` a loop entered at two blocks, the dispatch's and
+    /// the label's, which the memory check does not read. Found by review.
+    /// So a label whose statement is another label leaves its block for that
+    /// one to take, in [`Lowering::stacked`], and does not open it; a block a
+    /// `goto` reserved for the inner one before then is written as a jump to
+    /// the shared one, and nothing reaches it.
+    fn land(
+        &mut self,
+        builder: &mut Builder,
+        id: StmtId,
+        body: StmtId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let shared = self.stacked.take();
+        let landing = self.landing(builder, id);
+        let mut orphan = None;
+        let block = match shared {
+            Some(block) => {
+                if landing.block != block {
+                    orphan = Some(std::mem::replace(&mut landing.block, block));
+                }
+                block
+            }
+            None => landing.block,
+        };
+        if shared.is_none() && builder.reachable() {
+            builder.end(Terminator::Goto(block));
+        }
+        let to = self.point();
+        let landing = self.landings.get_mut(&id).expect("reserved above");
+        landing.at = Some(to.clone());
+        for (pad, from, span) in std::mem::take(&mut landing.waiting) {
+            builder.switch(pad);
+            self.jump(builder, &from, &to, span);
+            builder.end(Terminator::Goto(block));
+        }
+        if let Some(orphan) = orphan {
+            builder.switch(orphan);
+            builder.end(Terminator::Goto(block));
+        }
+        match self.ast.stmt(body) {
+            Stmt::Labeled { .. } | Stmt::Case { .. } | Stmt::Default { .. } => {
+                self.stacked = Some(block);
+            }
+            _ => builder.switch(block),
+        }
+        self.stmt(builder, body, diagnostics)
     }
 
     /// Open a scope with an id no other scope of this unit has.
@@ -2314,25 +2384,14 @@ impl Lowering<'_> {
     /// passes is alive already, and a declaration it reaches again is what
     /// makes the value indeterminate.
     fn jump(&self, builder: &mut Builder, from: &Point, to: &Point, span: Span) {
-        let shared = from
-            .iter()
-            .zip(to)
-            .take_while(|((left, _), (right, _))| left == right)
-            .count();
-        for (_, declared) in from[shared..].iter().rev() {
-            for &local in declared.iter().rev() {
-                builder.element(Element::StorageDead {
-                    origin: Origin::Generated(span),
-                    local,
-                });
-            }
+        let (ended, begun) = markers(from, to);
+        for local in ended {
+            builder.element(Element::StorageDead {
+                origin: Origin::Generated(span),
+                local,
+            });
         }
-        let skipped = shared.checked_sub(1).map_or(&[][..], |deepest| {
-            let (passed, reached) = (&from[deepest].1, &to[deepest].1);
-            reached.get(passed.len()..).unwrap_or(&[])
-        });
-        let entered = to[shared..].iter().flat_map(|(_, declared)| declared);
-        for &local in skipped.iter().chain(entered) {
+        for local in begun {
             builder.element(Element::StorageLive {
                 local,
                 origin: Origin::Generated(span),

@@ -14,7 +14,6 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
   Local "_5" "int *"
   Local "_6" "int *"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:5:13 generated
       Destination "_3"
@@ -28,11 +27,11 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
       Binary "Eq"
         Copy "_3"
         Constant 0
-    Branch a_local_one_case_leaves_unassigned_names_that_case.c:6:10 written "bb7" "bb8"
+    Branch a_local_one_case_leaves_unassigned_names_that_case.c:6:10 written "bb3" "bb7"
       Copy "_7"
   Block "bb2"
     ArgumentsEvaluated a_local_one_case_leaves_unassigned_names_that_case.c:14:5 generated
-    Call a_local_one_case_leaves_unassigned_names_that_case.c:14:5 written "free" "bb12"
+    Call a_local_one_case_leaves_unassigned_names_that_case.c:14:5 written "free" "bb9"
       Copy "_2"
   Block "bb3"
     ArgumentsEvaluated a_local_one_case_leaves_unassigned_names_that_case.c:7:13 generated
@@ -64,22 +63,16 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
     Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:12:9 generated
     Goto "bb2"
   Block "bb7"
-    Goto "bb3"
-  Block "bb8"
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:9:10 generated
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_3"
         Constant 5
-    Branch a_local_one_case_leaves_unassigned_names_that_case.c:9:10 written "bb9" "bb10"
-      Copy "_8"
-  Block "bb9"
-    Goto "bb5"
-  Block "bb10"
-    Goto "bb11"
-  Block "bb11"
+    Branch a_local_one_case_leaves_unassigned_names_that_case.c:9:10 written "bb5" "bb8"
+      Copy "_7"
+  Block "bb8"
     Goto "bb6"
-  Block "bb12"
+  Block "bb9"
     Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:14:5 generated
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:15:5 written
       Destination "_0"
