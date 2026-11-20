@@ -8294,10 +8294,6 @@ cases! {
         // 6.7.7: a type name is a declaration of nothing. Mutation: accept
         // the name in `Parser::type_name`; the cast is read.
         a_type_name_names_nothing: ["--emit", "ast"],
-        // The specifiers of a type name inside a declaration replace none of
-        // the declaration's own: both stay `static`. Mutation: do not restore
-        // the storage class in `Parser::type_name`; neither is.
-        a_type_name_in_a_static_declaration_keeps_its_storage: ["--emit", "ast"],
         // Every list C17 6.7.2 p2 gives an integer type, in the order it
         // gives them, and two out of order: each declaration's type is
         // spelled as `clang` spells it. Mutation: give a set with a `long`

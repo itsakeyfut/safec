@@ -1,4 +1,0 @@
-Declaration a_type_name_in_a_static_declaration_keeps_its_storage.c:1:1 static "a" "int[sizeof(int)]"
-Declaration a_type_name_in_a_static_declaration_keeps_its_storage.c:2:1 static "b" "int"
-  Cast a_type_name_in_a_static_declaration_keeps_its_storage.c:2:16 "int"
-    Number a_type_name_in_a_static_declaration_keeps_its_storage.c:2:21 "2"

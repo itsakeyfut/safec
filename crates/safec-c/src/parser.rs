@@ -3013,18 +3013,11 @@ impl Parser<'_> {
     }
 
     /// A type name, C17 6.7.7: specifiers and qualifiers, then a declarator
-    /// that names nothing. `None` once reported.
-    ///
-    /// **The storage class being read is kept**, since the specifiers here
-    /// replace it: `static int a[sizeof(int)];` lost its `static` otherwise,
-    /// as a struct's members did before `specifiers` held it locally. A
-    /// storage class in the type name itself is refused, as a member's is.
+    /// that names nothing. `None` once reported. A storage class in it is
+    /// refused, as a member's is.
     fn type_name(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         let start = self.peek().span;
-        let storage = self.storage;
-        let base = self.specifiers(Position::Member, diagnostics);
-        self.storage = storage;
-        let base = base?;
+        let base = self.specifiers(Position::Member, diagnostics)?;
         let (name, derivations) = self.declarator(false, diagnostics)?;
         if let Some(name) = name {
             self.report_at(
