@@ -493,9 +493,20 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
 
         // What this node says about itself, and nothing about what is under it.
         match expr {
-            Expr::Number { span } | Expr::Character { span } | Expr::Identifier { span } => {
+            Expr::Number { span }
+            | Expr::Character { span }
+            | Expr::Identifier { span }
+            | Expr::Length { span, .. } => {
                 write!(out, " {:?}", quoted(sources, *span))
                     .expect("writing to a string cannot fail");
+            }
+            // Each literal of the run as written, since what is between two
+            // of them is no part of either.
+            Expr::String { parts, .. } => {
+                for part in parts {
+                    write!(out, " {:?}", quoted(sources, *part))
+                        .expect("writing to a string cannot fail");
+                }
             }
             Expr::Unary { op, .. } => {
                 // `++` and `--` are the only operators C writes on either side,

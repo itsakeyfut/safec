@@ -7,8 +7,7 @@
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static` and `extern`, `typedef`, a variadic function's ellipsis,
-//! `[static N]` and `[*]`, and a string literal, a primary expression the
-//! lexer already hands it. Each arrives in a
+//! `[static N]` and `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
@@ -2919,12 +2918,73 @@ impl Parser<'_> {
         }
     }
 
-    /// Part of C17 6.5.1: an integer constant, a character constant, an
-    /// identifier, or a parenthesised expression.
+    /// A string literal, C17 6.4.5, and every one written straight after it,
+    /// which translation phase 6 joins into one (5.1.1.2 p1). Each is read
+    /// as a character constant's characters are, by
+    /// [`unescape`](crate::literal::unescape): what it says this compiler
+    /// does not read is refused as not read yet, and what it says is not C
+    /// is a syntax error. An encoding prefix, which the lexer scans into the
+    /// token, is not read yet (6.4.5 p3).
     ///
-    /// Not all of it. A string literal is a primary expression by 6.5.1, the
-    /// lexer already gives it its own token, and it is not read here: it is
-    /// refused as not read yet, by [`Parser::refuse_unread`].
+    /// Every literal of the run is read, refused or not, so that the next
+    /// token is what follows the run; the first refusal is the one reported.
+    fn string(&mut self, first: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let mut parts = Vec::new();
+        let mut refused = false;
+        // The terminating zero (C17 6.4.5 p6).
+        let mut count: u64 = 1;
+        while self.check(TokenKind::String) {
+            let span = self.peek().span;
+            if !refused {
+                let text = self.sources.snippet(span);
+                let body = text
+                    .strip_prefix('"')
+                    .and_then(|text| text.strip_suffix('"'));
+                match body.map(crate::literal::unescape) {
+                    Some(Ok(values)) => count += values.len() as u64,
+                    None => {
+                        refused = true;
+                        self.report_unread(
+                            Unread {
+                                what: "a prefixed string literal",
+                                clause: "6.4.5",
+                            },
+                            diagnostics,
+                        );
+                    }
+                    Some(Err(crate::literal::Unreadable::Unread(what))) => {
+                        refused = true;
+                        self.report_unread(
+                            Unread {
+                                what,
+                                clause: "6.4.5",
+                            },
+                            diagnostics,
+                        );
+                    }
+                    Some(Err(crate::literal::Unreadable::Malformed(what))) => {
+                        refused = true;
+                        self.report(what, "this is not a string literal C allows", diagnostics);
+                    }
+                }
+            }
+            self.advance();
+            parts.push(span);
+        }
+        if refused {
+            return self.ast.push_expr(Expr::Error { span: first });
+        }
+        let span = self.join(first, self.previous().span, diagnostics);
+        let length = self.ast.push_expr(Expr::Length { value: count, span });
+        self.ast.push_expr(Expr::String {
+            parts,
+            span,
+            length,
+        })
+    }
+
+    /// Part of C17 6.5.1: an integer constant, a character constant, a
+    /// string literal, an identifier, or a parenthesised expression.
     fn primary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let span = self.peek().span;
 
@@ -2934,6 +2994,10 @@ impl Parser<'_> {
 
         if self.check(TokenKind::Character) {
             return self.character(span, diagnostics);
+        }
+
+        if self.check(TokenKind::String) {
+            return self.string(span, diagnostics);
         }
 
         if self.eat(TokenKind::Identifier) {
@@ -3227,8 +3291,7 @@ impl Parser<'_> {
     /// Report valid C this parser does not read yet, if the token here begins
     /// some at `at`, and say whether it did.
     ///
-    /// A keyword asks [`unread_keyword`]. One more needs a token kind: a
-    /// string literal (6.4.5) begins an expression this parser does not read.
+    /// A keyword asks [`unread_keyword`].
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
         let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {
@@ -3239,10 +3302,6 @@ impl Parser<'_> {
                 })
             }
             TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
-            TokenKind::String if at == Position::Expression => Some(Unread {
-                what: "a string literal",
-                clause: "6.4.5",
-            }),
             _ => None,
         };
         let Some(unread) = unread else {

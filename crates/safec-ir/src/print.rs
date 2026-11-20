@@ -240,6 +240,14 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
         .expect("writing to a string cannot fail");
         match &object.init {
             crate::ir::StaticInit::Zero => out.push_str(" zero"),
+            // As numbers, so that no byte a literal holds reaches the
+            // artifact as a character it would have to answer for.
+            crate::ir::StaticInit::Bytes(bytes) => {
+                out.push_str(" bytes");
+                for byte in bytes {
+                    write!(out, " {byte}").expect("writing to a string cannot fail");
+                }
+            }
             crate::ir::StaticInit::Int(value) => {
                 write!(out, " {value}").expect("writing to a string cannot fail");
             }

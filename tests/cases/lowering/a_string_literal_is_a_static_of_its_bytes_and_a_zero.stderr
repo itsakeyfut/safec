@@ -1,0 +1,10 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_string_literal_is_a_static_of_its_bytes_and_a_zero.c:5:12 ]
+   │
+ 5 │     return s[1] + t[0];
+   │            ─────┬─────  
+   │                 ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `char (*)[9]` with `char (*)[2]`
+   ╭─[ a_string_literal_s_address_is_a_pointer_to_its_whole_array.c:3:24 ]
+   │
+ 3 │     char (*wrong)[9] = &"a";
+   │            ──┬──       ──┬─  
+   │              ╰─────────────── this holds `char (*)[9]`
+   │                          │   
+   │                          ╰─── this is `char (*)[2]`
+───╯

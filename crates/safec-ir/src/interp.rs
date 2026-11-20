@@ -164,8 +164,10 @@ pub struct InFrame {
 struct Stack {
     frames: Vec<Frame>,
     /// One value per static, made with its initial value when the run starts
-    /// (C17 5.1.2 p1) and never `Unwritten` or `Dead`.
-    statics: Vec<Value>,
+    /// (C17 5.1.2 p1) and never `Unwritten` or `Dead`. `None` for a string
+    /// literal, an array, whose elements this does not hold: reaching one
+    /// stops the run (#621).
+    statics: Vec<Option<Value>>,
 }
 
 impl std::ops::Deref for Stack {
@@ -280,9 +282,10 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
         // integer and as a null pointer alike.
         statics: unit
             .statics()
-            .map(|id| match unit.static_object(id).init {
-                StaticInit::Zero => Value::Int(0),
-                StaticInit::Int(value) => Value::Int(value),
+            .map(|id| match &unit.static_object(id).init {
+                StaticInit::Zero => Some(Value::Int(0)),
+                StaticInit::Int(value) => Some(Value::Int(*value)),
+                StaticInit::Bytes(_) => None,
             })
             .collect(),
     };
@@ -588,7 +591,16 @@ fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, 
         // resolved here rather than remembered: what `&p[i]` names is the
         // object it reached, and reaching it again later could reach another.
         Rvalue::Address(place) => Value::Pointer(resolve(frames, current, place)?),
-        Rvalue::Static(id) => Value::Pointer(Location::Static(*id)),
+        // Mutation: answer a pointer to a string literal too; the run reads
+        // an array as a value it never held.
+        Rvalue::Static(id) => {
+            if frames.statics[id.index()].is_none() {
+                return Err(Trap::new(
+                    "a string literal, an array whose elements this does not follow yet",
+                ));
+            }
+            Value::Pointer(Location::Static(*id))
+        }
         // C17 6.5.3.3 p5 makes `!E` mean `(0 == E)`, which is defined for a
         // pointer and needs no width: a place is an object, so `!p` is zero.
         Rvalue::Unary {
@@ -814,7 +826,11 @@ fn resolve(frames: &Stack, current: usize, place: &Place) -> Result<Location, Tr
 /// checks.
 fn load(frames: &Stack, at: Location) -> Result<Value, Trap> {
     let at = match at {
-        Location::Static(id) => return Ok(frames.statics[id.index()].clone()),
+        Location::Static(id) => {
+            return Ok(frames.statics[id.index()]
+                .clone()
+                .expect("a pointer to a string literal stops the run where it is made"));
+        }
         Location::Local(at) => at,
     };
     let frame = live(frames, at)?;
@@ -873,7 +889,7 @@ fn reached(frames: &[Frame], at: InFrame, what: &str) -> Result<usize, Trap> {
 fn store(frames: &mut Stack, at: Location, value: Value) -> Result<(), Trap> {
     let at = match at {
         Location::Static(id) => {
-            frames.statics[id.index()] = value;
+            frames.statics[id.index()] = Some(value);
             return Ok(());
         }
         Location::Local(at) => at,

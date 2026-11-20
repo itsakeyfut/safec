@@ -1,0 +1,8 @@
+error[SC0304]: cannot initialize `s` from a string literal yet
+   ╭─[ an_array_initialized_from_a_string_literal_is_not_built_yet.c:2:16 ]
+   │
+ 2 │     char s[] = "abc";
+   │                ──┬──  
+   │                  ╰──── a string literal
+───╯
+  = note: a gap in this compiler: C17 6.7.9 p14 allows it

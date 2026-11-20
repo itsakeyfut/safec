@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile this initializer yet
+   ╭─[ a_string_literal_is_no_static_initializer_yet.c:1:11 ]
+   │
+ 1 │ char *p = "hi";
+   │           ──┬─  
+   │             ╰─── an address, which an object with static storage duration cannot start with so far
+───╯
+  = note: an initializer that is a number or a null pointer is all this compiler holds

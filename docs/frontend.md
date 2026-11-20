@@ -198,7 +198,7 @@ where the declared type is scalar, and the parser does not know the type.
 
 The bit-field and the anonymous member are `SC0207`, the code for valid C the
 parser does not read yet, told apart from C it cannot parse where the parse
-failed. `switch`, `typedef`, a cast, a string literal and the other constructs
+failed. `typedef`, a cast, a prefixed string literal and the other constructs
 the parser does not read are reported under it too, each naming the clause
 that makes it valid; `parser.rs::unread_keyword` and the checks beside it
 decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
@@ -492,6 +492,12 @@ outside ASCII, and an encoding prefix, which the lexer scans into the token so
 that no macro can take it away. An escape C17 does not define, `'\e'` among
 them, is `SC0201`, where `clang` accepts it unless `-pedantic-errors` is
 given.
+
+A string literal (6.4.5) is read by the same function, so the same holds of
+its characters: `"\e[0m"` is `SC0201`, as `'\e'` is, though it is common in
+programs that colour a terminal. Its type is `char[N]`, `N` the bytes after
+escapes and a terminating zero, which the parser counts into a length the type
+names, so `&"ab"` is a `char (*)[3]` and spelled so.
 
 ### Which zero is a null pointer constant
 

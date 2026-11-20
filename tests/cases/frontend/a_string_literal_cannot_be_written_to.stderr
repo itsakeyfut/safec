@@ -1,0 +1,8 @@
+error[SC0318]: the left operand of `=` cannot be written to
+   ╭─[ a_string_literal_cannot_be_written_to.c:2:5 ]
+   │
+ 2 │     "ab" = 0;
+   │     ──┬─  
+   │       ╰─── this is `char[3]`, an array
+───╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)

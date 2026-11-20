@@ -395,6 +395,12 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
     match expr {
         Expr::Number { span: _ }
         | Expr::Character { span: _ }
+        | Expr::String {
+            parts: _,
+            span: _,
+            length: _,
+        }
+        | Expr::Length { value: _, span: _ }
         | Expr::Identifier { span: _ }
         | Expr::Error { span: _ } => Vec::new(),
         Expr::Unary {
@@ -838,7 +844,9 @@ impl Checker<'_> {
         loop {
             if designator {
                 id = match *ast.expr(id) {
-                    Expr::Identifier { .. } => return true,
+                    // A name, or a string literal, which has static storage
+                    // duration (C17 6.4.5 p6).
+                    Expr::Identifier { .. } | Expr::String { .. } => return true,
                     Expr::Subscript { base, index, .. } => {
                         designator = false;
                         if constant(index) {
@@ -964,6 +972,20 @@ impl Checker<'_> {
                     format!("`{called}` is a variable length array, which cannot be initialized"),
                     "C17 6.7.9 p3",
                 ),
+                // p14 lets a string literal initialize an array of character
+                // type, which this compiler does not build yet: the lowering
+                // would otherwise be handed an array to assign to.
+                Type::Array { .. } if matches!(ast.expr(init), Expr::String { .. }) => {
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "cannot initialize `{called}` from a string literal yet"
+                        ))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(ast.expr(init).span(), "a string literal"))
+                        .with_note("a gap in this compiler: C17 6.7.9 p14 allows it"),
+                    );
+                    continue;
+                }
                 // p16: "the initializer for an object that has aggregate or
                 // union type shall be a brace-enclosed list of initializers",
                 // and p14 allows a string literal for an array of character
@@ -975,7 +997,9 @@ impl Checker<'_> {
                 // being refused as this: `char s[] = "abc";` is valid C.
                 Type::Array { .. }
                     if match ast.expr(init) {
-                        Expr::Number { .. }
+                        Expr::String { .. } => false,
+                        Expr::Length { .. }
+                        | Expr::Number { .. }
                         | Expr::Character { .. }
                         | Expr::Identifier { .. }
                         | Expr::Unary { .. }
@@ -1619,6 +1643,8 @@ impl Checker<'_> {
             } => known(condition) && known(then) && known(otherwise),
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
+            | Expr::Length { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }
@@ -1963,6 +1989,25 @@ impl Checker<'_> {
                     value
                 };
                 self.values[id.index()] = Some(value);
+                Some(self.int)
+            }
+            // C17 6.4.5 p6: an array of `char`, as long as the bytes the parser
+            // counted, an `Expr::Length`, so that `&"ab"` is a `char (*)[3]`
+            // to every rule that compares or spells one. Mutation: give it no
+            // length; `a_string_literal_s_address_is_a_pointer_to_its_whole_array`
+            // accepts `char (*)[9]`.
+            Expr::String { length, .. } => {
+                let element = ast.push_type(Type::Char);
+                Some(ast.push_type(Type::Array {
+                    element,
+                    length: Some(length),
+                    written: None,
+                }))
+            }
+            // The parser counted it. Typed `int`, as a written length that
+            // fits one is, since nothing but an array's type reads it.
+            Expr::Length { value, .. } => {
+                self.values[id.index()] = Some(i128::from(value));
                 Some(self.int)
             }
             Expr::Identifier { .. } => {
@@ -2849,6 +2894,11 @@ impl Checker<'_> {
                 Some(Type::Function { .. }) => Designates::Function,
                 Some(_) => Designates::Object,
             },
+            // C17 6.5.1 p4: a string literal is an lvalue.
+            Expr::String { .. } => match typed(id) {
+                None => Designates::Unknown,
+                Some(_) => Designates::Object,
+            },
             Expr::Unary {
                 op: UnOp::Deref, ..
             } => match typed(id) {
@@ -2879,6 +2929,7 @@ impl Checker<'_> {
             } => unreachable!("the loop above walked every `.` down to its base"),
             Expr::Unary { .. }
             | Expr::Number { span: _ }
+            | Expr::Length { value: _, span: _ }
             | Expr::Character { span: _ }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -3864,8 +3915,11 @@ impl Checker<'_> {
                 }
                 value(taken)
             }
+            // Counted, and so known.
+            Expr::Length { value, .. } => Some(i128::from(value)),
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }

@@ -275,6 +275,18 @@ impl Emitter<'_> {
         let init = match &object.init {
             StaticInit::Zero => Ok("zeroinitializer".to_owned()),
             StaticInit::Int(value) => self.constant(*value, object.ty),
+            // A string literal's array: a constant no other module names,
+            // whose address nothing compares (C17 6.4.5 p7 leaves whether two
+            // literals share storage unspecified).
+            StaticInit::Bytes(bytes) => {
+                writeln!(
+                    out,
+                    "{name} = private unnamed_addr constant {spelled} c\"{}\"",
+                    bytes_spelled(bytes)
+                )
+                .expect("writing to a string cannot fail");
+                return;
+            }
         };
         let line = match (object.linkage, init) {
             (Linkage::Declared, _) | (_, Err(_)) => {
@@ -1147,6 +1159,21 @@ impl Emitter<'_> {
 
         Ok(body)
     }
+}
+
+/// Bytes as LLVM's `c"..."` spells them: a printable ASCII character as
+/// itself, and `"`, `\` and every other byte as `\` and two hex digits,
+/// which LLVM reads for any byte.
+fn bytes_spelled(bytes: &[u8]) -> String {
+    let mut spelled = String::new();
+    for &byte in bytes {
+        if byte.is_ascii_graphic() && byte != b'"' && byte != b'\\' || byte == b' ' {
+            spelled.push(char::from(byte));
+        } else {
+            write!(spelled, "\\{byte:02X}").expect("writing to a string cannot fail");
+        }
+    }
+    spelled
 }
 
 /// Whether LLVM takes this name without quotes.

@@ -29,6 +29,7 @@ const PROGRAMS: &[(&str, &str)] = &[
     ("the_mvp_becomes_llvm_ir", "x86_64-pc-windows-msvc"),
     ("llvm_ir_follows_the_target", "aarch64-unknown-linux-gnu"),
     ("llvm_ir_of_every_operator", "x86_64-pc-windows-msvc"),
+    ("llvm_ir_of_a_string_literal", "x86_64-pc-windows-msvc"),
     (
         "a_narrow_value_is_extended_where_the_target_asks",
         "x86_64-unknown-linux-gnu",
