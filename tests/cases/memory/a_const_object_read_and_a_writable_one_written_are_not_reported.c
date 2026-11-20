@@ -6,3 +6,6 @@ int main(void) {
     *p = *c;
     return g;
 }
+const char *named(void) {
+    return "ab";
+}

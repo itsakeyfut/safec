@@ -1746,8 +1746,13 @@ impl Lowering<'_> {
             return None;
         };
         let (returns, parameters) = (*returns, parameters.clone());
+        let returns_reads_only =
+            matches!(self.ast.ty(returns), Type::Pointer(pointee) if self.read_only(*pointee));
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
         let mut function = Function::with_parameters(name, returns, lowered);
+        if returns_reads_only {
+            function.mark_returns_reads_only();
+        }
         if let Parameters::Prototype(declared) = &parameters {
             for (parameter, local) in declared
                 .iter()

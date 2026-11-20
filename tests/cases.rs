@@ -95,15 +95,25 @@ cases! {
         // in `Known::load_into`; the read-back ones do. Mutation: ask no
         // read-only local in `may_land_read_only`; `a_const_local` does.
         // Mutation: ask no call in `handed_read_only`; the fill and the
-        // writer do.
+        // writer do. Mutation: join the mark as an intersection in
+        // `Held::joined` or `Cell::absorb`; `joined` or `stored_on_one_path`
+        // goes silent. Mutation: drop it in `Held::accumulated`;
+        // `moved_by_arithmetic` does. Mutation: ask no local or no level down
+        // in `names_read_only`; `a_const_local_handed_on` or
+        // `handed_one_level_down` does. Mutation: mark no `const` parameter,
+        // or no `extern const` static, in the lowering; `a_const_parameter`,
+        // `an_extern_const` or `a_block_extern_const` does.
         a_write_that_may_reach_a_const_object_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A string literal may not be modified (6.4.5 p7), so a store into
-        // one, a fill of one, and one handed to a parameter that is no
-        // pointer to `const` are `SC0417`. Mutation: make a literal not
-        // read-only in `Lowering::string`; all three go silent.
+        // one, a fill of one, one handed to a parameter that is no pointer to
+        // `const`, and one returned as a `char *` are `SC0417`. Mutation:
+        // make a literal not read-only in `Lowering::string`; all four go
+        // silent. Mutation: skip `returned_read_only`; `returned` does.
         a_write_to_a_string_literal_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A `const` object read and a writable one written are not reported.
-        // Mutation: mark every static read-only; the write to `h` is.
+        // A `const` object read, a writable one written, and a literal
+        // returned as a `const char *` are not reported. Mutation: mark every
+        // static read-only; the write to `h` is. Mutation: mark no function
+        // as returning a pointer to `const`; `named` is.
         a_const_object_read_and_a_writable_one_written_are_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write through a cast that dropped `const` may write an object
         // defined `const` (C17 6.7.3 p6), which nothing here can tell, so

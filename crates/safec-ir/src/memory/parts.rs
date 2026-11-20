@@ -2690,8 +2690,8 @@ pub(super) struct Cell {
     may_hold_null: bool,
     /// **Whether a pointer stored there may name storage the program may not
     /// modify**, [`Held::read_only`] poured in. A union at a join, and taken
-    /// by every load through the block (`Cell::taken_by_a_load`), so a pointer
-    /// to a `const` object read back out of memory is still one. See
+    /// by every load through the block (`Known::read_only_on_the_way`), so a
+    /// pointer to a `const` object read back out of memory is still one. See
     /// ADR-0120.
     may_hold_read_only: bool,
 }
@@ -2867,11 +2867,10 @@ impl Cell {
             position: _,
             // Not taken: a load is possibly null whatever memory holds.
             may_hold_null: _,
-            // Taken below.
-            may_hold_read_only,
+            // Taken by `Known::load_into` through `Known::read_only_on_the_way`,
+            // which asks every block and local on the way, once.
+            may_hold_read_only: _,
         } = self;
-        // A pointer to read-only storage read back is still one.
-        held.read_only = held.read_only || *may_hold_read_only;
         // Read out of an allocation that may hold one that is gone. See
         // ADR-0045.
         if self.may_name(Why::StaleRead) {

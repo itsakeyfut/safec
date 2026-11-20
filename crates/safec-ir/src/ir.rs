@@ -1277,6 +1277,9 @@ pub struct Function {
     /// The locals the program may not modify, each defined `const` at its
     /// innermost element (C17 6.7.3 p6). See ADR-0120.
     read_only: Vec<LocalId>,
+    /// Whether what it returns is a pointer to `const`, so that a caller
+    /// cannot write through it: [`Parameter::reads_only`] for the result.
+    returns_reads_only: bool,
     body: Body,
 }
 
@@ -1326,6 +1329,7 @@ impl Function {
             internal: false,
             return_promise: None,
             read_only: Vec::new(),
+            returns_reads_only: false,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1478,6 +1482,16 @@ impl Function {
     /// argument has no parameter to say so. See ADR-0120.
     pub fn reads_only_through(&self, index: usize) -> bool {
         self.reads_only.get(index).copied().unwrap_or(false)
+    }
+
+    /// Say that what this returns is a pointer to `const`. See ADR-0120.
+    pub fn mark_returns_reads_only(&mut self) {
+        self.returns_reads_only = true;
+    }
+
+    /// Whether what this returns is a pointer to `const`.
+    pub fn returns_reads_only(&self) -> bool {
+        self.returns_reads_only
     }
 
     /// Say that `local` may not be modified, being defined `const`. See

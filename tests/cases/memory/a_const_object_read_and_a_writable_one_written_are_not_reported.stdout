@@ -1,6 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Static "g" "int" external 1
 Static "h" "int" external zero
+Static ".str.0" "char[3]" internal bytes 97 98 0
 Function a_const_object_read_and_a_writable_one_written_are_not_reported.c:3:5 "main"
   Local "_0" "int" return
   Local "_1" "int *" "c"
@@ -51,4 +52,22 @@ Function a_const_object_read_and_a_writable_one_written_are_not_reported.c:3:5 "
         Copy "_6"
           Deref
     Sequenced a_const_object_read_and_a_writable_one_written_are_not_reported.c:7:12 generated
+    Return
+Function a_const_object_read_and_a_writable_one_written_are_not_reported.c:9:13 "named"
+  Local "_0" "char *" return
+  Local "_1" "char (*)[3]"
+  Local "_2" "char *"
+  Block "bb0" entry
+    Operation a_const_object_read_and_a_writable_one_written_are_not_reported.c:10:12 generated
+      Destination "_1"
+      Static ".str.0"
+    Operation a_const_object_read_and_a_writable_one_written_are_not_reported.c:10:12 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_const_object_read_and_a_writable_one_written_are_not_reported.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_const_object_read_and_a_writable_one_written_are_not_reported.c:10:12 generated
     Return

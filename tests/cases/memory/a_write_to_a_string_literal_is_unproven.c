@@ -11,3 +11,6 @@ void filled(void) {
 void handed_to_a_writer(void) {
     w("ab");
 }
+char *returned(void) {
+    return "ab";
+}

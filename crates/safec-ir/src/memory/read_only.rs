@@ -4,7 +4,7 @@
 //! and a call handed a pointer it may write through. See ADR-0120.
 
 use crate::analysis::Conclusion;
-use crate::ir::{Element, FuncId, Function, Operand, Shape, Terminator};
+use crate::ir::{Element, FuncId, Function, Operand, Rvalue, Shape, Terminator};
 use crate::library::Callee;
 
 use super::allocations::Allocations;
@@ -38,6 +38,73 @@ fn may_land_read_only(landing: &Landing, read_only: &[LocalIdx], known: &Known) 
             .targets
             .iter()
             .any(|target| read_only.contains(target))
+}
+
+/// Whether the pointer `operand` holds may name read-only storage: a static
+/// its value's mark says it may (`Held::read_only`), or a read-only local it
+/// may point at, read as the value is, by name or `depth` dereferences down.
+fn names_read_only(operand: &Operand, read_only: &[LocalIdx], known: &Known) -> bool {
+    let Operand::Copy(place) = operand else {
+        return false;
+    };
+    match place.shape() {
+        Shape::Local => {
+            let held = &known.points_to[place.local];
+            held.read_only || held.locals().any(|local| read_only.contains(&local))
+        }
+        // **And the locals it may point at, read as the value is**: `set(*pp)`
+        // with `*pp` holding a `const` local's address was asked for a static
+        // alone. Found by review.
+        Shape::Deref(depth) => {
+            known.read_only_on_the_way(place.local, depth)
+                || known
+                    .levels_below(place.local, depth)
+                    .1
+                    .iter()
+                    .any(|local| read_only.contains(local))
+        }
+        Shape::Indexed => false,
+    }
+}
+
+/// Report a `return` of a pointer that may name read-only storage from a
+/// function whose result is no pointer to `const`: the caller believes it
+/// may write through what it is given, as a callee handed one for a
+/// non-`const` parameter does, which [`handed_read_only`] asks from the other
+/// side. Found by review: `char *get(void) { return "ab"; }` and a write
+/// through what `get` returns were believed. Mutation: skip this;
+/// `a_write_to_a_string_literal_is_unproven`'s `returned` goes silent.
+pub(super) fn returned_read_only(
+    findings: &mut Vec<Finding>,
+    function: &Function,
+    element: &Element,
+    known: &Known,
+    func: FuncId,
+) {
+    let Element::Assign(operation) = element else {
+        return;
+    };
+    if operation.place.local != function.return_place()
+        || !operation.place.steps().is_empty()
+        || function.returns_reads_only()
+    {
+        return;
+    }
+    let Rvalue::Use(operand) = &operation.value else {
+        return;
+    };
+    if names_read_only(operand, &read_only_locals(function), known) {
+        findings.push(Finding {
+            function: func,
+            kind: Kind::WritesReadOnly,
+            conclusion: Conclusion::Unknown,
+            at: operation.origin.span(),
+            local: None,
+            freed: None,
+            made: None,
+            unproven: None,
+        });
+    }
 }
 
 /// Report a store through a pointer that may land in read-only storage.
@@ -110,18 +177,10 @@ pub(super) fn handed_read_only(
         if called.reads_only_through(index) {
             continue;
         }
-        let Operand::Copy(place) = argument else {
-            continue;
-        };
-        let marked = match place.shape() {
-            Shape::Local => {
-                let held = &known.points_to[place.local];
-                held.read_only || held.locals().any(|local| read_only.contains(&local))
-            }
-            Shape::Deref(depth) => known.read_only_on_the_way(place.local, depth),
-            Shape::Indexed => false,
-        };
-        if marked {
+        if names_read_only(argument, &read_only, known) {
+            let Operand::Copy(place) = argument else {
+                unreachable!("only a place names storage")
+            };
             findings.push(Finding {
                 function: func,
                 kind: Kind::WritesReadOnly,

@@ -48,10 +48,14 @@ spelling with one rule where the second option answers each with its own.
 * A write that may land in read-only storage is reported `Unknown`, `SC0417`,
   where it is written: a store, a library write's destination, and a call that
   hands such a pointer to a parameter whose pointee is not `const`, since the
-  callee may write through it.
+  callee may write through it. **And a `return` of one from a function whose
+  result is no pointer to `const`**, since the caller may write through what
+  it is given; found by the review of #1121. `free` and `realloc` are left to
+  the free rules.
 * ADR-0117's rule that a cast dropping `const` is `Rvalue::Reinterpret` is
-  superseded: such a cast is followed as `Rvalue::Use`, as any other pointer
-  cast is, so a free through it is followed.
+  superseded by this, and #1122 removes it: such a cast is then followed as
+  `Rvalue::Use`, as any other pointer cast is, so a free through it is
+  followed. Until #1122 lands both are said at such a cast.
 
 The second option fails where a spelling nobody listed is written: row 6.
 The third fails nowhere it claims, and leaves every write to a literal
@@ -75,6 +79,9 @@ every static is. ADR-0117's rule for a cast that drops `const` is removed by
 * Bad, because a literal handed to a parameter declared without `const`,
   `void w(char *); w("ab");`, is doubted though the callee may only read it.
 * Bad, because the mark is one more every door carries.
+* Bad, because a variadic call, once `...` is read, hands every argument past
+  the last parameter to no pointer to `const`, so `printf("%s", "x")` will be
+  doubted unless the library is told which variadic arguments it only reads.
 
 ## More Information
 
