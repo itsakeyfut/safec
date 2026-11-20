@@ -1806,10 +1806,16 @@ fn an_offset_that_moves_the_pointer_proves_no_use_after_free() {
     // Nothing here is proved: `free(z)` frees something this check was not
     // following, and may be what `q` holds, so the read through `q` is a
     // doubt too. A read of `z` at the free is about the read and not about
-    // this question (#640).
+    // this question (#640), and so is the doubt that the write through `p`
+    // left part of a pointer in it (#1123).
     let found: Vec<_> = found
         .into_iter()
-        .filter(|finding| finding.kind != Kind::IndeterminateLocal)
+        .filter(|finding| {
+            !matches!(
+                finding.kind,
+                Kind::IndeterminateLocal | Kind::PartOfAPointer { .. }
+            )
+        })
         .collect();
     assert!(!found.is_empty(), "{found:?}");
     for finding in &found {

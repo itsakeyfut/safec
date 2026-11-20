@@ -80,6 +80,12 @@ cases! {
         // (ADR-0117). Mutation: push no finding for `Rvalue::Reinterpret` in
         // `memory.rs`; both go silent and the read of `*q` with them.
         a_cast_between_a_pointer_and_an_integer_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer local written through its address by something that is
+        // no pointer is asked where its value is next used, as memory read
+        // as pointers is: `g(q)` is `SC0413` (#1123). Written and never used,
+        // or written whole again before the use, nothing is said. Mutation:
+        // skip the ask in `unwritten_read`; `g(q)` goes silent.
+        a_pointer_local_written_as_an_integer_is_asked_where_it_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write through a cast that dropped `const` may write an object
         // defined `const` (C17 6.7.3 p6), which nothing here can tell, so
         // the cast is `SC0416` (ADR-0117). Mutation: lower it as

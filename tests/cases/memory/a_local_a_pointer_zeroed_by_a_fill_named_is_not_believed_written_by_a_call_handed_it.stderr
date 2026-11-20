@@ -1,3 +1,13 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+   ╭─[ a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_it.c:6:5 ]
+   │
+ 6 │     memset(&h, 0, 8);
+   │     ────────┬───────  
+   │             ╰───────── written here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0411]: `a` may be read before anything was assigned to it
    ╭─[ a_local_a_pointer_zeroed_by_a_fill_named_is_not_believed_written_by_a_call_handed_it.c:8:12 ]
    │
