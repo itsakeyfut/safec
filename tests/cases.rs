@@ -6472,6 +6472,18 @@ cases! {
         // See ADR-0060, whose Confirmation names the mutation each of these
         // fails under.
         //
+        // An object with static storage duration is as wide as its type, and
+        // an access, a library copy or a hand-off wider than that is doubted
+        // (ADR-0115). Mutation: give `Rvalue::Static` no marks in the memory
+        // check's transfer; all three exit zero.
+        memset_past_a_global_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_int_written_through_a_chars_global_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_global_handed_where_a_wider_object_is_believed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a call does not end that belief, since no call frees a static's
+        // storage. Mutation: mark `Rvalue::Static` as from the caller instead;
+        // both reads are `SC0402`.
+        a_global_read_beside_a_call_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        //
         // The issue's own program: a null test on the moved pointer took away
         // the `SC0403` that had been standing in for this. Mutation: answer
         // `At::Moved` as `Bytes(0)` in `fits`; this goes silent.

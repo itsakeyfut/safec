@@ -3628,13 +3628,10 @@ impl Analysis for Allocations<'_> {
                     Rvalue::Use(Operand::Constant(0)) => {
                         value.replace(at, Held::null(value.points_to.len()));
                     }
-                    // **The address of a static object is followed as a pointer
-                    // into storage this check does not follow**, as a constant
-                    // other than zero is: it names no allocation, and a write
-                    // through it lands somewhere this function does not own,
-                    // so what is stored there escapes and what is read back is
-                    // not believed. It is not null. See ADR-0115.
-                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Static(_) => {
+                    // A constant other than zero names nothing this check
+                    // follows, and a write through it lands somewhere this
+                    // function does not own.
+                    Rvalue::Use(Operand::Constant(_)) => {
                         value.replace(
                             at,
                             Held::from_marks(
@@ -3663,6 +3660,62 @@ impl Analysis for Allocations<'_> {
                                     may_be_null: false,
                                     vouched: false,
                                     // A constant names nothing. See ADR-0105.
+                                    alone: None,
+                                },
+                            ),
+                        );
+                    }
+                    // **The address of a static object names storage this check
+                    // does not follow**, as a constant does: no allocation, so
+                    // a write through it escapes and what is read back is not
+                    // believed. It is not null. See ADR-0115.
+                    //
+                    // **And it is asked how wide it is.** Named nothing and
+                    // marked nothing, no access through it was asked at all:
+                    // `memset(a, 0, 100)` of an `int a[2]` and an `int` written
+                    // through a `char`'s address were built in silence. So it
+                    // is marked as a value whose position was vouched for, as a
+                    // record vouches for a load (ADR-0100), and believed as
+                    // wide as the object's type: an access or a hand-off wider
+                    // than that is doubted, and one inside it is not. A call
+                    // does not end that belief, since nothing a call does
+                    // frees a static's storage. Mutation: mark nothing;
+                    // `memset_past_a_global_array_is_doubted` goes silent.
+                    // Mutation: mark it as from the caller instead;
+                    // `a_global_read_beside_a_call_is_not_doubted` reports
+                    // `SC0402`.
+                    Rvalue::Static(id) => {
+                        let size = self.unit.size_of(self.unit.static_object(*id).ty);
+                        value.replace(
+                            at,
+                            Held::from_marks(
+                                value.points_to.len(),
+                                Marks {
+                                    lost: false,
+                                    freed: None,
+                                    writes_elsewhere: true,
+                                    position: Position::START,
+                                    loaded: true,
+                                    foreign: false,
+                                    stale_read: false,
+                                    unreplaced_read: false,
+                                    lost_read: false,
+                                    from_caller: false,
+                                    forged: false,
+                                    returned_by: None,
+                                    fresh_read: false,
+                                    widths: Levels::new(vec![Width::of_belief(Some(
+                                        size.unwrap_or(0),
+                                    ))]),
+                                    arrived_holds_pointer: false,
+                                    inner_address: false,
+                                    element: None,
+                                    site_element: None,
+                                    array_edge: false,
+                                    stored_through: false,
+                                    may_be_null: false,
+                                    vouched: true,
+                                    // Nothing this check follows. See ADR-0105.
                                     alone: None,
                                 },
                             ),

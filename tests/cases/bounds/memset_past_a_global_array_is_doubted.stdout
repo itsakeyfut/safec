@@ -1,0 +1,38 @@
+Target "x86_64-pc-windows-msvc"
+Static "a" "int[2]" external zero
+Function memset_past_a_global_array_is_doubted.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
+Function memset_past_a_global_array_is_doubted.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int (*)[2]"
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Block "bb0" entry
+    Operation memset_past_a_global_array_is_doubted.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation memset_past_a_global_array_is_doubted.c:4:12 generated
+      Destination "_1"
+      Static "a"
+    Operation memset_past_a_global_array_is_doubted.c:4:12 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    ArgumentsEvaluated memset_past_a_global_array_is_doubted.c:4:5 generated
+    Call memset_past_a_global_array_is_doubted.c:4:5 written "memset" "bb1"
+      Destination "_3"
+      Copy "_2"
+      Constant 0
+      Constant 100
+  Block "bb1"
+    Sequenced memset_past_a_global_array_is_doubted.c:4:5 generated
+    Operation memset_past_a_global_array_is_doubted.c:5:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced memset_past_a_global_array_is_doubted.c:5:12 generated
+    Return

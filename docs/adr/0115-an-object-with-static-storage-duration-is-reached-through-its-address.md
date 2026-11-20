@@ -41,15 +41,25 @@ Chosen option: "a new rvalue", by the owner's decision on #615.
   linkage and an initial value, and `Rvalue::Static(StaticId)` is the
   address of one. Every reader of an `Rvalue` matches it with every arm, so
   it is `E0004` at each until it says what the address is.
-* The memory check reads the address as a pointer into storage outside this
-  function, as it reads a parameter's, so what it cannot follow is a doubt.
-  The nullability check reads it as not null, as it reads `&x`.
+* The memory check reads the address as a pointer into storage it does not
+  follow, so what is written through it escapes and what is read back is a
+  doubt. It is believed as wide as the object's type and marked as vouched
+  for, so an access, a library copy or a hand-off wider than the object is
+  doubted, and a call does not end that belief, since nothing a call does
+  frees a static's storage. The nullability check reads it as not null, as
+  it reads `&x`.
 * #85's root is not built. A static object read precisely, which a later
   phase may want, is a second record that supersedes this one.
 
 ### Confirmation
 
 A new reader of an `Rvalue` is `E0004` until it answers `Rvalue::Static`.
+`memset_past_a_global_array_is_doubted`,
+`an_int_written_through_a_chars_global_address_is_doubted` and
+`a_global_handed_where_a_wider_object_is_believed_is_doubted` exit zero
+when the address carries no marks, and
+`a_global_read_beside_a_call_is_not_doubted` reports `SC0402` when it is
+marked as from the caller instead.
 `a_pointer_kept_in_a_global_and_freed_is_reported` and
 `a_pointer_kept_in_a_global_may_be_freed_by_any_call` change when a use of
 a static is lowered as the address of a fresh local, which is the check
