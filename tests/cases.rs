@@ -59,6 +59,13 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.5 p7 lets an object be reached through the signed or unsigned
+        // type corresponding to its own, so a write through an `unsigned int *`
+        // into an `int` writes it, and the read after is of a written `int`.
+        // Mutation: answer type identity alone in
+        // `TranslationUnit::same_or_counterpart`; `x` is believed unwritten
+        // and its read is `SC0411`.
+        a_write_through_an_unsigned_pointer_writes_the_int_it_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local nothing assigned, read by a null test and written
         // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
         // since no path assigns it.
