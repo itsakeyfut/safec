@@ -142,6 +142,27 @@ const INITIALIZED: Code = Code::new("SC0310");
 /// compile-time constant`.
 const NOT_CONSTANT: Code = Code::new("SC0317");
 
+/// `ty`, `const`-qualified, and an array's elements with it: C17 6.7.3 p10
+/// qualifies the element type of an array whose type is qualified, so an
+/// element of a `const` structure's array member is not written either.
+fn qualify(ast: &mut Ast, ty: TypeId) -> TypeId {
+    if let Type::Array {
+        element,
+        length,
+        written,
+    } = ast.ty(ty).clone()
+    {
+        let element = qualify(ast, element);
+        let array = ast.push_type(Type::Array {
+            element,
+            length,
+            written,
+        });
+        return ast.push_const(array);
+    }
+    ast.push_const(ty)
+}
+
 /// A `switch` given two labels for one value: a `case` value twice, or a
 /// second `default`, C17 6.8.4.2 p3.
 ///
@@ -1822,7 +1843,19 @@ impl Checker<'_> {
                 member,
                 arrow,
                 span,
-            } => self.member(ast, id, (base, member, arrow, span), diagnostics),
+            } => {
+                let ty = self.member(ast, id, (base, member, arrow, span), diagnostics)?;
+                // C17 6.5.2.3 p3 and p4: a member of a `const` structure is
+                // `const`, through `.` and through `->` alike, so `s.a = 1`
+                // with `const struct S s` writes what may not be written.
+                // Found by review.
+                let base_ty = self.types[base.index()]?;
+                let qualified = match ast.ty(base_ty) {
+                    Type::Pointer(pointee) if arrow => ast.is_const(*pointee),
+                    _ => ast.is_const(base_ty),
+                };
+                Some(if qualified { qualify(ast, ty) } else { ty })
+            }
             Expr::Unary { op, operand, .. } => self.unary(ast, op, operand, diagnostics),
             Expr::Binary { op, lhs, rhs, .. } => self.binary(ast, op, lhs, rhs, diagnostics),
             Expr::Assign {
@@ -2375,8 +2408,10 @@ impl Checker<'_> {
                 }
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
-                    // `int[]`, and only one of them is complete.
-                    if self.compatible(ast, left, right) {
+                    // `int[]`, and only one of them is complete. Qualified or
+                    // unqualified versions of compatible types (6.5.6 p3), so
+                    // a `const int *` and an `int *` subtract.
+                    if self.compatible_unqualified(ast, left, right) {
                         Some(
                             pointee_steppable(ast, left, true, &|ty| self.complete_here(ast, ty))
                                 .and(pointee_steppable(ast, right, false, &|ty| {
@@ -2395,7 +2430,7 @@ impl Checker<'_> {
             BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    self.compatible(ast, left, right)
+                    self.compatible_unqualified(ast, left, right)
                         && !matches!(ast.ty(left), Type::Function { .. })
                 }
                 _ => false,
@@ -2405,7 +2440,7 @@ impl Checker<'_> {
             BinOp::Eq | BinOp::Ne => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    self.compatible(ast, left, right)
+                    self.compatible_unqualified(ast, left, right)
                         || is_void_beside_an_object(ast, left, right)
                         || is_void_beside_an_object(ast, right, left)
                 }
@@ -2471,7 +2506,17 @@ impl Checker<'_> {
                 let right_void = matches!(ast.ty(*right_pointee), Type::Void);
                 let left_function = matches!(ast.ty(*left_pointee), Type::Function { .. });
                 let right_function = matches!(ast.ty(*right_pointee), Type::Function { .. });
-                if self.compatible(ast, left, right) || (left_void && !right_function) {
+                // p3 and p6: qualified or unqualified versions of compatible
+                // types, the result pointing to the one with every qualifier
+                // of both, which with `const` the only qualifier is whichever
+                // is `const`.
+                if self.compatible_unqualified(ast, *left_pointee, *right_pointee) {
+                    Some(if ast.is_const(*right_pointee) {
+                        right
+                    } else {
+                        left
+                    })
+                } else if left_void && !right_function {
                     Some(left)
                 } else if right_void && !left_function {
                     Some(right)

@@ -9027,6 +9027,18 @@ cases! {
         // Mutation: have `refuse_unwritable` not ask `Ast::is_const`; every
         // report goes.
         a_const_object_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.2.3 p3 and p4: a member of a `const` structure, through
+        // `.` or `->`, is `const`, and so is an element of its array member
+        // (6.7.3 p10). Mutation: leave a member access's type unqualified;
+        // the three reports go. Qualify only the array, not its elements;
+        // the third goes. Found by review.
+        a_member_of_a_const_struct_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.6 p3, 6.5.8 p2, 6.5.9 p2 and 6.5.15 p3 take pointers to
+        // qualified or unqualified versions of compatible types: nothing
+        // here is reported. Mutation: ask `compatible` rather than
+        // `compatible_unqualified` of the two pointees in any of the four;
+        // its operator is refused. Found by review.
+        a_pointer_to_const_compares_with_a_pointer_to_the_same: ["--emit", "ast"],
         // C17 6.5.16.1 p1: a pointer to `const` may not become a pointer to
         // what is not, and may be made from one. Mutation: drop the
         // qualifier rule from `assignable`; the `SC0302` goes. Require the
