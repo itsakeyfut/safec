@@ -3786,6 +3786,16 @@ cases! {
         // this check does not read: the function is `Unknown`, `SC0415`.
         // Mutation: have `Cfg::reducible` answer `true`; the function is read.
         a_goto_into_a_loop_leaves_its_function_unread: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `goto` back into a block that has closed begins its locals again,
+        // so `a` holds nothing there and the read is proved (ADR-0114).
+        // Mutation: have `jump` begin nothing in a scope only the label has
+        // open; this goes silent. Found by review.
+        a_pointer_a_goto_enters_a_block_past_is_unassigned_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Labels written one after another are one place, so `goto`s to
+        // each and one back to the first make an ordinary loop, which is
+        // read. Mutation: resolve a `goto` to the label it names rather than
+        // the outermost of a stack; this is `SC0415`. Found by review.
+        stacked_labels_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter

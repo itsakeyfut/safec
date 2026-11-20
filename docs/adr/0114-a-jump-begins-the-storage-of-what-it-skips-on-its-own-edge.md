@@ -75,9 +75,11 @@ not begun and on a read of storage that has ended or holds nothing:
 * `a_goto_out_of_a_block_ends_what_it_leaves` fails when it ends nothing in a
   scope only the `goto` has open.
 
-The memory check reads none of the markers as a question of its own: a read
-of storage whose lifetime ended is the lifetime level's, so no corpus case
-holds them, and the interpreter is the only thing that does.
+The memory check does not ask whether storage is alive, which is the lifetime
+level's question, but it does read a `StorageLive` as a new object holding
+nothing, so a pointer local a `goto` enters a block past is unassigned there.
+`a_pointer_a_goto_enters_a_block_past_is_unassigned_there` holds the entering
+half on that side: without it, the read is silent.
 
 ### Consequences
 

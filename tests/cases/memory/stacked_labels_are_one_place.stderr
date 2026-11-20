@@ -1,0 +1,10 @@
+error[SC0401]: this frees `s`, which may have been freed already
+    ╭─[ stacked_labels_are_one_place.c:20:9 ]
+    │
+ 20 │         free(s);
+    │         ───┬───  
+    │            ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

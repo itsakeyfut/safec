@@ -195,7 +195,9 @@ pub struct Resolution {
 }
 
 impl Resolution {
-    /// The labelled statement the `goto` at `goto` names.
+    /// The labelled statement the `goto` at `goto` names: the outermost of
+    /// the labels written directly one before another, which all name the
+    /// place it begins.
     ///
     /// Answered here so that which label a `goto` means is decided once, by
     /// the stage that knows a label's name space is its function (C17 6.2.1
@@ -464,6 +466,7 @@ pub fn resolve(
         definitions: HashMap::new(),
         labels: HashMap::new(),
         gotos: Vec::new(),
+        stacked: None,
     };
 
     for item in ast.items() {
@@ -549,6 +552,9 @@ struct Resolver<'a> {
     /// The `goto`s of the function being walked, resolved once its body has
     /// been, since a `goto` may name a label written below it.
     gotos: Vec<(StmtId, Span)>,
+    /// The outermost of the labels written directly before the statement
+    /// being walked, while a label's statement is another label.
+    stacked: Option<StmtId>,
 }
 
 impl Resolver<'_> {
@@ -1053,6 +1059,16 @@ impl Resolver<'_> {
                 }
             }
             Stmt::Labeled { label, body, .. } => {
+                // **Labels written one after another name one place**, so a
+                // `goto` to any of them goes to the outermost. Kept apart,
+                // each would be a block of its own, and `A: B:` with a `goto`
+                // to each and one back to `A` would be a loop entered at two
+                // blocks, which the memory check does not read. Found by
+                // review.
+                let place = self.stacked.take().unwrap_or(id);
+                if let Stmt::Labeled { .. } = ast.stmt(*body) {
+                    self.stacked = Some(place);
+                }
                 let spelled = self.sources.snippet(*label);
                 match self.labels.get(spelled) {
                     Some(&(_, first)) => diagnostics.report(
@@ -1063,7 +1079,7 @@ impl Resolver<'_> {
                             .with_note("C17 6.8.1 p3"),
                     ),
                     None => {
-                        self.labels.insert(spelled.to_owned(), (id, *label));
+                        self.labels.insert(spelled.to_owned(), (place, *label));
                     }
                 }
                 self.stmt(*body, diagnostics);
