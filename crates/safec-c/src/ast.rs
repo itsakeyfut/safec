@@ -450,6 +450,17 @@ pub enum Expr {
         /// The constant, quotes included.
         span: Span,
     },
+    /// A string literal, C17 6.4.5: an array of `char` with static storage
+    /// duration holding the characters and a terminating zero. Adjacent
+    /// literals are one (5.1.1.2 phase 6), so this is a run of tokens, each
+    /// read by `crate::literal`. Its type and bytes are the type checker's
+    /// and the lowering's, as a character constant's value is.
+    String {
+        /// Each literal of the run, quotes included, in the order written.
+        parts: Vec<Span>,
+        /// The whole run.
+        span: Span,
+    },
     /// An identifier standing for something. C17 6.5.1.
     ///
     /// `Identifier` and not `Name`, because `--emit tokens` already calls this
@@ -856,6 +867,7 @@ impl Expr {
         match self {
             Self::Number { .. } => "Number",
             Self::Character { .. } => "Character",
+            Self::String { .. } => "String",
             Self::Identifier { .. } => "Identifier",
             Self::Unary { .. } => "Unary",
             Self::Binary { .. } => "Binary",
@@ -874,6 +886,7 @@ impl Expr {
         match self {
             Self::Number { span, .. }
             | Self::Character { span }
+            | Self::String { span, .. }
             | Self::Identifier { span, .. }
             | Self::Unary { span, .. }
             | Self::Binary { span, .. }
@@ -927,6 +940,7 @@ impl Expr {
         match self {
             Self::Number { .. }
             | Self::Character { .. }
+            | Self::String { .. }
             | Self::Identifier { .. }
             | Self::Error { .. } => {}
             Self::Unary { operand, .. } | Self::Member { base: operand, .. } => out.push(*operand),

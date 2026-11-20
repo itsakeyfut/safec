@@ -1,0 +1,6 @@
+Function a_run_of_string_literals_is_one_expression.c:1:1 "main" "int (void)"
+  Compound a_run_of_string_literals_is_one_expression.c:1:16
+    Declaration a_run_of_string_literals_is_one_expression.c:2:5 "s" "char *"
+      String a_run_of_string_literals_is_one_expression.c:2:15 "\"a\"" "\"b\"" "\"c\""
+    Return a_run_of_string_literals_is_one_expression.c:4:5
+      Number a_run_of_string_literals_is_one_expression.c:4:12 "0"

@@ -395,6 +395,7 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
     match expr {
         Expr::Number { span: _ }
         | Expr::Character { span: _ }
+        | Expr::String { parts: _, span: _ }
         | Expr::Identifier { span: _ }
         | Expr::Error { span: _ } => Vec::new(),
         Expr::Unary {
@@ -838,7 +839,9 @@ impl Checker<'_> {
         loop {
             if designator {
                 id = match *ast.expr(id) {
-                    Expr::Identifier { .. } => return true,
+                    // A name, or a string literal, which has static storage
+                    // duration (C17 6.4.5 p6).
+                    Expr::Identifier { .. } | Expr::String { .. } => return true,
                     Expr::Subscript { base, index, .. } => {
                         designator = false;
                         if constant(index) {
@@ -964,6 +967,20 @@ impl Checker<'_> {
                     format!("`{called}` is a variable length array, which cannot be initialized"),
                     "C17 6.7.9 p3",
                 ),
+                // p14 lets a string literal initialize an array of character
+                // type, which this compiler does not build yet: the lowering
+                // would otherwise be handed an array to assign to.
+                Type::Array { .. } if matches!(ast.expr(init), Expr::String { .. }) => {
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "cannot initialize `{called}` from a string literal yet"
+                        ))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(ast.expr(init).span(), "a string literal"))
+                        .with_note("a gap in this compiler: C17 6.7.9 p14 allows it"),
+                    );
+                    continue;
+                }
                 // p16: "the initializer for an object that has aggregate or
                 // union type shall be a brace-enclosed list of initializers",
                 // and p14 allows a string literal for an array of character
@@ -975,6 +992,7 @@ impl Checker<'_> {
                 // being refused as this: `char s[] = "abc";` is valid C.
                 Type::Array { .. }
                     if match ast.expr(init) {
+                        Expr::String { .. } => false,
                         Expr::Number { .. }
                         | Expr::Character { .. }
                         | Expr::Identifier { .. }
@@ -1619,6 +1637,7 @@ impl Checker<'_> {
             } => known(condition) && known(then) && known(otherwise),
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }
@@ -1964,6 +1983,20 @@ impl Checker<'_> {
                 };
                 self.values[id.index()] = Some(value);
                 Some(self.int)
+            }
+            // C17 6.4.5 p6: an array of `char`. **With no length here**: this
+            // stage holds an array's length as an expression, and a literal
+            // has none to point at, so the lowering counts the bytes
+            // (`Lowering::string`). Every rule this stage asks of the type
+            // reads it as an array of `char` converted to `char *` (6.3.2.1
+            // p3), which needs no length; `sizeof` of one does, and is #1113's.
+            Expr::String { .. } => {
+                let element = ast.push_type(Type::Char);
+                Some(ast.push_type(Type::Array {
+                    element,
+                    length: None,
+                    written: None,
+                }))
             }
             Expr::Identifier { .. } => {
                 // A function is typed by its standing declaration, not the
@@ -2847,6 +2880,11 @@ impl Checker<'_> {
             Expr::Identifier { span: _ } => match typed(id) {
                 None => Designates::Unknown,
                 Some(Type::Function { .. }) => Designates::Function,
+                Some(_) => Designates::Object,
+            },
+            // C17 6.5.1 p4: a string literal is an lvalue.
+            Expr::String { .. } => match typed(id) {
+                None => Designates::Unknown,
                 Some(_) => Designates::Object,
             },
             Expr::Unary {
@@ -3866,6 +3904,7 @@ impl Checker<'_> {
             }
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }

@@ -857,6 +857,53 @@ fn arrays_and_pointer_arithmetic_compute_what_c_says() {
     }
 }
 
+/// A string literal is its bytes, escapes read, and a terminating zero, and
+/// adjacent literals are one (C17 6.4.5 p6, 5.1.1.2 phase 6): `s[1]` of
+/// `"hi"` is 105, the run `"a" "b"` is two characters before its zero, and
+/// `"\\x41\\n"` is 65 and 10.
+///
+/// Mutation: read each literal's characters unescaped in `Lowering::string`;
+/// `e[0]` is a backslash and this answers 209. Mutation: read only the
+/// first literal of a run; `n` is 1 and this answers 181.
+#[test]
+fn a_string_literal_is_its_bytes_and_a_zero() {
+    if !clang_or_skip("what a program with string literals answers") {
+        return;
+    }
+
+    let scratch = Scratch::new("strings");
+    scratch.source(
+        "strings.c",
+        "int main(void) {\n    char *s = \"hi\";\n    char *t = \"a\" \"b\";\n    char *e = \"\\x41\\n\";\n    int n = 0;\n    while (t[n] != 0) {\n        n = n + 1;\n    }\n    return s[1] + n + e[0] + e[1];\n}\n",
+    );
+    let program = scratch.path().join(if cfg!(windows) {
+        "strings.exe"
+    } else {
+        "strings"
+    });
+
+    let output = safec(
+        &[
+            "--safety",
+            "off",
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "strings.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(182), "105 + 2 + 65 + 10");
+}
+
 /// Objects with static storage duration and functions with internal linkage
 /// keep what C says across two units: a global defined in one and declared
 /// `extern` in the other, a tentative definition, a `static` local that keeps

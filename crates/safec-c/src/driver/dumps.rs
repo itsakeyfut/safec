@@ -497,6 +497,14 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
                 write!(out, " {:?}", quoted(sources, *span))
                     .expect("writing to a string cannot fail");
             }
+            // Each literal of the run as written, since what is between two
+            // of them is no part of either.
+            Expr::String { parts, .. } => {
+                for part in parts {
+                    write!(out, " {:?}", quoted(sources, *part))
+                        .expect("writing to a string cannot fail");
+                }
+            }
             Expr::Unary { op, .. } => {
                 // `++` and `--` are the only operators C writes on either side,
                 // so they are the only ones that need saying which side this

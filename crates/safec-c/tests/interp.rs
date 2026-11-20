@@ -1636,6 +1636,20 @@ fn a_discarded_dereference_is_not_a_read() {
     assert_eq!(answer, Ok(Value::Int(0)));
 }
 
+/// A string literal is an array, whose elements the interpreter does not
+/// hold, so a run that reaches one stops and says so rather than answering
+/// what it never held. What the program computes is held by building it
+/// (`a_string_literal_is_its_bytes_and_a_zero` in `tests/object.rs`).
+///
+/// Mutation: answer a pointer to a string literal in `interp.rs`'s
+/// `Rvalue::Static` arm; the run finishes and answers 0.
+#[test]
+fn a_string_literal_stops_the_run() {
+    let text = "int main(void) {\n    char *s = \"hi\";\n    return 0;\n}\n";
+    let stopped = ran(text).expect_err("a string literal stops the run");
+    assert!(stopped.why.contains("a string literal"), "{}", stopped.why);
+}
+
 /// A global is one object for the whole run, written by one call and read
 /// by the next, and starts as zero where nothing initializes it (C17 6.7.9
 /// p10).

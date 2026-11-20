@@ -330,6 +330,7 @@ pub fn lower(
         file_statics: HashMap::new(),
         block_statics: HashMap::new(),
         internal: HashSet::new(),
+        strings: HashMap::new(),
         pending: HashMap::new(),
         top_level: false,
         root: None,
@@ -434,6 +435,10 @@ struct Lowering<'a> {
     /// The functions some file-scope declaration of which says `static`,
     /// which C17 6.2.2 p3 gives internal linkage.
     internal: HashSet<String>,
+    /// The static each string literal is, by the literal: one object however
+    /// many times the expression is evaluated (C17 6.4.5 p6 gives it static
+    /// storage duration). See [`Lowering::string`].
+    strings: HashMap<ExprId, StaticId>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -728,6 +733,7 @@ fn sequences(expr: &Expr) -> bool {
         Expr::Binary { op, .. } => matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr),
         Expr::Number { .. }
         | Expr::Character { .. }
+        | Expr::String { .. }
         | Expr::Identifier { .. }
         | Expr::Unary { .. }
         | Expr::Member { .. }
@@ -959,6 +965,48 @@ impl Lowering<'_> {
             .resolved(id)
             .map(|binding| self.resolution.binding(binding).name)
             .and_then(|name| self.statics.get(&name).copied())
+    }
+
+    /// The static a string literal is, made the first time it is asked for:
+    /// an array of `char` holding each literal's characters, escapes read,
+    /// then a terminating zero (C17 6.4.5 p6), adjacent literals joined
+    /// (5.1.1.2 phase 6). Internal and named with a `.`, which no C
+    /// identifier holds, so it is no object the program can name.
+    ///
+    /// Mutation: leave out the zero; `a_string_literal_is_its_bytes_and_a_zero`
+    /// answers another length. Mutation: read only the first literal of a
+    /// run; the same test answers 1 where `"a" "b"` is 2.
+    fn string(&mut self, id: ExprId) -> StaticId {
+        if let Some(&object) = self.strings.get(&id) {
+            return object;
+        }
+        let Expr::String { parts, .. } = self.ast.expr(id) else {
+            unreachable!("a string literal is asked for only of one")
+        };
+        let mut bytes = Vec::new();
+        for &part in parts {
+            let text = self.sources.snippet(part);
+            let body = &text[1..text.len() - 1];
+            let values = crate::literal::unescape(body)
+                .expect("the parser keeps only a literal every escape of which it reads");
+            bytes.extend(values.into_iter().map(|value| {
+                u8::try_from(value).expect("`unescape` refuses a value no `char` holds")
+            }));
+        }
+        bytes.push(0);
+        let element = self.unit.push_type(Ty::Char);
+        let ty = self.unit.push_type(Ty::Array {
+            element,
+            length: bytes.len() as u64,
+        });
+        let object = self.unit.push_static(Static {
+            name: format!(".str.{}", self.strings.len()),
+            ty,
+            linkage: Linkage::Internal,
+            init: StaticInit::Bytes(bytes),
+        });
+        self.strings.insert(id, object);
+        object
     }
 
     /// The place a use of a static is: `*t`, where `t` is a temporary holding
@@ -2026,6 +2074,13 @@ impl Lowering<'_> {
 
     /// The IR type of an expression, or a report that it has none.
     fn ty_of(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
+        // **A literal's length is its bytes'**, which the type checker does
+        // not count: it holds an array's length as an expression, and a
+        // literal has none. See `Lowering::string`.
+        if let Expr::String { .. } = self.ast.expr(id) {
+            let object = self.string(id);
+            return Some(self.unit.static_object(object).ty);
+        }
         let ty = self.typed(id, diagnostics)?;
         self.ty(self.ast.expr(id).span(), ty, diagnostics)
     }
@@ -3050,6 +3105,7 @@ impl Lowering<'_> {
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Member { .. }
             | Expr::Conditional { .. }
@@ -3075,7 +3131,10 @@ impl Lowering<'_> {
     /// does, by reporting the conflict as `SC0409` (#525, ADR-0052).
     fn inert(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
-            Expr::Number { .. } | Expr::Character { .. } | Expr::Identifier { .. } => true,
+            Expr::Number { .. }
+            | Expr::Character { .. }
+            | Expr::String { .. }
+            | Expr::Identifier { .. } => true,
             Expr::Unary { op, operand, .. } => match op {
                 AstUnOp::AddrOf => matches!(self.ast.expr(*operand), Expr::Identifier { .. }),
                 AstUnOp::Plus | AstUnOp::Minus | AstUnOp::Not | AstUnOp::BitNot => {
@@ -3178,7 +3237,7 @@ impl Lowering<'_> {
                 // to ten.
                 values.push(Operand::Constant(self.types.value(id)?));
             }
-            Expr::Identifier { .. } | Expr::Subscript { .. } => {
+            Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Place(id));
             }
@@ -3298,6 +3357,11 @@ impl Lowering<'_> {
                 Some(object) => places.push(self.reach_static(builder, object, *span)),
                 None => places.push(Place::local(self.local(id, diagnostics)?)),
             },
+            // The array a literal is, through its address as any static is.
+            Expr::String { span, .. } => {
+                let object = self.string(id);
+                places.push(self.reach_static(builder, object, *span));
+            }
             Expr::Unary {
                 op: AstUnOp::Deref,
                 operand,
@@ -3464,7 +3528,7 @@ impl Lowering<'_> {
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
             Expr::Number { .. } | Expr::Character { .. } => {}
-            Expr::Identifier { .. } | Expr::Subscript { .. } => {
+            Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
                 let place = places.pop().expect("a place");
                 let span = self.ast.expr(id).span();
                 values.push(self.decayed(builder, place, span));
@@ -3822,6 +3886,7 @@ impl Lowering<'_> {
             // `places.pop()` taking an outer expression's place instead.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -3980,6 +4045,7 @@ impl Lowering<'_> {
             // moment somebody walks the graph.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Assign { .. }
@@ -4382,6 +4448,7 @@ impl Lowering<'_> {
                 Expr::Member { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }
+                | Expr::String { .. }
                 | Expr::Error { .. } => {}
             }
         }
@@ -4452,6 +4519,7 @@ impl Lowering<'_> {
             // later is asked whether its operands are unsequenced.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Conditional { .. }
@@ -4627,6 +4695,7 @@ impl Lowering<'_> {
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }
+                | Expr::String { .. }
                 | Expr::Member { .. }
                 | Expr::Error { .. } => {}
             }

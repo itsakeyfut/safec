@@ -1,0 +1,7 @@
+error[SC0201]: an escape sequence C does not define
+   ╭─[ an_escape_c_does_not_define_is_refused_in_a_string_literal.c:2:15 ]
+   │
+ 2 │     char *s = "\q";
+   │               ──┬─  
+   │                 ╰─── this is not a string literal C allows
+───╯

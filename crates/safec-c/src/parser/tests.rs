@@ -605,8 +605,8 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// bracket, `[*]` or pointer-qualifier checks, or any one qualifier from
 /// either qualifier check. A row in the first list fails. Let a `...` come
 /// first, `static` into brackets outside a parameter, or a character
-/// constant or string literal be asked about anywhere but its own position;
-/// a row in the second list fails.
+/// constant be asked about anywhere but its own position; a row in the
+/// second list fails.
 #[test]
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
@@ -731,8 +731,8 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "6.4.4.4",
         ),
         (
-            "int main(void) { return \"a\"[0]; }\n",
-            "a string literal",
+            "int main(void) { return L\"a\"[0]; }\n",
+            "a prefixed string literal",
             "6.4.5",
         ),
         (

@@ -5329,6 +5329,10 @@ cases! {
         // `drop` frees it through `kept`. Mutation: the same; `p` never
         // escapes, and the report changes.
         a_pointer_kept_in_a_global_may_be_freed_by_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A literal is a static, not an allocation, so freeing one is doubted.
+        // Mutation: answer `Rvalue::Static` as a null in the memory check's
+        // transfer; `free` of it is believed to do nothing, and this builds.
+        a_string_literal_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8202,6 +8206,18 @@ cases! {
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
         a_second_storage_class_is_refused: ["--emit", "ast"],
+        // C17 6.7.9 p14 allows it, and this compiler does not build it yet.
+        // Mutation: drop the string arm in `Checker::check_initialized`; this
+        // reaches the lowering as an array of no length.
+        an_array_initialized_from_a_string_literal_is_not_built_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Translation phase 6 joins adjacent literals (C17 5.1.1.2 p1).
+        // Mutation: read one token in `Parser::string`; the second is a
+        // syntax error.
+        a_run_of_string_literals_is_one_expression: ["--emit", "ast"],
+        // `\\q` is no escape C17 6.4.4.4 defines. Mutation: ignore what
+        // `unescape` says in `Parser::string`; this builds, and the lowering
+        // panics on the bytes.
+        an_escape_c_does_not_define_is_refused_in_a_string_literal: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.2.2 p7: one identifier with both linkages is undefined, and
         // `clang` refuses each of these three. Mutation: skip
         // `Resolver::linked`; nothing is reported.
@@ -9629,6 +9645,11 @@ cases! {
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A string literal is a private constant, its bytes spelled as LLVM
+        // reads them: `"`, `\\` and a newline as two hex digits. Mutation:
+        // push every byte as a character in `bytes_spelled`; the `"` ends
+        // the constant early, and `tests/llvm.rs` refuses the module.
+        llvm_ir_of_a_string_literal: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block ending in a call that does not return ends in `unreachable`,
         // and `tests/llvm.rs` hands it to `clang`. Mutation: have `emit.rs`'s
         // `call` write nothing for no continuation; this fails, and so does
@@ -9647,6 +9668,17 @@ cases! {
         // The shape of the Safety IR a program lowers to, where no check and no
         // frontend report is what the case is about.
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.4.5 p6: the characters, then a zero, adjacent literals one.
+        // Mutation: leave out the zero in `Lowering::string`; each array is a
+        // byte shorter. Mutation: read only the first literal of a run; `t`
+        // is `"a"`.
+        // The `SC0412` at `s[1]` is an index into a static array, which the
+        // bounds check doubts as it doubts one into a global array.
+        a_string_literal_is_a_static_of_its_bytes_and_a_zero: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An address constant, which a static here cannot start with yet.
+        // Mutation: drop the literal from `Checker::address_constant`; this is
+        // `SC0317`, which says C forbids it.
+        a_string_literal_is_no_static_initializer_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every use of an object with static storage duration is `*t` after
         // `t = Static(..)`, and the statics are listed before the functions
         // with what they start with: a tentative definition and its
