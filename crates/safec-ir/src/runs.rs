@@ -340,9 +340,10 @@ mod tests {
     /// block's successors, one for a `Goto`, two for a `Branch`, none for a
     /// `Return`. Answers whether the loop at `1` is shown to run.
     ///
-    /// **By hand because no C reaches these shapes yet**: the frontend reads
-    /// neither `continue`, `break` nor `goto`, and each refusal they need
-    /// would otherwise be held by nothing until it did.
+    /// **By hand because they were written before C reached these shapes**:
+    /// the frontend read neither `continue`, `break` nor `goto` then, and each
+    /// refusal they need would otherwise have been held by nothing. It reads
+    /// `continue` and `break` now, and still not `goto`.
     fn runs(blocks: usize, past: usize, edges: &[(usize, &[usize])]) -> bool {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");

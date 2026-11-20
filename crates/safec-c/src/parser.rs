@@ -2142,9 +2142,9 @@ impl Parser<'_> {
     /// p1 allow it: `continue` in a loop body, `break` in a loop or `switch`
     /// body, however deeply nested.
     ///
-    /// Anywhere else it is a constraint violation, reported at the keyword in
-    /// clang's words under [`EXPECTED`], which is the code `break` outside a
-    /// loop had while this parser read neither.
+    /// Anywhere else it is a constraint violation, reported at the keyword
+    /// under [`EXPECTED`], which is the code `break` outside a loop had while
+    /// this parser read neither, naming what C allows it in.
     fn jump_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         let breaks = self.check(TokenKind::Keyword(Keyword::Break));
         let misplaced = if breaks {
