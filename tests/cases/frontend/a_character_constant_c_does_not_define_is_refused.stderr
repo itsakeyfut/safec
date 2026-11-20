@@ -1,0 +1,7 @@
+error[SC0201]: an escape sequence C does not define
+   ╭─[ a_character_constant_c_does_not_define_is_refused.c:2:12 ]
+   │
+ 2 │     return '\q';
+   │            ──┬─  
+   │              ╰─── this is not a character constant C allows
+───╯

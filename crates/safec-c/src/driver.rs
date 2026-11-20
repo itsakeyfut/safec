@@ -352,6 +352,7 @@ pub fn compile(options: &Options) -> Compiled {
                     &tokens,
                     read_whole,
                     options.target.int(),
+                    options.target.char(),
                     false,
                     &mut diagnostics,
                 ) else {
@@ -581,6 +582,7 @@ fn analysed(
     tokens: &Preprocessed,
     read_whole: usize,
     int_range: Integer,
+    character: Integer,
     memory_checked: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Analysed> {
@@ -594,7 +596,14 @@ fn analysed(
     }
 
     let resolution = resolve(sources, &ast, memory_checked, diagnostics);
-    let types = check(sources, &mut ast, &resolution, int_range, diagnostics);
+    let types = check(
+        sources,
+        &mut ast,
+        &resolution,
+        int_range,
+        character,
+        diagnostics,
+    );
     if diagnostics.error_count() != read_whole {
         return Some(Analysed { ast, typed: None });
     }
@@ -624,6 +633,7 @@ fn lowered(
         tokens,
         read_whole,
         options.target.int(),
+        options.target.char(),
         options.safety >= SafetyLevel::Memory,
         diagnostics,
     )?;

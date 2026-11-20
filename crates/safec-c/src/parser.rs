@@ -7,8 +7,8 @@
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes, `typedef`, a variadic function's ellipsis,
-//! `[static N]` and `[*]`, and the two primary expressions the lexer already
-//! hands it: a character constant and a string literal. Each arrives in a
+//! `[static N]` and `[*]`, and a string literal, a primary expression the
+//! lexer already hands it. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
@@ -2788,18 +2788,84 @@ impl Parser<'_> {
         self.ast.push_expr(Expr::Subscript { base, index, span })
     }
 
-    /// Part of C17 6.5.1: an integer constant, an identifier, or a
-    /// parenthesised expression.
+    /// A character constant, C17 6.4.4.4, if what is between its quotes is one
+    /// character this compiler reads.
     ///
-    /// Not all of it. A character constant is a constant by 6.4.4 and a string
-    /// literal is a primary expression by 6.5.1, the lexer already gives both
-    /// their own token, and neither is read here. Both are refused with
-    /// `expected an expression`, which is the wording #36 exists to fix.
+    /// More than one is valid C with a value the implementation chooses (p10),
+    /// and refused as not read yet, as is anything [`unescape`] says is.
+    /// What it says is not C is a syntax error. The value is the type
+    /// checker's.
+    ///
+    /// [`unescape`]: crate::literal::unescape
+    fn character(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let text = self.sources.snippet(span);
+        // The lexer scans an encoding prefix into the token (C17 6.4.4.4 p1).
+        if !text.starts_with('\'') {
+            self.report_unread(
+                Unread {
+                    what: "a prefixed character constant",
+                    clause: "6.4.4.4",
+                },
+                diagnostics,
+            );
+            self.advance();
+            return self.ast.push_expr(Expr::Error { span });
+        }
+        let body = text
+            .strip_prefix('\'')
+            .and_then(|text| text.strip_suffix('\''))
+            .unwrap_or("");
+        let refused = match crate::literal::unescape(body) {
+            Ok(values) if values.len() == 1 => None,
+            // The lexer has reported an empty one already.
+            Ok(values) if values.is_empty() => Some(None),
+            Ok(_) => Some(Some(Unread {
+                what: "a character constant of more than one character",
+                clause: "6.4.4.4",
+            })),
+            Err(crate::literal::Unreadable::Unread(what)) => Some(Some(Unread {
+                what,
+                clause: "6.4.4.4",
+            })),
+            Err(crate::literal::Unreadable::Malformed(what)) => {
+                self.report(
+                    what,
+                    "this is not a character constant C allows",
+                    diagnostics,
+                );
+                Some(None)
+            }
+        };
+        match refused {
+            None => {
+                self.advance();
+                self.ast.push_expr(Expr::Character { span })
+            }
+            Some(unread) => {
+                if let Some(unread) = unread {
+                    self.report_unread(unread, diagnostics);
+                }
+                self.advance();
+                self.ast.push_expr(Expr::Error { span })
+            }
+        }
+    }
+
+    /// Part of C17 6.5.1: an integer constant, a character constant, an
+    /// identifier, or a parenthesised expression.
+    ///
+    /// Not all of it. A string literal is a primary expression by 6.5.1, the
+    /// lexer already gives it its own token, and it is not read here: it is
+    /// refused as not read yet, by [`Parser::refuse_unread`].
     fn primary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let span = self.peek().span;
 
         if self.eat(TokenKind::Number) {
             return self.ast.push_expr(Expr::Number { span });
+        }
+
+        if self.check(TokenKind::Character) {
+            return self.character(span, diagnostics);
         }
 
         if self.eat(TokenKind::Identifier) {
@@ -3093,9 +3159,8 @@ impl Parser<'_> {
     /// Report valid C this parser does not read yet, if the token here begins
     /// some at `at`, and say whether it did.
     ///
-    /// A keyword asks [`unread_keyword`]. One more needs a second token or a
-    /// token kind: a character constant or a string literal (6.4.4.4, 6.4.5)
-    /// begins an expression this parser does not read.
+    /// A keyword asks [`unread_keyword`]. One more needs a token kind: a
+    /// string literal (6.4.5) begins an expression this parser does not read.
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
         let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {
@@ -3106,10 +3171,6 @@ impl Parser<'_> {
                 })
             }
             TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
-            TokenKind::Character if at == Position::Expression => Some(Unread {
-                what: "a character constant",
-                clause: "6.4.4.4",
-            }),
             TokenKind::String if at == Position::Expression => Some(Unread {
                 what: "a string literal",
                 clause: "6.4.5",

@@ -307,9 +307,10 @@ impl Types {
 /// They go in the same arena as the rest, so that there is one representation
 /// of a type in this compiler rather than two.
 ///
-/// Takes `int_range` rather than a whole [`safec_ir::target::Target`] because
-/// that is all it reads: whether an integer constant's value is in the range
-/// of the one integer type this compiler has. ADR-0013 asks that a stage be
+/// Takes `int_range` and `character` rather than a whole
+/// [`safec_ir::target::Target`] because that is all it reads: whether an
+/// integer constant's value is in the range of `int`, and what a character
+/// constant's is once read as a `char`. ADR-0013 asks that a stage be
 /// given only what it reads, and its *Only what something reads* section names
 /// this stage as the second reader of `int`'s width. A diagnostic that turns
 /// on a width is a divergence from `docs/architecture.md`'s output table,
@@ -319,6 +320,7 @@ pub fn check(
     ast: &mut Ast,
     resolution: &Resolution,
     int_range: Integer,
+    character: Integer,
     diagnostics: &mut DiagnosticSink,
 ) -> Types {
     let mut checker = Checker {
@@ -333,6 +335,7 @@ pub fn check(
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
         int_range,
+        character,
         receivers: HashMap::new(),
         at: None,
     };
@@ -390,9 +393,10 @@ pub fn check(
 /// mark and having an `int` answered above a fault already reported.
 fn subexpressions(expr: &Expr) -> Vec<ExprId> {
     match expr {
-        Expr::Number { span: _ } | Expr::Identifier { span: _ } | Expr::Error { span: _ } => {
-            Vec::new()
-        }
+        Expr::Number { span: _ }
+        | Expr::Character { span: _ }
+        | Expr::Identifier { span: _ }
+        | Expr::Error { span: _ } => Vec::new(),
         Expr::Unary {
             op: _,
             operand,
@@ -538,6 +542,9 @@ struct Checker<'a> {
     int: TypeId,
     /// The range of `int` on the target this run is for.
     int_range: Integer,
+    /// The range of `char` on that target, which decides the value of a
+    /// character constant whose character does not fit a signed `char`.
+    character: Integer,
     /// The value of each `return` that has one and of each initializer, and
     /// what it has to be assignable to.
     ///
@@ -928,6 +935,7 @@ impl Checker<'_> {
                 Type::Array { .. }
                     if match ast.expr(init) {
                         Expr::Number { .. }
+                        | Expr::Character { .. }
                         | Expr::Identifier { .. }
                         | Expr::Unary { .. }
                         | Expr::Binary { .. }
@@ -1495,6 +1503,7 @@ impl Checker<'_> {
                 ..
             } => known(condition) && known(then) && known(otherwise),
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }
@@ -1821,6 +1830,26 @@ impl Checker<'_> {
 
         match expr {
             Expr::Number { span } => self.constant(id, span, diagnostics),
+            Expr::Character { span } => {
+                // C17 6.4.4.4 p10: type `int`, and the value of a `char`
+                // whose object representation is the character's, so
+                // `'\xff'` is -1 where `char` is signed and 255 where it is
+                // not. The parser read the one character; this reads it again.
+                let text = self.sources.snippet(span);
+                let body = &text[1..text.len() - 1];
+                let value = crate::literal::unescape(body)
+                    .ok()
+                    .and_then(|values| values.first().copied())
+                    .expect("the parser keeps only a constant of one character it reads");
+                let value = i128::from(value);
+                let value = if self.character.signed() && value > self.character.max() {
+                    value - (1i128 << self.character.bits())
+                } else {
+                    value
+                };
+                self.values[id.index()] = Some(value);
+                Some(self.int)
+            }
             Expr::Identifier { .. } => {
                 // A function is typed by its standing declaration, not the
                 // one the use resolved to: see `Resolution::standing`. An
@@ -2735,6 +2764,7 @@ impl Checker<'_> {
             } => unreachable!("the loop above walked every `.` down to its base"),
             Expr::Unary { .. }
             | Expr::Number { span: _ }
+            | Expr::Character { span: _ }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }
@@ -3720,6 +3750,7 @@ impl Checker<'_> {
                 value(taken)
             }
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }

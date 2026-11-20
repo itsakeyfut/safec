@@ -84,6 +84,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
     assert!(

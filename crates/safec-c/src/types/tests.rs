@@ -45,6 +45,7 @@ fn checked(text: &str) -> Checked {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
 

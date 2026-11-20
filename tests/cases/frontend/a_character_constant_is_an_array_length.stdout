@@ -1,0 +1,42 @@
+Target "x86_64-pc-windows-msvc"
+Function a_character_constant_is_an_array_length.c:1:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation a_character_constant_is_an_array_length.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_character_constant_is_an_array_length.c:3:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_character_constant_is_an_array_length.c:3:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Operation a_character_constant_is_an_array_length.c:3:5 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_character_constant_is_an_array_length.c:3:5 generated
+    Operation a_character_constant_is_an_array_length.c:4:12 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_character_constant_is_an_array_length.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_character_constant_is_an_array_length.c:4:12 generated
+    Return

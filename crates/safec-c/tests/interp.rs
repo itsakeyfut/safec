@@ -52,6 +52,7 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
     let unit = lower(
@@ -396,6 +397,24 @@ fn a_const_object_is_read_as_its_type() {
         "int main(void) {\n    const char c = 200;\n    int v;\n    int *const p = &v;\n    const int *q = p;\n    v = 3;\n    return c + *q;\n}\n",
     );
     assert_eq!(read, Ok(Value::Int(-53)));
+}
+
+/// A character constant is the value its character has, escapes read, as an
+/// `int` and as an integer constant expression: a `case`
+/// value; `a_character_constant_is_an_array_length` holds the array length. `'\xff'` is a `char`'s value, so -1 where `char` is signed and 255
+/// where it is not (C17 6.4.4.4 p10).
+///
+/// Mutation: ignore the target's signedness of `char`; the `x86_64` run
+/// answers 256. Give a character constant no value in `values`; the program
+/// is refused and this fails.
+#[test]
+fn a_character_constant_is_its_value() {
+    let text = "int main(void) {\n    int n;\n    n = 'a' + '\\n' + '\\101' + '\\x41' + '\\0';\n    switch (n) {\n    case 'a' + '\\n' + 'A' + 'A':\n        return '\\xff' + 1;\n    }\n    return 100;\n}\n";
+    assert_eq!(ran_for("x86_64-pc-windows-msvc", text), Ok(Value::Int(0)));
+    assert_eq!(
+        ran_for("aarch64-unknown-linux-gnu", text),
+        Ok(Value::Int(256))
+    );
 }
 
 /// A pointer is a place, and writing through one writes the place.
@@ -777,6 +796,7 @@ fn a_trap_points_at_what_stopped_it() {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
     let unit = lower(
@@ -832,6 +852,7 @@ fn a_trap_on_a_call_points_at_the_call() {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
     let unit = lower(

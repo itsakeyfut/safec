@@ -483,9 +483,15 @@ every row of `Target::ALL`. It becomes observable the day `long` is in that
 table, because `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
 `x86_64-unknown-linux-gnu`.
 
-Character constants (6.4.4.4) are not here, because the parser builds no
-expression for one: `crates/safec-c/src/parser.rs`'s `primary` reads a number and
-an identifier, and a character constant is refused as `expected an expression`.
+A character constant (6.4.4.4) has type `int` and the value of a `char`, so
+it too turns on the target: `'\xff'` is -1 where `char` is signed and 255
+where it is not, and `int a['\xff'];` is refused on the first and accepted on
+the second, as `clang` does on each. What it does not read yet is refused as
+`SC0207`: more than one character, a universal character name, a character
+outside ASCII, and an encoding prefix, which the lexer scans into the token so
+that no macro can take it away. An escape C17 does not define, `'\e'` among
+them, is `SC0201`, where `clang` accepts it unless `-pedantic-errors` is
+given.
 
 ### Which zero is a null pointer constant
 
