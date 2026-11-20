@@ -6,7 +6,7 @@
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
 //! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
-//! here is `switch` and structs. The siblings of the issues that added the rest fill those in,
+//! here is structs. The siblings of the issues that added the rest fill those in,
 //! and each of them adds variants here rather than changing the shape.
 //!
 //! **A statement tree is bounded and an expression tree is not.** Every place a
@@ -710,6 +710,32 @@ pub enum Stmt {
         /// The name through the end of the statement.
         span: Span,
     },
+    /// `switch`, which goes to the label in its body whose value its
+    /// controlling expression has. C17 6.8.4.2.
+    Switch {
+        /// What decides, an integer (6.8.4.2 p1).
+        condition: ExprId,
+        /// What holds the labels, usually a compound statement.
+        body: StmtId,
+        /// The keyword through the body.
+        span: Span,
+    },
+    /// `case`, a label of the innermost `switch`. C17 6.8.1.
+    Case {
+        /// The value, an integer constant expression (6.8.4.2 p3).
+        value: ExprId,
+        /// The statement it labels.
+        body: StmtId,
+        /// The keyword through the end of the statement.
+        span: Span,
+    },
+    /// `default`, the label of the innermost `switch` that no `case` matched.
+    Default {
+        /// The statement it labels.
+        body: StmtId,
+        /// The keyword through the end of the statement.
+        span: Span,
+    },
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -909,6 +935,9 @@ impl Stmt {
             Self::Continue { .. } => "Continue",
             Self::Goto { .. } => "Goto",
             Self::Labeled { .. } => "Labeled",
+            Self::Switch { .. } => "Switch",
+            Self::Case { .. } => "Case",
+            Self::Default { .. } => "Default",
             Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
@@ -927,6 +956,9 @@ impl Stmt {
             | Self::Continue { span }
             | Self::Goto { span, .. }
             | Self::Labeled { span, .. }
+            | Self::Switch { span, .. }
+            | Self::Case { span, .. }
+            | Self::Default { span, .. }
             | Self::For { span, .. }
             | Self::Declaration { span, .. }
             | Self::Error { span } => *span,

@@ -396,6 +396,22 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 .expect("writing to a string cannot fail");
             child(*body, out);
         }
+        Stmt::Switch {
+            condition, body, ..
+        } => {
+            out.push('\n');
+            dump_expr(sources, ast, *condition, depth + 1, out);
+            child(*body, out);
+        }
+        Stmt::Case { value, body, .. } => {
+            out.push('\n');
+            dump_expr(sources, ast, *value, depth + 1, out);
+            child(*body, out);
+        }
+        Stmt::Default { body, .. } => {
+            out.push('\n');
+            child(*body, out);
+        }
         Stmt::For {
             start,
             condition,

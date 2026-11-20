@@ -142,6 +142,13 @@ const INITIALIZED: Code = Code::new("SC0310");
 /// compile-time constant`.
 const NOT_CONSTANT: Code = Code::new("SC0317");
 
+/// A `switch` given two labels for one value: a `case` value twice, or a
+/// second `default`, C17 6.8.4.2 p3.
+///
+/// Not `REDEFINED`, which is a name given two definitions: a `case` value is
+/// no name. The headlines are clang's.
+const SWITCH_LABELS: Code = Code::new("SC0321");
+
 /// Something a `for` declares that C17 6.8.5 p3 says it may not: anything
 /// but an object with storage class `auto` or `register`. With no storage
 /// class specifier in the language yet, that is a function.
@@ -345,6 +352,7 @@ pub fn check(
     checker.check_initialized(ast, diagnostics);
     checker.check_static_initializers(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
+    checker.check_switches(ast, diagnostics);
 
     Types {
         of: checker.types,
@@ -473,6 +481,9 @@ enum Receiving {
         /// The statement's keyword, which is what the report names.
         keyword: &'static str,
     },
+    /// The controlling expression of a `switch`, C17 6.8.4.2 p1, which has
+    /// to be an integer: a pointer, which a condition takes, is not one.
+    Switch,
 }
 
 struct Checker<'a> {
@@ -1731,7 +1742,15 @@ impl Checker<'_> {
                 }
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
-            Stmt::Labeled { body, .. } => self.receivers_in(ast, *body, returning, diagnostics),
+            Stmt::Labeled { body, .. } | Stmt::Case { body, .. } | Stmt::Default { body, .. } => {
+                self.receivers_in(ast, *body, returning, diagnostics)
+            }
+            Stmt::Switch {
+                condition, body, ..
+            } => {
+                self.receivers.insert(*condition, Receiving::Switch);
+                self.receivers_in(ast, *body, returning, diagnostics);
+            }
             Stmt::Expression { .. }
             | Stmt::Break { .. }
             | Stmt::Continue { .. }
@@ -2949,6 +2968,118 @@ impl Checker<'_> {
         true
     }
 
+    /// A `switch` on a value that is not an integer, refused under `OPERANDS`
+    /// in the words a condition is: C17 6.8.4.2 p1 wants integer type, and a
+    /// pointer, which a condition takes, is not one.
+    fn refuse_a_switch_on_no_integer(
+        &self,
+        ast: &Ast,
+        condition: ExprId,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        match ast.ty(ty) {
+            Type::Int | Type::Char => return,
+            Type::Void
+            | Type::Pointer(_)
+            | Type::Array { .. }
+            | Type::Function { .. }
+            | Type::Struct { .. } => {}
+        }
+        let spelled = self.spelled(ast, ty);
+        diagnostics.report(
+            Diagnostic::error(format!("`switch` cannot take `{spelled}`"))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(
+                    ast.expr(condition).span(),
+                    format!("this is `{spelled}`"),
+                ))
+                .with_note("C17 6.8.4.2 p1 wants an expression of integer type"),
+        );
+    }
+
+    /// Hold each `switch`'s labels to C17 6.8.4.2 p3: a `case` value is an
+    /// integer constant expression, no two have one value, and there is at
+    /// most one `default`.
+    ///
+    /// After every expression has its value, which is what the first two
+    /// ask. A value is compared as `types.rs` worked it out, at `int`, the
+    /// promoted type of every controlling expression here (p5); #615's wider
+    /// types are what will make the conversion p5 asks for change one.
+    fn check_switches(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for id in ast.stmt_ids() {
+            let Stmt::Switch { .. } = ast.stmt(id) else {
+                continue;
+            };
+            let mut seen: HashMap<i128, Span> = HashMap::new();
+            let mut default: Option<Span> = None;
+            for &label in self.resolution.labels_of_switch(id) {
+                match ast.stmt(label) {
+                    Stmt::Case { value, .. } => {
+                        let at = ast.expr(*value).span();
+                        let Some(number) = self.values[value.index()] else {
+                            // A value nothing typed was reported already. One
+                            // shaped as a constant whose evaluation C leaves
+                            // undefined is a constant expression with no value,
+                            // and is said to be that, as an array's length is.
+                            // Found by review.
+                            if self.undefined[value.index()] {
+                                diagnostics.report(
+                                    Diagnostic::error("a `case` value has no defined value")
+                                        .with_code(NOT_CONSTANT)
+                                        .with_label(Label::primary(
+                                            at,
+                                            "this overflows `int` or divides by zero",
+                                        ))
+                                        .with_note(
+                                            "a constant expression evaluates to a value its type \
+                                             can hold (C17 6.6 p4)",
+                                        ),
+                                );
+                            } else if self.types[value.index()].is_some() {
+                                diagnostics.report(
+                                    Diagnostic::error(
+                                        "a `case` value is not an integer constant expression",
+                                    )
+                                    .with_code(NOT_CONSTANT)
+                                    .with_label(Label::primary(at, "not a constant expression"))
+                                    .with_note("C17 6.8.4.2 p3"),
+                                );
+                            }
+                            continue;
+                        };
+                        match seen.get(&number) {
+                            Some(&first) => diagnostics.report(
+                                Diagnostic::error("duplicate case value")
+                                    .with_code(SWITCH_LABELS)
+                                    .with_label(Label::primary(at, "this value again"))
+                                    .with_label(Label::secondary(first, "first here"))
+                                    .with_note("C17 6.8.4.2 p3"),
+                            ),
+                            None => {
+                                seen.insert(number, at);
+                            }
+                        }
+                    }
+                    Stmt::Default { span, .. } => {
+                        let at = Span::new(span.file(), span.start(), span.start() + 7);
+                        match default {
+                            Some(first) => diagnostics.report(
+                                Diagnostic::error("multiple default labels in one switch")
+                                    .with_code(SWITCH_LABELS)
+                                    .with_label(Label::primary(at, "a second `default`"))
+                                    .with_label(Label::secondary(first, "the first"))
+                                    .with_note("C17 6.8.4.2 p3"),
+                            ),
+                            None => default = Some(at),
+                        }
+                    }
+                    _ => unreachable!("name resolution lists only `case` and `default`"),
+                }
+            }
+        }
+    }
+
     /// What each value the statement walk found has to satisfy, once it is
     /// typed. For a `return` and an initializer that is C17 6.8.6.4 p3 and
     /// 6.7.9 p11, each 6.5.16.1 p1 with another place: the return type, or
@@ -2983,6 +3114,10 @@ impl Checker<'_> {
                 self.refuse_a_void_condition(ast, keyword, value, source, diagnostics);
                 return;
             }
+            Receiving::Switch => {
+                self.refuse_a_switch_on_no_integer(ast, value, source, diagnostics);
+                return;
+            }
         };
 
         if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
@@ -3009,7 +3144,7 @@ impl Checker<'_> {
                 format!("this holds `{target_spelled}`"),
             ),
             // Answered where the target was asked for, above.
-            Receiving::Condition { .. } => return,
+            Receiving::Condition { .. } | Receiving::Switch => return,
         };
 
         diagnostics.report(

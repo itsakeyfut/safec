@@ -1,0 +1,7 @@
+Function a_switch_with_no_label_is_read.c:1:1 "main" "int (void)"
+  Compound a_switch_with_no_label_is_read.c:1:16
+    Switch a_switch_with_no_label_is_read.c:2:5
+      Number a_switch_with_no_label_is_read.c:2:13 "1"
+      Compound a_switch_with_no_label_is_read.c:2:16
+    Return a_switch_with_no_label_is_read.c:4:5
+      Number a_switch_with_no_label_is_read.c:4:12 "0"

@@ -1,0 +1,90 @@
+error[SC0415]: `f` has a loop entered other than at its top, which the memory check does not read yet
+   ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 ]
+   │
+ 3 │ int f(int *to, int *from, int count) {
+   │     ┬  
+   │     ╰── nothing about this function's memory is proved
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: jump to the top of the loop instead
+error[SC0403]: this may dereference `to` while it is null
+   ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:9:13 ]
+   │
+ 9 │             *to = *from;
+   │             ─────┬─────  
+   │                  ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `from` while it is null
+   ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:9:13 ]
+   │
+ 9 │             *to = *from;
+   │             ─────┬─────  
+   │                  ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `to` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:11:13 ]
+    │
+ 11 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `from` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:11:13 ]
+    │
+ 11 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `to` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:13:13 ]
+    │
+ 13 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `from` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:13:13 ]
+    │
+ 13 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `to` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:15:13 ]
+    │
+ 15 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `from` while it is null
+    ╭─[ a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:15:13 ]
+    │
+ 15 │             *to = *from;
+    │             ─────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

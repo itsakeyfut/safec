@@ -3796,6 +3796,12 @@ cases! {
         // read. Mutation: resolve a `goto` to the label it names rather than
         // the outermost of a stack; this is `SC0415`. Found by review.
         stacked_labels_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a label and a `case` written together, which the
+        // dispatch and a `goto` both reach: one block, so the loop the
+        // `goto` makes is entered at its top. Mutation: have `land` reserve
+        // a block for every label rather than take the stacked one; this is
+        // `SC0415`. Found by review.
+        a_label_and_a_case_written_together_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A declaration in the body itself, reached a second time by a
         // backward `goto`, makes its value indeterminate again (C17 6.2.4 p6),
         // so the `free` reads a pointer nothing assigned on this pass.
@@ -3803,6 +3809,18 @@ cases! {
         // than the body, as before labels; this builds in silence. Found by
         // review.
         a_body_declaration_a_backward_goto_reaches_again_is_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A use after a free in one `case`, reached by its dispatch.
+        // Mutation: send every comparison's success past the body; this goes
+        // silent.
+        a_use_after_a_free_in_a_case_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local one `case` leaves unassigned is doubted where it is read,
+        // and the edge that left it so is named at that `case`'s value, not
+        // at the controlling expression. Mutation: give each comparison the
+        // controlling expression's span; the label moves. Found by review.
+        a_local_one_case_leaves_unassigned_names_that_case: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Duff's device: a `case` inside a loop of the body is a second way
+        // into the loop, so the function is not read, `SC0415`.
+        a_case_inside_a_loop_of_its_switch_leaves_the_function_unread: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter
@@ -8463,12 +8481,12 @@ cases! {
         a_struct_with_an_anonymous_member_is_not_read_yet: ["--emit", "ast"],
         a_bit_field_is_not_read_yet: ["--emit", "ast"],
         a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
-        // The two kinds `SC0201` and `SC0207` tell apart, each pinned whole: a
-        // `switch` is C (6.8.4.2) this parser does not read, and a `case` with
-        // no `switch` around it breaks 6.8.1 p2's constraint, so it is not C.
-        // Mutation: add a `Keyword::Case` row to `unread_keyword`, and the
-        // second case fails; drop the `switch` row, and the first does.
-        a_switch_is_not_read_yet: ["--emit", "ast"],
+        // A `switch` with nothing in it is read and goes straight past its
+        // body, and a `case` with no `switch` around it breaks 6.8.1 p2's
+        // constraint, so it is not C and says where C allows it. Mutation:
+        // drop the test of `switches` in `case_statement`; the second case
+        // fails.
+        a_switch_with_no_label_is_read: ["--emit", "ast"],
         a_case_outside_a_switch_is_malformed: ["--emit", "ast"],
         // A member list has nowhere to put a tag (6.7.2.1 p2), so `struct T;`
         // in one declares nothing, which `clang -pedantic-errors` refuses
@@ -9007,6 +9025,16 @@ cases! {
         // A label and a `goto` each with the name on its own line. Mutation:
         // write no name for either; the lines lose it.
         goto_and_labels: ["--emit", "ast"],
+        // The controlling expression and then the body, and a `case` with
+        // its value. Mutation: write no value for a `case`; the line goes.
+        switch_statement: ["--emit", "ast"],
+        // C17 6.8.4.2 p1 and p3: a pointer to switch on is `SC0306`, a `case`
+        // value that is no constant `SC0317`, and a value twice or a second
+        // `default` `SC0321`, each at what is wrong. A value whose evaluation
+        // overflows is said to have no value rather than to be no constant.
+        // Mutation: drop any of the four; its report goes. Ask `undefined`
+        // no more; the overflow is called no constant.
+        a_switch_is_held_to_what_c_allows_in_it: ["--emit", "ast"],
         // A label defined twice is `SC0312`, and a `goto` to no label of its
         // function is `SC0301`, each at the name. Mutation: drop either
         // check; its report goes.

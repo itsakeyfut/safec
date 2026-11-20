@@ -1,7 +1,7 @@
-error[SC0201]: expected an expression
+error[SC0201]: `case` is not in a `switch`
    ╭─[ a_case_outside_a_switch_is_malformed.c:2:5 ]
    │
  2 │     case 1:
    │     ──┬─  
-   │       ╰─── this cannot begin one
+   │       ╰─── C17 6.8.1 p2 allows `case` only in a `switch`
 ───╯

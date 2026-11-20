@@ -4,8 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! with `break`, `continue`, `goto` and labels from 6.8.1 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is `switch`, `union`, a bit-field, an anonymous member, casts,
+//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
@@ -209,6 +209,11 @@ const COMMA: u8 = 1;
 /// comma. That is the whole of what tells `f(a, b)` from `f((a, b))`.
 const ASSIGNMENT: u8 = 2;
 
+/// One step tighter again: the conditional operator, C17 6.5.15, which is
+/// where a `case` value is read from, since 6.6's `constant-expression` is a
+/// `conditional-expression`.
+const CONDITIONAL: u8 = 3;
+
 /// How a declaration and a function definition both begin: the specifiers and
 /// the first declarator.
 ///
@@ -371,24 +376,21 @@ struct Unread {
 /// positions C allows the keyword in, because one that is C in one place is a
 /// constraint violation in another: `typedef` in a parameter list breaks
 /// C17 6.7.6.3 p2, and `static` in a `for` breaks 6.8.5 p3. Those keep
-/// [`EXPECTED`]. So do `case` and `default`, which 6.8.1 p2 allows only in a
-/// `switch` this parser never reads, and `_Imaginary`, which only Annex G
-/// gives a meaning. `restrict` has no row: 6.7.3 p2 allows it only on a
+/// [`EXPECTED`]. So does `_Imaginary`, which only Annex G gives a meaning;
+/// `case` and `default` outside a `switch` are [`Parser::case_statement`]'s. `restrict` has no row: 6.7.3 p2 allows it only on a
 /// pointer to an object, so leading a declaration it is C only before a
 /// typedef name for one, which this parser does not read, and after a `*` it
 /// is [`Parser::declarator`]'s to refuse.
 fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
-    use Position::{BlockScope, Expression, FileScope, ForInit, Member, Parameter, Statement};
+    use Position::{BlockScope, Expression, FileScope, ForInit, Member, Parameter};
 
     // Which positions each kind of keyword belongs in. A type specifier or a
     // qualifier begins a declaration anywhere one may begin.
     const SPECIFIER: &[Position] = &[FileScope, BlockScope, Member, Parameter, ForInit];
     const STORAGE: &[Position] = &[FileScope, BlockScope];
     const AUTOMATIC: &[Position] = &[BlockScope, ForInit];
-    const STATEMENT: &[Position] = &[Statement];
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
-        Keyword::Switch => ("`switch`", "6.8.4.2", STATEMENT),
         Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
         Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
         Keyword::Static => ("`static`", "6.7.1", STORAGE),
@@ -513,7 +515,7 @@ fn infix(punct: Punct) -> Option<Infix> {
         Punct::PipeEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::BitOr))),
 
         // 6.5.15
-        Punct::Question => (3, Right, Conditional),
+        Punct::Question => (CONDITIONAL, Right, Conditional),
 
         // 6.5.14 down to 6.5.5
         Punct::PipePipe => (4, Left, Binary(BinOp::LogOr)),
@@ -629,9 +631,8 @@ struct Parser<'a> {
     /// C17 6.8.6.2 p1 allows `continue` only in a loop body, and 6.8.6.3 p1
     /// `break` only in a loop or `switch` body. See [`Parser::jump_statement`].
     loops: usize,
-    /// How many `switch` bodies are being read right now, which this parser
-    /// reads none of yet, so this stays 0 until it does. Here so that the
-    /// test for where `break` may stand is written once, with both.
+    /// How many `switch` bodies are being read right now, which is where a
+    /// `case`, a `default` and a `break` that is in no loop may stand.
     switches: usize,
 }
 
@@ -2019,6 +2020,16 @@ impl Parser<'_> {
             return self.do_statement(start, diagnostics);
         }
 
+        if self.check(TokenKind::Keyword(Keyword::Switch)) {
+            return self.switch_statement(start, diagnostics);
+        }
+
+        if self.check(TokenKind::Keyword(Keyword::Case))
+            || self.check(TokenKind::Keyword(Keyword::Default))
+        {
+            return self.case_statement(start, diagnostics);
+        }
+
         if self.check(TokenKind::Keyword(Keyword::Break))
             || self.check(TokenKind::Keyword(Keyword::Continue))
         {
@@ -2194,6 +2205,79 @@ impl Parser<'_> {
         } else {
             Stmt::Continue { span }
         })
+    }
+
+    /// `switch ( expression ) statement`. C17 6.8.4 p1.
+    ///
+    /// The body counts in `switches`, which is what lets a `case` or a
+    /// `break` stand in it, however deep.
+    fn switch_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                parser.switches += 1;
+                let body = parser.statement(diagnostics);
+                parser.switches -= 1;
+                let span = parser.join(start, parser.previous().span, diagnostics);
+                parser.ast.push_stmt(Stmt::Switch {
+                    condition,
+                    body,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// `case constant-expression : statement` or `default : statement`,
+    /// C17 6.8.1 p1, which p2 allows only in a `switch` body. Outside one it
+    /// is reported at the keyword under [`EXPECTED`], naming where C allows
+    /// it.
+    fn case_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let case = self.check(TokenKind::Keyword(Keyword::Case));
+        if self.switches == 0 {
+            let (message, label) = if case {
+                (
+                    "`case` is not in a `switch`",
+                    "C17 6.8.1 p2 allows `case` only in a `switch`",
+                )
+            } else {
+                (
+                    "`default` is not in a `switch`",
+                    "C17 6.8.1 p2 allows `default` only in a `switch`",
+                )
+            };
+            self.report(message, label, diagnostics);
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+        self.advance();
+
+        let value = case.then(|| self.infix_from(CONDITIONAL, diagnostics));
+        if self
+            .expect(TokenKind::Punct(Punct::Colon), "`:`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = parser.join(start, parser.previous().span, diagnostics);
+                parser.ast.push_stmt(match value {
+                    Some(value) => Stmt::Case { value, body, span },
+                    None => Stmt::Default { body, span },
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
     }
 
     /// `goto identifier ;`, its keyword and name already known to be here.
