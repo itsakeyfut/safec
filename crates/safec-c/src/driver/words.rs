@@ -106,8 +106,8 @@ const TOO_LARGE: Code = Code::new("SC0410");
 /// top of the loop. See `memory::Kind::EnteredInside`.
 const ENTERED_INSIDE: Code = Code::new("SC0415");
 
-/// A conversion between a pointer and an integer, which the memory check
-/// does not follow.
+/// A cast the memory check does not follow: between a pointer and an
+/// integer, or one that drops `const` from what a pointer points at.
 ///
 /// Not any code above, which are each about what a pointer holds: this is
 /// about this check, which follows no allocation through an integer, and the
@@ -896,10 +896,9 @@ pub(super) fn memory_finding(
         // Built only `Unknown`, at the cast, as the rows above are.
         (Kind::Reinterpreted, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             REINTERPRETED,
-            "this converts between a pointer and an integer, which the memory check does not follow"
-                .to_owned(),
+            "the memory check does not follow a pointer through this cast".to_owned(),
             "nothing about what this points at is proved from here",
-            "keep the value a pointer, or a `void *` where its type has to change",
+            "keep the value a pointer, and keep `const` on what it points at",
         ),
         // Only ever a proof: a read some paths assigned is the next arm's.
         // `Unknown` takes the same words so the match stays exhaustive

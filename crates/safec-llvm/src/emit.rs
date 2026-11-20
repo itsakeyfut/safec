@@ -431,14 +431,24 @@ impl Emitter<'_> {
         to: TyId,
         out: &mut String,
     ) -> Refuses<String> {
+        let pointer = format!("i{}", self.unit.target().pointer_bits());
         let (value, from) = match from {
             Operand::Copy(place) => self.read(function, place, out)?,
-            Operand::Constant(_) => {
-                return self
-                    .refuse("a constant reinterpreted, which a cast lowers as a conversion");
+            // `(void *)-1`: the integer's bits at a pointer's width, which
+            // is what widening it by its sign or its zeros came to when the
+            // constant was folded, and `inttoptr` of them.
+            Operand::Constant(value) => {
+                if !matches!(self.unit.ty(to), Ty::Pointer(_)) {
+                    return self.constant(*value, to);
+                }
+                let bits = self.unit.target().pointer_bits();
+                let wrapped = value.rem_euclid(1i128 << bits);
+                let result = self.temp();
+                writeln!(out, "  {result} = inttoptr {pointer} {wrapped} to ptr")
+                    .expect("writing to a string cannot fail");
+                return Ok(result);
             }
         };
-        let pointer = format!("i{}", self.unit.target().pointer_bits());
         let source = self.spell(from);
         let wanted = self.spell(to);
         match (self.unit.integer(from), self.unit.integer(to)) {
@@ -469,6 +479,12 @@ impl Emitter<'_> {
                 )
                 .expect("writing to a string cannot fail");
                 Ok(result)
+            }
+            // A pointer whose `const` was dropped is the same address.
+            _ if matches!(self.unit.ty(from), Ty::Pointer(_))
+                && matches!(self.unit.ty(to), Ty::Pointer(_)) =>
+            {
+                Ok(value)
             }
             _ => self.refuse(format!("`{source}` reinterpreted as `{wanted}`")),
         }
