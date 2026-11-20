@@ -610,7 +610,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 #[test]
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
-        ("int main(void) { switch (1) { } }\n", "`switch`", "6.8.4.2"),
         ("typedef int T;\n", "`typedef`", "6.7.8"),
         ("extern int x;\n", "`extern`", "6.7.1"),
         ("static int x;\n", "`static`", "6.7.1"),
@@ -931,7 +930,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
     const SPECIFIER: &[At] = &[FileScope, BlockScope, Member, Parameter, ForInit];
 
     let keywords: &[(&str, &str, &[At])] = &[
-        ("switch", "6.8.4.2", &[Statement]),
         ("typedef", "6.7.8", &[FileScope, BlockScope]),
         ("extern", "6.7.1", &[FileScope, BlockScope]),
         ("static", "6.7.1", &[FileScope, BlockScope]),

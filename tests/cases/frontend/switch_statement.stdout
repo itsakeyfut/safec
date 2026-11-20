@@ -1,0 +1,24 @@
+Function switch_statement.c:1:1 "main" "int (void)"
+  Compound switch_statement.c:1:16
+    Declaration switch_statement.c:2:5 "r" "int"
+    Expression switch_statement.c:3:5
+      Assign switch_statement.c:3:5 "="
+        Identifier switch_statement.c:3:5 "r"
+        Number switch_statement.c:3:9 "0"
+    Switch switch_statement.c:4:5
+      Identifier switch_statement.c:4:13 "r"
+      Compound switch_statement.c:4:16
+        Case switch_statement.c:5:5
+          Number switch_statement.c:5:10 "1"
+          Expression switch_statement.c:6:9
+            Assign switch_statement.c:6:9 "="
+              Identifier switch_statement.c:6:9 "r"
+              Number switch_statement.c:6:13 "2"
+        Break switch_statement.c:7:9
+        Default switch_statement.c:8:5
+          Expression switch_statement.c:9:9
+            Assign switch_statement.c:9:9 "="
+              Identifier switch_statement.c:9:9 "r"
+              Number switch_statement.c:9:13 "3"
+    Return switch_statement.c:11:5
+      Identifier switch_statement.c:11:12 "r"

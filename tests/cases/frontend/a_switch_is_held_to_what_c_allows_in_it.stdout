@@ -1,0 +1,23 @@
+Function a_switch_is_held_to_what_c_allows_in_it.c:1:1 "f" "int (int *, int)"
+  Parameter a_switch_is_held_to_what_c_allows_in_it.c:1:7 "p" "int *"
+  Parameter a_switch_is_held_to_what_c_allows_in_it.c:1:15 "n" "int"
+  Compound a_switch_is_held_to_what_c_allows_in_it.c:1:22
+    Switch a_switch_is_held_to_what_c_allows_in_it.c:2:5
+      Identifier a_switch_is_held_to_what_c_allows_in_it.c:2:13 "p"
+      Compound a_switch_is_held_to_what_c_allows_in_it.c:2:16
+    Switch a_switch_is_held_to_what_c_allows_in_it.c:4:5
+      Identifier a_switch_is_held_to_what_c_allows_in_it.c:4:13 "n"
+      Compound a_switch_is_held_to_what_c_allows_in_it.c:4:16
+        Case a_switch_is_held_to_what_c_allows_in_it.c:5:5
+          Number a_switch_is_held_to_what_c_allows_in_it.c:5:10 "1"
+          Case a_switch_is_held_to_what_c_allows_in_it.c:6:5
+            Identifier a_switch_is_held_to_what_c_allows_in_it.c:6:10 "n"
+            Case a_switch_is_held_to_what_c_allows_in_it.c:7:5
+              Number a_switch_is_held_to_what_c_allows_in_it.c:7:10 "1"
+              Break a_switch_is_held_to_what_c_allows_in_it.c:8:9
+        Default a_switch_is_held_to_what_c_allows_in_it.c:9:5
+          Break a_switch_is_held_to_what_c_allows_in_it.c:10:9
+        Default a_switch_is_held_to_what_c_allows_in_it.c:11:5
+          Break a_switch_is_held_to_what_c_allows_in_it.c:12:9
+    Return a_switch_is_held_to_what_c_allows_in_it.c:14:5
+      Number a_switch_is_held_to_what_c_allows_in_it.c:14:12 "0"

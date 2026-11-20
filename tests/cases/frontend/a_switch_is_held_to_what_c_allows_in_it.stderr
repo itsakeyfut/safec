@@ -1,0 +1,40 @@
+error[SC0306]: `switch` cannot take `int *`
+   ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:2:13 ]
+   │
+ 2 │     switch (p) {
+   │             ┬  
+   │             ╰── this is `int *`
+───╯
+  = note: C17 6.8.4.2 p1 wants an expression of integer type
+error[SC0317]: a `case` value is not an integer constant expression
+   ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:6:10 ]
+   │
+ 6 │     case n:
+   │          ┬  
+   │          ╰── not a constant expression
+───╯
+  = note: C17 6.8.4.2 p3
+error[SC0321]: duplicate case value
+   ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:7:10 ]
+   │
+ 5 │     case 1:
+   │          ┬  
+   │          ╰── first here
+   │ 
+ 7 │     case 1:
+   │          ┬  
+   │          ╰── this value again
+───╯
+  = note: C17 6.8.4.2 p3
+error[SC0321]: multiple default labels in one switch
+    ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:11:5 ]
+    │
+  9 │     default:
+    │     ───┬───  
+    │        ╰───── the first
+    │ 
+ 11 │     default:
+    │     ───┬───  
+    │        ╰───── a second `default`
+────╯
+  = note: C17 6.8.4.2 p3

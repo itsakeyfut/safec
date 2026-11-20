@@ -232,6 +232,9 @@ enum Continued {
     /// `continue` would leave a block reserved and never written, which
     /// [`Function::blocks`] refuses.
     Step(Option<BlockId>),
+    /// A `switch`, which a `continue` goes past to the loop around it
+    /// (C17 6.8.6.2 p1).
+    Passes,
 }
 
 /// End the storage of the locals one scope declared, where it closes.
@@ -1942,7 +1945,9 @@ impl Lowering<'_> {
                 let span = *span;
                 let target = self
                     .targets
-                    .last_mut()
+                    .iter_mut()
+                    .rev()
+                    .find(|target| !matches!(target.continued, Continued::Passes))
                     .expect("the parser reads a `continue` only in a loop");
                 let depth = target.depth;
                 let to = match &mut target.continued {
@@ -1951,6 +1956,7 @@ impl Lowering<'_> {
                     Continued::Step(reserved @ None) => {
                         *reserved.insert(builder.function.reserve_block())
                     }
+                    Continued::Passes => unreachable!("passed over above"),
                 };
                 self.leave_scopes(builder, depth, span);
                 builder.end(Terminator::Goto(to));
@@ -1992,6 +1998,25 @@ impl Lowering<'_> {
                     self.jump(builder, &from, &to, span);
                     builder.end(Terminator::Goto(block));
                 }
+                builder.switch(block);
+                self.stmt(builder, body, diagnostics)?;
+            }
+            Stmt::Switch {
+                condition, body, ..
+            } => {
+                let (condition, body) = (*condition, *body);
+                self.switch(builder, id, condition, body, diagnostics)?;
+            }
+            // A label of the `switch` around it: a block its dispatch jumps
+            // to, the way a `goto` jumps to a label. See `Lowering::switch`.
+            Stmt::Case { body, .. } | Stmt::Default { body, .. } => {
+                let body = *body;
+                let block = self.landing(builder, id).block;
+                if builder.reachable() {
+                    builder.end(Terminator::Goto(block));
+                }
+                let to = self.point();
+                self.landings.get_mut(&id).expect("reserved above").at = Some(to);
                 builder.switch(block);
                 self.stmt(builder, body, diagnostics)?;
             }
@@ -2113,6 +2138,108 @@ impl Lowering<'_> {
             Stmt::Error { .. } => {}
         }
 
+        Some(())
+    }
+
+    /// A `switch`, C17 6.8.4.2: the controlling value worked out once, the
+    /// body, and then the dispatch, a chain of comparisons with each label's
+    /// value in the order the labels are written, each going on its own edge
+    /// to its label as a `goto` would (ADR-0114). No `case` matching goes to
+    /// the `default`, or past the body where there is none (p5).
+    ///
+    /// A chain of `Branch` and not a terminator of its own, by the owner's
+    /// decision on #616: every analysis, the interpreter and the backend read
+    /// it already. Its cost is a block per label, which reaches the memory
+    /// check's bound sooner.
+    ///
+    /// The dispatch is written after the body because only then is what each
+    /// label has open known; the block before the body ends with a jump to
+    /// it. Every comparison is at `int`, the promoted type of every value
+    /// this compiler reads (p5).
+    fn switch(
+        &mut self,
+        builder: &mut Builder,
+        id: StmtId,
+        condition: ExprId,
+        body: StmtId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let asked = self.ast.expr(condition).span();
+        let value = self.value(builder, condition, diagnostics)?;
+        let int = self.unit.push_type(Ty::Int);
+        let held = builder.function.push_local(int);
+        builder.push(Operation {
+            place: Place::local(held),
+            value: Rvalue::Use(value),
+            origin: Origin::Generated(asked),
+        });
+        builder.sequenced(asked);
+        let from = self.point();
+        let dispatch = builder.function.reserve_block();
+        builder.end(Terminator::Goto(dispatch));
+
+        let after = builder.function.reserve_block();
+        let target = Jumps {
+            broken: after,
+            continued: Continued::Passes,
+            depth: self.scopes.len(),
+        };
+        self.looped(builder, body, target, diagnostics).0?;
+        if builder.reachable() {
+            builder.end(Terminator::Goto(after));
+        }
+
+        builder.switch(dispatch);
+        let mut default = None;
+        let mut pads = Vec::new();
+        for &label in self.resolution.labels_of_switch(id) {
+            let pad = builder.function.reserve_block();
+            pads.push((pad, label));
+            match self.ast.stmt(label) {
+                Stmt::Case { value, .. } => {
+                    let number = self
+                        .types
+                        .value(*value)
+                        .expect("the type check refuses a `case` value that is no constant");
+                    let equal = builder.function.push_local(int);
+                    builder.push(Operation {
+                        place: Place::local(equal),
+                        value: Rvalue::Binary {
+                            op: BinOp::Eq,
+                            lhs: Operand::Copy(Place::local(held)),
+                            rhs: Operand::Constant(number),
+                        },
+                        origin: Origin::Generated(self.ast.expr(*value).span()),
+                    });
+                    let next = builder.function.reserve_block();
+                    builder.end(Terminator::Branch {
+                        condition: Operand::Copy(Place::local(equal)),
+                        then: pad,
+                        otherwise: next,
+                        origin: Origin::Written(asked),
+                    });
+                    builder.switch(next);
+                }
+                _ => default = Some(pad),
+            }
+        }
+        builder.end(Terminator::Goto(default.unwrap_or(after)));
+
+        for (pad, label) in pads {
+            let landing = &self.landings[&label];
+            let (block, to) = (
+                landing.block,
+                landing
+                    .at
+                    .clone()
+                    .expect("every label of a lowered body was reached"),
+            );
+            builder.switch(pad);
+            self.jump(builder, &from, &to, self.ast.stmt(label).span());
+            builder.end(Terminator::Goto(block));
+        }
+
+        builder.switch(after);
         Some(())
     }
 
@@ -2291,7 +2418,9 @@ impl Lowering<'_> {
         // to what it did before there was one.
         let reserved = match continued {
             Continued::Step(reserved) => reserved,
-            Continued::To(_) => unreachable!("a `for` continues to its step"),
+            Continued::To(_) | Continued::Passes => {
+                unreachable!("a `for` continues to its step")
+            }
         };
         if let Some(stepped) = reserved {
             if builder.reachable() {

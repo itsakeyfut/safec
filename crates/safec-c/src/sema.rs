@@ -192,9 +192,22 @@ pub struct Resolution {
     declared: HashMap<String, TypeId>,
     /// The labelled statement each `goto` names. See [`Resolution::label`].
     label_of: HashMap<StmtId, StmtId>,
+    /// The `case` and `default` labels of each `switch`, in the order written.
+    /// See [`Resolution::labels_of_switch`].
+    switch_labels: HashMap<StmtId, Vec<StmtId>>,
 }
 
 impl Resolution {
+    /// The `case` and `default` labels of the `switch` at `switch`, in the
+    /// order written, which is the order its dispatch asks them in.
+    ///
+    /// Answered here, where a label is matched with its `switch`, so that the
+    /// type checker that holds them to 6.8.4.2 p3 and the lowering that jumps
+    /// to them read one list.
+    pub fn labels_of_switch(&self, switch: StmtId) -> &[StmtId] {
+        self.switch_labels.get(&switch).map_or(&[], Vec::as_slice)
+    }
+
     /// The labelled statement the `goto` at `goto` names: the outermost of
     /// the labels written directly one before another, which all name the
     /// place it begins.
@@ -454,6 +467,7 @@ pub fn resolve(
             standing: HashMap::new(),
             declared: HashMap::new(),
             label_of: HashMap::new(),
+            switch_labels: HashMap::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
@@ -467,6 +481,7 @@ pub fn resolve(
         labels: HashMap::new(),
         gotos: Vec::new(),
         stacked: None,
+        switches: Vec::new(),
     };
 
     for item in ast.items() {
@@ -555,6 +570,9 @@ struct Resolver<'a> {
     /// The outermost of the labels written directly before the statement
     /// being walked, while a label's statement is another label.
     stacked: Option<StmtId>,
+    /// The labels of each `switch` being walked, innermost last: a `case`
+    /// belongs to the innermost (C17 6.8.4.2 p3), however deep in its body.
+    switches: Vec<Vec<StmtId>>,
 }
 
 impl Resolver<'_> {
@@ -1085,6 +1103,28 @@ impl Resolver<'_> {
                 self.stmt(*body, diagnostics);
             }
             Stmt::Goto { label, .. } => self.gotos.push((id, *label)),
+            Stmt::Switch {
+                condition, body, ..
+            } => {
+                self.expr(*condition, diagnostics);
+                self.switches.push(Vec::new());
+                self.stmt(*body, diagnostics);
+                let labels = self.switches.pop().expect("the list this arm pushed");
+                self.resolution.switch_labels.insert(id, labels);
+            }
+            Stmt::Case { value, body, .. } => {
+                self.expr(*value, diagnostics);
+                if let Some(labels) = self.switches.last_mut() {
+                    labels.push(id);
+                }
+                self.stmt(*body, diagnostics);
+            }
+            Stmt::Default { body, .. } => {
+                if let Some(labels) = self.switches.last_mut() {
+                    labels.push(id);
+                }
+                self.stmt(*body, diagnostics);
+            }
             Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Error { .. } => {}
         }
     }

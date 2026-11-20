@@ -306,6 +306,72 @@ fn a_goto_out_of_a_block_ends_what_it_leaves() {
     assert!(trap.why.contains("scope has ended"), "{trap:?}");
 }
 
+/// A `switch` goes to the `case` whose value its controlling expression has,
+/// and to `default` where none has. C17 6.8.4.2 p4 and p5.
+///
+/// Mutation: compare with `!=` in the dispatch; this fails.
+#[test]
+fn a_switch_takes_the_case_that_matches() {
+    let chosen = |n: i64| {
+        ran(&format!(
+            "int main(void) {{\n    int r;\n    r = 0;\n    switch ({n}) {{\n    case 1:\n        r = 10;\n        break;\n    case 2:\n        r = 20;\n        break;\n    case 3:\n        r = 30;\n        break;\n    default:\n        r = 99;\n    }}\n    return r;\n}}\n"
+        ))
+    };
+    assert_eq!(chosen(2), Ok(Value::Int(20)));
+    assert_eq!(chosen(3), Ok(Value::Int(30)));
+    assert_eq!(chosen(7), Ok(Value::Int(99)));
+}
+
+/// A `case` with no `break` falls through to the next.
+///
+/// Mutation: end a label's block reached by falling through with a `return`
+/// rather than the jump into the label; this fails.
+#[test]
+fn a_case_falls_through_to_the_next() {
+    let fell = ran(
+        "int main(void) {\n    int r;\n    r = 0;\n    switch (1) {\n    case 1:\n        r = r + 1;\n    case 2:\n        r = r + 10;\n    }\n    return r;\n}\n",
+    );
+    assert_eq!(fell, Ok(Value::Int(11)));
+}
+
+/// With no `case` matching and no `default`, nothing in the body runs.
+///
+/// Mutation: send the last comparison's failure to the first label rather
+/// than past the body; this fails.
+#[test]
+fn a_switch_with_no_match_and_no_default_does_nothing() {
+    let skipped = ran(
+        "int main(void) {\n    int r;\n    r = 5;\n    switch (4) {\n    case 1:\n        r = 10;\n    case 2:\n        r = 20;\n    }\n    return r;\n}\n",
+    );
+    assert_eq!(skipped, Ok(Value::Int(5)));
+}
+
+/// `break` in a `switch` leaves the `switch` and not the loop around it,
+/// and `continue` goes past the `switch` to that loop. C17 6.8.6.2 p1.
+///
+/// Mutation: have `continue` take the innermost target whatever it is; this
+/// fails.
+#[test]
+fn break_and_continue_in_a_switch_inside_a_loop() {
+    let counted = ran(
+        "int main(void) {\n    int n;\n    int i;\n    n = 0;\n    for (i = 0; i < 4; i = i + 1) {\n        switch (i) {\n        case 1:\n            continue;\n        case 2:\n            break;\n        default:\n            n = n + 1;\n        }\n        n = n + 10;\n    }\n    return n;\n}\n",
+    );
+    assert_eq!(counted, Ok(Value::Int(32)));
+}
+
+/// A `case` after a declaration in the `switch`'s body begins that local's
+/// storage on the dispatch's edge, as a `goto` past it does (ADR-0114).
+///
+/// Mutation: write the dispatch's pads without `jump`; the second turn
+/// writes `x` after the first turn ended it, and the run stops.
+#[test]
+fn a_case_after_a_declaration_begins_it() {
+    let begun = ran(
+        "int main(void) {\n    int n;\n    int r;\n    n = 0;\n    r = 0;\n    while (n < 2) {\n        switch (n) {\n            int x;\n        case 0:\n        case 1:\n            x = 2;\n            r = r + x;\n        }\n        n = n + 1;\n    }\n    return r;\n}\n",
+    );
+    assert_eq!(begun, Ok(Value::Int(4)));
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.
