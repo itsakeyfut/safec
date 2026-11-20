@@ -982,57 +982,84 @@ impl Checker<'_> {
         }
     }
 
-    /// Report a file-scope declaration of a name whose array lengths differ
-    /// from an earlier one's, at any level of its type: two array types with
-    /// constant lengths are compatible only where the lengths are equal (C17
-    /// 6.7.6.2 p6), and 6.7 p4 asks every declaration of one object to have
+    /// Report a declaration of a name with linkage whose array lengths
+    /// differ from an earlier one's: two array types with constant lengths
+    /// are compatible only where the lengths are equal (C17 6.7.6.2 p6), and
+    /// 6.7 p4 asks every declaration of one object or function to have
     /// compatible types. The name resolution compares the rest of the type
     /// and cannot compare this, having no values, so `extern int g[10]; int
-    /// g[2];` gave the object its first length. Mutation: skip this;
-    /// `an_array_redeclared_with_another_length_is_refused` is accepted.
+    /// g[2];` gave the object its first length.
+    ///
+    /// **Against every earlier declaration, not the first**: `extern int
+    /// a[]; int a[2]; int a[3];` has a first with no length to differ from.
+    /// **And a block's `extern` declarations**, which declare the same object
+    /// (6.2.2 p4). Found by review.
+    ///
+    /// Mutation: skip this; `an_array_redeclared_with_another_length_is_refused`
+    /// is accepted. Mutation: compare with the first declaration alone; its
+    /// `a` is.
     fn check_redeclared_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        let mut first: HashMap<&str, (Span, TypeId)> = HashMap::new();
+        let mut declared: Vec<(Span, TypeId)> = Vec::new();
         for item in ast.items() {
-            let Item::Declaration { declarators, .. } = item else {
-                continue;
-            };
-            for declarator in declarators {
-                let declaration = &declarator.declaration;
-                let Some(name) = declaration.name else {
-                    continue;
-                };
-                let spelled = self.sources.snippet(name);
-                let Some(&(earlier, earlier_ty)) = first.get(spelled) else {
-                    first.insert(spelled, (name, declaration.ty));
-                    continue;
-                };
-                if self.lengths_disagree(ast, earlier_ty, declaration.ty) {
-                    diagnostics.report(
-                        Diagnostic::error(format!("conflicting types for `{spelled}`"))
-                            .with_code(CONFLICTING)
-                            .with_label(Label::primary(
-                                name,
-                                format!("declared here as `{}`", self.spelled(ast, declaration.ty)),
-                            ))
-                            .with_label(Label::secondary(
-                                earlier,
-                                format!(
-                                    "previously declared as `{}`",
-                                    self.spelled(ast, earlier_ty)
-                                ),
-                            ))
-                            .with_note("C17 6.7 p4 and 6.7.6.2 p6"),
-                    );
+            match item {
+                Item::Declaration { declarators, .. } => {
+                    declared.extend(declarators.iter().filter_map(|declarator| {
+                        Some((declarator.declaration.name?, declarator.declaration.ty))
+                    }))
                 }
+                Item::Function(function) => declared.push((function.name, function.ty)),
+                _ => {}
             }
+        }
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration {
+                declarators,
+                storage: Some(Storage::Extern),
+                ..
+            } = ast.stmt(id)
+            {
+                declared.extend(declarators.iter().filter_map(|declarator| {
+                    Some((declarator.declaration.name?, declarator.declaration.ty))
+                }));
+            }
+        }
+        let mut by_name: HashMap<&str, Vec<(Span, TypeId)>> = HashMap::new();
+        for (name, ty) in declared {
+            let spelled = self.sources.snippet(name);
+            let earlier = by_name.entry(spelled).or_default();
+            if let Some(&(before, before_ty)) = earlier
+                .iter()
+                .find(|&&(_, before_ty)| self.lengths_disagree(ast, before_ty, ty))
+            {
+                diagnostics.report(
+                    Diagnostic::error(format!("conflicting types for `{spelled}`"))
+                        .with_code(CONFLICTING)
+                        .with_label(Label::primary(
+                            name,
+                            format!("declared here as `{}`", self.spelled(ast, ty)),
+                        ))
+                        .with_label(Label::secondary(
+                            before,
+                            format!("previously declared as `{}`", self.spelled(ast, before_ty)),
+                        ))
+                        .with_note("C17 6.7 p4 and 6.7.6.2 p6"),
+                );
+            }
+            earlier.push((name, ty));
         }
     }
 
-    /// Whether `left` and `right` hold, at one level of their derivations,
-    /// two arrays whose lengths are both constants and differ. Through
-    /// pointers and arrays alike, as `Ast::compatible` walks them.
-    fn lengths_disagree(&self, ast: &Ast, mut left: TypeId, mut right: TypeId) -> bool {
-        loop {
+    /// Whether `left` and `right` hold, at one place in their derivations,
+    /// two arrays whose lengths are both constants and differ: through
+    /// arrays, pointers, and a function's return and each parameter of two
+    /// prototypes, as `Ast::compatible` walks them. A worklist, as every walk
+    /// of a type here is. Mutation: leave out the function arm;
+    /// `an_array_redeclared_with_another_length_is_refused`'s `f` is
+    /// accepted.
+    fn lengths_disagree(&self, ast: &Ast, left: TypeId, right: TypeId) -> bool {
+        let value = |length: &Option<ExprId>| length.and_then(|id| self.values[id.index()]);
+        let mut work = vec![(left, right)];
+        while let Some((left, right)) = work.pop() {
             match (ast.ty(left), ast.ty(right)) {
                 (
                     Type::Array {
@@ -1046,19 +1073,35 @@ impl Checker<'_> {
                         ..
                     },
                 ) => {
-                    let value =
-                        |length: &Option<ExprId>| length.and_then(|id| self.values[id.index()]);
                     if let (Some(l), Some(r)) = (value(left_length), value(right_length)) {
                         if l != r {
                             return true;
                         }
                     }
-                    (left, right) = (*left_element, *right_element);
+                    work.push((*left_element, *right_element));
                 }
-                (Type::Pointer(l), Type::Pointer(r)) => (left, right) = (*l, *r),
-                _ => return false,
+                (Type::Pointer(l), Type::Pointer(r)) => work.push((*l, *r)),
+                (
+                    Type::Function {
+                        returns: left_returns,
+                        parameters: left_parameters,
+                    },
+                    Type::Function {
+                        returns: right_returns,
+                        parameters: right_parameters,
+                    },
+                ) => {
+                    work.push((*left_returns, *right_returns));
+                    if let (Parameters::Prototype(l), Parameters::Prototype(r)) =
+                        (left_parameters, right_parameters)
+                    {
+                        work.extend(l.iter().zip(r).map(|(l, r)| (l.written, r.written)));
+                    }
+                }
+                _ => {}
             }
         }
+        false
     }
 
     /// Hold every declarator that has an initializer to C17 6.7.9 p3, and
