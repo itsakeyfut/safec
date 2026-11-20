@@ -372,6 +372,17 @@ fn a_case_after_a_declaration_begins_it() {
     assert_eq!(begun, Ok(Value::Int(4)));
 }
 
+/// A `case` belongs to the innermost `switch` around it, so a nested one
+/// may repeat a value of the outer one. C17 6.8.4.2 p3.
+///
+/// Mutation: have name resolution give a `case` to the outermost `switch`;
+/// this fails.
+#[test]
+fn a_case_belongs_to_the_innermost_switch() {
+    let nested = ran("int main(void) {\n    int r;\n    r = 0;\n    switch (1) {\n    case 1:\n        switch (2) {\n        case 1:\n            r = 10;\n            break;\n        case 2:\n            r = 20;\n            break;\n        }\n        r = r + 1;\n        break;\n    case 2:\n        r = 99;\n    }\n    return r;\n}\n");
+    assert_eq!(nested, Ok(Value::Int(21)));
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.
