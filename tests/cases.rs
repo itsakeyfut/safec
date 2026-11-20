@@ -8215,8 +8215,8 @@ cases! {
         // syntax error.
         a_run_of_string_literals_is_one_expression: ["--emit", "ast"],
         // `\\q` is no escape C17 6.4.4.4 defines. Mutation: ignore what
-        // `unescape` says in `Parser::string`; this builds, and the lowering
-        // panics on the bytes.
+        // `unescape` says in `Parser::string`; the literal reaches the
+        // lowering, which panics reading its bytes.
         an_escape_c_does_not_define_is_refused_in_a_string_literal: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.2.2 p7: one identifier with both linkages is undefined, and
         // `clang` refuses each of these three. Mutation: skip
