@@ -756,6 +756,9 @@ struct FileObject {
     ty: TyId,
     /// Whether its first declaration said `static`.
     internal: bool,
+    /// Whether the program may not modify it, read off its first declaration.
+    /// See [`Lowering::read_only`].
+    read_only: bool,
     /// Whether a declaration defines it, tentatively or not.
     defined: bool,
     init: StaticInit,
@@ -850,6 +853,7 @@ impl Lowering<'_> {
                 ty: object.ty,
                 linkage,
                 init: object.init,
+                read_only: object.read_only,
             });
             self.file_statics.insert(object.name, id);
             for span in object.declared {
@@ -911,6 +915,7 @@ impl Lowering<'_> {
                     objects.push(FileObject {
                         name: spelled.to_owned(),
                         ty,
+                        read_only: self.read_only(declaration.ty),
                         internal: storage == Some(Storage::Static),
                         defined: false,
                         init: StaticInit::Zero,
@@ -1019,9 +1024,23 @@ impl Lowering<'_> {
             ty,
             linkage: Linkage::Internal,
             init: StaticInit::Bytes(bytes),
+            // C17 6.4.5 p7: a literal may not be modified, whatever its type
+            // says. See ADR-0120.
+            read_only: true,
         });
         self.strings.insert(id, object);
         object
+    }
+
+    /// Whether an object of `ty` may not be modified: `const` at its
+    /// innermost element (C17 6.7.3 p6), so `const int a[2]` is and `int
+    /// *const p`'s pointee is no business of `p`'s. See ADR-0120.
+    fn read_only(&self, ty: TypeId) -> bool {
+        let mut ty = ty;
+        while let Type::Array { element, .. } = self.ast.ty(ty) {
+            ty = *element;
+        }
+        self.ast.is_const(ty)
     }
 
     /// The place a use of a static is: `*t`, where `t` is a temporary holding
@@ -1080,6 +1099,7 @@ impl Lowering<'_> {
                     ty,
                     linkage: Linkage::Internal,
                     init,
+                    read_only: self.read_only(declaration.ty),
                 })
             }
             Storage::Extern => {
@@ -1091,6 +1111,7 @@ impl Lowering<'_> {
                             ty,
                             linkage: Linkage::Declared,
                             init: StaticInit::Zero,
+                            read_only: self.read_only(declaration.ty),
                         });
                         self.file_statics.insert(spelled.clone(), id);
                         id
@@ -1367,6 +1388,8 @@ impl Lowering<'_> {
                     return None;
                 }
                 lowered.push(Parameter {
+                    reads_only: matches!(self.ast.ty(parameter.ty),
+                        Type::Pointer(pointee) if self.read_only(*pointee)),
                     ty: self.ty(at, parameter.ty, diagnostics)?,
                     nonnull: match parameter.nullability {
                         Some(Nullability {
@@ -1725,6 +1748,16 @@ impl Lowering<'_> {
         let (returns, parameters) = (*returns, parameters.clone());
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
         let mut function = Function::with_parameters(name, returns, lowered);
+        if let Parameters::Prototype(declared) = &parameters {
+            for (parameter, local) in declared
+                .iter()
+                .zip(function.parameters().collect::<Vec<_>>())
+            {
+                if self.read_only(parameter.ty) {
+                    function.mark_read_only(local);
+                }
+            }
+        }
         if hatch {
             function = function.hatched();
         }
@@ -2186,8 +2219,12 @@ impl Lowering<'_> {
                     // one with no initializer writes nothing: a local is made and
                     // left alone until something assigns to it.
                     if let Some(name) = name {
+                        let read_only = self.read_only(ty);
                         let ty = self.ty(span, ty, diagnostics)?;
                         let local = builder.function.push_named_local(ty, name);
+                        if read_only {
+                            builder.function.mark_read_only(local);
+                        }
                         self.locals.insert(name, local);
 
                         // Only a scope narrower than the function's own body. The

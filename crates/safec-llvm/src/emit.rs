@@ -290,13 +290,21 @@ impl Emitter<'_> {
                 return;
             }
         };
+        // **A `const` object is a `constant`**, as `clang` writes one, so it
+        // lands in read-only memory and a write to it faults as it does in
+        // `clang`'s build (C17 6.7.3 p6). See ADR-0120.
+        let kind = if object.read_only {
+            "constant"
+        } else {
+            "global"
+        };
         let line = match (object.linkage, init) {
             (Linkage::Declared, _) | (_, Err(_)) => {
-                format!("{name} = external global {spelled}")
+                format!("{name} = external {kind} {spelled}")
             }
-            (Linkage::External, Ok(init)) => format!("{name} = global {spelled} {init}"),
+            (Linkage::External, Ok(init)) => format!("{name} = {kind} {spelled} {init}"),
             (Linkage::Internal, Ok(init)) => {
-                format!("{name} = internal global {spelled} {init}")
+                format!("{name} = internal {kind} {spelled} {init}")
             }
         };
         writeln!(out, "{line}").expect("writing to a string cannot fail");

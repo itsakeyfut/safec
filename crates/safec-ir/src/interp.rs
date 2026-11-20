@@ -1096,6 +1096,7 @@ mod tests {
             ty: int,
             linkage: crate::ir::Linkage::External,
             init: StaticInit::Int(5),
+            read_only: false,
         });
 
         let mut main = Function::new(at, int, []);
