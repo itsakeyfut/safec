@@ -1971,7 +1971,7 @@ impl Lowering<'_> {
                         ))
                         .with_code(LOWERING)
                         .with_label(Label::primary(at, "declared here"))
-                        .with_note("`int`, `char`, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
+                        .with_note("the integer types, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -2070,9 +2070,9 @@ impl Lowering<'_> {
 
         // Which operand is the pointer is read off which side holds the
         // literal, and that is sound only because an `Operand::Constant` is
-        // always an `int`: a constant expression is the one thing that builds
-        // one, and `types.rs` gives a value only to an expression of `int`.
-        // A cast or a string literal would break that, and `((int *)0)[n]`
+        // always an integer: a constant expression is the one thing that
+        // builds one, and `types.rs` gives a value only to an expression of
+        // integer type. A cast or a string literal would break that, and `((int *)0)[n]`
         // would fold to `n`, which is a wrong **value** rather than a wrong
         // report. Neither is implemented; when one is, this decides by the
         // operand's type instead.

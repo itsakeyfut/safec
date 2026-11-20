@@ -1330,7 +1330,35 @@ impl Ast {
                 self.compatible(*left, *right, same_struct)
             }
             (Type::Struct { .. }, Type::Struct { .. }) => same_struct(qualified, plain),
-            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
+            // Two integer types are compatible only where they are one type
+            // (C17 6.2.7 p1): `const long long *` takes no `int *`. Every
+            // kind is named on the left, so one added later has to answer
+            // here. Mutation: compare kinds alone; `a_const_pointer_takes_no_other_integer_type`
+            // fails.
+            (
+                Type::Integer {
+                    rank: left_rank,
+                    sign: left_sign,
+                },
+                Type::Integer {
+                    rank: right_rank,
+                    sign: right_sign,
+                },
+            ) => left_rank == right_rank && left_sign == right_sign,
+            (Type::Void, Type::Void) => true,
+            // 6.7.3 p9 leaves a qualified function type undefined, so no
+            // valid program asks this, and the answer is the one this gave
+            // before its arms were written out.
+            (Type::Function { .. }, Type::Function { .. }) => true,
+            (
+                Type::Pointer(_)
+                | Type::Array { .. }
+                | Type::Struct { .. }
+                | Type::Integer { .. }
+                | Type::Void
+                | Type::Function { .. },
+                _,
+            ) => false,
         }
     }
 

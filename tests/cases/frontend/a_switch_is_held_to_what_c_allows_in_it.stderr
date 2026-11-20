@@ -19,7 +19,7 @@ error[SC0317]: a `case` value has no defined value
    │
  7 │     case 2147483647 + 1:
    │          ───────┬──────  
-   │                 ╰──────── this overflows `int` or divides by zero
+   │                 ╰──────── this overflows its type, divides by zero, or shifts too far
 ───╯
   = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
 error[SC0321]: duplicate case value

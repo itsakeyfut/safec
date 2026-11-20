@@ -1,0 +1,4 @@
+Declaration an_array_larger_than_the_target_can_address_is_refused.c:1:1 "a" "char[18446744073709551615u]"
+Declaration an_array_larger_than_the_target_can_address_is_refused.c:2:1 "b" "char[65535][42009217][6700417]"
+Declaration an_array_larger_than_the_target_can_address_is_refused.c:3:1 extern "c" "char[2305843009213693951ull]"
+Declaration an_array_larger_than_the_target_can_address_is_refused.c:4:1 extern "d" "char[2305843009213693952ull]"

@@ -908,8 +908,9 @@ fn a_string_literal_is_its_bytes_and_a_zero() {
 /// program of the promotions, the usual arithmetic conversions, unsigned
 /// wrapping, unsigned `>>`, `/` and `%`, a narrowing conversion, a 40-bit
 /// shift at `long long`, a `switch` on an `unsigned int` and a product of
-/// two `unsigned short`s, each result folded into a hash the exit code
-/// carries, built by both compilers and run (#1112).
+/// two `unsigned short`s promoted to an `int` that holds it, each result
+/// folded into a hash the exit code carries, built by both compilers and run
+/// (#1112).
 ///
 /// Mutation: compare at the `int` result in the lowering's binary arm, not
 /// at the common type; `lt` and `mixed` differ and so does the hash.
@@ -922,7 +923,7 @@ fn integer_arithmetic_is_what_clang_computes() {
     }
 
     let scratch = Scratch::new("integers");
-    scratch.source("integers.c", "int lt(void) { return -1 < 1u; }\nint ltl(void) { long a = -1; unsigned int b = 1; return a < b; }\nint wrap(void) { unsigned int u = 0; u = u - 1; return u == 4294967295u; }\nint shr(void) { unsigned int u = 4294967295u; return u >> 28; }\nint divu(void) { unsigned int u = 4294967290u; return u / 7u == 613566755u; }\nint remu(void) { unsigned int u = 4294967290u; return u % 7u; }\nint promote(void) { unsigned char c = 255; return c + 1; }\nint sc(void) { signed char c = -1; return c; }\nint narrow(void) { short s = 32767; s = s + 1; return s < 0; }\nint wide(void) { long long a = 1; a = a << 40; return a == 1099511627776; }\nint ull(void) { unsigned long long x = 0xffffffffffffffffull; return x > 0; }\nint sw(unsigned int u) { switch (u) { case 4294967295u: return 1; default: return 2; } }\nint mixed(void) { unsigned int a = 1; int b = -1; return a > b; }\nint ushort(void) { unsigned short s = 65535; return s * s > 0; }\nint main(void) {\n    unsigned int h = 0;\n    h = h * 31u + lt();\n    h = h * 31u + ltl();\n    h = h * 31u + wrap();\n    h = h * 31u + shr();\n    h = h * 31u + divu();\n    h = h * 31u + remu();\n    h = h * 31u + promote();\n    h = h * 31u + sc();\n    h = h * 31u + narrow();\n    h = h * 31u + wide();\n    h = h * 31u + ull();\n    h = h * 31u + sw(4294967295u);\n    h = h * 31u + mixed();\n    h = h * 31u + ushort();\n    return h % 251u;\n}\n");
+    scratch.source("integers.c", "int lt(void) { return -1 < 1u; }\nint ltl(void) { long a = -1; unsigned int b = 1; return a < b; }\nint wrap(void) { unsigned int u = 0; u = u - 1; return u == 4294967295u; }\nint shr(void) { unsigned int u = 4294967295u; return u >> 28; }\nint divu(void) { unsigned int u = 4294967290u; return u / 7u == 613566755u; }\nint remu(void) { unsigned int u = 4294967290u; return u % 7u; }\nint promote(void) { unsigned char c = 255; return c + 1; }\nint sc(void) { signed char c = -1; return c; }\nint narrow(void) { short s = 32767; s = s + 1; return s < 0; }\nint wide(void) { long long a = 1; a = a << 40; return a == 1099511627776; }\nint ull(void) { unsigned long long x = 0xffffffffffffffffull; return x > 0; }\nint sw(unsigned int u) { switch (u) { case 4294967295u: return 1; default: return 2; } }\nint mixed(void) { unsigned int a = 1; int b = -1; return a > b; }\nint ushort(void) { unsigned short s = 40000; return s * s == 1600000000; }\nint main(void) {\n    unsigned int h = 0;\n    h = h * 31u + lt();\n    h = h * 31u + ltl();\n    h = h * 31u + wrap();\n    h = h * 31u + shr();\n    h = h * 31u + divu();\n    h = h * 31u + remu();\n    h = h * 31u + promote();\n    h = h * 31u + sc();\n    h = h * 31u + narrow();\n    h = h * 31u + wide();\n    h = h * 31u + ull();\n    h = h * 31u + sw(4294967295u);\n    h = h * 31u + mixed();\n    h = h * 31u + ushort();\n    return h % 251u;\n}\n");
     let ours = scratch
         .path()
         .join(if cfg!(windows) { "ours.exe" } else { "ours" });

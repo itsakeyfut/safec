@@ -45,9 +45,10 @@ const MALFORMED_CONSTANT: Code = Code::new("SC0106");
 ///
 /// One code for two messages, because they are one rule met two ways: a
 /// constant has to have a type that holds it. A value no type in its 6.4.4.1
-/// p5 list holds is the program's fault, and `clang` refuses it too; a
-/// floating constant is this compiler's gap, because it has no floating type
-/// to give one. Same arrangement as `MISMATCH` below, for the same reason.
+/// p5 list holds is the program's fault, though `clang` takes an unsuffixed
+/// decimal from 2^63 to 2^64 - 1 as an extension and refuses it only under
+/// `-pedantic-errors`; a floating constant is this compiler's gap, because it
+/// has no floating type to give one. Same arrangement as `MISMATCH` below, for the same reason.
 /// The spelling that is no constant at all is the other code.
 const NO_TYPE: Code = Code::new("SC0305");
 
@@ -258,8 +259,9 @@ impl Types {
     /// type of its result: the common type C17 6.3.1.8 gives the operands of
     /// a comparison, whose result is an `int`, and the type a compound
     /// assignment or an increment computes at before the result is
-    /// converted back to its left operand's (6.5.16.2 p3). `None` for every
-    /// other expression, which is performed at its own type.
+    /// converted back to its left operand's (6.5.16.2 p3), and a `switch`'s
+    /// controlling expression promoted (6.8.4.2 p5). `None` for every other
+    /// expression, which is performed at its own type.
     pub fn operated(&self, id: ExprId) -> Option<TypeId> {
         self.operated[id.index()]
     }
@@ -841,7 +843,7 @@ impl Checker<'_> {
                     Diagnostic::error(format!("the initializer of `{name}` has no defined value"))
                         .with_label(Label::primary(
                             span,
-                            "this overflows `int`, divides by zero, or shifts too far",
+                            "this overflows its type, divides by zero, or shifts too far",
                         ))
                         .with_note(
                             "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
@@ -1561,6 +1563,26 @@ impl Checker<'_> {
         }
     }
 
+    /// How many bytes an object of `ty` takes on the target, where this stage
+    /// can say: an integer, a pointer, and an array of either with a constant
+    /// length. `None` for a struct, which has no layout here and whose
+    /// objects the lowering refuses, and for what is no object type.
+    fn bytes_of(&self, ast: &Ast, ty: TypeId) -> Option<u128> {
+        match *ast.ty(ty) {
+            Type::Integer { rank, sign } => {
+                Some(u128::from(self.target.integer(rank, sign).bits() / 8))
+            }
+            Type::Pointer(_) => Some(u128::from(self.target.pointer_bits() / 8)),
+            Type::Array {
+                element, length, ..
+            } => {
+                let count = u128::try_from(self.values[length?.index()]?).ok()?;
+                count.checked_mul(self.bytes_of(ast, element)?)
+            }
+            Type::Struct { .. } | Type::Void | Type::Function { .. } => None,
+        }
+    }
+
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
     /// or, at file scope or as a member, whose length p2, 6.7.2.1 p9 and 6.6 p4
     /// forbid, and say
@@ -1644,6 +1666,35 @@ impl Checker<'_> {
             );
             return true;
         }
+        // **No object larger than this target can address**: a local one
+        // moves the stack pointer by its size, and past the address space
+        // that wraps, so the program writes outside its own stack where
+        // every access is inside the array. Fewer than 2^61 bytes on a 64-bit
+        // target, where the size in bits has to fit 64 bits, and fewer than
+        // 2^32 on a 32-bit one, which is also where `clang` stops. C17 5.2.4.1
+        // asks only that an object of 65535 bytes be allowed. Mutation: skip
+        // this; `an_array_larger_than_the_target_can_address_is_refused`
+        // compiles.
+        if let Some(count) = self.values[length.index()] {
+            let bytes = self
+                .bytes_of(ast, element)
+                .and_then(|each| u128::try_from(count).ok()?.checked_mul(each));
+            let limit = 1u128 << self.target.pointer_bits().min(61);
+            if let Some(bytes) = bytes.filter(|&bytes| bytes >= limit) {
+                diagnostics.report(
+                    Diagnostic::error("an array this large cannot be an object on this target")
+                        .with_code(DECLARATOR)
+                        .with_label(Label::primary(
+                            ast.expr(length).span(),
+                            format!("this makes it {bytes} bytes"),
+                        ))
+                        .with_note(format!(
+                            "an object here is smaller than {limit} bytes, the most this target can address"
+                        )),
+                );
+                return true;
+            }
+        }
         // At file scope a length has to be a constant with a value. Untyped,
         // it was asked nothing above and is asked nothing here: an undeclared
         // name has been reported already, and `p - q`, the one untyped length
@@ -1653,7 +1704,7 @@ impl Checker<'_> {
             diagnostics.report(if self.undefined[length.index()] {
                 Diagnostic::error("the length of an array has no defined value")
                     .with_code(DECLARATOR)
-                    .with_label(Label::primary(at, "this overflows `int` or divides by zero"))
+                    .with_label(Label::primary(at, "this overflows its type, divides by zero, or shifts too far"))
                     .with_note(
                         "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
                     )
@@ -2742,8 +2793,8 @@ impl Checker<'_> {
         );
 
         match pointers {
-            // p9 makes a pointer minus a pointer `ptrdiff_t`, which this
-            // compiler has no name for. Two pointers added, which p2 forbids,
+            // p9 makes a pointer minus a pointer `ptrdiff_t`, an integer
+            // type `<stddef.h>` names and this compiler does not ship yet. Two pointers added, which p2 forbids,
             // are refused by `binary_operable` before they reach here, and
             // the arm answers the same for them.
             (true, true) => None,
@@ -3624,9 +3675,10 @@ impl Checker<'_> {
     /// most one `default`.
     ///
     /// After every expression has its value, which is what the first two
-    /// ask. A value is compared as `types.rs` worked it out, at `int`, the
-    /// promoted type of every controlling expression here (p5); #615's wider
-    /// types are what will make the conversion p5 asks for change one.
+    /// ask. Each value is converted to the promoted controlling type before
+    /// two are compared (p5), which is also the type recorded for the
+    /// controlling expression in [`Types::controlling`] and
+    /// [`Types::operated`].
     fn check_switches(&mut self, ast: &mut Ast, diagnostics: &mut DiagnosticSink) {
         for id in ast.stmt_ids().collect::<Vec<_>>() {
             let Stmt::Switch { condition, .. } = *ast.stmt(id) else {
@@ -3666,7 +3718,7 @@ impl Checker<'_> {
                                         .with_code(NOT_CONSTANT)
                                         .with_label(Label::primary(
                                             at,
-                                            "this overflows `int` or divides by zero",
+                                            "this overflows its type, divides by zero, or shifts too far",
                                         ))
                                         .with_note(
                                             "a constant expression evaluates to a value its type \
@@ -4189,9 +4241,9 @@ impl Checker<'_> {
     /// an assignment, a call, `++`, `*`, `&`, a subscript and a comma (6.6
     /// p3) have none, and nor does anything built on them.
     ///
-    /// Computed at `int`, the only integer type with a range here, and given
-    /// no value where C gives the operation no defined result: a result
-    /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
+    /// Computed at the type the operation is performed at, and given no
+    /// value where C gives the operation no defined result: a signed result
+    /// outside that type (6.6 p4 for a constant, 6.5 p5 at run time), a division
     /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
     /// width or more, and a left shift of a negative value or out of range.
     /// Such an expression has no value and nothing is said about it here;
@@ -4287,7 +4339,11 @@ impl Checker<'_> {
                 }
                 let (lhs, rhs) = (converted(lhs)?, converted(rhs)?);
                 match op {
-                    BinOp::Mul => held(lhs * rhs),
+                    // Two `unsigned long long`s near 2^64 multiply past
+                    // `i128`; wrapping keeps the low 128 bits, of which an
+                    // unsigned result keeps the low 64, and a product of two
+                    // signed values of 64 bits or fewer never wraps.
+                    BinOp::Mul => held(lhs.wrapping_mul(rhs)),
                     BinOp::Div => (rhs != 0).then(|| lhs / rhs).and_then(held),
                     // 6.5.5 p6 defines `a % b` only where `a / b` is
                     // representable, so `INT_MIN % -1` has no value though
@@ -4633,7 +4689,7 @@ struct Reported {
 const TOO_LARGE: Reported = Reported {
     code: NO_TYPE,
     message: "no integer type can hold this constant",
-    label: "this is wider than every type its suffix allows",
+    label: "this is wider than every type its spelling allows",
     note: "C17 6.4.4.1 p5 gives a constant the first type in a list that holds it, and 6.4.4 p2 \
            requires a constant's value to be in the range of its type",
 };

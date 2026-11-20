@@ -3,6 +3,6 @@ error[SC0305]: no integer type can hold this constant
    │
  3 │     x = 18446744073709551616;
    │         ──────────┬─────────  
-   │                   ╰─────────── this is wider than every type its suffix allows
+   │                   ╰─────────── this is wider than every type its spelling allows
 ───╯
   = note: C17 6.4.4.1 p5 gives a constant the first type in a list that holds it, and 6.4.4 p2 requires a constant's value to be in the range of its type

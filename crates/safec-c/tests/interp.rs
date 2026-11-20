@@ -1676,6 +1676,17 @@ fn unsigned_arithmetic_is_modulo_and_sees_no_sign() {
     assert_eq!(ran(text), Ok(Value::Int(1 + 2 + 4 + 8)));
 }
 
+/// An `unsigned long long` product wraps modulo 2^64 (C17 6.2.5 p9), and
+/// the square of its largest value, past `i128`, is 1.
+///
+/// Mutation: drop the interpreter's wrapping multiply for an unsigned type;
+/// the product does not fit and the run stops.
+#[test]
+fn an_unsigned_long_long_product_wraps() {
+    let text = "int main(void) {\n    unsigned long long a = 18446744073709551615ull;\n    return a * a == 1;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(1)));
+}
+
 /// A `switch` compares at its promoted controlling type and converts each
 /// `case` value to it (C17 6.8.4.2 p5): `case -1` on an `unsigned int` is
 /// the largest one and matches 4294967295, and a `long long` of 2 to the 32

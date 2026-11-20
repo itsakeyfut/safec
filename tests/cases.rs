@@ -6482,9 +6482,10 @@ cases! {
         // check's transfer; all three exit zero.
         memset_past_a_global_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An index of any integer type is read as one of `int` is: past the
-        // end of `int a[4]`, `SC0412` (#1112). Mutation: read an index of a
-        // rank other than `int` as unknown in the memory check; this is
-        // reported differently.
+        // end of `int a[4]`, `SC0412` (#1112), where the program used to be
+        // refused for `unsigned long`. The memory check does not tell an
+        // index's rank apart, so no mutation there changes this; it guards
+        // the frontend reading the declaration.
         an_index_of_unsigned_long_past_the_end_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_written_through_a_chars_global_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_global_handed_where_a_wider_object_is_believed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -7200,9 +7201,6 @@ cases! {
         // Mutation: the width a local was handed as skips an array of
         // pointers rather than reading its element; this goes silent.
         a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `size_of` wraps an array too large to count rather than
-        // answering `None`; this goes silent.
-        an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `innermost_element` strips one dimension only; this panics at
         // `type_levels`.
         a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8268,6 +8266,20 @@ cases! {
         // sign replace the first; the second is.
         long_and_short_are_one_type_too_many: ["--emit", "ast"],
         signed_and_unsigned_are_one_type_too_many: ["--emit", "ast"],
+        // No list has three. Mutation: drop the `long long` clash in
+        // `Words::with`; the third `long` is read.
+        long_long_long_is_one_long_too_many: ["--emit", "ast"],
+        // An object of 2^61 bytes or more is refused on a 64-bit target, one
+        // length or three, where a local one would wrap the stack pointer;
+        // the largest allowed, `c`, is not and the next, `d`, is (#1112).
+        // Mutation: skip the size check in `Checker::report_array`; nothing
+        // is reported. Mutation: let an object of the limit through; `d` is.
+        an_array_larger_than_the_target_can_address_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // `const` sets the qualifier aside and nothing else: `const long long
+        // *` takes no `int *`, and `const int *` does (C17 6.5.16.1 p1).
+        // Mutation: compare kinds alone in `Ast::compatible_ignoring`; the
+        // first is accepted.
+        a_const_pointer_takes_no_other_integer_type: ["--emit", "ast"],
         // C17 6.8.5 p3 lets a `for` declare only `auto` and `register`
         // objects. Mutation: drop the storage test in the type checker's
         // `for` walk; nothing is reported and the loop builds.

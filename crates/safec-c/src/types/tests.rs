@@ -1880,7 +1880,11 @@ fn a_constant_expression_has_the_value_c_gives_it() {
 /// Mutation: evaluate every operation at `int`, as before #1112; the shifts
 /// and `2147483647 + 1u` have no value. Mutation: hold an unsigned result
 /// to its range rather than wrapping it; `0u - 1` and `4294967295u + 1`
-/// have none.
+/// have none. Mutation: multiply without wrapping; the product of two
+/// largest `unsigned long long`s overflows `i128` and the check panics.
+/// Mutation: return `!` of an unsigned operand without converting it, or
+/// the arm `?:` takes without converting it to the conditional's type;
+/// `~0u` or `1 ? -1 : 0u` is -1.
 #[test]
 fn a_constant_expression_is_evaluated_at_its_type() {
     for (written, value) in [
@@ -1894,6 +1898,9 @@ fn a_constant_expression_is_evaluated_at_its_type() {
         ("1L << 31", None),
         ("4294967295u", Some(4_294_967_295)),
         ("9223372036854775807LL + 1", None),
+        ("18446744073709551615ull * 18446744073709551615ull", Some(1)),
+        ("~0u", Some(4_294_967_295)),
+        ("1 ? -1 : 0u", Some(4_294_967_295)),
     ] {
         let checked = checked(&format!(
             "int main(void) {{

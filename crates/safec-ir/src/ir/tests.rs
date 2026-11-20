@@ -1,14 +1,5 @@
 use super::*;
 
-/// The type a place reaches is the one its projections lead to.
-///
-/// `p` and `*p` are two places and two types, which is the distinction
-/// `Place`'s own doc comment says an analysis depends on. The interpreter
-/// asks this to know what width an operation happens at, so answering the
-/// pointer's own type would check an `int`'s arithmetic against a pointer.
-///
-/// Mutation: answer `function.local(place.local)` and ignore the
-/// projections. This fails on the second assertion.
 /// C17 6.5 p7 lets an object be reached through its own type or the signed
 /// or unsigned type corresponding to it, the one of the same rank (6.2.5 p6),
 /// and through no other integer type: an `int` through an `unsigned int`, not
@@ -37,6 +28,15 @@ fn an_integer_is_reached_through_its_counterpart_and_no_other_rank() {
     assert!(!unit.same_or_counterpart(pointer, int));
 }
 
+/// The type a place reaches is the one its projections lead to.
+///
+/// `p` and `*p` are two places and two types, which is the distinction
+/// `Place`'s own doc comment says an analysis depends on. The interpreter
+/// asks this to know what width an operation happens at, so answering the
+/// pointer's own type would check an `int`'s arithmetic against a pointer.
+///
+/// Mutation: answer `function.local(place.local)` and ignore the
+/// projections. This fails on the second assertion.
 #[test]
 fn the_type_a_place_reaches_follows_its_projections() {
     let mut unit = TranslationUnit::new(a_target());
@@ -847,6 +847,29 @@ fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
         Some(int)
     );
     assert_eq!(unit.size_of(array), Some(16));
+}
+
+/// An array too large for its size to count in a `u64` has no size, rather
+/// than one that wrapped. The frontend refuses such an object before the
+/// memory check sees it, so this is asked of a hand-built unit.
+///
+/// Mutation: multiply with `wrapping_mul` in `size_of`; this answers a small
+/// size.
+#[test]
+fn an_array_too_large_to_count_has_no_size() {
+    let mut unit = TranslationUnit::new(a_target());
+    let char = unit.push_type(Ty::CHAR);
+    let row = unit.push_type(Ty::Array {
+        element: char,
+        length: 1 << 40,
+    });
+    let array = unit.push_type(Ty::Array {
+        element: row,
+        length: 1 << 40,
+    });
+
+    assert_eq!(unit.size_of(row), Some(1 << 40));
+    assert_eq!(unit.size_of(array), None);
 }
 
 /// Every reader of a place answers every [`Shape`] with a `match`, so that a

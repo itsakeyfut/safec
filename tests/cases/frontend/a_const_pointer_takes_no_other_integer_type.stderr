@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `const long long *` with `int *`
+   ╭─[ a_const_pointer_takes_no_other_integer_type.c:3:26 ]
+   │
+ 3 │     const long long *q = &x;
+   │                      ┬   ─┬  
+   │                      ╰─────── this holds `const long long *`
+   │                           │  
+   │                           ╰── this is `int *`
+───╯
