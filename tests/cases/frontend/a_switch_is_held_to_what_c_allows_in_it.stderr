@@ -14,26 +14,34 @@ error[SC0317]: a `case` value is not an integer constant expression
    │          ╰── not a constant expression
 ───╯
   = note: C17 6.8.4.2 p3
-error[SC0321]: duplicate case value
+error[SC0317]: a `case` value has no defined value
    ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:7:10 ]
+   │
+ 7 │     case 2147483647 + 1:
+   │          ───────┬──────  
+   │                 ╰──────── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0321]: duplicate case value
+   ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:8:10 ]
    │
  5 │     case 1:
    │          ┬  
    │          ╰── first here
    │ 
- 7 │     case 1:
+ 8 │     case 1:
    │          ┬  
    │          ╰── this value again
 ───╯
   = note: C17 6.8.4.2 p3
 error[SC0321]: multiple default labels in one switch
-    ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:11:5 ]
+    ╭─[ a_switch_is_held_to_what_c_allows_in_it.c:12:5 ]
     │
-  9 │     default:
+ 10 │     default:
     │     ───┬───  
     │        ╰───── the first
     │ 
- 11 │     default:
+ 12 │     default:
     │     ───┬───  
     │        ╰───── a second `default`
 ────╯

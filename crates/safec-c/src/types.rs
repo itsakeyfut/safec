@@ -3018,8 +3018,25 @@ impl Checker<'_> {
                     Stmt::Case { value, .. } => {
                         let at = ast.expr(*value).span();
                         let Some(number) = self.values[value.index()] else {
-                            // A value nothing typed was reported already.
-                            if self.types[value.index()].is_some() {
+                            // A value nothing typed was reported already. One
+                            // shaped as a constant whose evaluation C leaves
+                            // undefined is a constant expression with no value,
+                            // and is said to be that, as an array's length is.
+                            // Found by review.
+                            if self.undefined[value.index()] {
+                                diagnostics.report(
+                                    Diagnostic::error("a `case` value has no defined value")
+                                        .with_code(NOT_CONSTANT)
+                                        .with_label(Label::primary(
+                                            at,
+                                            "this overflows `int` or divides by zero",
+                                        ))
+                                        .with_note(
+                                            "a constant expression evaluates to a value its type \
+                                             can hold (C17 6.6 p4)",
+                                        ),
+                                );
+                            } else if self.types[value.index()].is_some() {
                                 diagnostics.report(
                                     Diagnostic::error(
                                         "a `case` value is not an integer constant expression",
