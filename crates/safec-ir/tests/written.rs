@@ -321,7 +321,7 @@ fn a_function(at: Span) -> (TranslationUnit, Function, TyId) {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let function = Function::new(at, int, []);
     (unit, function, int)
 }
@@ -1157,7 +1157,7 @@ fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut function = Function::new(at, int, []);
     let origin = Origin::Written(at);
     let a = function.push_local(int);

@@ -74,6 +74,48 @@ pub const DOES_NOT_RETURN: &[(&str, &str)] = &[
     ("quick_exit", "7.22.4.7"),
 ];
 
+/// An integer type's rank, C17 6.3.1.1 p1, from the lowest: what an integer
+/// type is, before the target says how wide it is. See ADR-0116.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Rank {
+    /// `char`, `signed char` and `unsigned char`.
+    Char,
+    /// `short`.
+    Short,
+    /// `int`.
+    Int,
+    /// `long`.
+    Long,
+    /// `long long`.
+    LongLong,
+}
+
+/// How an integer type was signed: `Plain` is `char` alone, which C17 6.2.5
+/// p15 makes a third type beside `signed char` and `unsigned char`, signed or
+/// not as the target says.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Sign {
+    /// Plain `char`.
+    Plain,
+    /// `signed`, written or not.
+    Signed,
+    /// `unsigned`.
+    Unsigned,
+}
+
+impl Ty {
+    /// `int`.
+    pub const INT: Ty = Ty::Integer {
+        rank: Rank::Int,
+        sign: Sign::Signed,
+    };
+    /// Plain `char`.
+    pub const CHAR: Ty = Ty::Integer {
+        rank: Rank::Char,
+        sign: Sign::Plain,
+    };
+}
+
 /// Which function, within one [`TranslationUnit`].
 ///
 /// An opaque id and not a name, which `docs/c-family.md` asks for and gives the
@@ -152,17 +194,20 @@ impl BlockId {
 /// rather than `ast::Type`.
 ///
 /// **No widths here, and that is the decision rather than a gap.** What an
-/// `Int` is worth is asked of the unit, which carries the target:
-/// [`TranslationUnit::integer`]. Putting it in the type instead would dissolve
-/// `Int` and `Char` into one integer kind with a width and a sign, and `--emit
-/// safety-ir` would stop saying which one a program wrote. See ADR-0013, which
-/// rejected exactly that and says what would reverse it.
+/// integer is worth is asked of the unit, which carries the target:
+/// [`TranslationUnit::integer`]. An integer is a rank and a sign, which is
+/// what C names one by, and its width is the target's (ADR-0013), so `long`
+/// can be 32 bits on one machine and 64 on another. See ADR-0116.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Ty {
-    /// `int`.
-    Int,
-    /// `char`.
-    Char,
+    /// An integer type, C17 6.2.5 p4 to p7: `int` is `Integer { Int, Signed }`
+    /// and `char` `Integer { Char, Plain }`.
+    Integer {
+        /// Which of C's standard integer types, by rank (6.3.1.1 p1).
+        rank: Rank,
+        /// Whether it was written `signed`, `unsigned` or neither.
+        sign: Sign,
+    },
     /// `void`, which is what a function returns when it returns nothing.
     Void,
     /// A pointer to the type this id names.
@@ -201,7 +246,12 @@ impl Ty {
     pub fn is_pointer(self) -> bool {
         match self {
             Ty::Pointer(_) => true,
-            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                sign: _,
+            }
+            | Ty::Void
+            | Ty::Array { .. } => false,
         }
     }
 }
@@ -1658,8 +1708,7 @@ impl TranslationUnit {
     /// answering `Option` rather than panicking.
     pub fn integer(&self, id: TyId) -> Option<Integer> {
         match self.ty(id) {
-            Ty::Int => Some(self.target.int()),
-            Ty::Char => Some(self.target.char()),
+            Ty::Integer { rank, sign } => Some(self.target.integer(rank, sign)),
             // No array is a value, so none is converted or range-checked.
             Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => None,
         }
@@ -1675,8 +1724,7 @@ impl TranslationUnit {
     /// `error[E0004]` here until it says what it is worth. See ADR-0060.
     pub fn size_of(&self, id: TyId) -> Option<u64> {
         let bits = match self.ty(id) {
-            Ty::Int => self.target.int().bits(),
-            Ty::Char => self.target.char().bits(),
+            Ty::Integer { rank, sign } => self.target.integer(rank, sign).bits(),
             Ty::Pointer(_) => self.target.pointer_bits(),
             Ty::Void => return None,
             // `length` elements and no padding between them, C17 6.5.3.4 p7.
@@ -1688,7 +1736,9 @@ impl TranslationUnit {
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.
-        Some(u64::from(bits / self.target.char().bits()))
+        Some(u64::from(
+            bits / self.target.integer(Rank::Char, Sign::Plain).bits(),
+        ))
     }
 
     /// The type a place reaches, or `None` where its projections do not fit.

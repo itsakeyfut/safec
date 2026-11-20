@@ -3,6 +3,7 @@
 //! pin down may have replaced, and the sites out of everything a place reached.
 
 use crate::ir::{BinOp, Function, LocalId, Operand, Place, Shape, TranslationUnit, Ty};
+use crate::ir::{Rank, Sign};
 
 use super::allocations::stored_pointer;
 use super::index::{Idx, LocalIdx, Site};
@@ -390,7 +391,8 @@ pub(super) fn write_effects(
     }
     let one_landing = lands.len() == 1;
     let target = unit.target();
-    let pointer_width = u64::from(target.pointer_bits() / target.char().bits());
+    let pointer_width =
+        u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
     lands
         .into_iter()
         // **And a local that is no array, for a write of a width this check

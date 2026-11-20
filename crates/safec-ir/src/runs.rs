@@ -171,7 +171,7 @@ fn head_test(
     condition: &Operand,
     taken: &Bits<LocalIdx>,
 ) -> Option<bool> {
-    let holds_int = |local: LocalId| matches!(unit.ty(function.local(local)), Ty::Int);
+    let holds_int = |local: LocalId| unit.ty(function.local(local)) == Ty::INT;
     let mut written: Vec<(LocalId, Option<i128>)> = Vec::new();
     let value = |written: &[(LocalId, Option<i128>)], operand: &Operand| match operand {
         Operand::Constant(c) => small(*c),
@@ -351,7 +351,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         let ids: Vec<BlockId> = (0..blocks).map(|_| function.reserve_block()).collect();
         let branch = |then: usize, otherwise: usize| Terminator::Branch {

@@ -570,7 +570,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let function = Function::new(at, int, []);
         (unit, function)
     }

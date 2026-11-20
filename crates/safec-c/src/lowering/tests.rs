@@ -4,6 +4,7 @@ use crate::parser::parse;
 use crate::preprocessor::preprocess;
 use crate::sema::resolve;
 use crate::types::check;
+use safec_ir::ir::{Rank, Sign};
 
 /// The assignments in a block, in order, with the storage markers dropped.
 ///
@@ -83,8 +84,8 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
     assert!(
@@ -804,7 +805,7 @@ fn a_declared_function_can_be_called() {
 /// `ptrdiff_t` to give it and reports nothing, because the program is valid,
 /// so nothing before this stage says the run has a hole in it.
 ///
-/// Mutation: lower an untyped expression as `Ty::Int`. No code is reported
+/// Mutation: lower an untyped expression as `Ty::INT`. No code is reported
 /// and this fails. Mutation: report and lower the rest of the function
 /// anyway. `is_defined` starts answering true and this fails.
 #[test]
@@ -1159,7 +1160,7 @@ fn a_pointer_type_is_not_the_type_it_points_at() {
 
     assert_eq!(lowered.unit.ty(f.local(p)), Ty::Pointer(int));
     assert_eq!(lowered.unit.ty(f.local(pp)), Ty::Pointer(f.local(p)));
-    assert_eq!(lowered.unit.ty(f.local(c)), Ty::Char);
+    assert_eq!(lowered.unit.ty(f.local(c)), Ty::CHAR);
     assert_ne!(f.local(c), int);
 }
 

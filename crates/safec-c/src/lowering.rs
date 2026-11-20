@@ -25,6 +25,7 @@
 //! a program nobody wrote correctly. Every case here is the first kind, so the
 //! split has nothing to divide.
 
+use safec_ir::ir::Rank;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
@@ -995,7 +996,7 @@ impl Lowering<'_> {
             }));
         }
         bytes.push(0);
-        let element = self.unit.push_type(Ty::Char);
+        let element = self.unit.push_type(Ty::CHAR);
         let ty = self.unit.push_type(Ty::Array {
             element,
             length: bytes.len() as u64,
@@ -1766,7 +1767,7 @@ impl Lowering<'_> {
         // `main` returning anything but `int` is not one 5.1.2.2.1 describes,
         // and writing a zero into its return place would be writing into a
         // `void`.
-        if self.sources.snippet(name) == "main" && self.unit.ty(returns) == Ty::Int {
+        if self.sources.snippet(name) == "main" && self.unit.ty(returns) == Ty::INT {
             builder.push(Operation {
                 place: Place::local(builder.function.return_place()),
                 value: Rvalue::Use(Operand::Constant(0)),
@@ -1928,8 +1929,8 @@ impl Lowering<'_> {
 
         let base = loop {
             match self.ast.ty(current) {
-                Type::Int => break Ty::Int,
-                Type::Char => break Ty::Char,
+                Type::Int => break Ty::INT,
+                Type::Char => break Ty::CHAR,
                 Type::Void => break Ty::Void,
                 Type::Pointer(pointee) => {
                     derivations.push(None);
@@ -2508,7 +2509,7 @@ impl Lowering<'_> {
     ) -> Option<()> {
         let asked = self.ast.expr(condition).span();
         let value = self.value(builder, condition, diagnostics)?;
-        let int = self.unit.push_type(Ty::Int);
+        let int = self.unit.push_type(Ty::INT);
         let held = builder.function.push_local(int);
         builder.push(Operation {
             place: Place::local(held),
@@ -3447,7 +3448,12 @@ impl Lowering<'_> {
     fn decayed_ty(&mut self, ty: TyId) -> TyId {
         match self.unit.ty(ty) {
             Ty::Array { element, .. } => self.unit.push_type(Ty::Pointer(element)),
-            Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                sign: _,
+            }
+            | Ty::Void
+            | Ty::Pointer(_) => ty,
         }
     }
 
@@ -4269,8 +4275,12 @@ impl Lowering<'_> {
         // type.
         match self.unit.ty(ty) {
             Ty::Pointer(_) => builder.function.push_local(ty),
-            Ty::Int | Ty::Char | Ty::Void => {
-                let int = self.unit.push_type(Ty::Int);
+            Ty::Integer {
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                sign: _,
+            }
+            | Ty::Void => {
+                let int = self.unit.push_type(Ty::INT);
                 builder.function.push_local(int)
             }
             // An array is no modifiable lvalue (C17 6.3.2.1 p1), so it is the
@@ -4551,7 +4561,12 @@ impl Lowering<'_> {
             let pointer = match self.unit.ty(function.local(local)) {
                 Ty::Pointer(_) => true,
                 // No whole array is written, so none is a pointer written twice.
-                Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+                Ty::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Ty::Void
+                | Ty::Array { .. } => false,
             };
             let unordered = self
                 .unordered_writes(value)
@@ -4594,7 +4609,12 @@ impl Lowering<'_> {
                 // `promoted` gives.
                 let pointer = match self.unit.ty(function.local(local)) {
                     Ty::Pointer(_) => true,
-                    Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+                    Ty::Integer {
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        sign: _,
+                    }
+                    | Ty::Void
+                    | Ty::Array { .. } => false,
                 };
                 if !write || !pointer || said.contains(&local) {
                     continue;

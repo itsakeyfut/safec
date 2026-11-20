@@ -5,6 +5,7 @@
 //! report, and a change to what is reported cannot change what the walk
 //! believes. See ADR-0060 for the question and ADR-0063 for the split.
 
+use crate::ir::Rank;
 use crate::ir::{Function, LocalId, Operand, Place, Rvalue, Shape, Ty, TyId};
 use crate::source::Span;
 
@@ -432,7 +433,12 @@ pub(super) fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64>
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
         // An array is not a pointer, so nothing it points at has a width.
-        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
+        Ty::Integer {
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            sign: _,
+        }
+        | Ty::Void
+        | Ty::Array { .. } => None,
     }
 }
 
@@ -707,7 +713,11 @@ pub(super) fn carried_width(
 pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     match analysis.unit.ty(innermost_element(analysis.unit, ty)) {
         Ty::Pointer(pointee) => Some(pointee),
-        Ty::Int | Ty::Char | Ty::Void => None,
+        Ty::Integer {
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            sign: _,
+        }
+        | Ty::Void => None,
         Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }
@@ -736,8 +746,8 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
-        let char = unit.push_type(Ty::Char);
+        let int = unit.push_type(Ty::INT);
+        let char = unit.push_type(Ty::CHAR);
         let pair = unit.push_type(Ty::Array {
             element: int,
             length: 2,

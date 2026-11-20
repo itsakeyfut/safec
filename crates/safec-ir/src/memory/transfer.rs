@@ -3,6 +3,7 @@
 //! does to the [`Known`] value, and what the analysis asks of the IR to answer
 //! that.
 
+use crate::ir::{Rank, Sign};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dataflow::Analysis;
@@ -225,7 +226,8 @@ impl Allocations<'_> {
         length: usize,
     ) -> CopiedPointers {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         match self.constant_argument(callee, arguments, length) {
             Some(length) if length < pointer => CopiedPointers::NoneWhole,
             Some(length) if length % pointer != 0 => CopiedPointers::LastInPart,
@@ -463,7 +465,11 @@ impl Allocations<'_> {
                 Operand::Copy(place) => match self.unit.ty(self.unit.place_ty(function, place)?) {
                     Ty::Pointer(pointee) => Some(self.unit.size_of(pointee)),
                     Ty::Array { element, .. } => Some(self.unit.size_of(element)),
-                    Ty::Int | Ty::Char | Ty::Void => None,
+                    Ty::Integer {
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        sign: _,
+                    }
+                    | Ty::Void => None,
                 },
                 Operand::Constant(_) => None,
             })
@@ -567,7 +573,8 @@ impl Allocations<'_> {
         value: &mut Known,
     ) {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         if wrote.width.is_some_and(|width| width < pointer) {
             self.note_landing(landing, Noted::Part, at, value);
         } else if whole == Whole::Other {
@@ -644,7 +651,8 @@ impl Allocations<'_> {
         value: &mut Known,
     ) {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         let narrower = |extent: Option<Extent>| matches!(extent, Some(Extent::Exactly(size)) if size < pointer);
         let storages: Vec<Storage> = storages
             .into_iter()
@@ -681,7 +689,11 @@ impl Allocations<'_> {
         match self.unit.ty(ty) {
             Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
             Ty::Pointer(_) => Some(1),
-            Ty::Int | Ty::Char | Ty::Void => None,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                sign: _,
+            }
+            | Ty::Void => None,
         }
     }
 
@@ -726,7 +738,13 @@ impl Allocations<'_> {
             .map(|ty| self.unit.ty(ty))
         {
             Some(Ty::Pointer(_)) | None => true,
-            Some(Ty::Int | Ty::Char | Ty::Void) => false,
+            Some(
+                Ty::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Ty::Void,
+            ) => false,
             // As its elements do: no whole array is read or written, and where
             // one were, what it holds is its elements. **Held by nothing,
             // measured**: answering `false` changes no case, since no C reads a
@@ -734,7 +752,11 @@ impl Allocations<'_> {
             Some(Ty::Array { element, .. }) => {
                 match self.unit.ty(innermost_element(self.unit, element)) {
                     Ty::Pointer(_) => true,
-                    Ty::Int | Ty::Char | Ty::Void => false,
+                    Ty::Integer {
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                        sign: _,
+                    }
+                    | Ty::Void => false,
                     Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
                 }
             }
@@ -750,7 +772,12 @@ impl Allocations<'_> {
         match self.unit.ty(ty) {
             Ty::Pointer(pointee) => Some(self.unit.size_of(pointee).unwrap_or(0)),
             // An array is not a pointer, so a place of one points at nothing.
-            Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => None,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                sign: _,
+            }
+            | Ty::Void
+            | Ty::Array { .. } => None,
         }
     }
 
@@ -780,7 +807,11 @@ impl Allocations<'_> {
                     stored = inner;
                     self.unit.size_of(inner).unwrap_or(0)
                 }
-                Ty::Int | Ty::Char | Ty::Void => 0,
+                Ty::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Ty::Void => 0,
                 Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
             levels.push(Width::AtMost(width));
@@ -1066,7 +1097,15 @@ impl Allocations<'_> {
             .map(|ty| self.unit.ty(ty))
         {
             Some(Ty::Pointer(pointee)) => self.unit.size_of(pointee),
-            Some(Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. }) | None => Some(0),
+            Some(
+                Ty::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Ty::Void
+                | Ty::Array { .. },
+            )
+            | None => Some(0),
         }
     }
 
@@ -1257,8 +1296,19 @@ impl Allocations<'_> {
             .place_ty(function, place)
             .map(|ty| self.unit.ty(ty))
         {
-            Some(Ty::Char) => true,
-            Some(Ty::Pointer(_) | Ty::Int | Ty::Void | Ty::Array { .. }) | None => false,
+            Some(Ty::Integer {
+                rank: Rank::Char,
+                sign: _,
+            }) => true,
+            Some(Ty::Integer {
+                rank: Rank::Int,
+                sign: _,
+            }) => false,
+            Some(Ty::Integer {
+                rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
+                sign: _,
+            }) => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
+            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. }) | None => false,
         }
     }
 
@@ -3062,7 +3112,9 @@ impl Analysis for Allocations<'_> {
                     value.written_local(at.into(), whole);
                     if whole == Whole::Other {
                         let target = self.unit.target();
-                        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+                        let pointer = u64::from(
+                            target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits(),
+                        );
                         let noted = if wrote.width.is_some_and(|width| width < pointer) {
                             Noted::Part
                         } else {
@@ -3955,7 +4007,7 @@ mod caller_memory {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let ptr = unit.push_type(Ty::Pointer(int));
         let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
         let mut function = Function::new(Span::new(file, 0, 1), int, [ptr_ptr]);
@@ -4001,7 +4053,7 @@ mod caller_memory {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let ptr = unit.push_type(Ty::Pointer(int));
         let get = unit.push_function(Function::new(Span::new(file, 2, 5), ptr, []));
         let mut function = Function::new(Span::new(file, 0, 1), int, []);

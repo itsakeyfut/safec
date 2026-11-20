@@ -11,6 +11,8 @@
 //!
 //! [ADR-0013]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0013-the-translation-unit-carries-the-target-and-answers-what-a-type-is-worth.md
 
+use crate::ir::{Rank, Sign};
+
 /// What an integer type is worth on some target.
 ///
 /// The two facts C needs to say what an operation means: how wide the value is,
@@ -265,25 +267,28 @@ impl Target {
         self.triple
     }
 
-    /// What `int` is worth here.
-    pub fn int(self) -> Integer {
-        self.int
-    }
-
-    /// What `char` is worth here.
-    ///
-    /// Named after the C keyword, the way [`Self::int`] is and the way `clang`
-    /// names the same thing (`getCharWidth`, `SignedChar`, `UnsignedChar`). A
-    /// method and a primitive type do not share a namespace in Rust, so this
-    /// costs nothing and keeps `Ty::Char` and `char()` reading as one pair.
+    /// What the integer type of this rank and sign is worth here. See
+    /// ADR-0116.
     ///
     /// C17 6.2.5 p15 makes plain `char` a third type beside `signed char` and
     /// `unsigned char`: "the implementation shall define char to have the same
     /// range, representation, and behavior as either". Which one is the
     /// target's to say, and it is unsigned on two rows of [`Self::ALL`],
     /// `aarch64-unknown-linux-gnu` and `armv7-unknown-linux-gnueabihf`.
-    pub fn char(self) -> Integer {
-        self.character
+    ///
+    /// # Panics
+    ///
+    /// For any type but `int` and plain `char`, which are the two this
+    /// compiler reads until #1112 measures the rest.
+    pub fn integer(self, rank: Rank, sign: Sign) -> Integer {
+        match (rank, sign) {
+            (Rank::Int, Sign::Signed) => self.int,
+            (Rank::Char, Sign::Plain) => self.character,
+            (Rank::Char, Sign::Signed | Sign::Unsigned)
+            | (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, _) => {
+                unreachable!("{sign:?} {rank:?} is measured by #1112, and nothing builds it yet")
+            }
+        }
     }
 
     /// How many bits a pointer takes here: what an object holding one is
@@ -430,16 +435,39 @@ mod tests {
 
         for &(triple, int_bits, char_bits, char_signed, pointer_bits, extension) in measured {
             let target = Target::from_triple(triple).expect("a measured triple is known");
-            assert_eq!(target.int().bits(), int_bits, "{triple}");
-            assert!(target.int().signed(), "{triple}: C17 6.2.5 p4");
-            assert_eq!(target.char().bits(), char_bits, "{triple}");
-            assert_eq!(target.char().signed(), char_signed, "{triple}");
+            assert_eq!(
+                target.integer(Rank::Int, Sign::Signed).bits(),
+                int_bits,
+                "{triple}"
+            );
+            assert!(
+                target.integer(Rank::Int, Sign::Signed).signed(),
+                "{triple}: C17 6.2.5 p4"
+            );
+            assert_eq!(
+                target.integer(Rank::Char, Sign::Plain).bits(),
+                char_bits,
+                "{triple}"
+            );
+            assert_eq!(
+                target.integer(Rank::Char, Sign::Plain).signed(),
+                char_signed,
+                "{triple}"
+            );
             assert_eq!(target.pointer_bits(), pointer_bits, "{triple}");
-            assert_eq!(target.extension(target.char()), extension, "{triple}");
+            assert_eq!(
+                target.extension(target.integer(Rank::Char, Sign::Plain)),
+                extension,
+                "{triple}"
+            );
             // Nothing widens an `int`, on every row measured so far. It is what
             // C17 6.3.1.1 p2 promotes to, so nothing is narrower than it that
             // an operation ever sees.
-            assert_eq!(target.extension(target.int()), None, "{triple}");
+            assert_eq!(
+                target.extension(target.integer(Rank::Int, Sign::Signed)),
+                None,
+                "{triple}"
+            );
         }
     }
 
@@ -458,7 +486,7 @@ mod tests {
         let answers = |answer| {
             Target::ALL
                 .iter()
-                .any(|target| target.extension(target.char()) == answer)
+                .any(|target| target.extension(target.integer(Rank::Char, Sign::Plain)) == answer)
         };
 
         assert!(answers(Some(Extend::Sign)), "signext");
@@ -484,7 +512,7 @@ mod tests {
     fn a_signed_type_holds_what_two_s_complement_holds() {
         let int = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .int();
+            .integer(Rank::Int, Sign::Signed);
 
         assert_eq!(int.max(), 2_147_483_647);
         assert_eq!(int.min(), -2_147_483_648);
@@ -501,7 +529,7 @@ mod tests {
     fn an_unsigned_type_holds_nothing_below_zero() {
         let character = Target::from_triple("aarch64-unknown-linux-gnu")
             .expect("a known triple")
-            .char();
+            .integer(Rank::Char, Sign::Plain);
 
         assert_eq!((character.min(), character.max()), (0, 255));
         assert!(!character.holds(-1));
@@ -521,7 +549,7 @@ mod tests {
     fn a_value_that_fits_is_unchanged() {
         let character = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .char();
+            .integer(Rank::Char, Sign::Plain);
 
         for value in [0, 1, -1, 127, -128] {
             assert_eq!(character.convert(value), value);
@@ -549,7 +577,7 @@ mod tests {
     fn a_value_anywhere_in_the_carrier_converts() {
         let int = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .int();
+            .integer(Rank::Int, Sign::Signed);
 
         for value in [i128::MAX, i128::MIN, i128::MAX - 1, i128::MIN + 1] {
             let converted = int.convert(value);
@@ -579,10 +607,10 @@ mod tests {
     fn a_value_that_does_not_fit_is_converted_the_way_the_target_does() {
         let signed = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .char();
+            .integer(Rank::Char, Sign::Plain);
         let unsigned = Target::from_triple("aarch64-unknown-linux-gnu")
             .expect("a known triple")
-            .char();
+            .integer(Rank::Char, Sign::Plain);
 
         assert_eq!(signed.convert(200), -56);
         assert_eq!(unsigned.convert(200), 200);
