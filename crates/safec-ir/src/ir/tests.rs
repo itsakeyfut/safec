@@ -9,6 +9,34 @@ use super::*;
 ///
 /// Mutation: answer `function.local(place.local)` and ignore the
 /// projections. This fails on the second assertion.
+/// C17 6.5 p7 lets an object be reached through its own type or the signed
+/// or unsigned type corresponding to it, the one of the same rank (6.2.5 p6),
+/// and through no other integer type: an `int` through an `unsigned int`, not
+/// through a `long`.
+///
+/// Mutation: answer identity alone in `same_or_counterpart`; the second
+/// assertion fails. Mutation: answer every pair of integer types; the third
+/// does.
+#[test]
+fn an_integer_is_reached_through_its_counterpart_and_no_other_rank() {
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::INT);
+    let unsigned = unit.push_type(Ty::Integer {
+        rank: Rank::Int,
+        sign: Sign::Unsigned,
+    });
+    let long = unit.push_type(Ty::Integer {
+        rank: Rank::Long,
+        sign: Sign::Signed,
+    });
+    let pointer = unit.push_type(Ty::Pointer(int));
+
+    assert!(unit.same_or_counterpart(int, int));
+    assert!(unit.same_or_counterpart(unsigned, int));
+    assert!(!unit.same_or_counterpart(long, int));
+    assert!(!unit.same_or_counterpart(pointer, int));
+}
+
 #[test]
 fn the_type_a_place_reaches_follows_its_projections() {
     let mut unit = TranslationUnit::new(a_target());

@@ -59,13 +59,6 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // C17 6.5 p7 lets an object be reached through the signed or unsigned
-        // type corresponding to its own, so a write through an `unsigned int *`
-        // into an `int` writes it, and the read after is of a written `int`.
-        // Mutation: answer type identity alone in
-        // `TranslationUnit::same_or_counterpart`; `x` is believed unwritten
-        // and its read is `SC0411`.
-        a_write_through_an_unsigned_pointer_writes_the_int_it_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local nothing assigned, read by a null test and written
         // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
         // since no path assigns it.
@@ -9220,6 +9213,12 @@ cases! {
         // Mutation: drop any of the four; its report goes. Ask `undefined`
         // no more; the overflow is called no constant.
         a_switch_is_held_to_what_c_allows_in_it: ["--emit", "ast"],
+        // p5 converts each `case` value to the promoted controlling type
+        // before comparing, so on an `unsigned int` `-1` and `4294967295u`
+        // are one value, `SC0321` (#1112). Mutation: convert no `case` value
+        // in `Checker::check_switches`; the two differ and nothing is
+        // reported.
+        two_case_values_that_convert_to_one_are_one_case: ["--emit", "ast"],
         // A label defined twice is `SC0312`, and a `goto` to no label of its
         // function is `SC0301`, each at the name. Mutation: drop either
         // check; its report goes.

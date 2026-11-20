@@ -1617,7 +1617,8 @@ fn a_discarded_dereference_is_not_a_read() {
 
 /// C17 6.3.1.8: an `int` and an `unsigned int` meet at `unsigned int`, so
 /// `-1 < 1u` compares 4294967295 with 1 and is 0, and the same at `int`
-/// would be 1.
+/// would be 1. Held in locals, because a constant expression is folded by
+/// the type check and never reaches the lowering's comparison.
 ///
 /// Mutation: give a comparison no common type, so the lowering compares at
 /// the `int` result; this answers 1. Mutation: answer the higher rank
@@ -1626,20 +1627,21 @@ fn a_discarded_dereference_is_not_a_read() {
 /// the interpreter; the same.
 #[test]
 fn minus_one_is_not_below_one_unsigned() {
-    let text = "int main(void) {\n    return -1 < 1u;\n}\n";
+    let text = "int main(void) {\n    int a = -1;\n    unsigned int b = 1;\n    return a < b;\n}\n";
     assert_eq!(ran(text), Ok(Value::Int(0)));
 }
 
 /// An `unsigned char` of 255 is promoted to `int` before it is added (C17
-/// 6.3.1.1 p2), so `c + 1` is 256, where an addition at the `unsigned char`
-/// would wrap to 0.
+/// 6.3.1.1 p2), so `c + c` is 510, where an addition at the `unsigned char`
+/// would wrap to 254. Two of them, because with an `int` the usual
+/// arithmetic conversions widen the `char` whether or not it was promoted.
 ///
 /// Mutation: promote nothing in `Checker::promoted_of`; the addition is at
-/// `unsigned char` and this answers 0.
+/// `unsigned char` and this answers 254.
 #[test]
 fn a_char_is_promoted_before_it_is_added() {
-    let text = "int main(void) {\n    unsigned char c = 255;\n    return c + 1;\n}\n";
-    assert_eq!(ran(text), Ok(Value::Int(256)));
+    let text = "int main(void) {\n    unsigned char c = 255;\n    return c + c;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(510)));
 }
 
 /// Whether `long` holds every `unsigned int` is the target's: on
@@ -1674,16 +1676,16 @@ fn unsigned_arithmetic_is_modulo_and_sees_no_sign() {
     assert_eq!(ran(text), Ok(Value::Int(1 + 2 + 4 + 8)));
 }
 
-/// A `switch` on an `unsigned int` compares at that type and converts each
-/// `case` value to it (C17 6.8.4.2 p5), so `case -1` is the largest
-/// `unsigned int` and matches 4294967295.
+/// A `switch` compares at its promoted controlling type and converts each
+/// `case` value to it (C17 6.8.4.2 p5): `case -1` on an `unsigned int` is
+/// the largest one and matches 4294967295, and a `long long` of 2 to the 32
+/// is not `case 0`, which it would be compared at `int`.
 ///
-/// Mutation: compare at `int` in the lowering's dispatch; the controlling
-/// value is converted to -1 and the constant 4294967295 is not, and the
-/// `default` is taken.
+/// Mutation: compare at `int` in the lowering's dispatch; the `long long`
+/// matches `case 0`.
 #[test]
-fn a_switch_on_an_unsigned_value_compares_at_its_type() {
-    let text = "int main(void) {\n    unsigned int u = 4294967295u;\n    switch (u) {\n    case -1:\n        return 1;\n    default:\n        return 2;\n    }\n}\n";
+fn a_switch_compares_at_its_controlling_type() {
+    let text = "int f(unsigned int u, long long w) {\n    int r = 0;\n    switch (u) {\n    case -1:\n        r = 1;\n    }\n    switch (w) {\n    case 0:\n        r = r + 2;\n    }\n    return r;\n}\n\nint main(void) {\n    return f(4294967295u, 4294967296);\n}\n";
     assert_eq!(ran(text), Ok(Value::Int(1)));
 }
 

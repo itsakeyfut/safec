@@ -1755,8 +1755,10 @@ impl TranslationUnit {
     /// (6.2.5 p6). The character types are its last item, and a caller asks
     /// them apart, as bytes.
     ///
-    /// Mutation: answer identity alone; `a_write_through_an_unsigned_pointer_writes_the_int_it_reaches`
-    /// reports `SC0411`.
+    /// Guarded by `an_integer_is_reached_through_its_counterpart_and_no_other_rank`.
+    /// Nothing the memory check reports turns on it yet: an integer local is
+    /// never asked whether it was written, and a write that lands on one
+    /// object is placed whatever its type.
     pub fn same_or_counterpart(&self, access: TyId, object: TyId) -> bool {
         access == object
             || match (self.ty(access), self.ty(object)) {

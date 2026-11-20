@@ -2525,8 +2525,8 @@ impl Lowering<'_> {
             .types
             .controlling(condition)
             .expect("the type check refuses a `switch` on no integer");
-        let int = self.ty(asked, controlling, diagnostics)?;
-        let held = builder.function.push_local(int);
+        let at = self.ty(asked, controlling, diagnostics)?;
+        let held = builder.function.push_local(at);
         builder.push(Operation {
             place: Place::local(held),
             value: Rvalue::Use(value),
@@ -2554,7 +2554,7 @@ impl Lowering<'_> {
         // 260 past the memory check's bound, measured by review: what that
         // check holds grows with blocks times locals squared.
         builder.switch(dispatch);
-        let equal = builder.function.push_local(int);
+        let equal = builder.function.push_local(at);
         let mut default = None;
         let mut pads = Vec::new();
         for &label in self.resolution.labels_of_switch(id) {
