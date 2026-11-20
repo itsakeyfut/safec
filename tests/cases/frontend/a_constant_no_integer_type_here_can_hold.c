@@ -1,5 +1,5 @@
 int main(void) {
     int x;
-    x = 2147483648;
+    x = 18446744073709551616;
     return x;
 }

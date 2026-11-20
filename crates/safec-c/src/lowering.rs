@@ -2501,8 +2501,8 @@ impl Lowering<'_> {
     ///
     /// The dispatch is written after the body because only then is what each
     /// label has open known; the block before the body ends with a jump to
-    /// it. Every comparison is at `int`, the promoted type of every value
-    /// this compiler reads (p5).
+    /// it. Every comparison is at the promoted type of the controlling
+    /// expression (p5), [`Types::controlling`].
     ///
     /// A `null` test written as the controlling expression refines a pointer
     /// only through the first comparison: the nullability check walks back
@@ -2519,7 +2519,13 @@ impl Lowering<'_> {
     ) -> Option<()> {
         let asked = self.ast.expr(condition).span();
         let value = self.value(builder, condition, diagnostics)?;
-        let int = self.unit.push_type(Ty::INT);
+        // At the promoted controlling type (p5), which each `case` value is
+        // converted to as the comparison reads it.
+        let controlling = self
+            .types
+            .controlling(condition)
+            .expect("the type check refuses a `switch` on no integer");
+        let int = self.ty(asked, controlling, diagnostics)?;
         let held = builder.function.push_local(int);
         builder.push(Operation {
             place: Place::local(held),
@@ -3656,7 +3662,7 @@ impl Lowering<'_> {
                         // `E += 1`, which 6.5.16.2 p3 makes `E = E + 1`. So the
                         // step happens at the promoted type, the same as a
                         // compound assignment above, and for the same reason.
-                        let stepped = self.promoted(builder, &place);
+                        let stepped = self.promoted(builder, id, &place, diagnostics)?;
                         builder.push(Operation {
                             place: Place::local(stepped),
                             value: Rvalue::Binary {
@@ -3702,13 +3708,36 @@ impl Lowering<'_> {
                 match Self::unmoved(self.unit.ty(ty), op, &lhs, &rhs) {
                     Some(unmoved) => values.push(unmoved),
                     None => {
-                        let into = builder.function.push_local(ty);
+                        // **At the type the operation is performed at**, which
+                        // is the result's but for a comparison: that is made
+                        // at the operands' common type (C17 6.3.1.8) and its
+                        // 0 or 1 converted to the `int` it is (6.5.8 p6).
+                        // An operation converts its operands to the type it
+                        // is written into, so `-1 < 1u` compares 4294967295
+                        // with 1. Mutation: compare at the result's type;
+                        // `minus_one_is_not_below_one_unsigned` answers 1.
+                        let at = match self.types.operated(id) {
+                            Some(at) => self.ty(span, at, diagnostics)?,
+                            None => ty,
+                        };
+                        let into = builder.function.push_local(at);
                         builder.push(Operation {
                             place: Place::local(into),
                             value: Rvalue::Binary { op, lhs, rhs },
                             origin: Origin::Written(span),
                         });
-                        values.push(Operand::Copy(Place::local(into)));
+                        let result = if at == ty {
+                            into
+                        } else {
+                            let result = builder.function.push_local(ty);
+                            builder.push(Operation {
+                                place: Place::local(result),
+                                value: Rvalue::Use(Operand::Copy(Place::local(into))),
+                                origin: Origin::Generated(span),
+                            });
+                            result
+                        };
+                        values.push(Operand::Copy(Place::local(result)));
                     }
                 }
             }
@@ -3723,7 +3752,7 @@ impl Lowering<'_> {
                     // IR and the addition is checked at the width C performs it
                     // at rather than at the width it is stored into.
                     Some(op) => {
-                        let computed = self.promoted(builder, &place);
+                        let computed = self.promoted(builder, id, &place, diagnostics)?;
                         builder.push(Operation {
                             place: Place::local(computed),
                             value: Rvalue::Binary {
@@ -4272,7 +4301,20 @@ impl Lowering<'_> {
     /// The whole place is asked about rather than its base local, because
     /// `*pp` on an `int **` is an `int *` and the operation happens at what
     /// the place holds.
-    fn promoted(&mut self, builder: &mut Builder, place: &Place) -> LocalId {
+    fn promoted(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        place: &Place,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<LocalId> {
+        // An integer is computed at the type the type check worked out:
+        // `E op E2`'s, the usual arithmetic conversions of the place's
+        // promoted type and the other operand's (C17 6.5.16.2 p3).
+        if let Some(at) = self.types.operated(id) {
+            let at = self.ty(self.ast.expr(id).span(), at, diagnostics)?;
+            return Some(builder.function.push_local(at));
+        }
         let ty = self
             .unit
             .place_ty(&builder.function, place)
@@ -4283,13 +4325,13 @@ impl Lowering<'_> {
         // nobody has added yet is not a number, and `error[E0004]` here is what
         // asks a fourth kind whether an operation on it happens at its own
         // type.
-        match self.unit.ty(ty) {
+        Some(match self.unit.ty(ty) {
             Ty::Pointer(_) => builder.function.push_local(ty),
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
-            }
-            | Ty::Void => {
+            } => unreachable!("the type check records what an integer is computed at"),
+            Ty::Void => {
                 let int = self.unit.push_type(Ty::INT);
                 builder.function.push_local(int)
             }
@@ -4299,7 +4341,7 @@ impl Lowering<'_> {
             Ty::Array { .. } => unreachable!(
                 "an array reached a compound assignment, `++` or `--`, which the type check refuses"
             ),
-        }
+        })
     }
 
     /// The local an identifier means.

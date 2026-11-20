@@ -412,39 +412,24 @@ of a parameter's own function type, may still go unnamed.
 ### What an integer constant is worth, and what type it is not
 
 The scan settles where a constant ends and stops there. `crates/safec-c/src/types.rs`
-is what reads it, because deciding the type needs the range of `int` and the
-scan is below the target. Three bases, C17 6.4.4.1 p1: a leading `0x` or `0X`
-is hexadecimal, a leading `0` is octal, and anything else is decimal, so `010`
-is eight. The suffixes of p1 are read far enough to reject a spelling C does not
-have, and then discarded.
+is what reads it, because deciding the type needs every integer type's range
+on the target and the scan is below the target (ADR-0119). Three bases, C17
+6.4.4.1 p1: a leading `0x` or `0X` is hexadecimal, a leading `0` is octal, and
+anything else is decimal, so `010` is eight.
 
-**Rejected, because there is no type to give them to.** 6.4.4.1 p5 asks for the
-first type in a list that holds the value, and the list is `int`,
-`unsigned int`, `long`, and so on. `crates/safec-c/src/ast.rs`'s `Type` has `Int`,
-`Char`, `Void` and the types derived from them, and
-`crates/safec-ir/src/target.rs`'s `Target` answers `int()` and `char()`. There
-is no `unsigned int` and no `long` for p5's table to select, so `int` is the
-only type a constant can get here, and a constant p5 would give any other is
-reported rather than read as an `int`.
+**The type is the first in p5's list that holds the value**, the list chosen
+by the suffix and by whether the constant is decimal: `2147483648` is a `long`
+where `long` is 64 bits and a `long long` where it is 32, `0xffffffff` is an
+`unsigned int`, and `3u` an `unsigned int`, so 6.3.1.8 makes `-6 / 3u` an
+unsigned division whose value is 1431655763. A value no type in its list holds
+is refused (6.4.4 p2).
 
-**A suffix is not decoration, which is why it is refused rather than dropped.**
-It decides what arithmetic on the constant means: 6.4.4.1 p5 makes `3u` an
-`unsigned int`, 6.3.1.8's conversions then make `-6 / 3u` an unsigned division,
-and its value is 1431655763 and not -2. An earlier version of this section said
-the suffix was read and then discarded, and priced the divergence entirely in
-refused programs; that was false, and what it left out was the expensive half.
-Discarding it compiled `-6 / 3u` to a signed division and `2147483647l + 1l` to
-a 32-bit `add nsw`, both silently. A refusal is visible and a wrongly-signed
-division is not.
-
-What the missing types cost is the rows below. Measured against
-`clang 20.1.6 --target=x86_64-unknown-linux-gnu`, as the tables above are.
+Measured against `clang 22.1.8 --target=x86_64-unknown-linux-gnu`, as the
+tables above are.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
-| `int x = 2147483648;` | `error[SC0305]` | accepts | accepts |
-| `int x = 1u;` | `error[SC0305]` | accepts | accepts |
-| `int x = 0L;` | `error[SC0305]` | accepts | accepts |
+| `int x = 18446744073709551616;` | `error[SC0305]` | error | error |
 | `int x = 1.5;` | `error[SC0305]` | accepts | accepts |
 | `int x = 09;` | `error[SC0106]` | error | error |
 | `int x = 1lL;` | `error[SC0106]` | error | error |
@@ -452,11 +437,10 @@ What the missing types cost is the rows below. Measured against
 | `int x = 0x1.8;` | `error[SC0106]` | error | error |
 | `int x = 0b101;` | `error[SC0106]` | accepts | error |
 
-**The first four are gaps and the rest are not.** `SC0305` says this compiler
-has no type for a constant C gives one to, which is what the paragraphs above
-are about; a floating constant is the same sentence with no floating type in
-it. `SC0106` says the spelling is not a constant at all, and `clang` refuses
-each of those too.
+**Only the floating constant is a gap.** `SC0305` for a value past every type
+in its list is the program's, and `clang` refuses it too; for a floating
+constant it is this compiler's, which has no floating type. `SC0106` says the
+spelling is not a constant at all, and `clang` refuses each of those too.
 
 The last four are where that line is easiest to draw wrongly, so each is
 measured rather than reasoned about. `1e` has an exponent with no digits and

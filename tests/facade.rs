@@ -11,7 +11,6 @@ use safec::c::parser::parse;
 use safec::c::preprocessor::preprocess;
 use safec::c::sema::resolve;
 use safec::c::types::check;
-use safec::ir::ir::{Rank, Sign};
 use safec::ir::print::dump_ir;
 use safec::ir::source::SourceMap;
 use safec::ir::target::Target;
@@ -34,14 +33,7 @@ fn a_program_reaches_every_part_through_the_facade_alone() {
     let tokens = preprocess(file, &tokens, target, &[], &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve(&sources, &ast, false, &mut diagnostics);
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
     let unit = lower(
         &sources,
         &ast,

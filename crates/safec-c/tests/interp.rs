@@ -15,7 +15,6 @@ use safec_c::lexer::lex;
 use safec_c::lowering::lower;
 use safec_c::parser::parse;
 use safec_c::preprocessor::preprocess;
-use safec_ir::ir::{Rank, Sign};
 // Renamed, because the interpreter has a `resolve` of its own and the two
 // answer different questions: one resolves a name, the other a place.
 use safec_c::sema::resolve as resolve_names;
@@ -48,14 +47,7 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
     let tokens = preprocess(file, &tokens, target, &[], &mut sources, &mut diagnostics);
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
     let unit = lower(
         &sources,
         &ast,
@@ -792,14 +784,7 @@ fn a_trap_points_at_what_stopped_it() {
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
     let unit = lower(
         &sources,
         &ast,
@@ -848,14 +833,7 @@ fn a_trap_on_a_call_points_at_the_call() {
     let mut ast = parse(&tokens, &sources, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, false, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
     let unit = lower(
         &sources,
         &ast,
@@ -1635,6 +1613,78 @@ fn a_discarded_dereference_is_not_a_read() {
     let answer =
         ran("int main(void) {\n    int x;\n    int *q;\n    q = &x;\n    *q;\n    return 0;\n}\n");
     assert_eq!(answer, Ok(Value::Int(0)));
+}
+
+/// C17 6.3.1.8: an `int` and an `unsigned int` meet at `unsigned int`, so
+/// `-1 < 1u` compares 4294967295 with 1 and is 0, and the same at `int`
+/// would be 1.
+///
+/// Mutation: give a comparison no common type, so the lowering compares at
+/// the `int` result; this answers 1. Mutation: answer the higher rank
+/// whatever the sign in `Checker::usual_of`; the comparison is signed and
+/// this answers 1. Mutation: convert no operand to the operation's type in
+/// the interpreter; the same.
+#[test]
+fn minus_one_is_not_below_one_unsigned() {
+    let text = "int main(void) {\n    return -1 < 1u;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(0)));
+}
+
+/// An `unsigned char` of 255 is promoted to `int` before it is added (C17
+/// 6.3.1.1 p2), so `c + 1` is 256, where an addition at the `unsigned char`
+/// would wrap to 0.
+///
+/// Mutation: promote nothing in `Checker::promoted_of`; the addition is at
+/// `unsigned char` and this answers 0.
+#[test]
+fn a_char_is_promoted_before_it_is_added() {
+    let text = "int main(void) {\n    unsigned char c = 255;\n    return c + 1;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(256)));
+}
+
+/// Whether `long` holds every `unsigned int` is the target's: on
+/// `x86_64-unknown-linux-gnu` it is 64 bits and does, so `-1L < 1u` is a
+/// signed comparison and 1; on `x86_64-pc-windows-msvc` it is 32 bits and
+/// does not, so both meet at `unsigned long` and it is 0 (C17 6.3.1.8). See
+/// ADR-0119.
+///
+/// Mutation: answer the signed type whenever its rank is higher, in
+/// `Checker::usual_of`, without asking the target; the Windows row answers
+/// 1.
+#[test]
+fn a_long_compared_with_an_unsigned_int_depends_on_the_target() {
+    let text =
+        "int main(void) {\n    long a = -1;\n    unsigned int b = 1;\n    return a < b;\n}\n";
+    assert_eq!(ran_for("x86_64-unknown-linux-gnu", text), Ok(Value::Int(1)));
+    assert_eq!(ran_for("x86_64-pc-windows-msvc", text), Ok(Value::Int(0)));
+}
+
+/// Unsigned arithmetic is modulo its range, never undefined (C17 6.2.5 p9),
+/// and an unsigned `>>`, `/` and `%` see no sign: `0u - 1` is the largest
+/// `unsigned int`, `>> 28` of it is 15, and `/` and `%` by 7 of 4294967290
+/// are 613566755 and 5, where a signed reading of -6 gives 0 and -6.
+///
+/// Mutation: hold an unsigned result to its range, as a signed one is, in
+/// the interpreter; the subtraction stops. Mutation: make the interpreter's
+/// conversion of an operand signed; `>>`, `/` and `%` answer the signed
+/// values.
+#[test]
+fn unsigned_arithmetic_is_modulo_and_sees_no_sign() {
+    let text = "int main(void) {\n    unsigned int u = 0;\n    unsigned int v = 4294967290u;\n    u = u - 1;\n    int r = 0;\n    if (u == 4294967295u) {\n        r = r + 1;\n    }\n    if (u >> 28 == 15) {\n        r = r + 2;\n    }\n    if (v / 7 == 613566755) {\n        r = r + 4;\n    }\n    if (v % 7 == 5) {\n        r = r + 8;\n    }\n    return r;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(1 + 2 + 4 + 8)));
+}
+
+/// A `switch` on an `unsigned int` compares at that type and converts each
+/// `case` value to it (C17 6.8.4.2 p5), so `case -1` is the largest
+/// `unsigned int` and matches 4294967295.
+///
+/// Mutation: compare at `int` in the lowering's dispatch; the controlling
+/// value is converted to -1 and the constant 4294967295 is not, and the
+/// `default` is taken.
+#[test]
+fn a_switch_on_an_unsigned_value_compares_at_its_type() {
+    let text = "int main(void) {\n    unsigned int u = 4294967295u;\n    switch (u) {\n    case -1:\n        return 1;\n    default:\n        return 2;\n    }\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(1)));
 }
 
 /// A string literal is an array, whose elements the interpreter does not

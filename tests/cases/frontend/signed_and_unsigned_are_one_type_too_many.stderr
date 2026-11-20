@@ -1,0 +1,7 @@
+error[SC0201]: cannot combine with previous `unsigned` declaration specifier
+   ╭─[ signed_and_unsigned_are_one_type_too_many.c:1:10 ]
+   │
+ 1 │ unsigned signed x;
+   │          ───┬──  
+   │             ╰──── C17 6.7.2 p2 lists no type with these specifiers
+───╯

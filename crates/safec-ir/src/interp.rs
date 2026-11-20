@@ -631,7 +631,21 @@ fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, 
                 | (BinOp::Eq | BinOp::Ne, _, Value::Pointer(_)) => {
                     Value::Int(compared(*op, &lhs, &rhs)?)
                 }
-                _ => Value::Int(binary(*op, integer(lhs)?, integer(rhs)?, ty)?),
+                _ => {
+                    // **Each operand is converted to the type the operation
+                    // is written into**, as the backend converts it, which is
+                    // the type C performs it at (C17 6.3.1.8): `-1 < 1u`
+                    // compares 4294967295 with 1. A shift's right operand is
+                    // a count and is not (6.5.7 p3). Mutation: convert
+                    // nothing; `minus_one_is_not_below_one_unsigned` answers 1.
+                    let at = |value: i128| ty.map_or(value, |ty| ty.convert(value));
+                    let left = at(integer(lhs)?);
+                    let right = match op {
+                        BinOp::Shl | BinOp::Shr => integer(rhs)?,
+                        _ => at(integer(rhs)?),
+                    };
+                    Value::Int(binary(*op, left, right, ty)?)
+                }
             }
         }
     })
