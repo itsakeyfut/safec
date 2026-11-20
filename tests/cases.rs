@@ -3807,6 +3807,11 @@ cases! {
         // Mutation: send every comparison's success past the body; this goes
         // silent.
         a_use_after_a_free_in_a_case_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local one `case` leaves unassigned is doubted where it is read,
+        // and the edge that left it so is named at that `case`'s value, not
+        // at the controlling expression. Mutation: give each comparison the
+        // controlling expression's span; the label moves. Found by review.
+        a_local_one_case_leaves_unassigned_names_that_case: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Duff's device: a `case` inside a loop of the body is a second way
         // into the loop, so the function is not read, `SC0415`.
         a_case_inside_a_loop_of_its_switch_leaves_the_function_unread: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -9019,8 +9024,10 @@ cases! {
         switch_statement: ["--emit", "ast"],
         // C17 6.8.4.2 p1 and p3: a pointer to switch on is `SC0306`, a `case`
         // value that is no constant `SC0317`, and a value twice or a second
-        // `default` `SC0321`, each at what is wrong. Mutation: drop any of
-        // the four; its report goes.
+        // `default` `SC0321`, each at what is wrong. A value whose evaluation
+        // overflows is said to have no value rather than to be no constant.
+        // Mutation: drop any of the four; its report goes. Ask `undefined`
+        // no more; the overflow is called no constant.
         a_switch_is_held_to_what_c_allows_in_it: ["--emit", "ast"],
         // A label defined twice is `SC0312`, and a `goto` to no label of its
         // function is `SC0301`, each at the name. Mutation: drop either

@@ -36,7 +36,7 @@ Function a_use_after_a_free_in_a_case_is_proved.c:3:5 "f"
       Binary "Eq"
         Copy "_4"
         Constant 1
-    Branch a_use_after_a_free_in_a_case_is_proved.c:5:13 written "bb7" "bb8"
+    Branch a_use_after_a_free_in_a_case_is_proved.c:6:10 written "bb7" "bb8"
       Copy "_6"
   Block "bb3"
     Operation a_use_after_a_free_in_a_case_is_proved.c:13:5 written

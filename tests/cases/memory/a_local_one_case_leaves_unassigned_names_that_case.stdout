@@ -1,0 +1,89 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_one_case_leaves_unassigned_names_that_case.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_local_one_case_leaves_unassigned_names_that_case.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int *" "p"
+  Local "_3" "int"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:5:13 generated
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:5:13 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:6:10 generated
+      Destination "_7"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_local_one_case_leaves_unassigned_names_that_case.c:6:10 written "bb7" "bb8"
+      Copy "_7"
+  Block "bb2"
+    ArgumentsEvaluated a_local_one_case_leaves_unassigned_names_that_case.c:14:5 generated
+    Call a_local_one_case_leaves_unassigned_names_that_case.c:14:5 written "free" "bb12"
+      Copy "_2"
+  Block "bb3"
+    ArgumentsEvaluated a_local_one_case_leaves_unassigned_names_that_case.c:7:13 generated
+    Call a_local_one_case_leaves_unassigned_names_that_case.c:7:13 written "malloc" "bb4"
+      Destination "_4"
+      Constant 4
+  Block "bb4"
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:7:9 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:7:9 generated
+    Goto "bb2"
+  Block "bb5"
+    Goto "bb2"
+  Block "bb6"
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:12:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:12:9 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:12:9 generated
+    Goto "bb2"
+  Block "bb7"
+    Goto "bb3"
+  Block "bb8"
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:9:10 generated
+      Destination "_8"
+      Binary "Eq"
+        Copy "_3"
+        Constant 5
+    Branch a_local_one_case_leaves_unassigned_names_that_case.c:9:10 written "bb9" "bb10"
+      Copy "_8"
+  Block "bb9"
+    Goto "bb5"
+  Block "bb10"
+    Goto "bb11"
+  Block "bb11"
+    Goto "bb6"
+  Block "bb12"
+    Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:14:5 generated
+    Operation a_local_one_case_leaves_unassigned_names_that_case.c:15:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:15:12 generated
+    Return

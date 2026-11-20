@@ -2156,6 +2156,12 @@ impl Lowering<'_> {
     /// label has open known; the block before the body ends with a jump to
     /// it. Every comparison is at `int`, the promoted type of every value
     /// this compiler reads (p5).
+    ///
+    /// A `null` test written as the controlling expression refines a pointer
+    /// only through the first comparison: the nullability check walks back
+    /// from a `Branch` across `Goto`s alone, and every later comparison is
+    /// reached through one. That is a doubt it could have spared, not one it
+    /// misses.
     fn switch(
         &mut self,
         builder: &mut Builder,
@@ -2212,11 +2218,16 @@ impl Lowering<'_> {
                         origin: Origin::Generated(self.ast.expr(*value).span()),
                     });
                     let next = builder.function.reserve_block();
+                    // **At the `case` value, not the controlling expression**:
+                    // what decides this edge is whether the value is this
+                    // one, and a report that names the edge, "when this is
+                    // true", has to point where that reads true. Found by
+                    // review.
                     builder.end(Terminator::Branch {
                         condition: Operand::Copy(Place::local(equal)),
                         then: pad,
                         otherwise: next,
-                        origin: Origin::Written(asked),
+                        origin: Origin::Written(self.ast.expr(*value).span()),
                     });
                     builder.switch(next);
                 }
