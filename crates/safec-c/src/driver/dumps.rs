@@ -385,6 +385,7 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
             child(*body, out);
             dump_expr(sources, ast, *condition, depth + 1, out);
         }
+        Stmt::Break { .. } | Stmt::Continue { .. } => out.push('\n'),
         Stmt::For {
             start,
             condition,

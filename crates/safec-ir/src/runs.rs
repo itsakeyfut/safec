@@ -54,13 +54,16 @@ impl ShownToRun {
 /// - one edge into the head from outside the loop, so "on the way in" is one
 ///   path's answer and not a join this would have to take;
 /// - one latch, so every turn that comes round ends at the same block: a
-///   second back edge leaving the body early, a `continue`, carries a turn
-///   that did not finish;
+///   second back edge leaving the body early, a `continue` in a `while`,
+///   carries a turn that did not finish. A `continue` in a `for` goes to the
+///   step and adds no latch, and needs none: the turn it ends is joined into
+///   what the one latch sends, which is what
+///   `a_write_a_continue_may_skip_in_a_loop_shown_to_run_is_doubted_after_it`
+///   holds;
 /// - no edge leaving the loop from inside its body reaches where the head's
 ///   test leaves it, so the only way past the loop is the head's own test on a
 ///   later turn: a `break` reaching that block on the first turn would carry
-///   the skipped write past it. The only way out of a body today is a
-///   `return`, the frontend reading neither `break` nor `goto` yet;
+///   the skipped write past it;
 /// - the head's test is true on the way in, by [`head_test`].
 pub(crate) fn shown_to_run(
     unit: &TranslationUnit,

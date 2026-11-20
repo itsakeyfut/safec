@@ -4,9 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is `switch`, `goto`, a labelled statement,
-//! `break`, `continue`, `union`, a bit-field, an anonymous member, casts,
+//! with `break` and `continue` from 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is `switch`, `goto`, a labelled statement, `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
@@ -391,8 +390,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
         Keyword::Switch => ("`switch`", "6.8.4.2", STATEMENT),
         Keyword::Goto => ("`goto`", "6.8.6.1", STATEMENT),
-        Keyword::Continue => ("`continue`", "6.8.6.2", STATEMENT),
-        Keyword::Break => ("`break`", "6.8.6.3", STATEMENT),
         Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
         Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
         Keyword::Static => ("`static`", "6.7.1", STORAGE),
@@ -584,6 +581,7 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         budget: tokens.len() + 1,
         depth: 0,
         loops: 0,
+        switches: 0,
     }
     .run(diagnostics)
 }
@@ -629,11 +627,13 @@ struct Parser<'a> {
     depth: usize,
     /// How many `while`, `do` and `for` bodies are being read right now.
     ///
-    /// C17 6.8.6.2 p1 and 6.8.6.3 p1 allow `continue` only in a loop body and
-    /// `break` only in a loop or `switch` body, and this parser reads no
-    /// `switch`. So outside a loop either one is not C, and is not reported as
-    /// C this parser does not read.
+    /// C17 6.8.6.2 p1 allows `continue` only in a loop body, and 6.8.6.3 p1
+    /// `break` only in a loop or `switch` body. See [`Parser::jump_statement`].
     loops: usize,
+    /// How many `switch` bodies are being read right now, which this parser
+    /// reads none of yet, so this stays 0 until it does. Here so that the
+    /// test for where `break` may stand is written once, with both.
+    switches: usize,
 }
 
 impl Parser<'_> {
@@ -2020,6 +2020,12 @@ impl Parser<'_> {
             return self.do_statement(start, diagnostics);
         }
 
+        if self.check(TokenKind::Keyword(Keyword::Break))
+            || self.check(TokenKind::Keyword(Keyword::Continue))
+        {
+            return self.jump_statement(start, diagnostics);
+        }
+
         // A statement C allows here that this parser does not read: a keyword
         // that begins one, or a label.
         if self.refuse_unread(Position::Statement, diagnostics) {
@@ -2130,6 +2136,47 @@ impl Parser<'_> {
             },
             |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
         )
+    }
+
+    /// `break ;` or `continue ;`, C17 6.8.6 p1, where 6.8.6.2 p1 and 6.8.6.3
+    /// p1 allow it: `continue` in a loop body, `break` in a loop or `switch`
+    /// body, however deeply nested.
+    ///
+    /// Anywhere else it is a constraint violation, reported at the keyword in
+    /// clang's words under [`EXPECTED`], which is the code `break` outside a
+    /// loop had while this parser read neither.
+    fn jump_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let breaks = self.check(TokenKind::Keyword(Keyword::Break));
+        let misplaced = if breaks {
+            (self.loops + self.switches == 0).then_some((
+                "`break` is not in a loop or a `switch`",
+                "C17 6.8.6.3 p1 allows `break` only in a loop or a `switch`",
+            ))
+        } else {
+            (self.loops == 0).then_some((
+                "`continue` is not in a loop",
+                "C17 6.8.6.2 p1 allows `continue` only in a loop",
+            ))
+        };
+        if let Some((message, label)) = misplaced {
+            self.report(message, label, diagnostics);
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+        self.advance();
+
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        let span = self.join(start, self.previous().span, diagnostics);
+        self.ast.push_stmt(if breaks {
+            Stmt::Break { span }
+        } else {
+            Stmt::Continue { span }
+        })
     }
 
     /// `do statement while ( expression ) ;`. C17 6.8.5 p1.
@@ -2856,9 +2903,6 @@ impl Parser<'_> {
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
         let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {
-            // Outside a loop, C17 6.8.6.2 p1 and 6.8.6.3 p1 forbid them; see
-            // `loops`.
-            TokenKind::Keyword(Keyword::Break | Keyword::Continue) if self.loops == 0 => None,
             // 6.8.6.1's `goto identifier ;`: anything else after it is not C.
             TokenKind::Keyword(Keyword::Goto) if next != TokenKind::Identifier => None,
             TokenKind::Keyword(Keyword::Atomic) if next == TokenKind::Punct(Punct::LeftParen) => {

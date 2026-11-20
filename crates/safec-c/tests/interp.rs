@@ -155,6 +155,76 @@ fn a_do_loop_asks_after_every_turn() {
     assert_eq!(counted, Ok(Value::Int(3)));
 }
 
+/// `break` leaves the innermost loop and no other. C17 6.8.6.3 p2.
+///
+/// Mutation: send `break` to the outermost entry of `Lowering::targets`; this
+/// fails.
+#[test]
+fn break_leaves_the_innermost_loop() {
+    let counted = ran(
+        "int main(void) {\n    int n;\n    int i;\n    int j;\n    n = 0;\n    for (i = 0; i < 3; i = i + 1) {\n        for (j = 0; j < 3; j = j + 1) {\n            if (j == 2) break;\n            n = n + 1;\n        }\n    }\n    return n;\n}\n",
+    );
+    assert_eq!(counted, Ok(Value::Int(6)));
+}
+
+/// `continue` in a `for` runs the step before the next turn. C17 6.8.6.2 p2,
+/// whose `contin:` label sits before the step.
+///
+/// Mutation: send a `for`'s `continue` to its header rather than its step;
+/// this fails.
+#[test]
+fn continue_in_a_for_runs_the_step() {
+    let counted = ran(
+        "int main(void) {\n    int n;\n    int i;\n    n = 0;\n    for (i = 0; i < 5; i = i + 1) {\n        if (i == 2) continue;\n        n = n + 1;\n    }\n    return n;\n}\n",
+    );
+    assert_eq!(counted, Ok(Value::Int(4)));
+}
+
+/// `continue` in a `do` asks the condition, and in a `while` the header,
+/// before another turn.
+///
+/// Mutation: send a `continue` to where the loop is left; this fails.
+#[test]
+fn continue_asks_the_condition_again() {
+    let in_do = ran(
+        "int main(void) {\n    int n;\n    n = 0;\n    do {\n        n = n + 1;\n        continue;\n    } while (n < 3);\n    return n;\n}\n",
+    );
+    assert_eq!(in_do, Ok(Value::Int(3)));
+    let in_while = ran(
+        "int main(void) {\n    int n;\n    n = 0;\n    while (n < 3) {\n        n = n + 1;\n        continue;\n    }\n    return n;\n}\n",
+    );
+    assert_eq!(in_while, Ok(Value::Int(3)));
+}
+
+/// A `break` ends the storage of every scope it leaves, and a `continue`
+/// every scope it leaves for the next turn. Each stops a run that reads
+/// through a pointer to a local of the body afterwards.
+///
+/// The `continue` is read in the step, which comes after the body's scope has
+/// ended and before the next turn begins it again, so nothing but the
+/// `continue` ends it there.
+///
+/// Mutation: have `leave_scopes` start one scope deeper than the target's
+/// depth, so a jump out of a loop body ends nothing; this fails.
+#[test]
+fn a_jump_out_of_a_loop_body_ends_its_storage() {
+    let broken = ran(
+        "int main(void) {\n    int *p;\n    while (1) {\n        int x;\n        x = 1;\n        p = &x;\n        break;\n    }\n    return *p;\n}\n",
+    );
+    let Err(trap) = broken else {
+        panic!("a read of storage a `break` ended: {broken:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+
+    let continued = ran(
+        "int main(void) {\n    int *p;\n    int n;\n    for (n = 0; n < 1; n = n + *p) {\n        int x;\n        x = 1;\n        p = &x;\n        continue;\n    }\n    return n;\n}\n",
+    );
+    let Err(trap) = continued else {
+        panic!("a read of storage a `continue` ended: {continued:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.

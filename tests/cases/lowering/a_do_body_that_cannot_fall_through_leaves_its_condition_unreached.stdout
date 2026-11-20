@@ -12,12 +12,12 @@ Function a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:1:5
     Sequenced a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:3:16 generated
     Return
   Block "bb2"
-    Branch a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:4:14 written "bb3" "bb4"
+    Branch a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:4:14 written "bb4" "bb3"
       Copy "_1"
         Deref
   Block "bb3"
     Sequenced a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:4:14 generated
-    Goto "bb1"
+    Return
   Block "bb4"
     Sequenced a_do_body_that_cannot_fall_through_leaves_its_condition_unreached.c:4:14 generated
-    Return
+    Goto "bb1"

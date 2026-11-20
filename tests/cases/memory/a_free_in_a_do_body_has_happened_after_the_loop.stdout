@@ -24,17 +24,11 @@ Function a_free_in_a_do_body_has_happened_after_the_loop.c:3:5 "f"
     Goto "bb2"
   Block "bb2"
     ArgumentsEvaluated a_free_in_a_do_body_has_happened_after_the_loop.c:5:10 generated
-    Call a_free_in_a_do_body_has_happened_after_the_loop.c:5:10 written "free" "bb3"
+    Call a_free_in_a_do_body_has_happened_after_the_loop.c:5:10 written "free" "bb5"
       Copy "_1"
   Block "bb3"
-    Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:5:10 generated
     Goto "bb4"
   Block "bb4"
-    Goto "bb6"
-  Block "bb5"
-    Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:5:28 generated
-    Goto "bb2"
-  Block "bb6"
     Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:5:28 generated
     Operation a_free_in_a_do_body_has_happened_after_the_loop.c:6:5 written
       Destination "_1"
@@ -53,3 +47,9 @@ Function a_free_in_a_do_body_has_happened_after_the_loop.c:3:5 "f"
         Constant 0
     Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:7:12 generated
     Return
+  Block "bb5"
+    Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:5:10 generated
+    Goto "bb3"
+  Block "bb6"
+    Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:5:28 generated
+    Goto "bb2"

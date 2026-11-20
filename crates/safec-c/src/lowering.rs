@@ -186,6 +186,32 @@ fn decided(
     }
 }
 
+/// Where a `break` and a `continue` inside one loop go. C17 6.8.6.2 and
+/// 6.8.6.3.
+struct Jumps {
+    /// Where the loop is left: the block its condition leaves it for, whose
+    /// sequence point a `break` passes with nothing pending, since a `break`
+    /// is a statement and the one before it ended a full expression.
+    broken: BlockId,
+    /// Where the next turn begins.
+    continued: Continued,
+    /// How many scopes were open where the loop began, so that a jump out of
+    /// its body ends every scope opened since and none before.
+    depth: usize,
+}
+
+/// Where a `continue` goes, which for a `for` is a block nobody may need.
+enum Continued {
+    /// A block that is written whatever happens: the header of a `while`, the
+    /// condition of a `do`.
+    To(BlockId),
+    /// The step of a `for`, reserved by the first `continue` that needs it.
+    /// Reserved up front, a loop whose body cannot fall through and holds no
+    /// `continue` would leave a block reserved and never written, which
+    /// [`Function::blocks`] refuses.
+    Step(Option<BlockId>),
+}
+
 /// End the storage of the locals one scope declared, where it closes.
 ///
 /// Reverse order of declaration, which is the order a C++ destructor would run
@@ -244,6 +270,7 @@ pub fn lower(
         unit: TranslationUnit::new(target),
         locals: HashMap::new(),
         scopes: Vec::new(),
+        targets: Vec::new(),
         functions: HashMap::new(),
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
@@ -284,6 +311,13 @@ struct Lowering<'a> {
     /// declared in the body itself lives exactly as long as the frame, which
     /// every consumer already knows, and ADR-0012 argues why that is enough.
     scopes: Vec<Vec<LocalId>>,
+    /// Where a `break` and a `continue` go, innermost loop last.
+    ///
+    /// Pushed by each loop around its body and popped on every path out of
+    /// it, lowered or not, as [`Lowering::scopes`] is: a target left behind
+    /// by a body that failed would send a `break` in the next function into a
+    /// block of this one.
+    targets: Vec<Jumps>,
     /// Which function a name at file scope became, keyed by the name itself.
     ///
     /// Not by span, the way a local is: a prototype and the definition that
@@ -1719,14 +1753,7 @@ impl Lowering<'_> {
                 // and this statement is why the storage ends. The function's
                 // own body is the first scope and holds nothing, so no depth
                 // test is needed. See ADR-0012.
-                for scope in self.scopes.iter().rev() {
-                    for &local in scope.iter().rev() {
-                        builder.element(Element::StorageDead {
-                            origin: Origin::Generated(span),
-                            local,
-                        });
-                    }
-                }
+                self.leave_scopes(builder, 0, span);
                 builder.end(Terminator::Return);
             }
             Stmt::Declaration { declarators, .. } => {
@@ -1852,6 +1879,33 @@ impl Lowering<'_> {
 
                 builder.switch(join);
             }
+            Stmt::Break { span } => {
+                let span = *span;
+                let target = self
+                    .targets
+                    .last()
+                    .expect("the parser reads a `break` only in a loop");
+                let (to, depth) = (target.broken, target.depth);
+                self.leave_scopes(builder, depth, span);
+                builder.end(Terminator::Goto(to));
+            }
+            Stmt::Continue { span } => {
+                let span = *span;
+                let target = self
+                    .targets
+                    .last_mut()
+                    .expect("the parser reads a `continue` only in a loop");
+                let depth = target.depth;
+                let to = match &mut target.continued {
+                    Continued::To(to) => *to,
+                    Continued::Step(Some(step)) => *step,
+                    Continued::Step(reserved @ None) => {
+                        *reserved.insert(builder.function.reserve_block())
+                    }
+                };
+                self.leave_scopes(builder, depth, span);
+                builder.end(Terminator::Goto(to));
+            }
             Stmt::While {
                 condition, body, ..
             } => {
@@ -1878,7 +1932,12 @@ impl Lowering<'_> {
                 ));
 
                 builder.enter(inside, Some(asked));
-                self.stmt(builder, body, diagnostics)?;
+                let target = Jumps {
+                    broken: after,
+                    continued: Continued::To(header),
+                    depth: self.scopes.len(),
+                };
+                self.looped(builder, body, target, diagnostics).0?;
                 if builder.reachable() {
                     builder.end(Terminator::Goto(header));
                 }
@@ -1893,8 +1952,16 @@ impl Lowering<'_> {
                 builder.end(Terminator::Goto(top));
 
                 builder.switch(top);
-                self.stmt(builder, body, diagnostics)?;
+                // Before the body, which a `continue` or a `break` in it
+                // reaches.
                 let test = builder.function.reserve_block();
+                let after = builder.function.reserve_block();
+                let target = Jumps {
+                    broken: after,
+                    continued: Continued::To(test),
+                    depth: self.scopes.len(),
+                };
+                self.looped(builder, body, target, diagnostics).0?;
                 if builder.reachable() {
                     builder.end(Terminator::Goto(test));
                 }
@@ -1907,7 +1974,6 @@ impl Lowering<'_> {
                 let constant = self.constant_expression(condition);
                 let condition = self.value(builder, condition, diagnostics)?;
                 let again = builder.function.reserve_block();
-                let after = builder.function.reserve_block();
                 builder.end(decided(
                     condition,
                     constant,
@@ -1959,6 +2025,45 @@ impl Lowering<'_> {
         }
 
         Some(())
+    }
+
+    /// A loop's body, lowered with `target` the innermost, and what became of
+    /// the target's `continue` block.
+    ///
+    /// The target is popped whether or not the body could be lowered, for the
+    /// reason [`Lowering::targets`] gives, so a caller applies `?` only to
+    /// what this returns.
+    fn looped(
+        &mut self,
+        builder: &mut Builder,
+        body: StmtId,
+        target: Jumps,
+        diagnostics: &mut DiagnosticSink,
+    ) -> (Option<()>, Continued) {
+        self.targets.push(target);
+        let lowered = self.stmt(builder, body, diagnostics);
+        let target = self.targets.pop().expect("the target this pushed");
+        (lowered, target.continued)
+    }
+
+    /// End the storage of every local in a scope deeper than `depth`, where
+    /// control leaves them all at once: a `return`, a `break` or a
+    /// `continue`.
+    ///
+    /// Innermost first, in the order the `Compound` arm closes one, and
+    /// `Generated` at `span`, the statement that leaves: control never
+    /// reaches those braces, and this statement is why the storage ends. The
+    /// body of the function is the first scope and holds nothing, so the depth
+    /// of 0 a `return` passes needs no test. See ADR-0012.
+    fn leave_scopes(&self, builder: &mut Builder, depth: usize, span: Span) {
+        for scope in self.scopes[depth..].iter().rev() {
+            for &local in scope.iter().rev() {
+                builder.element(Element::StorageDead {
+                    origin: Origin::Generated(span),
+                    local,
+                });
+            }
+        }
     }
 
     /// The blocks of a `for` from its first clause to where it is left, with
@@ -2016,7 +2121,28 @@ impl Lowering<'_> {
         }
 
         builder.enter(inside, asked);
-        self.stmt(builder, body, diagnostics)?;
+        let target = Jumps {
+            broken: after,
+            continued: Continued::Step(None),
+            depth: self.scopes.len(),
+        };
+        let (lowered, continued) = self.looped(builder, body, target, diagnostics);
+        lowered?;
+        // The step runs after a turn that fell through and after one a
+        // `continue` ended (C17 6.8.5.3 p1, 6.8.6.2 p2). Where a `continue`
+        // reserved a block for it, both arrive there; where none did, it is
+        // written where the body ended, so a loop with no `continue` lowers
+        // to what it did before there was one.
+        let reserved = match continued {
+            Continued::Step(reserved) => reserved,
+            Continued::To(_) => unreachable!("a `for` continues to its step"),
+        };
+        if let Some(stepped) = reserved {
+            if builder.reachable() {
+                builder.end(Terminator::Goto(stepped));
+            }
+            builder.switch(stepped);
+        }
         if builder.reachable() {
             if let Some(step) = step {
                 self.effect(builder, step, diagnostics)?;

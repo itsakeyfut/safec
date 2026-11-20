@@ -33,9 +33,25 @@ Function a_use_after_a_free_in_a_do_body_is_reported.c:3:5 "f"
     Goto "bb2"
   Block "bb2"
     ArgumentsEvaluated a_use_after_a_free_in_a_do_body_is_reported.c:7:9 generated
-    Call a_use_after_a_free_in_a_do_body_is_reported.c:7:9 written "free" "bb3"
+    Call a_use_after_a_free_in_a_do_body_is_reported.c:7:9 written "free" "bb5"
       Copy "_1"
   Block "bb3"
+    Operation a_use_after_a_free_in_a_do_body_is_reported.c:10:14 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_3"
+        Constant 3
+    Branch a_use_after_a_free_in_a_do_body_is_reported.c:10:14 written "bb6" "bb4"
+      Copy "_7"
+  Block "bb4"
+    Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:10:14 generated
+    Operation a_use_after_a_free_in_a_do_body_is_reported.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:11:12 generated
+    Return
+  Block "bb5"
     Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:7:9 generated
     Operation a_use_after_a_free_in_a_do_body_is_reported.c:8:9 written
       Destination "_1"
@@ -62,23 +78,7 @@ Function a_use_after_a_free_in_a_do_body_is_reported.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:9:9 generated
-    Goto "bb4"
-  Block "bb4"
-    Operation a_use_after_a_free_in_a_do_body_is_reported.c:10:14 written
-      Destination "_7"
-      Binary "Lt"
-        Copy "_3"
-        Constant 3
-    Branch a_use_after_a_free_in_a_do_body_is_reported.c:10:14 written "bb5" "bb6"
-      Copy "_7"
-  Block "bb5"
-    Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:10:14 generated
-    Goto "bb2"
+    Goto "bb3"
   Block "bb6"
     Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:10:14 generated
-    Operation a_use_after_a_free_in_a_do_body_is_reported.c:11:5 written
-      Destination "_0"
-      Use
-        Constant 0
-    Sequenced a_use_after_a_free_in_a_do_body_is_reported.c:11:12 generated
-    Return
+    Goto "bb2"
