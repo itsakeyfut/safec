@@ -294,6 +294,7 @@ pub fn lower(
         scopes: Vec::new(),
         next_scope: 0,
         landings: HashMap::new(),
+        labeled: false,
         targets: Vec::new(),
         functions: HashMap::new(),
         prototypes: HashMap::new(),
@@ -341,6 +342,10 @@ struct Lowering<'a> {
     /// Where each labelled statement lowered so far, or named by a `goto`
     /// before it was, begins. See ADR-0114.
     landings: HashMap<StmtId, Landing>,
+    /// Whether the function being lowered has had a label lowered yet, which
+    /// is whether a declaration lowered now can be reached again by a
+    /// backward `goto`. See the `Declaration` arm.
+    labeled: bool,
     /// Where a `break` and a `continue` go, innermost loop last.
     ///
     /// Pushed by each loop around its body and popped on every path out of
@@ -1399,6 +1404,7 @@ impl Lowering<'_> {
             elements: Vec::new(),
         };
         builder.open();
+        self.labeled = false;
         self.lengths(&mut builder, &parameters, diagnostics)?;
 
         // C17 5.1.2.2.3 p1: reaching the `}` that terminates `main` returns
@@ -1804,9 +1810,22 @@ impl Lowering<'_> {
                         // Only a scope narrower than the function's own body. The
                         // first entry is the body, and ADR-0012 says why a local
                         // that lives as long as the frame needs no marker.
-                        if self.scopes.len() > 1 {
+                        //
+                        // **Except where a label comes before it**: a backward
+                        // `goto` can then reach the declaration a second time,
+                        // and C17 6.2.4 p6 makes the value indeterminate each
+                        // time it is reached. Without the marker the value of
+                        // the last pass was carried round and read as if it
+                        // were still there, a free of it built in silence.
+                        // Marked, and not added to the body's scope, so that
+                        // no jump and no `return` ends a frame's local. Found
+                        // by review. See ADR-0114.
+                        let narrower = self.scopes.len() > 1;
+                        if narrower {
                             let scope = self.scopes.last_mut().expect("a scope is open");
                             scope.declared.push(local);
+                        }
+                        if narrower || self.labeled {
                             // Generated for the same reason as the closing half:
                             // the declaration is what this exists because of, and
                             // is not itself an instruction to begin storage that
@@ -1960,6 +1979,7 @@ impl Lowering<'_> {
             }
             Stmt::Labeled { body, .. } => {
                 let body = *body;
+                self.labeled = true;
                 let block = self.landing(builder, id).block;
                 if builder.reachable() {
                     builder.end(Terminator::Goto(block));

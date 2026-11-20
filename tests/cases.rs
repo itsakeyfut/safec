@@ -3796,6 +3796,13 @@ cases! {
         // read. Mutation: resolve a `goto` to the label it names rather than
         // the outermost of a stack; this is `SC0415`. Found by review.
         stacked_labels_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration in the body itself, reached a second time by a
+        // backward `goto`, makes its value indeterminate again (C17 6.2.4 p6),
+        // so the `free` reads a pointer nothing assigned on this pass.
+        // Mutation: begin a body local's storage only in a scope narrower
+        // than the body, as before labels; this builds in silence. Found by
+        // review.
+        a_body_declaration_a_backward_goto_reaches_again_is_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter

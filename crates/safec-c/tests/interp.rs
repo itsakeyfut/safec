@@ -273,6 +273,23 @@ fn a_goto_past_a_declaration_begins_only_what_it_skips() {
     assert_eq!(skipped, Ok(Value::Int(6)));
 }
 
+/// A `goto` from one block into a sibling ends what the first declared and
+/// begins what the second declared before the label: the two are at one
+/// depth and are not one scope.
+///
+/// Mutation: match a jump's scopes by depth rather than by id in `jump`; `x`
+/// is not ended, and the read through `p` answers 1. Found by review.
+#[test]
+fn a_goto_between_sibling_blocks_ends_one_and_begins_the_other() {
+    let crossed = ran(
+        "int main(void) {\n    int *p;\n    {\n        int x;\n        x = 1;\n        p = &x;\n        goto in;\n    }\n    {\n        int y;\n    in:\n        y = *p;\n        return y;\n    }\n}\n",
+    );
+    let Err(trap) = crossed else {
+        panic!("a read of storage a jump to a sibling block ended: {crossed:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
 /// A `goto` out of a block ends the storage of what it leaves, as the
 /// block's closing brace would have.
 ///

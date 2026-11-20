@@ -54,7 +54,11 @@ Chosen option: "the jump's own edge", by the owner's decision on #616.
 * The markers are `Generated` at the jump, as a `return`'s are: the jump is the
   reason the storage ends or begins, and nobody wrote a marker.
 * A declaration still begins its local's storage where it is, on the path that
-  reaches it. A backward jump over a declaration in the same block leaves the
+  reaches it. One in the body of the function itself, which ADR-0012 leaves
+  unmarked because it lives as long as the frame, is marked too once a label
+  has come before it in the function: a backward `goto` can then reach it a
+  second time, and unmarked its last value was carried round as if the
+  declaration had not been reached. It is not ended by any jump or `return`. A backward jump over a declaration in the same block leaves the
   local alive and passes the declaration again, so the marker runs again where
   C says only that the value "becomes indeterminate each time the declaration
   is reached". That keeps what is read right, an indeterminate value, and is
@@ -74,6 +78,11 @@ not begun and on a read of storage that has ended or holds nothing:
   whole list rather than what was declared past the jump.
 * `a_goto_out_of_a_block_ends_what_it_leaves` fails when it ends nothing in a
   scope only the `goto` has open.
+* `a_goto_between_sibling_blocks_ends_one_and_begins_the_other` fails when
+  scopes are matched by depth rather than by id.
+* `a_body_declaration_a_backward_goto_reaches_again_is_indeterminate`, in the
+  corpus, is built in silence when a declaration in the body of the function
+  is left unmarked after a label.
 
 The memory check does not ask whether storage is alive, which is the lifetime
 level's question, but it does read a `StorageLive` as a new object holding
