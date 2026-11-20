@@ -474,9 +474,9 @@ fn enter(
     // A nested one is therefore `Unwritten` rather than `Dead` until its scope
     // has opened and closed once, which is a more permissive start than the IR
     // strictly says and is unobservable: C17 6.2.1 p7 starts a name's scope at
-    // its declarator, so nothing can name the local before the `StorageLive`
-    // that follows it. `goto` into a block is what ends that, and ADR-0012
-    // names it as the change this moves with.
+    // its declarator, so nothing can name the local before a `StorageLive`. A
+    // `goto` into a block, which skips the declaration, carries one of its
+    // own on its edge (ADR-0114), so this still holds.
     let mut locals: Vec<Slot> = function.locals().map(|_| Slot::Unwritten).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
         // C17 6.5.2.2 p7: for a prototyped function "the arguments are

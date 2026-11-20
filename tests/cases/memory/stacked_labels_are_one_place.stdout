@@ -1,0 +1,114 @@
+Target "x86_64-pc-windows-msvc"
+Function stacked_labels_are_one_place.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function stacked_labels_are_one_place.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function stacked_labels_are_one_place.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "int *" "q"
+  Local "_5" "int *" "r"
+  Local "_6" "int"
+  Local "_7" "int *" "s"
+  Local "_8" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated stacked_labels_are_one_place.c:4:14 generated
+    Call stacked_labels_are_one_place.c:4:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation stacked_labels_are_one_place.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced stacked_labels_are_one_place.c:4:14 generated
+    StorageLive stacked_labels_are_one_place.c:6:9 generated "_4"
+    Operation stacked_labels_are_one_place.c:6:14 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced stacked_labels_are_one_place.c:6:18 generated
+    Branch stacked_labels_are_one_place.c:7:13 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced stacked_labels_are_one_place.c:7:13 generated
+    Goto "bb6"
+  Block "bb3"
+    Sequenced stacked_labels_are_one_place.c:7:13 generated
+    Goto "bb4"
+  Block "bb4"
+    StorageLive stacked_labels_are_one_place.c:9:13 generated "_5"
+    Operation stacked_labels_are_one_place.c:9:18 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    Sequenced stacked_labels_are_one_place.c:9:22 generated
+    Operation stacked_labels_are_one_place.c:10:17 written
+      Destination "_6"
+      Binary "Gt"
+        Copy "_1"
+        Constant 1
+    Branch stacked_labels_are_one_place.c:10:17 written "bb7" "bb8"
+      Copy "_6"
+  Block "bb5"
+    Goto "bb12"
+  Block "bb6"
+    StorageDead stacked_labels_are_one_place.c:7:16 generated "_4"
+    Goto "bb5"
+  Block "bb7"
+    Sequenced stacked_labels_are_one_place.c:10:17 generated
+    Goto "bb10"
+  Block "bb8"
+    Sequenced stacked_labels_are_one_place.c:10:17 generated
+    Goto "bb9"
+  Block "bb9"
+    ArgumentsEvaluated stacked_labels_are_one_place.c:11:13 generated
+    Call stacked_labels_are_one_place.c:11:13 written "free" "bb11"
+      Copy "_5"
+  Block "bb10"
+    StorageDead stacked_labels_are_one_place.c:10:24 generated "_5"
+    StorageDead stacked_labels_are_one_place.c:10:24 generated "_4"
+    Goto "bb5"
+  Block "bb11"
+    Sequenced stacked_labels_are_one_place.c:11:13 generated
+    StorageDead stacked_labels_are_one_place.c:12:9 generated "_5"
+    StorageDead stacked_labels_are_one_place.c:13:5 generated "_4"
+    Goto "bb5"
+  Block "bb12"
+    StorageLive stacked_labels_are_one_place.c:18:9 generated "_7"
+    Operation stacked_labels_are_one_place.c:18:14 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced stacked_labels_are_one_place.c:18:18 generated
+    Operation stacked_labels_are_one_place.c:19:13 written
+      Destination "_8"
+      Binary "Gt"
+        Copy "_1"
+        Constant 2
+    Branch stacked_labels_are_one_place.c:19:13 written "bb13" "bb14"
+      Copy "_8"
+  Block "bb13"
+    Sequenced stacked_labels_are_one_place.c:19:13 generated
+    StorageDead stacked_labels_are_one_place.c:19:20 generated "_7"
+    Goto "bb5"
+  Block "bb14"
+    Sequenced stacked_labels_are_one_place.c:19:13 generated
+    Goto "bb15"
+  Block "bb15"
+    ArgumentsEvaluated stacked_labels_are_one_place.c:20:9 generated
+    Call stacked_labels_are_one_place.c:20:9 written "free" "bb16"
+      Copy "_7"
+  Block "bb16"
+    Sequenced stacked_labels_are_one_place.c:20:9 generated
+    StorageDead stacked_labels_are_one_place.c:21:5 generated "_7"
+    Operation stacked_labels_are_one_place.c:22:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced stacked_labels_are_one_place.c:22:12 generated
+    Return

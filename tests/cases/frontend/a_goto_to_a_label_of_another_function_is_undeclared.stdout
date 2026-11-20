@@ -1,0 +1,8 @@
+Function a_goto_to_a_label_of_another_function_is_undeclared.c:1:1 "f" "int (void)"
+  Compound a_goto_to_a_label_of_another_function_is_undeclared.c:1:13
+    Labeled a_goto_to_a_label_of_another_function_is_undeclared.c:2:1 "l"
+      Return a_goto_to_a_label_of_another_function_is_undeclared.c:3:5
+        Number a_goto_to_a_label_of_another_function_is_undeclared.c:3:12 "0"
+Function a_goto_to_a_label_of_another_function_is_undeclared.c:5:1 "g" "int (void)"
+  Compound a_goto_to_a_label_of_another_function_is_undeclared.c:5:13
+    Goto a_goto_to_a_label_of_another_function_is_undeclared.c:6:5 "l"

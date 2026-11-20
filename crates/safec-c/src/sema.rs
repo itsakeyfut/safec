@@ -190,9 +190,30 @@ pub struct Resolution {
     standing: HashMap<BindingId, BindingId>,
     /// The standing type of every file-scope name, by its spelling.
     declared: HashMap<String, TypeId>,
+    /// The labelled statement each `goto` names. See [`Resolution::label`].
+    label_of: HashMap<StmtId, StmtId>,
 }
 
 impl Resolution {
+    /// The labelled statement the `goto` at `goto` names: the outermost of
+    /// the labels written directly one before another, which all name the
+    /// place it begins.
+    ///
+    /// Answered here so that which label a `goto` means is decided once, by
+    /// the stage that knows a label's name space is its function (C17 6.2.1
+    /// p3), rather than by the lowering comparing spellings again.
+    ///
+    /// # Panics
+    ///
+    /// If `goto` is not a `goto` this stage resolved, which a tree it reported
+    /// nothing about cannot hold: a `goto` to no label is `SC0301` here.
+    pub fn label(&self, goto: StmtId) -> StmtId {
+        *self
+            .label_of
+            .get(&goto)
+            .expect("every `goto` in a tree with no report names a label")
+    }
+
     /// Whether `attribute` is one this stage accepted as a hatch.
     ///
     /// Asked by the lowering, so that what makes a function a hatch is this
@@ -432,6 +453,7 @@ pub fn resolve(
             definitions: HashMap::new(),
             standing: HashMap::new(),
             declared: HashMap::new(),
+            label_of: HashMap::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
@@ -442,6 +464,9 @@ pub fn resolve(
         completed: HashSet::new(),
         step: 0,
         definitions: HashMap::new(),
+        labels: HashMap::new(),
+        gotos: Vec::new(),
+        stacked: None,
     };
 
     for item in ast.items() {
@@ -520,6 +545,16 @@ struct Resolver<'a> {
     /// forty thousand distinct functions take thirty seconds in a debug
     /// build.
     definitions: HashMap<String, Span>,
+    /// The labels of the function being walked, by spelling, each with where
+    /// its name is. C17 6.2.1 p3 gives a label function scope, and 6.2.3 a
+    /// name space of its own, so these are kept apart from `spelled`.
+    labels: HashMap<String, (StmtId, Span)>,
+    /// The `goto`s of the function being walked, resolved once its body has
+    /// been, since a `goto` may name a label written below it.
+    gotos: Vec<(StmtId, Span)>,
+    /// The outermost of the labels written directly before the statement
+    /// being walked, while a label's statement is another label.
+    stacked: Option<StmtId>,
 }
 
 impl Resolver<'_> {
@@ -562,6 +597,7 @@ impl Resolver<'_> {
                     _ => self.stmt(function.body, diagnostics),
                 }
                 self.close_scope();
+                self.resolve_gotos(diagnostics);
             }
             Item::Declaration {
                 declarators,
@@ -1022,6 +1058,33 @@ impl Resolver<'_> {
                     self.close_scope();
                 }
             }
+            Stmt::Labeled { label, body, .. } => {
+                // **Labels written one after another name one place**, so a
+                // `goto` to any of them goes to the outermost. Kept apart,
+                // each would be a block of its own, and `A: B:` with a `goto`
+                // to each and one back to `A` would be a loop entered at two
+                // blocks, which the memory check does not read. Found by
+                // review.
+                let place = self.stacked.take().unwrap_or(id);
+                if let Stmt::Labeled { .. } = ast.stmt(*body) {
+                    self.stacked = Some(place);
+                }
+                let spelled = self.sources.snippet(*label);
+                match self.labels.get(spelled) {
+                    Some(&(_, first)) => diagnostics.report(
+                        Diagnostic::error(format!("redefinition of label `{spelled}`"))
+                            .with_code(REDEFINED)
+                            .with_label(Label::primary(*label, "defined again here"))
+                            .with_label(Label::secondary(first, "previously defined here"))
+                            .with_note("C17 6.8.1 p3"),
+                    ),
+                    None => {
+                        self.labels.insert(spelled.to_owned(), (place, *label));
+                    }
+                }
+                self.stmt(*body, diagnostics);
+            }
+            Stmt::Goto { label, .. } => self.gotos.push((id, *label)),
             Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Error { .. } => {}
         }
     }
@@ -1690,6 +1753,35 @@ enum Step {
     Parameters(TypeId),
     CloseScope,
     Declare(Span, TypeId),
+}
+
+impl Resolver<'_> {
+    /// Match every `goto` of the function just walked with its label, and
+    /// forget both, so the next function starts with none.
+    ///
+    /// A `goto` naming no label of its function is `SC0301`, the code of a
+    /// name nothing declares, in clang's headline. The spelling is
+    /// interpolated raw, for the reason [`undeclared`] gives.
+    fn resolve_gotos(&mut self, diagnostics: &mut DiagnosticSink) {
+        let labels = std::mem::take(&mut self.labels);
+        for (goto, label) in std::mem::take(&mut self.gotos) {
+            let spelled = self.sources.snippet(label);
+            match labels.get(spelled) {
+                Some(&(labeled, _)) => {
+                    self.resolution.label_of.insert(goto, labeled);
+                }
+                None => diagnostics.report(
+                    Diagnostic::error(format!("use of undeclared label `{spelled}`"))
+                        .with_code(UNDECLARED)
+                        .with_label(Label::primary(
+                            label,
+                            "no label of this name is in this function",
+                        ))
+                        .with_note("C17 6.8.6.1 p1 wants a label in the enclosing function"),
+                ),
+            }
+        }
+    }
 }
 
 /// `name` is source text, and it reaches a terminal through this message.

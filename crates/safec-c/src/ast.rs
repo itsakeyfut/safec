@@ -6,7 +6,7 @@
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
 //! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
-//! here is `switch`, `goto`, a labelled statement, and structs. The siblings of the issues that added the rest fill those in,
+//! here is `switch` and structs. The siblings of the issues that added the rest fill those in,
 //! and each of them adds variants here rather than changing the shape.
 //!
 //! **A statement tree is bounded and an expression tree is not.** Every place a
@@ -46,7 +46,7 @@ impl ExprId {
 }
 
 /// Where a statement is in [`Ast`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct StmtId(u32);
 
 /// Where a top-level item is in [`Ast`].
@@ -693,6 +693,23 @@ pub enum Stmt {
         /// The keyword through the `;`.
         span: Span,
     },
+    /// `goto`, which goes to a label in the same function. C17 6.8.6.1.
+    Goto {
+        /// The label's name, which name resolution matches with a
+        /// [`Stmt::Labeled`] of the same function.
+        label: Span,
+        /// The keyword through the `;`.
+        span: Span,
+    },
+    /// A statement with a label in front of it. C17 6.8.1.
+    Labeled {
+        /// The label's name.
+        label: Span,
+        /// The statement it labels.
+        body: StmtId,
+        /// The name through the end of the statement.
+        span: Span,
+    },
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -890,6 +907,8 @@ impl Stmt {
             Self::Do { .. } => "Do",
             Self::Break { .. } => "Break",
             Self::Continue { .. } => "Continue",
+            Self::Goto { .. } => "Goto",
+            Self::Labeled { .. } => "Labeled",
             Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
@@ -906,6 +925,8 @@ impl Stmt {
             | Self::Do { span, .. }
             | Self::Break { span }
             | Self::Continue { span }
+            | Self::Goto { span, .. }
+            | Self::Labeled { span, .. }
             | Self::For { span, .. }
             | Self::Declaration { span, .. }
             | Self::Error { span } => *span,

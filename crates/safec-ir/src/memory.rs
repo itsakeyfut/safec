@@ -228,6 +228,16 @@ pub enum Kind {
         /// The most this check holds.
         max: usize,
     },
+    /// A function with a loop entered somewhere other than its head, by a
+    /// `goto` or a `case` label into its body, so it is not read and nothing
+    /// about its memory is proved. Always `Unknown`, at the function's name.
+    ///
+    /// What this check reads of a loop assumes every turn starts at its head:
+    /// the first turn asked of every block that dominates its latches, and a
+    /// loop shown to run leaving only after a turn. A second entry makes
+    /// both false, and believing them would be silent about the path that
+    /// enters there. See `Cfg::reducible`.
+    EnteredInside,
     /// A pointer local read where no path to the read assigned it, which C17
     /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
     /// a read some paths assigned is [`Kind::SometimesUnassigned`] or
@@ -868,8 +878,22 @@ fn findings_within(
             continue;
         }
 
-        let analysis = analysis(sources, unit, func);
         let cfg = Cfg::of(function);
+        if !cfg.reducible() {
+            findings.push(Finding {
+                function: func,
+                kind: Kind::EnteredInside,
+                conclusion: Conclusion::Unknown,
+                at: function.name,
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            });
+            continue;
+        }
+
+        let analysis = analysis(sources, unit, func);
         // Never zero, so no clamp: `Function::with_parameters`, which every
         // constructor goes through, makes the local for what the function
         // returns, and locals are only ever added, so `per_block` is at least

@@ -1,0 +1,10 @@
+error[SC0411]: `a` is read before anything was assigned to it
+   ╭─[ a_pointer_a_goto_enters_a_block_past_is_unassigned_there.c:8:16 ]
+   │
+ 8 │         return a != 0;
+   │                ───┬──  
+   │                   ╰──── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else

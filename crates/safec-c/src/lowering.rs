@@ -186,6 +186,28 @@ fn decided(
     }
 }
 
+/// One open scope: which it is, and the locals it has declared so far.
+struct Scope {
+    id: u32,
+    declared: Vec<LocalId>,
+}
+
+/// The scopes open at one place in a function, outermost first, each with
+/// the locals it had declared by then. What a jump compares to find which
+/// storage it ends and which it begins. See ADR-0114.
+type Point = Vec<(u32, Vec<LocalId>)>;
+
+/// A labelled statement's block, and the `goto`s waiting for it.
+struct Landing {
+    /// Where the labelled statement begins.
+    block: BlockId,
+    /// The scopes open at the label, once it has been lowered.
+    at: Option<Point>,
+    /// Each `goto` lowered before the label: the block it ended with a jump
+    /// to, still to be written, where it was, and its span.
+    waiting: Vec<(BlockId, Point, Span)>,
+}
+
 /// Where a `break` and a `continue` inside one loop go. C17 6.8.6.2 and
 /// 6.8.6.3.
 struct Jumps {
@@ -270,6 +292,9 @@ pub fn lower(
         unit: TranslationUnit::new(target),
         locals: HashMap::new(),
         scopes: Vec::new(),
+        next_scope: 0,
+        landings: HashMap::new(),
+        labeled: false,
         targets: Vec::new(),
         functions: HashMap::new(),
         prototypes: HashMap::new(),
@@ -310,7 +335,17 @@ struct Lowering<'a> {
     /// is one at index 1 or beyond. Only those get storage markers: a local
     /// declared in the body itself lives exactly as long as the frame, which
     /// every consumer already knows, and ADR-0012 argues why that is enough.
-    scopes: Vec<Vec<LocalId>>,
+    scopes: Vec<Scope>,
+    /// The id the next scope opened gets, so that two points of a function
+    /// can be compared by which scopes they have open. See [`Point`].
+    next_scope: u32,
+    /// Where each labelled statement lowered so far, or named by a `goto`
+    /// before it was, begins. See ADR-0114.
+    landings: HashMap<StmtId, Landing>,
+    /// Whether the function being lowered has had a label lowered yet, which
+    /// is whether a declaration lowered now can be reached again by a
+    /// backward `goto`. See the `Declaration` arm.
+    labeled: bool,
     /// Where a `break` and a `continue` go, innermost loop last.
     ///
     /// Pushed by each loop around its body and popped on every path out of
@@ -1369,6 +1404,7 @@ impl Lowering<'_> {
             elements: Vec::new(),
         };
         builder.open();
+        self.labeled = false;
         self.lengths(&mut builder, &parameters, diagnostics)?;
 
         // C17 5.1.2.2.3 p1: reaching the `}` that terminates `main` returns
@@ -1708,7 +1744,7 @@ impl Lowering<'_> {
         match self.ast.stmt(id) {
             Stmt::Compound { body, span } => {
                 let (body, span) = (body.clone(), *span);
-                self.scopes.push(Vec::new());
+                self.open_scope();
 
                 // Not `?`: the scope has to be closed whether or not a
                 // statement inside it could be lowered, or the next compound
@@ -1726,7 +1762,7 @@ impl Lowering<'_> {
                 // than the body is open, so there is nothing to close for it
                 // and no need to ask whether this is that one.
                 let declared = self.scopes.pop().expect("the scope this arm pushed");
-                end_storage(builder, &declared, span);
+                end_storage(builder, &declared.declared, span);
                 lowered?;
             }
             Stmt::Return { value, span } => {
@@ -1774,9 +1810,22 @@ impl Lowering<'_> {
                         // Only a scope narrower than the function's own body. The
                         // first entry is the body, and ADR-0012 says why a local
                         // that lives as long as the frame needs no marker.
-                        if self.scopes.len() > 1 {
+                        //
+                        // **Except where a label comes before it**: a backward
+                        // `goto` can then reach the declaration a second time,
+                        // and C17 6.2.4 p6 makes the value indeterminate each
+                        // time it is reached. Without the marker the value of
+                        // the last pass was carried round and read as if it
+                        // were still there, a free of it built in silence.
+                        // Marked, and not added to the body's scope, so that
+                        // no jump and no `return` ends a frame's local. Found
+                        // by review. See ADR-0114.
+                        let narrower = self.scopes.len() > 1;
+                        if narrower {
                             let scope = self.scopes.last_mut().expect("a scope is open");
-                            scope.push(local);
+                            scope.declared.push(local);
+                        }
+                        if narrower || self.labeled {
                             // Generated for the same reason as the closing half:
                             // the declaration is what this exists because of, and
                             // is not itself an instruction to begin storage that
@@ -1906,6 +1955,46 @@ impl Lowering<'_> {
                 self.leave_scopes(builder, depth, span);
                 builder.end(Terminator::Goto(to));
             }
+            Stmt::Goto { span, .. } => {
+                let span = *span;
+                let labeled = self.resolution.label(id);
+                let from = self.point();
+                let landing = self.landing(builder, labeled);
+                match &landing.at {
+                    // Backward: what the label has open is known, so the
+                    // markers go in this block.
+                    Some(to) => {
+                        let (to, block) = (to.clone(), landing.block);
+                        self.jump(builder, &from, &to, span);
+                        builder.end(Terminator::Goto(block));
+                    }
+                    // Forward: what the label has declared is not, so this
+                    // ends in a block the label writes when it is reached.
+                    None => {
+                        let pad = builder.function.reserve_block();
+                        landing.waiting.push((pad, from, span));
+                        builder.end(Terminator::Goto(pad));
+                    }
+                }
+            }
+            Stmt::Labeled { body, .. } => {
+                let body = *body;
+                self.labeled = true;
+                let block = self.landing(builder, id).block;
+                if builder.reachable() {
+                    builder.end(Terminator::Goto(block));
+                }
+                let to = self.point();
+                let landing = self.landings.get_mut(&id).expect("reserved above");
+                landing.at = Some(to.clone());
+                for (pad, from, span) in std::mem::take(&mut landing.waiting) {
+                    builder.switch(pad);
+                    self.jump(builder, &from, &to, span);
+                    builder.end(Terminator::Goto(block));
+                }
+                builder.switch(block);
+                self.stmt(builder, body, diagnostics)?;
+            }
             Stmt::While {
                 condition, body, ..
             } => {
@@ -2008,12 +2097,12 @@ impl Lowering<'_> {
                 // scope is closed whether or not the loop could be lowered.
                 let declares = matches!(start, Some(ForStart::Declaration(_)));
                 if declares {
-                    self.scopes.push(Vec::new());
+                    self.open_scope();
                 }
                 let lowered = self.for_loop(builder, start, condition, step, body, diagnostics);
                 if declares {
                     let declared = self.scopes.pop().expect("the scope this arm pushed");
-                    end_storage(builder, &declared, span);
+                    end_storage(builder, &declared.declared, span);
                 }
                 lowered?;
             }
@@ -2046,6 +2135,73 @@ impl Lowering<'_> {
         (lowered, target.continued)
     }
 
+    /// Open a scope with an id no other scope of this unit has.
+    fn open_scope(&mut self) {
+        self.scopes.push(Scope {
+            id: self.next_scope,
+            declared: Vec::new(),
+        });
+        self.next_scope += 1;
+    }
+
+    /// The scopes open here, with what each has declared so far.
+    fn point(&self) -> Point {
+        self.scopes
+            .iter()
+            .map(|scope| (scope.id, scope.declared.clone()))
+            .collect()
+    }
+
+    /// The landing of `labeled`, its block reserved the first time a `goto`
+    /// or the label itself asks.
+    fn landing(&mut self, builder: &mut Builder, labeled: StmtId) -> &mut Landing {
+        self.landings.entry(labeled).or_insert_with(|| Landing {
+            block: builder.function.reserve_block(),
+            at: None,
+            waiting: Vec::new(),
+        })
+    }
+
+    /// The storage markers of a jump from `from` to `to`, written into the
+    /// block being built, which the caller then ends with the jump. See
+    /// ADR-0114.
+    ///
+    /// The scopes both have open, matched by id, are the ones the jump stays
+    /// in. It ends every local of a scope only `from` has, innermost first in
+    /// reverse order of declaration, as a closing brace would. It begins what
+    /// the deepest of the shared scopes has declared at `to` and had not at
+    /// `from`, which a forward jump skips, and every local of a scope only
+    /// `to` has, outermost first in order of declaration, which a jump into a
+    /// block skips. A backward jump within one scope begins nothing: what it
+    /// passes is alive already, and a declaration it reaches again is what
+    /// makes the value indeterminate.
+    fn jump(&self, builder: &mut Builder, from: &Point, to: &Point, span: Span) {
+        let shared = from
+            .iter()
+            .zip(to)
+            .take_while(|((left, _), (right, _))| left == right)
+            .count();
+        for (_, declared) in from[shared..].iter().rev() {
+            for &local in declared.iter().rev() {
+                builder.element(Element::StorageDead {
+                    origin: Origin::Generated(span),
+                    local,
+                });
+            }
+        }
+        let skipped = shared.checked_sub(1).map_or(&[][..], |deepest| {
+            let (passed, reached) = (&from[deepest].1, &to[deepest].1);
+            reached.get(passed.len()..).unwrap_or(&[])
+        });
+        let entered = to[shared..].iter().flat_map(|(_, declared)| declared);
+        for &local in skipped.iter().chain(entered) {
+            builder.element(Element::StorageLive {
+                local,
+                origin: Origin::Generated(span),
+            });
+        }
+    }
+
     /// End the storage of every local in a scope deeper than `depth`, where
     /// control leaves them all at once: a `return`, a `break` or a
     /// `continue`.
@@ -2057,7 +2213,7 @@ impl Lowering<'_> {
     /// of 0 a `return` passes needs no test. See ADR-0012.
     fn leave_scopes(&self, builder: &mut Builder, depth: usize, span: Span) {
         for scope in self.scopes[depth..].iter().rev() {
-            for &local in scope.iter().rev() {
+            for &local in scope.declared.iter().rev() {
                 builder.element(Element::StorageDead {
                     origin: Origin::Generated(span),
                     local,

@@ -3355,6 +3355,10 @@ cases! {
         // silence. See ADR-0038. Mutation: route it as any other `Unknown`.
         // It exits 0.
         a_hatch_too_large_for_the_memory_check_is_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a hatch with a loop a `goto` enters inside, which the
+        // check does not read either. Mutation: leave `EnteredInside` out of
+        // `driver::unread`; it exits 0 with the double free unread.
+        a_hatch_with_a_loop_entered_inside_is_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         a_value_freed_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same function with its only caller in view, passing null. See
@@ -3774,6 +3778,31 @@ cases! {
         // The same for a pointer local, which `memory::assigned` asks.
         // Mutation: the same, in its filter of first turns; this is proved.
         a_pointer_a_turn_ended_by_continue_may_have_assigned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A use after a free a forward `goto` reaches, read as any edge is.
+        // Mutation: end the block a forward `goto` waits in with a `return`
+        // rather than the jump to its label; this goes silent.
+        a_use_after_a_free_a_goto_reaches_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `goto` into a loop's body is a second way into the loop, which
+        // this check does not read: the function is `Unknown`, `SC0415`.
+        // Mutation: have `Cfg::reducible` answer `true`; the function is read.
+        a_goto_into_a_loop_leaves_its_function_unread: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `goto` back into a block that has closed begins its locals again,
+        // so `a` holds nothing there and the read is proved (ADR-0114).
+        // Mutation: have `jump` begin nothing in a scope only the label has
+        // open; this goes silent. Found by review.
+        a_pointer_a_goto_enters_a_block_past_is_unassigned_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Labels written one after another are one place, so `goto`s to
+        // each and one back to the first make an ordinary loop, which is
+        // read. Mutation: resolve a `goto` to the label it names rather than
+        // the outermost of a stack; this is `SC0415`. Found by review.
+        stacked_labels_are_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration in the body itself, reached a second time by a
+        // backward `goto`, makes its value indeterminate again (C17 6.2.4 p6),
+        // so the `free` reads a pointer nothing assigned on this pass.
+        // Mutation: begin a body local's storage only in a scope narrower
+        // than the body, as before labels; this builds in silence. Found by
+        // review.
+        a_body_declaration_a_backward_goto_reaches_again_is_indeterminate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter
@@ -8975,6 +9004,17 @@ cases! {
         // Each a node with no children. Mutation: have the dump's arm for
         // them write nothing; the next node runs onto their line.
         break_and_continue_statements: ["--emit", "ast"],
+        // A label and a `goto` each with the name on its own line. Mutation:
+        // write no name for either; the lines lose it.
+        goto_and_labels: ["--emit", "ast"],
+        // A label defined twice is `SC0312`, and a `goto` to no label of its
+        // function is `SC0301`, each at the name. Mutation: drop either
+        // check; its report goes.
+        a_label_defined_twice_and_a_goto_to_none: ["--emit", "ast"],
+        // A label's scope is its function (C17 6.2.1 p3), so another
+        // function's is no label at all. Mutation: keep the labels of one
+        // function for the next; the `SC0301` goes.
+        a_goto_to_a_label_of_another_function_is_undeclared: ["--emit", "ast"],
     }
 
     "preprocessor" => {

@@ -386,6 +386,16 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
             dump_expr(sources, ast, *condition, depth + 1, out);
         }
         Stmt::Break { .. } | Stmt::Continue { .. } => out.push('\n'),
+        // The label's name on the node's own line, as an identifier's is.
+        Stmt::Goto { label, .. } => {
+            writeln!(out, " {:?}", quoted(sources, *label))
+                .expect("writing to a string cannot fail");
+        }
+        Stmt::Labeled { label, body, .. } => {
+            writeln!(out, " {:?}", quoted(sources, *label))
+                .expect("writing to a string cannot fail");
+            child(*body, out);
+        }
         Stmt::For {
             start,
             condition,
