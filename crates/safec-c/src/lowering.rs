@@ -1512,7 +1512,7 @@ impl Lowering<'_> {
                 }
                 Type::Pointer(pointee) => current = *pointee,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void
@@ -1572,7 +1572,7 @@ impl Lowering<'_> {
                 // Written out rather than `_`, so a type added later is
                 // asked whether it can hold a prototype.
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void => {}
@@ -3459,7 +3459,7 @@ impl Lowering<'_> {
         match self.unit.ty(ty) {
             Ty::Array { element, .. } => self.unit.push_type(Ty::Pointer(element)),
             Ty::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Ty::Void
@@ -4286,7 +4286,7 @@ impl Lowering<'_> {
         match self.unit.ty(ty) {
             Ty::Pointer(_) => builder.function.push_local(ty),
             Ty::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Ty::Void => {
@@ -4572,7 +4572,7 @@ impl Lowering<'_> {
                 Ty::Pointer(_) => true,
                 // No whole array is written, so none is a pointer written twice.
                 Ty::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Ty::Void
@@ -4620,7 +4620,7 @@ impl Lowering<'_> {
                 let pointer = match self.unit.ty(function.local(local)) {
                     Ty::Pointer(_) => true,
                     Ty::Integer {
-                        rank: Rank::Char | Rank::Int,
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }
                     | Ty::Void

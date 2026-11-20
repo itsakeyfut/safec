@@ -77,17 +77,23 @@ pub const DOES_NOT_RETURN: &[(&str, &str)] = &[
 /// An integer type's rank, C17 6.3.1.1 p1, from the lowest: what an integer
 /// type is, before the target says how wide it is. See ADR-0116.
 ///
-/// **Only the ranks a program can write**, so that the one #1112 adds is
+/// **Only the ranks a program can write**, so that one added later is
 /// `error[E0004]` at every site that answers for an integer, which is where
-/// each has to say what a wider one is to it: a rank no program could write
-/// yet was answered at every site already, and gave the next one nothing to
-/// be asked.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// each has to say what it is to it: a rank no program could write yet was
+/// answered at every site already, and gave the next one nothing to be asked.
+/// See ADR-0116.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Rank {
-    /// `char`.
+    /// `char`, `signed char` and `unsigned char`.
     Char,
+    /// `short`.
+    Short,
     /// `int`.
     Int,
+    /// `long`.
+    Long,
+    /// `long long`.
+    LongLong,
 }
 
 /// How an integer type is signed: `Plain` is `char` alone, which C17 6.2.5
@@ -101,6 +107,35 @@ pub enum Sign {
     Plain,
     /// Signed, written or not.
     Signed,
+    /// `unsigned`.
+    Unsigned,
+}
+
+/// What C calls the integer type of this rank and sign, the way `clang`
+/// spells it in a diagnostic: `unsigned int`, `long long`, `signed char`.
+/// One table for `--emit ast` and `--emit safety-ir`, which spell a type
+/// alike.
+///
+/// # Panics
+///
+/// For `Plain` with a rank other than `char`, which is no type.
+pub fn integer_name(rank: Rank, sign: Sign) -> &'static str {
+    match (rank, sign) {
+        (Rank::Char, Sign::Plain) => "char",
+        (Rank::Char, Sign::Signed) => "signed char",
+        (Rank::Char, Sign::Unsigned) => "unsigned char",
+        (Rank::Short, Sign::Signed) => "short",
+        (Rank::Short, Sign::Unsigned) => "unsigned short",
+        (Rank::Int, Sign::Signed) => "int",
+        (Rank::Int, Sign::Unsigned) => "unsigned int",
+        (Rank::Long, Sign::Signed) => "long",
+        (Rank::Long, Sign::Unsigned) => "unsigned long",
+        (Rank::LongLong, Sign::Signed) => "long long",
+        (Rank::LongLong, Sign::Unsigned) => "unsigned long long",
+        (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, Sign::Plain) => {
+            unreachable!("{rank:?} is never plain: `Plain` is `char`'s alone")
+        }
+    }
 }
 
 impl Ty {
@@ -247,7 +282,7 @@ impl Ty {
         match self {
             Ty::Pointer(_) => true,
             Ty::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Ty::Void
@@ -1712,6 +1747,22 @@ impl TranslationUnit {
             // No array is a value, so none is converted or range-checked.
             Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => None,
         }
+    }
+
+    /// Whether an lvalue of type `access` may reach an object of type
+    /// `object`, by C17 6.5 p7's first items: the type itself, or the signed
+    /// or unsigned type corresponding to it, which is the one of equal rank
+    /// (6.2.5 p6). The character types are its last item, and a caller asks
+    /// them apart, as bytes.
+    ///
+    /// Mutation: answer identity alone; `a_write_through_an_unsigned_pointer_writes_the_int_it_reaches`
+    /// reports `SC0411`.
+    pub fn same_or_counterpart(&self, access: TyId, object: TyId) -> bool {
+        access == object
+            || match (self.ty(access), self.ty(object)) {
+                (Ty::Integer { rank: left, .. }, Ty::Integer { rank: right, .. }) => left == right,
+                _ => false,
+            }
     }
 
     /// How many bytes an object of this type takes on this unit's target, or

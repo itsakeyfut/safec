@@ -617,7 +617,7 @@ fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, 
                 UnOp::Not => i128::from(value == 0),
                 UnOp::BitNot => !value,
             };
-            Value::Int(fits(computed, ty)?)
+            Value::Int(result(computed, ty)?)
         }
         Rvalue::Binary { op, lhs, rhs } => {
             let lhs = operand(frames, current, lhs)?;
@@ -692,10 +692,30 @@ fn fits(value: i128, ty: Option<Integer>) -> Result<i128, Trap> {
     }
 }
 
+/// What an operation leaves in the type it is written into: reduced modulo
+/// its range where that type is unsigned, which C17 6.2.5 p9 makes never an
+/// overflow, and otherwise held to it by [`fits`].
+///
+/// Mutation: hold an unsigned result to its range too; `unsigned_arithmetic_wraps`
+/// stops where it should wrap.
+fn result(value: i128, ty: Option<Integer>) -> Result<i128, Trap> {
+    match ty {
+        Some(ty) if !ty.signed() => Ok(ty.convert(value)),
+        _ => fits(value, ty),
+    }
+}
+
 /// What an operator does to two numbers, as the type it is written into.
+///
+/// The operands are already of the type the operation is performed at, which
+/// the lowering converted them to (C17 6.3.1.8), so a comparison of two
+/// unsigned values compares their values. An unsigned product is taken
+/// modulo the carrier, which keeps the low bits [`result`] reduces it by.
 fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, Trap> {
     let overflow = || Trap::new("an arithmetic result that does not fit");
+    let unsigned = ty.is_some_and(|ty| !ty.signed());
     let computed = match op {
+        BinOp::Mul if unsigned => lhs.wrapping_mul(rhs),
         BinOp::Mul => lhs.checked_mul(rhs).ok_or_else(overflow)?,
         // C17 6.5.5 p5 leaves division and remainder by zero undefined, and
         // 6.5 p5 leaves an overflowing signed result undefined. Answering a
@@ -723,6 +743,7 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
             }
             let by = u32::try_from(rhs).expect("checked against the width above");
             match op {
+                BinOp::Shl if unsigned => lhs.wrapping_shl(by),
                 BinOp::Shl => lhs.checked_shl(by).ok_or_else(overflow)?,
                 _ => lhs.checked_shr(by).ok_or_else(overflow)?,
             }
@@ -739,7 +760,7 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
         BinOp::BitOr => lhs | rhs,
     };
 
-    fits(computed, ty)
+    result(computed, ty)
 }
 
 /// What an operand reads, or a stop where what it reads is a pointer whose

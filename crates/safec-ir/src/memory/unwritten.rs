@@ -338,7 +338,7 @@ pub(super) fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) 
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => matches!(analysis.unit.ty(pointee), Ty::Void),
         Ty::Integer {
-            rank: Rank::Char | Rank::Int,
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Ty::Void

@@ -345,7 +345,7 @@ impl Resolution {
         loop {
             match ast.ty(current) {
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_) => return true,
@@ -939,7 +939,7 @@ impl Resolver<'_> {
             };
             match ast.ty(ty) {
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void => {}
@@ -1498,7 +1498,7 @@ impl Resolver<'_> {
                         .map(|parameter| match self.ast.ty(parameter.ty) {
                             Type::Pointer(_) => Some(library::Shape::Pointer),
                             Type::Integer {
-                                rank: Rank::Char | Rank::Int,
+                                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                                 sign: _,
                             } => Some(library::Shape::Integer),
                             // A parameter is adjusted from an array or a function to a
@@ -1910,7 +1910,7 @@ fn push_declarator(ast: &Ast, root: TypeId, pending: &mut Vec<Step>) {
             Type::Pointer(next) | Type::Array { element: next, .. } => *next,
             Type::Function { returns, .. } => *returns,
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Type::Void

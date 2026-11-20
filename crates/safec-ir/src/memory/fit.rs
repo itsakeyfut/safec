@@ -434,7 +434,7 @@ pub(super) fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64>
         Ty::Pointer(pointee) => Some(analysis.unit.size_of(pointee).unwrap_or(0)),
         // An array is not a pointer, so nothing it points at has a width.
         Ty::Integer {
-            rank: Rank::Char | Rank::Int,
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Ty::Void
@@ -714,7 +714,7 @@ pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
     match analysis.unit.ty(innermost_element(analysis.unit, ty)) {
         Ty::Pointer(pointee) => Some(pointee),
         Ty::Integer {
-            rank: Rank::Char | Rank::Int,
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Ty::Void => None,

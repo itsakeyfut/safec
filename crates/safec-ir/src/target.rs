@@ -151,6 +151,11 @@ pub struct Target {
     triple: &'static str,
     int: Integer,
     character: Integer,
+    /// How wide `short`, `long` and `long long` are, each signed or not as
+    /// it is written.
+    short_bits: u32,
+    long_bits: u32,
+    long_long_bits: u32,
     pointer_bits: u32,
     widening: Widening,
 }
@@ -178,12 +183,25 @@ impl Target {
     /// `char` returning one, reading the attribute on the result and on the
     /// parameter.
     pub const ALL: &'static [Self] = &[
-        Self::new("aarch64-apple-darwin", 32, 8, true, 64, Widening::Required),
+        Self::new(
+            "aarch64-apple-darwin",
+            32,
+            8,
+            true,
+            16,
+            64,
+            64,
+            64,
+            Widening::Required,
+        ),
         Self::new(
             "aarch64-unknown-linux-gnu",
             32,
             8,
             false,
+            16,
+            64,
+            64,
             64,
             Widening::None,
         ),
@@ -192,6 +210,9 @@ impl Target {
             32,
             8,
             false,
+            16,
+            32,
+            64,
             32,
             Widening::Required,
         ),
@@ -200,6 +221,9 @@ impl Target {
             32,
             8,
             true,
+            16,
+            32,
+            64,
             32,
             Widening::Required,
         ),
@@ -208,16 +232,42 @@ impl Target {
             32,
             8,
             true,
+            16,
+            32,
+            64,
             32,
             Widening::Required,
         ),
-        Self::new("x86_64-apple-darwin", 32, 8, true, 64, Widening::Required),
-        Self::new("x86_64-pc-windows-msvc", 32, 8, true, 64, Widening::None),
+        Self::new(
+            "x86_64-apple-darwin",
+            32,
+            8,
+            true,
+            16,
+            64,
+            64,
+            64,
+            Widening::Required,
+        ),
+        Self::new(
+            "x86_64-pc-windows-msvc",
+            32,
+            8,
+            true,
+            16,
+            32,
+            64,
+            64,
+            Widening::None,
+        ),
         Self::new(
             "x86_64-unknown-linux-gnu",
             32,
             8,
             true,
+            16,
+            64,
+            64,
             64,
             Widening::Required,
         ),
@@ -233,11 +283,17 @@ impl Target {
         int_bits: u32,
         char_bits: u32,
         char_signed: bool,
+        short_bits: u32,
+        long_bits: u32,
+        long_long_bits: u32,
         pointer_bits: u32,
         widening: Widening,
     ) -> Self {
         Self {
             triple,
+            short_bits,
+            long_bits,
+            long_long_bits,
             pointer_bits,
             widening,
             int: Integer {
@@ -278,16 +334,24 @@ impl Target {
     ///
     /// # Panics
     ///
-    /// For `signed char`, which #1112 measures, and for `Plain` with a rank
-    /// other than `char`, which is no type at all.
+    /// For `Plain` with a rank other than `char`, which is no type at all.
     pub fn integer(self, rank: Rank, sign: Sign) -> Integer {
+        let bits = match rank {
+            Rank::Char => self.character.bits,
+            Rank::Short => self.short_bits,
+            Rank::Int => self.int.bits,
+            Rank::Long => self.long_bits,
+            Rank::LongLong => self.long_long_bits,
+        };
         match (rank, sign) {
-            (Rank::Int, Sign::Signed) => self.int,
             (Rank::Char, Sign::Plain) => self.character,
-            (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
-                unreachable!(
-                    "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
-                )
+            (_, Sign::Signed) => Integer { bits, signed: true },
+            (_, Sign::Unsigned) => Integer {
+                bits,
+                signed: false,
+            },
+            (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, Sign::Plain) => {
+                unreachable!("{sign:?} {rank:?} is no type: `Plain` is `char`'s alone")
             }
         }
     }
@@ -368,7 +432,9 @@ mod tests {
     /// numbers came from
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null`, reading
     /// `__SIZEOF_INT__`, `__CHAR_BIT__`, `__CHAR_UNSIGNED__` and
-    /// `__SIZEOF_POINTER__`, the last in bytes and written here in bits. The
+    /// `__SIZEOF_POINTER__`, the last in bytes and written here in bits, and
+    /// `__SIZEOF_SHORT__`, `__SIZEOF_LONG__` and `__SIZEOF_LONG_LONG__` from
+    /// `clang 22.1.8` the same way (#1112). The
     /// extension
     /// column came from `clang 20.1.6 --target=<triple> -S -emit-llvm -O0` on
     /// `char csink(char x) { return x; }`, reading the attribute on the result
@@ -387,11 +453,36 @@ mod tests {
         // measurement, rather than the flag behind it, which is this module's
         // own business.
         // The triple, `int`'s bits, `char`'s bits, whether `char` is signed,
-        // a pointer's bits, and what a `char` is widened by.
-        type Row = (&'static str, u32, u32, bool, u32, Option<Extend>);
+        // a pointer's bits, what a `char` is widened by, and the bits of
+        // `short`, `long` and `long long`.
+        type Row = (
+            &'static str,
+            u32,
+            u32,
+            bool,
+            u32,
+            Option<Extend>,
+            (u32, u32, u32),
+        );
         let measured: &[Row] = &[
-            ("aarch64-apple-darwin", 32, 8, true, 64, Some(Extend::Sign)),
-            ("aarch64-unknown-linux-gnu", 32, 8, false, 64, None),
+            (
+                "aarch64-apple-darwin",
+                32,
+                8,
+                true,
+                64,
+                Some(Extend::Sign),
+                (16, 64, 64),
+            ),
+            (
+                "aarch64-unknown-linux-gnu",
+                32,
+                8,
+                false,
+                64,
+                None,
+                (16, 64, 64),
+            ),
             (
                 "armv7-unknown-linux-gnueabihf",
                 32,
@@ -399,6 +490,7 @@ mod tests {
                 false,
                 32,
                 Some(Extend::Zero),
+                (16, 32, 64),
             ),
             (
                 "i686-unknown-linux-gnu",
@@ -407,6 +499,7 @@ mod tests {
                 true,
                 32,
                 Some(Extend::Sign),
+                (16, 32, 64),
             ),
             (
                 "wasm32-unknown-unknown",
@@ -415,9 +508,26 @@ mod tests {
                 true,
                 32,
                 Some(Extend::Sign),
+                (16, 32, 64),
             ),
-            ("x86_64-apple-darwin", 32, 8, true, 64, Some(Extend::Sign)),
-            ("x86_64-pc-windows-msvc", 32, 8, true, 64, None),
+            (
+                "x86_64-apple-darwin",
+                32,
+                8,
+                true,
+                64,
+                Some(Extend::Sign),
+                (16, 64, 64),
+            ),
+            (
+                "x86_64-pc-windows-msvc",
+                32,
+                8,
+                true,
+                64,
+                None,
+                (16, 32, 64),
+            ),
             (
                 "x86_64-unknown-linux-gnu",
                 32,
@@ -425,6 +535,7 @@ mod tests {
                 true,
                 64,
                 Some(Extend::Sign),
+                (16, 64, 64),
             ),
         ];
 
@@ -434,8 +545,33 @@ mod tests {
             "a target nobody measured is a machine this compiler invented"
         );
 
-        for &(triple, int_bits, char_bits, char_signed, pointer_bits, extension) in measured {
+        for &(
+            triple,
+            int_bits,
+            char_bits,
+            char_signed,
+            pointer_bits,
+            extension,
+            (short_bits, long_bits, long_long_bits),
+        ) in measured
+        {
             let target = Target::from_triple(triple).expect("a measured triple is known");
+            // Every rank, signed and unsigned: the width is the rank's, the
+            // sign what was written (C17 6.2.5 p6), and `signed char` and
+            // `unsigned char` as wide as `char`.
+            for (rank, bits) in [
+                (Rank::Char, char_bits),
+                (Rank::Short, short_bits),
+                (Rank::Int, int_bits),
+                (Rank::Long, long_bits),
+                (Rank::LongLong, long_long_bits),
+            ] {
+                for (sign, signed) in [(Sign::Signed, true), (Sign::Unsigned, false)] {
+                    let answered = target.integer(rank, sign);
+                    assert_eq!(answered.bits(), bits, "{triple}: {sign:?} {rank:?}");
+                    assert_eq!(answered.signed(), signed, "{triple}: {sign:?} {rank:?}");
+                }
+            }
             assert_eq!(
                 target.integer(Rank::Int, Sign::Signed).bits(),
                 int_bits,
