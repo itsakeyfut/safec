@@ -4544,6 +4544,12 @@ cases! {
         // (#621), and `an_ir_shape_the_backend_cannot_write` holds a refusal
         // that is left.
         a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast between an integer and a pointer is `ptrtoint` and
+        // `inttoptr`, and an `int` narrower than a pointer is widened by its
+        // sign first, `sext` for `n` and `zext` for `u`, as `clang` writes
+        // it. Mutation: widen every integer with `zext` in `reinterpret`;
+        // `n`'s line changes.
+        a_narrow_integer_cast_to_a_pointer_is_widened_by_its_sign: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         // A message names the local its conclusion is about, read as itself
         // or read through at its first level: a double free, a free through
         // `q` then a use through `p` that names `p`, two uses at one caret
