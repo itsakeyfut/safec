@@ -3760,9 +3760,9 @@ cases! {
         // The condition reads `*p` and the next turn frees `p`. The condition
         // is a full expression, so its read is ordered before the free and
         // nothing about the order is reported. The sequence point is written
-        // on the edge back into the body, and **only this case's IR holds
-        // it**: measured, writing none there changes no diagnostic here or in
-        // the two cases above, only the `.stdout`.
+        // on the edge back into the body, and **only the IR holds it**:
+        // measured, writing none there changes no diagnostic here or in the
+        // two cases above, only the `.stdout` of all three.
         a_do_condition_is_ordered_before_the_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_that_is_not_known_to_allocate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -9485,6 +9485,11 @@ cases! {
         // it.
         // Mutation: do not end the `for`'s scope's storage; `i`'s
         // `StorageDead` goes.
+        // The body returns, so nothing reaches the condition and no block
+        // falls through into it. Mutation: end the body's block with a
+        // `Goto` to the condition whether or not it is reachable; an empty
+        // block that only jumps appears.
+        a_do_body_that_cannot_fall_through_leaves_its_condition_unreached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_for_declaration_lives_across_the_whole_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `f`'s `for` cannot be lowered, since a variable length array has no
         // IR yet, and its scope is closed all the same, so `g`, lowered by the
