@@ -215,7 +215,10 @@ fn head_test(
                                 _ => None,
                             }
                         }
-                        Rvalue::Unary { .. } | Rvalue::Address(_) | Rvalue::Static(_) => None,
+                        Rvalue::Unary { .. }
+                        | Rvalue::Address(_)
+                        | Rvalue::Static(_)
+                        | Rvalue::Reinterpret(_) => None,
                     }
                 } else {
                     None

@@ -132,7 +132,11 @@ pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Pl
                     lhs: _,
                     rhs: _,
                 } => Vec::new(),
-                Rvalue::Unary { op: _, operand } => named(operand).into_iter().collect(),
+                // A conversion between a pointer and an integer uses the
+                // value as an operator does (C17 6.3.2.3 p6).
+                Rvalue::Unary { op: _, operand } | Rvalue::Reinterpret(operand) => {
+                    named(operand).into_iter().collect()
+                }
                 // A copy carries the value on; an address reads none.
                 Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Static(_) => Vec::new(),
             };
@@ -198,7 +202,7 @@ fn named(operand: &Operand) -> Option<&Place> {
 /// The same, for what an rvalue reads.
 fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
     match value {
-        Rvalue::Use(operand) => dereferenced_in(operand),
+        Rvalue::Use(operand) | Rvalue::Reinterpret(operand) => dereferenced_in(operand),
         Rvalue::Unary { op: _, operand } => dereferenced_in(operand),
         Rvalue::Binary { op: _, lhs, rhs } => {
             let mut places = dereferenced_in(lhs);
@@ -253,7 +257,9 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
             let mut places: Vec<Place> =
                 first_of_two_derefs(&operation.place).into_iter().collect();
             match &operation.value {
-                Rvalue::Use(operand) | Rvalue::Unary { op: _, operand } => {
+                Rvalue::Use(operand)
+                | Rvalue::Unary { op: _, operand }
+                | Rvalue::Reinterpret(operand) => {
                     places.extend(read_in(operand));
                 }
                 Rvalue::Binary { op: _, lhs, rhs } => {

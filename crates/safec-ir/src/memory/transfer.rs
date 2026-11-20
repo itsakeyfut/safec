@@ -362,7 +362,10 @@ impl Allocations<'_> {
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
             // contents are gone.
-            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) | Rvalue::Static(_) => {
+            Rvalue::Use(Operand::Constant(_))
+            | Rvalue::Address(_)
+            | Rvalue::Static(_)
+            | Rvalue::Reinterpret(_) => {
                 Held::from_marks(
                     value.points_to.len(),
                     Marks {
@@ -3410,7 +3413,8 @@ impl Analysis for Allocations<'_> {
                         | Rvalue::Address(_)
                         | Rvalue::Static(_)
                         | Rvalue::Unary { .. }
-                        | Rvalue::Binary { .. } => None,
+                        | Rvalue::Binary { .. }
+                        | Rvalue::Reinterpret(_) => None,
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -3678,8 +3682,11 @@ impl Analysis for Allocations<'_> {
                     }
                     // A constant other than zero names nothing this check
                     // follows, and a write through it lands somewhere this
-                    // function does not own.
-                    Rvalue::Use(Operand::Constant(_)) => {
+                    // function does not own. **So does a pointer made from
+                    // an integer**, which is reported unproven where it is
+                    // made (`Self::reinterpreted`), and is not null: what
+                    // this proves after it is moot. See ADR-0117.
+                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Reinterpret(_) => {
                         value.replace(
                             at,
                             Held::from_marks(

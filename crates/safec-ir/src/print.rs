@@ -520,7 +520,7 @@ fn dump_rvalue(
     dump_line(value.name(), depth, out);
 
     match value {
-        Rvalue::Use(operand) => {
+        Rvalue::Use(operand) | Rvalue::Reinterpret(operand) => {
             out.push('\n');
             dump_operand(sources, operand, depth + 1, out);
         }

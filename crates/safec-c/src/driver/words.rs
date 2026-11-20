@@ -105,6 +105,14 @@ const TOO_LARGE: Code = Code::new("SC0410");
 /// about the shape of the function's jumps, and the fix is to jump to the
 /// top of the loop. See `memory::Kind::EnteredInside`.
 const ENTERED_INSIDE: Code = Code::new("SC0415");
+
+/// A conversion between a pointer and an integer, which the memory check
+/// does not follow.
+///
+/// Not any code above, which are each about what a pointer holds: this is
+/// about this check, which follows no allocation through an integer, and the
+/// fix is to keep the value a pointer. See ADR-0117.
+const REINTERPRETED: Code = Code::new("SC0416");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -884,6 +892,14 @@ pub(super) fn memory_finding(
             ),
             "nothing about this function's memory is proved",
             "jump to the top of the loop instead",
+        ),
+        // Built only `Unknown`, at the cast, as the rows above are.
+        (Kind::Reinterpreted, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            REINTERPRETED,
+            "this converts between a pointer and an integer, which the memory check does not follow"
+                .to_owned(),
+            "nothing about what this points at is proved from here",
+            "keep the value a pointer, or a `void *` where its type has to change",
         ),
         // Only ever a proof: a read some paths assigned is the next arm's.
         // `Unknown` takes the same words so the match stays exhaustive

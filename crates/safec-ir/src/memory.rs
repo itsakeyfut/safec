@@ -84,7 +84,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, LocalId, Place, Terminator, TranslationUnit,
+    Between, BlockId, Element, FuncId, Function, LocalId, Place, Rvalue, Terminator,
+    TranslationUnit,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -238,6 +239,12 @@ pub enum Kind {
     /// both false, and believing them would be silent about the path that
     /// enters there. See `Cfg::reducible`.
     EnteredInside,
+    /// A conversion between a pointer and an integer, `(long)p` or `(int
+    /// *)n`, which this check does not follow: the integer carries no
+    /// allocation, so a pointer made from one names nothing this check knows
+    /// and one turned into one may be freed or written through where nothing
+    /// here sees it. Always `Unknown`, at the cast. See ADR-0117.
+    Reinterpreted,
     /// A pointer local read where no path to the read assigned it, which C17
     /// 6.3.2.1 p2 leaves undefined whatever the read is for. Always `Unsafe`;
     /// a read some paths assigned is [`Kind::SometimesUnassigned`] or
@@ -1083,6 +1090,26 @@ fn findings_within(
                         made: None,
                         unproven: None,
                     });
+                }
+                // Wherever the walk reaches it, as the access above is:
+                // what follows a pointer made from an integer, or an
+                // allocation whose address became one, is nothing this
+                // proves. Mutation: push nothing;
+                // `a_cast_between_a_pointer_and_an_integer_is_unproven`
+                // goes silent. See ADR-0117.
+                if let Element::Assign(operation) = element {
+                    if let Rvalue::Reinterpret(_) = operation.value {
+                        findings.push(Finding {
+                            function: func,
+                            kind: Kind::Reinterpreted,
+                            conclusion: Conclusion::Unknown,
+                            at: operation.origin.span(),
+                            local: None,
+                            freed: None,
+                            made: None,
+                            unproven: None,
+                        });
+                    }
                 }
                 analysis.element(function, element, &mut known);
             }

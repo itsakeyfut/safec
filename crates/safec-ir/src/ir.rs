@@ -683,6 +683,12 @@ pub enum Rvalue {
     /// reached: `g = 1` is `t = Static(g); *t = 1`. Never null, and pointing
     /// to storage no function owns. See ADR-0115.
     Static(StaticId),
+    /// The operand's bits as the type the operation is written into, where
+    /// one of the two is an integer and the other a pointer: C17 6.3.2.3 p5
+    /// and p6, a cast in either direction. What the result points at is
+    /// nothing an analysis can follow from the operand, so the memory check
+    /// reports every one as unproven where it is written. See ADR-0117.
+    Reinterpret(Operand),
 }
 
 impl Rvalue {
@@ -694,6 +700,7 @@ impl Rvalue {
             Self::Binary { .. } => "Binary",
             Self::Address(_) => "Address",
             Self::Static(_) => "Static",
+            Self::Reinterpret(_) => "Reinterpret",
         }
     }
 }

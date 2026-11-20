@@ -235,6 +235,9 @@ fn verdict(
         // Never asked: it is built before any value exists, and it is about
         // no free.
         Kind::TooLarge { .. } | Kind::TooLong { .. } | Kind::EnteredInside => true,
+        // Never asked: it is built from its element in `memory.rs`, about no
+        // free.
+        Kind::Reinterpreted => true,
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,
@@ -1237,9 +1240,11 @@ fn leaving(
             };
             Some((fit, None))
         }
-        Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
-            Some((Fit::Unknown, None))
-        }
+        Rvalue::Address(_)
+        | Rvalue::Static(_)
+        | Rvalue::Unary { .. }
+        | Rvalue::Binary { .. }
+        | Rvalue::Reinterpret(_) => Some((Fit::Unknown, None)),
     }
 }
 
@@ -1454,7 +1459,8 @@ fn contents_leaving(
         | Rvalue::Address(_)
         | Rvalue::Static(_)
         | Rvalue::Unary { .. }
-        | Rvalue::Binary { .. } => Levels::default(),
+        | Rvalue::Binary { .. }
+        | Rvalue::Reinterpret(_) => Levels::default(),
     };
     // **The receiver's first level at least as wide as `carried`**, where
     // its memory says so rather than its type (#1079): `memcpy(vo, in, 8)`
@@ -1490,7 +1496,8 @@ fn contents_leaving(
                 | Rvalue::Address(_)
                 | Rvalue::Static(_)
                 | Rvalue::Unary { .. }
-                | Rvalue::Binary { .. } => None,
+                | Rvalue::Binary { .. }
+                | Rvalue::Reinterpret(_) => None,
             };
             say_leaving(
                 findings,

@@ -67,7 +67,9 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
             match element {
                 Element::Assign(operation) => {
                     match &operation.value {
-                        Rvalue::Use(operand) | Rvalue::Unary { operand, .. } => {
+                        Rvalue::Use(operand)
+                        | Rvalue::Unary { operand, .. }
+                        | Rvalue::Reinterpret(operand) => {
                             reads_of_operand(operand, &mut read, &written);
                         }
                         Rvalue::Binary { lhs, rhs, .. } => {
