@@ -54,13 +54,16 @@ impl ShownToRun {
 /// - one edge into the head from outside the loop, so "on the way in" is one
 ///   path's answer and not a join this would have to take;
 /// - one latch, so every turn that comes round ends at the same block: a
-///   second back edge leaving the body early, a `continue`, carries a turn
-///   that did not finish;
+///   second back edge leaving the body early, a `continue` in a `while`,
+///   carries a turn that did not finish. A `continue` in a `for` goes to the
+///   step and adds no latch, and needs none: the turn it ends is joined into
+///   what the one latch sends, which is what
+///   `a_write_a_continue_may_skip_in_a_loop_shown_to_run_is_doubted_after_it`
+///   holds;
 /// - no edge leaving the loop from inside its body reaches where the head's
 ///   test leaves it, so the only way past the loop is the head's own test on a
 ///   later turn: a `break` reaching that block on the first turn would carry
-///   the skipped write past it. The only way out of a body today is a
-///   `return`, the frontend reading neither `break` nor `goto` yet;
+///   the skipped write past it;
 /// - the head's test is true on the way in, by [`head_test`].
 pub(crate) fn shown_to_run(
     unit: &TranslationUnit,
@@ -337,9 +340,10 @@ mod tests {
     /// block's successors, one for a `Goto`, two for a `Branch`, none for a
     /// `Return`. Answers whether the loop at `1` is shown to run.
     ///
-    /// **By hand because no C reaches these shapes yet**: the frontend reads
-    /// neither `continue`, `break` nor `goto`, and each refusal they need
-    /// would otherwise be held by nothing until it did.
+    /// **By hand because they were written before C reached these shapes**:
+    /// the frontend read neither `continue`, `break` nor `goto` then, and each
+    /// refusal they need would otherwise have been held by nothing. It reads
+    /// `continue` and `break` now, and still not `goto`.
     fn runs(blocks: usize, past: usize, edges: &[(usize, &[usize])]) -> bool {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "f");

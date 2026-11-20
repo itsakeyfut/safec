@@ -436,6 +436,12 @@ pub(super) fn findings(
         };
         let mut value = start.clone();
         let block = function.block(id);
+        // A loop's first turn is asked only where the block dominates every
+        // latch, as in `memory.rs`'s first-turn walk: a block after a
+        // `continue` in a `while` dominates one of two, and may first run
+        // after a turn the `continue` ended.
+        // `a_pointer_a_turn_ended_by_continue_may_have_assigned_is_doubted`
+        // is proved under `any`.
         let mut turns: Vec<State> = first_turns
             .iter()
             .filter(|(each, _)| {

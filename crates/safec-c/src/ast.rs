@@ -6,8 +6,7 @@
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
 //! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
-//! here is `switch`, `goto`, a labelled statement, `break`, `continue`, and
-//! structs. The siblings of the issues that added the rest fill those in,
+//! here is `switch`, `goto`, a labelled statement, and structs. The siblings of the issues that added the rest fill those in,
 //! and each of them adds variants here rather than changing the shape.
 //!
 //! **A statement tree is bounded and an expression tree is not.** Every place a
@@ -684,6 +683,16 @@ pub enum Stmt {
         /// The keyword through the body.
         span: Span,
     },
+    /// `break`, which leaves the innermost loop. C17 6.8.6.3.
+    Break {
+        /// The keyword through the `;`.
+        span: Span,
+    },
+    /// `continue`, which ends this turn of the innermost loop. C17 6.8.6.2.
+    Continue {
+        /// The keyword through the `;`.
+        span: Span,
+    },
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -879,6 +888,8 @@ impl Stmt {
             Self::If { .. } => "If",
             Self::While { .. } => "While",
             Self::Do { .. } => "Do",
+            Self::Break { .. } => "Break",
+            Self::Continue { .. } => "Continue",
             Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
@@ -893,6 +904,8 @@ impl Stmt {
             | Self::If { span, .. }
             | Self::While { span, .. }
             | Self::Do { span, .. }
+            | Self::Break { span }
+            | Self::Continue { span }
             | Self::For { span, .. }
             | Self::Declaration { span, .. }
             | Self::Error { span } => *span,

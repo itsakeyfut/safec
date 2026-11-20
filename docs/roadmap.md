@@ -233,9 +233,10 @@ Phase 9.
 - storage and types: global variables and `static`, the integer widths,
   `unsigned` and `const`, character constants and string literals, `sizeof`
   and casts
-- the jump and selection statements the subset does not read: `break`,
-  `continue`, `switch` and `goto`, each refused today as `SC0207`, and `do`,
-  read since #1099. No Stage in [frontend.md](frontend.md) lists them
+- the jump and selection statements the subset does not read: `switch` and
+  `goto`, each refused today as `SC0207`, and `do`, `break` and `continue`,
+  read since #1099 and #1100. No Stage in [frontend.md](frontend.md) lists
+  them
 - compiling the rest of a function pointer, which already parses and
   type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
   through one, and comparing two. Phase 8 names one and passes it (#115)

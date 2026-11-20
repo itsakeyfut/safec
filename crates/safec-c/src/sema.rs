@@ -1022,7 +1022,7 @@ impl Resolver<'_> {
                     self.close_scope();
                 }
             }
-            Stmt::Error { .. } => {}
+            Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Error { .. } => {}
         }
     }
 

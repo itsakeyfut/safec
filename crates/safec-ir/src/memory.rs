@@ -1272,11 +1272,14 @@ fn findings_within(
                 // comes round passed it and the first did too. A read on an
                 // arm, `if (k == 1) q = *t2;`, may not run on the first turn,
                 // and C defines it reading last turn's value, so it is a
-                // doubt, by the user's decision. Every latch and not any: no
-                // case tells the two apart, measured, since a loop this C can
-                // write has one, and `continue` is the first that will not. A
-                // block that leaves the loop early dominates no latch, so it
-                // is a doubt by the same test.
+                // doubt, by the user's decision. Every latch and not any: a
+                // `continue` in a `while` is a second latch, and a read after
+                // it may first run on a turn that follows one the `continue`
+                // ended, so it dominates the latch it falls through to and not
+                // that one.
+                // `a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted`
+                // is proved under `any`. A block that leaves the loop early
+                // dominates no latch, so it is a doubt by the same test.
                 let doubt_only = !each
                     .latches()
                     .iter()

@@ -1,0 +1,10 @@
+error[SC0401]: this frees `p`, which may have been freed already
+   ╭─[ a_free_on_a_turn_a_continue_ends_is_freed_again_on_the_next.c:7:9 ]
+   │
+ 7 │         free(p);
+   │         ───┬───  
+   │            ╰───── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

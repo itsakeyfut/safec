@@ -38,15 +38,24 @@ Function a_do_condition_is_ordered_before_the_next_turn.c:3:5 "f"
     Goto "bb2"
   Block "bb2"
     ArgumentsEvaluated a_do_condition_is_ordered_before_the_next_turn.c:7:9 generated
-    Call a_do_condition_is_ordered_before_the_next_turn.c:7:9 written "free" "bb3"
+    Call a_do_condition_is_ordered_before_the_next_turn.c:7:9 written "free" "bb5"
       Copy "_1"
   Block "bb3"
+    Branch a_do_condition_is_ordered_before_the_next_turn.c:10:14 written "bb7" "bb4"
+      Copy "_1"
+        Deref
+  Block "bb4"
+    Sequenced a_do_condition_is_ordered_before_the_next_turn.c:10:14 generated
+    ArgumentsEvaluated a_do_condition_is_ordered_before_the_next_turn.c:11:5 generated
+    Call a_do_condition_is_ordered_before_the_next_turn.c:11:5 written "free" "bb8"
+      Copy "_1"
+  Block "bb5"
     Sequenced a_do_condition_is_ordered_before_the_next_turn.c:7:9 generated
     ArgumentsEvaluated a_do_condition_is_ordered_before_the_next_turn.c:8:13 generated
-    Call a_do_condition_is_ordered_before_the_next_turn.c:8:13 written "malloc" "bb4"
+    Call a_do_condition_is_ordered_before_the_next_turn.c:8:13 written "malloc" "bb6"
       Destination "_4"
       Constant 4
-  Block "bb4"
+  Block "bb6"
     Operation a_do_condition_is_ordered_before_the_next_turn.c:8:9 written
       Destination "_1"
       Use
@@ -67,19 +76,10 @@ Function a_do_condition_is_ordered_before_the_next_turn.c:3:5 "f"
         Copy "_1"
           Deref
     Sequenced a_do_condition_is_ordered_before_the_next_turn.c:9:9 generated
-    Goto "bb5"
-  Block "bb5"
-    Branch a_do_condition_is_ordered_before_the_next_turn.c:10:14 written "bb6" "bb7"
-      Copy "_1"
-        Deref
-  Block "bb6"
-    Sequenced a_do_condition_is_ordered_before_the_next_turn.c:10:14 generated
-    Goto "bb2"
+    Goto "bb3"
   Block "bb7"
     Sequenced a_do_condition_is_ordered_before_the_next_turn.c:10:14 generated
-    ArgumentsEvaluated a_do_condition_is_ordered_before_the_next_turn.c:11:5 generated
-    Call a_do_condition_is_ordered_before_the_next_turn.c:11:5 written "free" "bb8"
-      Copy "_1"
+    Goto "bb2"
   Block "bb8"
     Sequenced a_do_condition_is_ordered_before_the_next_turn.c:11:5 generated
     Operation a_do_condition_is_ordered_before_the_next_turn.c:12:5 written

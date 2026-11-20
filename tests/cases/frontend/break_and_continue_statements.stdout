@@ -1,0 +1,9 @@
+Function break_and_continue_statements.c:1:1 "main" "int (void)"
+  Compound break_and_continue_statements.c:1:16
+    While break_and_continue_statements.c:2:5
+      Number break_and_continue_statements.c:2:12 "1"
+      Compound break_and_continue_statements.c:2:15
+        Continue break_and_continue_statements.c:3:9
+        Break break_and_continue_statements.c:4:9
+    Return break_and_continue_statements.c:6:5
+      Number break_and_continue_statements.c:6:12 "0"

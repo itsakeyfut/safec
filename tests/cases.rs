@@ -3751,6 +3751,29 @@ cases! {
         // happened by the time the loop is left, whatever the condition says:
         // proved. Mutation: lower `do` as `while`, asking before the body;
         // the use is only doubted.
+        // A loop left only by `break`: the free before it has happened
+        // where the loop is left, so the use after it is proved. Mutation:
+        // send `break` where `continue` goes; the loop never ends, the use
+        // is reached by nothing, and this is silent.
+        a_use_after_a_free_reached_only_by_a_break_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A turn ended by `continue` comes round to free again. Mutation:
+        // send `continue` where `break` goes; there is no second turn and no
+        // second free.
+        a_free_on_a_turn_a_continue_ends_is_freed_again_on_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `for` whose test holds on the way in is shown to run, so what its
+        // body writes is believed written after it. A `continue` before the
+        // write may end every turn without it, so the read after the loop is
+        // doubted all the same.
+        a_write_a_continue_may_skip_in_a_loop_shown_to_run_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A turn a `continue` ends writes `m[0]` and comes round, so the read
+        // after the `if` may first run with it written: a doubt, as the same
+        // program with an `else` is. Its block dominates one of the loop's
+        // two latches. Mutation: ask that it dominate any latch rather than
+        // every one, in the first-turn walk of `memory.rs`; this is proved.
+        a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a pointer local, which `memory::assigned` asks.
+        // Mutation: the same, in its filter of first turns; this is proved.
+        a_pointer_a_turn_ended_by_continue_may_have_assigned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter
@@ -8949,6 +8972,9 @@ cases! {
         // dump's `Do` arm; it does not build. Print the condition first; the
         // children swap.
         do_statement: ["--emit", "ast"],
+        // Each a node with no children. Mutation: have the dump's arm for
+        // them write nothing; the next node runs onto their line.
+        break_and_continue_statements: ["--emit", "ast"],
     }
 
     "preprocessor" => {

@@ -616,16 +616,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`goto`",
             "6.8.6.1",
         ),
-        (
-            "int main(void) { while (1) continue; }\n",
-            "`continue`",
-            "6.8.6.2",
-        ),
-        (
-            "int main(void) { while (1) break; }\n",
-            "`break`",
-            "6.8.6.3",
-        ),
         ("typedef int T;\n", "`typedef`", "6.7.8"),
         ("extern int x;\n", "`extern`", "6.7.1"),
         ("static int x;\n", "`static`", "6.7.1"),
@@ -789,12 +779,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`static` or a qualifier",
             "6.7.6.3 p7",
         ),
-        (
-            "int main(void) { while (1) { if (1) continue; } }\n",
-            "`continue`",
-            "6.8.6.2",
-        ),
-        ("int main(void) { for (;;) break; }\n", "`break`", "6.8.6.3"),
     ];
     let malformed = [
         "int main(void) { case 1: return 0; }\n",
@@ -930,9 +914,7 @@ fn a_star_length_says_where_c_allows_it_rather_than_that_it_is_allowed_here() {
 ///
 /// A block's position also reaches a statement's, because a block-item that
 /// is not a declaration is read as one, and an expression may begin a
-/// statement, a block-item or a `for`'s first clause (6.8.3, 6.8.5 p1). `break` and `continue` are written
-/// inside a loop where a statement is asked about, and outside one in a
-/// block, where 6.8.6.2 p1 and 6.8.6.3 p1 forbid them.
+/// statement, a block-item or a `for`'s first clause (6.8.3, 6.8.5 p1).
 ///
 /// Mutation: add or remove any position in `unread_keyword`, or give a row
 /// another clause. A cell here fails, named by keyword and position.
@@ -957,8 +939,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
     let keywords: &[(&str, &str, &[At])] = &[
         ("switch", "6.8.4.2", &[Statement]),
         ("goto", "6.8.6.1", &[Statement]),
-        ("continue", "6.8.6.2", &[Statement]),
-        ("break", "6.8.6.3", &[Statement]),
         ("typedef", "6.7.8", &[FileScope, BlockScope]),
         ("extern", "6.7.1", &[FileScope, BlockScope]),
         ("static", "6.7.1", &[FileScope, BlockScope]),
@@ -1002,13 +982,11 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
                 ForInit => format!("int main(void) {{ for ({keyword} i;;) ; }}\n"),
                 Expression => format!("int main(void) {{ return {keyword} x; }}\n"),
             };
-            // A block-item that is no declaration is read as a statement, and
-            // there a `break` or `continue` is outside any loop. An expression
-            // can begin a statement, a block-item and a `for`'s first clause.
+            // A block-item that is no declaration is read as a statement. An
+            // expression can begin a statement, a block-item and a `for`'s
+            // first clause.
             let unread = allowed.contains(&at)
-                || (at == BlockScope
-                    && allowed.contains(&Statement)
-                    && !matches!(keyword, "break" | "continue"))
+                || (at == BlockScope && allowed.contains(&Statement))
                 || (matches!(at, BlockScope | Statement | ForInit)
                     && allowed.contains(&Expression));
 
