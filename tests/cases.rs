@@ -8994,6 +8994,10 @@ cases! {
         // function is `SC0301`, each at the name. Mutation: drop either
         // check; its report goes.
         a_label_defined_twice_and_a_goto_to_none: ["--emit", "ast"],
+        // A label's scope is its function (C17 6.2.1 p3), so another
+        // function's is no label at all. Mutation: keep the labels of one
+        // function for the next; the `SC0301` goes.
+        a_goto_to_a_label_of_another_function_is_undeclared: ["--emit", "ast"],
     }
 
     "preprocessor" => {
