@@ -1617,7 +1617,7 @@ fn a_node_is_placed_against_the_file_its_span_names() {
         body: Vec::new(),
         span: Span::new(second, 9, 14),
     });
-    let ty = ast.push_type(Type::Int);
+    let ty = ast.push_type(Type::INT);
     ast.push_item(Item::Function(Function {
         ty,
         name: Span::new(first, 4, 9),

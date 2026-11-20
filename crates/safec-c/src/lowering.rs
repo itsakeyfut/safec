@@ -1511,8 +1511,10 @@ impl Lowering<'_> {
                     current = *element;
                 }
                 Type::Pointer(pointee) => current = *pointee,
-                Type::Int
-                | Type::Char
+                Type::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
                 | Type::Void
                 | Type::Function { .. }
                 | Type::Struct { .. } => {
@@ -1569,7 +1571,11 @@ impl Lowering<'_> {
                 }
                 // Written out rather than `_`, so a type added later is
                 // asked whether it can hold a prototype.
-                Type::Int | Type::Char | Type::Void => {}
+                Type::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Type::Void => {}
             }
         }
         Some(())
@@ -1929,8 +1935,12 @@ impl Lowering<'_> {
 
         let base = loop {
             match self.ast.ty(current) {
-                Type::Int => break Ty::INT,
-                Type::Char => break Ty::CHAR,
+                Type::Integer { rank, sign } => {
+                    break Ty::Integer {
+                        rank: *rank,
+                        sign: *sign,
+                    };
+                }
                 Type::Void => break Ty::Void,
                 Type::Pointer(pointee) => {
                     derivations.push(None);

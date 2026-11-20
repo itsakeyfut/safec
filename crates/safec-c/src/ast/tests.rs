@@ -28,9 +28,9 @@ fn two_types_are_compatible_when_c_says_they_are() {
         span: Span::new(file, 1, 2),
     });
 
-    let int = ast.push_type(Type::Int);
-    let also_int = ast.push_type(Type::Int);
-    let character = ast.push_type(Type::Char);
+    let int = ast.push_type(Type::INT);
+    let also_int = ast.push_type(Type::INT);
+    let character = ast.push_type(Type::CHAR);
     let pointer_to_int = ast.push_type(Type::Pointer(int));
     let also_pointer_to_int = ast.push_type(Type::Pointer(also_int));
     let pointer_to_char = ast.push_type(Type::Pointer(character));
@@ -197,9 +197,9 @@ fn every_type_is_spelled_the_way_c_declares_it() {
         span: Span::new(file, 0, 2),
     });
 
-    let int = ast.push_type(Type::Int);
+    let int = ast.push_type(Type::INT);
     let void = ast.push_type(Type::Void);
-    let character = ast.push_type(Type::Char);
+    let character = ast.push_type(Type::CHAR);
     let pointer_to_int = ast.push_type(Type::Pointer(int));
     let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
     let pointer_to_char = ast.push_type(Type::Pointer(character));

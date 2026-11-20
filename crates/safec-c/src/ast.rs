@@ -22,6 +22,7 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
+use safec_ir::ir::{Rank, Sign};
 use safec_ir::source::{SourceMap, Span};
 
 /// Where an expression is in [`Ast`].
@@ -57,6 +58,19 @@ pub struct ItemId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TypeId(u32);
 
+impl Type {
+    /// `int`.
+    pub const INT: Type = Type::Integer {
+        rank: Rank::Int,
+        sign: Sign::Signed,
+    };
+    /// Plain `char`.
+    pub const CHAR: Type = Type::Integer {
+        rank: Rank::Char,
+        sign: Sign::Plain,
+    };
+}
+
 /// A type, as C17 6.7.6 derives one from a declarator.
 ///
 /// The standard describes the derivation inductively, and this is the result
@@ -89,10 +103,15 @@ pub struct TypeId(u32);
 /// [`Ast::compatible`] is that comparison, written.
 #[derive(Clone, Debug)]
 pub enum Type {
-    /// `int`.
-    Int,
-    /// `char`.
-    Char,
+    /// An integer type, a rank and a sign, as the IR's is: `int` is
+    /// `Integer { Int, Signed }` and `char` `Integer { Char, Plain }`. See
+    /// ADR-0116.
+    Integer {
+        /// Which of C's standard integer types, by rank.
+        rank: Rank,
+        /// Whether it was written `signed`, `unsigned` or neither.
+        sign: Sign,
+    },
     /// `void`.
     Void,
     /// C17 6.7.6.1 p1 derives "pointer to T" from `* D`.
@@ -1217,7 +1236,17 @@ impl Ast {
             return false;
         }
         match (self.ty(left), self.ty(right)) {
-            (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
+            (
+                Type::Integer {
+                    rank: left_rank,
+                    sign: left_sign,
+                },
+                Type::Integer {
+                    rank: right_rank,
+                    sign: right_sign,
+                },
+            ) => left_rank == right_rank && left_sign == right_sign,
+            (Type::Void, Type::Void) => true,
             (Type::Pointer(left), Type::Pointer(right)) => {
                 self.compatible(*left, *right, same_struct)
             }
@@ -1241,8 +1270,13 @@ impl Ast {
             // `Type` has to be answered for here: `error[E0004]` is what says
             // somebody looked, and a wildcard would call the new type
             // different from everything including itself.
-            (Type::Int, _)
-            | (Type::Char, _)
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                },
+                _,
+            )
             | (Type::Void, _)
             | (Type::Pointer(_), _)
             | (Type::Array { .. }, _)
@@ -1347,9 +1381,19 @@ impl Ast {
     /// has to say which side it is on.
     pub(crate) fn is_promoted_by_default(&self, ty: TypeId) -> bool {
         match self.ty(ty) {
-            Type::Char => true,
-            Type::Int
-            | Type::Void
+            Type::Integer {
+                rank: Rank::Char,
+                sign: _,
+            } => true,
+            Type::Integer {
+                rank: Rank::Int,
+                sign: _,
+            } => false,
+            Type::Integer {
+                rank: rank @ (Rank::Short | Rank::Long | Rank::LongLong),
+                sign: _,
+            } => unreachable!("{rank:?} is #1112's to answer, and nothing builds it yet"),
+            Type::Void
             | Type::Pointer(_)
             | Type::Array { .. }
             | Type::Function { .. }
@@ -1389,11 +1433,27 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
         // spells `const int *` and `int *const`.
         let constant = if ast.is_const(id) { "const " } else { "" };
         let base = match ast.ty(id) {
-            Type::Int if ast.is_const(id) => "const int",
-            Type::Char if ast.is_const(id) => "const char",
+            Type::Integer { rank, sign } => {
+                let spelled = match (rank, sign) {
+                    (Rank::Int, Sign::Signed) => "int",
+                    (Rank::Char, Sign::Plain) => "char",
+                    (Rank::Char, Sign::Signed | Sign::Unsigned)
+                    | (Rank::Short | Rank::Int | Rank::Long | Rank::LongLong, _) => {
+                        unreachable!(
+                            "{sign:?} {rank:?} is spelled by #1112, and nothing builds it yet"
+                        )
+                    }
+                };
+                if ast.is_const(id) {
+                    match spelled {
+                        "int" => "const int",
+                        _ => "const char",
+                    }
+                } else {
+                    spelled
+                }
+            }
             Type::Void if ast.is_const(id) => "const void",
-            Type::Int => "int",
-            Type::Char => "char",
             Type::Void => "void",
             // The tag as written, and `(anonymous)` for none. A base of more
             // than one word, so it is spelled here and returned with the same
@@ -1479,7 +1539,13 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
 fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
     match ty {
         Type::Array { .. } | Type::Function { .. } => true,
-        Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => false,
+        Type::Integer {
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+            sign: _,
+        }
+        | Type::Void
+        | Type::Pointer(_)
+        | Type::Struct { .. } => false,
     }
 }
 
