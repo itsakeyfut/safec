@@ -742,6 +742,9 @@ fn sequences(expr: &Expr) -> bool {
         | Expr::Assign { .. }
         | Expr::Call { .. }
         | Expr::Subscript { .. }
+        | Expr::SizeofType { .. }
+        | Expr::SizeofExpr { .. }
+        | Expr::Cast { .. }
         | Expr::Error { .. } => false,
     }
 }
@@ -945,6 +948,16 @@ impl Lowering<'_> {
                 .integer(ty)
                 .map_or(value, |int| int.convert(value));
             return Some(StaticInit::Int(value));
+        }
+        // A null pointer however it is cast, `(int *)0` or `(void *)0`:
+        // C17 6.3.2.3 p3 and p4 make each a null pointer. Mutation: answer
+        // none; `a_null_pointer_cast_initializes_a_static` is refused.
+        let mut id = init;
+        while let Expr::Cast { operand, .. } = self.ast.expr(id) {
+            id = *operand;
+        }
+        if id != init && self.types.value(id) == Some(0) {
+            return Some(StaticInit::Int(0));
         }
         if !diagnostics.has_errors() {
             diagnostics.report(
@@ -2993,7 +3006,8 @@ impl Lowering<'_> {
 
     /// Whether lowering `id` leaves a value on the walk's stack.
     ///
-    /// A call to a `void` function and a `void` `?:` leave none, and a comma
+    /// A call to a `void` function, a `void` `?:` and a cast to `void` leave
+    /// none, and a comma
     /// leaves what its right operand leaves. Everything else leaves one,
     /// `void` included: `*p` of a `void *` is a read of a place, and a
     /// consumer that dropped it for its type would drop the read, which is
@@ -3003,7 +3017,9 @@ impl Lowering<'_> {
         // can be a comma as deep as the parser lets parentheses go.
         loop {
             match self.ast.expr(id) {
-                Expr::Call { .. } | Expr::Conditional { .. } => return !self.is_void(id),
+                Expr::Call { .. } | Expr::Conditional { .. } | Expr::Cast { .. } => {
+                    return !self.is_void(id);
+                }
                 Expr::Comma { rhs, .. } => id = *rhs,
                 _ => return true,
             }
@@ -3111,7 +3127,7 @@ impl Lowering<'_> {
                         .count()
             }
             // One operand, so nothing beside it.
-            Expr::Unary { .. } => 1,
+            Expr::Unary { .. } | Expr::Cast { .. } => 1,
             // Written out rather than `_`, so a kind added later is asked.
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
@@ -3122,6 +3138,8 @@ impl Lowering<'_> {
             | Expr::Member { .. }
             | Expr::Conditional { .. }
             | Expr::Comma { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
             | Expr::Error { .. } => 2,
         };
         acting <= 1
@@ -3168,6 +3186,9 @@ impl Lowering<'_> {
                 otherwise,
                 ..
             } => self.inert(*condition) && self.inert(*then) && self.inert(*otherwise),
+            Expr::Cast { operand, .. } => self.inert(*operand),
+            // Its operand is not evaluated (C17 6.5.3.4 p2).
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => true,
             Expr::Assign { .. }
             | Expr::Call { .. }
             | Expr::Subscript { .. }
@@ -3341,6 +3362,15 @@ impl Lowering<'_> {
                 tasks.push(Task::Discard(id));
                 tasks.push(Task::Value(*lhs));
             }
+            Expr::Cast { operand, .. } => {
+                tasks.push(Task::Finish(id));
+                tasks.push(Task::Value(*operand));
+            }
+            // A `sizeof` that has a type has its value, which the fold above
+            // pushed; its operand is never evaluated (C17 6.5.3.4 p2).
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {
+                unreachable!("a typed `sizeof` has its value, which the fold above pushed")
+            }
             // The parser reported whatever made this, and the driver's gate
             // means it never reaches here. Reporting it again would be a second
             // diagnostic about the first one's problem, so the function is
@@ -3440,6 +3470,9 @@ impl Lowering<'_> {
             | Expr::Conditional { .. }
             | Expr::Call { .. }
             | Expr::Comma { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
+            | Expr::Cast { .. }
             | Expr::Error { .. } => {
                 diagnostics.report(
                     Diagnostic::error("this expression names no place")
@@ -3479,7 +3512,7 @@ impl Lowering<'_> {
     /// **C17 6.3.2.1 p3**: an expression of array type that is not the operand
     /// of `&` or `sizeof` is converted to a pointer to the array's first
     /// element. `&` takes its operand's place and never reaches here, and
-    /// `sizeof` does not parse yet. Two shapes, by where the array is:
+    /// `sizeof`'s operand is never lowered. Two shapes, by where the array is:
     ///
     /// - **A local**, `a`: `Address(a[0])`, an `Index` of a constant zero
     ///   under `Rvalue::Address`, which the memory check reads as the local's
@@ -3543,6 +3576,13 @@ impl Lowering<'_> {
     ) -> Option<()> {
         match self.ast.expr(id) {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
+            Expr::Cast { operand, span, .. } => {
+                let (operand, span) = (*operand, *span);
+                self.cast(builder, id, operand, span, values, diagnostics)?;
+            }
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {
+                unreachable!("a typed `sizeof` has its value, which `begin_value` pushed")
+            }
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
@@ -3936,6 +3976,9 @@ impl Lowering<'_> {
             | Expr::Conditional { .. }
             | Expr::Call { .. }
             | Expr::Comma { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
+            | Expr::Cast { .. }
             | Expr::Error { .. } => {}
         }
 
@@ -4096,6 +4139,9 @@ impl Lowering<'_> {
             | Expr::Call { .. }
             | Expr::Subscript { .. }
             | Expr::Comma { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
+            | Expr::Cast { .. }
             | Expr::Error { .. } => {}
         }
 
@@ -4242,6 +4288,79 @@ impl Lowering<'_> {
     /// what the analyses ask about: `docs/safety-model.md`'s memory axis asks
     /// whether a place is still allocated, and a value with nowhere to live is
     /// a question it cannot be asked.
+    /// Finish the cast `id` of `operand`, whose value is on `values`. See
+    /// ADR-0117.
+    ///
+    /// - To `void`, the operand was evaluated for its effects (C17 6.5.4
+    ///   p6 with 6.3.2.2) and nothing is kept: a value read through a place
+    ///   is still a read, as a discarded comma operand's is.
+    /// - Between two integer types, or between two pointer types, a copy into
+    ///   a temporary of the type converted to, as an assignment converts:
+    ///   the memory check reads a pointer whose element type changed as it
+    ///   reads one converted through `void *`, in bytes.
+    /// - A null pointer constant to a pointer type is the null it is.
+    /// - Between a pointer and an integer otherwise, [`Rvalue::Reinterpret`],
+    ///   which the memory check reports unproven where it is written.
+    /// - Between two pointer types where what the result points at is not
+    ///   `const` and what the operand points at is, the same: a write
+    ///   through it to an object defined `const` is undefined (C17 6.7.3
+    ///   p6), and nothing here knows which objects those are. Mutation:
+    ///   lower it as `Rvalue::Use`; `a_cast_that_drops_const_is_unproven`
+    ///   goes silent.
+    fn cast(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        operand: ExprId,
+        span: Span,
+        values: &mut Vec<Operand>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        if self.is_void(id) {
+            if self.pushes(operand) {
+                let value = values.pop().expect("an operand");
+                builder.discarded(value, self.ast.expr(operand).span());
+            }
+            return Some(());
+        }
+        let value = values.pop().expect("an operand");
+        let pointer = |ty: Option<TypeId>, ast: &Ast| match ty.map(|ty| ast.ty(ty)) {
+            Some(Type::Pointer(_) | Type::Array { .. } | Type::Function { .. }) => true,
+            Some(Type::Integer { .. } | Type::Void | Type::Struct { .. }) | None => false,
+        };
+        let (to, from) = (
+            pointer(self.types.of(id), self.ast),
+            pointer(self.types.of(operand), self.ast),
+        );
+        let rvalue = match (to, from, &value) {
+            (true, true, _) if self.drops_const(id, operand) => Rvalue::Reinterpret(value),
+            (true, false, Operand::Constant(0)) | (true, true, _) | (false, false, _) => {
+                Rvalue::Use(value)
+            }
+            (true, false, _) | (false, true, _) => Rvalue::Reinterpret(value),
+        };
+        let into = self.temporary(builder, id, diagnostics)?;
+        builder.push(Operation {
+            place: Place::local(into),
+            value: rvalue,
+            origin: Origin::Written(span),
+        });
+        values.push(Operand::Copy(Place::local(into)));
+        Some(())
+    }
+
+    /// Whether the cast `id` of `operand`, both pointers, gives a pointer to
+    /// something not `const` from one to something that is.
+    fn drops_const(&self, id: ExprId, operand: ExprId) -> bool {
+        let pointee = |ty: Option<TypeId>| match ty.map(|ty| self.ast.ty(ty)) {
+            Some(Type::Pointer(pointee)) => Some(self.ast.is_const(*pointee)),
+            // An array operand points at its elements once it is read.
+            Some(Type::Array { element, .. }) => Some(self.ast.is_const(*element)),
+            _ => None,
+        };
+        pointee(self.types.of(operand)) == Some(true) && pointee(self.types.of(id)) == Some(false)
+    }
+
     fn temporary(
         &mut self,
         builder: &mut Builder,
@@ -4504,9 +4623,12 @@ impl Lowering<'_> {
                     work.extend(arguments.iter().rev().map(|&argument| (argument, false)));
                     work.push((*callee, false));
                 }
-                // A member is refused before anything reads it, and the other
-                // two name nothing.
-                Expr::Member { .. }
+                Expr::Cast { operand, .. } => work.push((*operand, false)),
+                // A member is refused before anything reads it, the other two
+                // name nothing, and `sizeof` evaluates nothing.
+                Expr::SizeofType { .. }
+                | Expr::SizeofExpr { .. }
+                | Expr::Member { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }
                 | Expr::Length { .. }
@@ -4588,6 +4710,9 @@ impl Lowering<'_> {
             | Expr::Conditional { .. }
             | Expr::Member { .. }
             | Expr::Comma { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
+            | Expr::Cast { .. }
             | Expr::Error { .. } => return Vec::new(),
         };
         let mut said: Vec<LocalId> = Vec::new();
@@ -4765,6 +4890,9 @@ impl Lowering<'_> {
                     work.push((*index, ordered));
                     work.push((*base, ordered));
                 }
+                Expr::Cast { operand, .. } => work.push((*operand, ordered)),
+                // Its operand is not evaluated, so it writes nothing.
+                Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {}
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }

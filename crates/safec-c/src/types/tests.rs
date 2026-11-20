@@ -13,8 +13,14 @@ struct Checked {
     diagnostics: DiagnosticSink,
 }
 
-/// Scan, parse, resolve and check, the way the driver does.
+/// Scan, parse, resolve and check, the way the driver does, for the target
+/// the comment below names.
 fn checked(text: &str) -> Checked {
+    checked_on(text, "x86_64-pc-windows-msvc")
+}
+
+/// [`checked`] for the target `triple` names.
+fn checked_on(text: &str, triple: &str) -> Checked {
     let mut sources = SourceMap::new();
     let file = sources.add_virtual("t.c", text);
     let mut diagnostics = DiagnosticSink::new();
@@ -40,7 +46,7 @@ fn checked(text: &str) -> Checked {
     // asserting about whichever machine ran it. Here `long` is 32 bits, as
     // `int` is; a test about a 64-bit `long` runs the interpreter on
     // another triple.
-    let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+    let target = Target::from_triple(triple).expect("a known triple");
     let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
 
     Checked {
@@ -138,6 +144,111 @@ impl Checked {
 /// One program per spelling, so that a row is about one constant.
 fn returning(spelling: &str) -> Checked {
     checked(&format!("int f(void) {{\n    return {spelling};\n}}\n"))
+}
+
+/// `sizeof` of every scalar type, of an expression and of an array is what
+/// `clang` says on each target, written out from `clang 22.1.8
+/// --target=<triple> -dM -E` (`__SIZEOF_SHORT__`, `__SIZEOF_INT__`,
+/// `__SIZEOF_LONG__`, `__SIZEOF_LONG_LONG__`, `__SIZEOF_POINTER__`,
+/// `__SIZE_TYPE__`), and has the type `size_t` (C17 6.5.3.4 p5).
+///
+/// Mutation: read the size of `long` from `int`'s in `Checker::bytes_of`, or
+/// a pointer's as 8 everywhere; a row fails. Mutation: give `sizeof` the
+/// type `unsigned long` everywhere; the Windows row fails.
+#[test]
+fn sizeof_is_what_clang_says_it_is() {
+    // The triple, the sizes of `short`, `int`, `long`, `long long` and a
+    // pointer, and `size_t`.
+    let measured: &[(&str, [i128; 5], &str)] = &[
+        ("aarch64-apple-darwin", [2, 4, 8, 8, 8], "unsigned long"),
+        (
+            "aarch64-unknown-linux-gnu",
+            [2, 4, 8, 8, 8],
+            "unsigned long",
+        ),
+        (
+            "armv7-unknown-linux-gnueabihf",
+            [2, 4, 4, 8, 4],
+            "unsigned int",
+        ),
+        ("i686-unknown-linux-gnu", [2, 4, 4, 8, 4], "unsigned int"),
+        ("wasm32-unknown-unknown", [2, 4, 4, 8, 4], "unsigned long"),
+        ("x86_64-apple-darwin", [2, 4, 8, 8, 8], "unsigned long"),
+        (
+            "x86_64-pc-windows-msvc",
+            [2, 4, 4, 8, 8],
+            "unsigned long long",
+        ),
+        ("x86_64-unknown-linux-gnu", [2, 4, 8, 8, 8], "unsigned long"),
+    ];
+    let text = "int f(int *p) {\n    return sizeof(char) + sizeof(short) + sizeof(int) + sizeof(long) + sizeof(long long) + sizeof(char *) + sizeof *p + sizeof(int[3]);\n}\n";
+    for &(triple, [short, int, long, long_long, pointer], size_t) in measured {
+        let checked = checked_on(text, triple);
+        assert_eq!(checked.messages(), Vec::<&str>::new(), "{triple}");
+        for (written, size) in [
+            ("sizeof(char)", 1),
+            ("sizeof(short)", short),
+            ("sizeof(int)", int),
+            ("sizeof(long)", long),
+            ("sizeof(long long)", long_long),
+            ("sizeof(char *)", pointer),
+            ("sizeof *p", int),
+            ("sizeof(int[3])", 3 * int),
+        ] {
+            assert_eq!(checked.value_of(written), Some(size), "{triple}: {written}");
+            assert_eq!(checked.spelling(written), size_t, "{triple}: {written}");
+        }
+    }
+}
+
+/// A comma's result is a value, so an array on its right is a pointer there
+/// (C17 6.3.2.1 p3): `sizeof(0, a)` is a pointer's size, 8 here, where
+/// `sizeof a` is the array's 100.
+///
+/// Mutation: type a comma as its right operand undecayed; this answers 100.
+#[test]
+fn sizeof_of_a_comma_is_a_pointer_s_size() {
+    let checked =
+        checked("int f(void) {\n    char a[100];\n    return sizeof(0, a) + sizeof a;\n}\n");
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+    assert_eq!(checked.value_of("sizeof(0, a)"), Some(8));
+    assert_eq!(checked.value_of("sizeof a"), Some(100));
+}
+
+/// `(void *)0` is a null pointer constant (C17 6.3.2.3 p3), so beside a
+/// pointer in `?:` the result has the other operand's type (6.5.15 p6), and
+/// it may be compared with a pointer to a function (6.5.9 p2).
+///
+/// Mutation: answer `false` in `Checker::void_null`; each `?:` is a `void *`
+/// and its `*` is refused. Mutation: drop the null arms of the conditional;
+/// the same.
+#[test]
+fn void_pointer_zero_is_a_null_pointer_constant() {
+    let checked = checked(
+        "int f(int c, int *p, int (*fp)(int)) {\n    return *(c ? p : (void *)0) + *(c ? (void *)0 : p) + (fp == (void *)0);\n}\n",
+    );
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+    assert_eq!(checked.spelling("c ? p : (void *)0"), "int *");
+    assert_eq!(checked.spelling("c ? (void *)0 : p"), "int *");
+}
+
+/// A cast to an integer type is a constant where its operand is one, at
+/// the type it converts to (C17 6.6 p6, 6.3.1.3): `(char)300` is 44,
+/// `(unsigned char)-1` 255, and `(long)-1` -1.
+///
+/// Mutation: give a cast no value in `Checker::evaluate`; every row fails.
+/// Mutation: answer the operand's value unconverted; the first two do.
+#[test]
+fn a_cast_to_an_integer_type_converts_a_constant() {
+    for (written, value) in [
+        ("(char)300", 44),
+        ("(unsigned char)-1", 255),
+        ("(long)-1", -1),
+    ] {
+        let checked = returning(written);
+        assert_eq!(checked.messages(), Vec::<&str>::new(), "{written}");
+        assert_eq!(checked.value_of(written), Some(value), "{written}");
+    }
 }
 
 /// An integer constant is worth what its base says, C17 6.4.4.1 p1.

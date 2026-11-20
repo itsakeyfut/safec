@@ -966,6 +966,65 @@ fn integer_arithmetic_is_what_clang_computes() {
     assert_eq!(ran(&ours), ran(&theirs));
 }
 
+/// `sizeof` and every kind of cast compute what `clang` computes on this
+/// machine: sizes of an array, a pointer, `int` and `long`, integer casts
+/// that narrow and widen, a cast to `void`, `(int *)malloc(..)`, a pointer
+/// read in bytes through `(char *)`, and a pointer turned into an integer
+/// and back, each folded into a hash the exit code carries (#1113).
+///
+/// Mutation: in `Lowering::cast`, hand an integer cast's operand on
+/// without converting it; `(char)x` stays 300 and the hash differs.
+/// Mutation: read a pointer's size as 4 in `Checker::bytes_of`; the same.
+#[test]
+fn sizeof_and_casts_are_what_clang_computes() {
+    if !clang_or_skip("what sizeof and casts answer") {
+        return;
+    }
+
+    let scratch = Scratch::new("casts");
+    scratch.source("casts.c", "void *malloc(unsigned long long n);\nvoid free(void *p);\nint g(void) { return 7; }\nint main(void) {\n    int x = 300;\n    int y = 0;\n    long long big = -1;\n    int a[5];\n    int *p = (int *)malloc(sizeof(int) * 2);\n    if (!p) {\n        return 1;\n    }\n    (void)g();\n    long long n = (long long)&y;\n    int *q = (int *)n;\n    *q = 5;\n    char *c = (char *)p;\n    c[0] = 1;\n    c[1] = 0;\n    c[2] = 0;\n    c[3] = 0;\n    unsigned long long h = sizeof a + sizeof(char *) + sizeof x + sizeof(long);\n    h = h * 31u + (unsigned char)-1;\n    h = h * 31u + (char)x;\n    h = h * 31u + (unsigned long long)big;\n    h = h * 31u + y;\n    h = h * 31u + *p;\n    free(p);\n    return (int)(h % 251u);\n}\n");
+    let ours = scratch
+        .path()
+        .join(if cfg!(windows) { "ours.exe" } else { "ours" });
+    let theirs = scratch.path().join(if cfg!(windows) {
+        "theirs.exe"
+    } else {
+        "theirs"
+    });
+
+    let output = safec(
+        &[
+            "--safety",
+            "off",
+            "--emit",
+            "executable",
+            "-o",
+            &ours.to_string_lossy(),
+            "casts.c",
+        ],
+        scratch.path(),
+    );
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let built = Command::new("clang")
+        .args(["-w", "-o"])
+        .arg(&theirs)
+        .arg("casts.c")
+        .current_dir(scratch.path())
+        .status()
+        .expect("clang runs");
+    assert!(built.success(), "clang built the same program");
+
+    let ran = |program: &Path| {
+        Command::new(program)
+            .status()
+            .expect("a program just built can be run")
+            .code()
+    };
+    assert_eq!(ran(&ours), ran(&theirs));
+}
+
 /// Objects with static storage duration and functions with internal linkage
 /// keep what C says across two units: a global defined in one and declared
 /// `extern` in the other, a tentative definition, a `static` local that keeps

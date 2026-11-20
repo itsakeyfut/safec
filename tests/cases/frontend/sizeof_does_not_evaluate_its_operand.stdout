@@ -1,0 +1,16 @@
+Target "x86_64-pc-windows-msvc"
+Function sizeof_does_not_evaluate_its_operand.c:1:5 "f" declared
+  Local "_0" "int" return
+Function sizeof_does_not_evaluate_its_operand.c:2:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation sizeof_does_not_evaluate_its_operand.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation sizeof_does_not_evaluate_its_operand.c:3:5 written
+      Destination "_0"
+      Use
+        Constant 4
+    Sequenced sizeof_does_not_evaluate_its_operand.c:3:12 generated
+    Return

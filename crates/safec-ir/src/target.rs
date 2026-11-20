@@ -158,6 +158,10 @@ pub struct Target {
     long_bits: u32,
     long_long_bits: u32,
     pointer_bits: u32,
+    /// The rank of `size_t`, which is unsigned: not worked out from the
+    /// widths, since `i686` and `wasm32` have the same ones and `clang`
+    /// gives them `unsigned int` and `unsigned long`.
+    size: Rank,
     widening: Widening,
 }
 
@@ -168,7 +172,8 @@ impl Target {
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null` reading
     /// `__SIZEOF_INT__`, `__CHAR_BIT__`, `__CHAR_UNSIGNED__` and
     /// `__SIZEOF_POINTER__`, and with `clang 22.1.8` the same way reading
-    /// `__SIZEOF_SHORT__`, `__SIZEOF_LONG__` and `__SIZEOF_LONG_LONG__`. A row nobody
+    /// `__SIZEOF_SHORT__`, `__SIZEOF_LONG__`, `__SIZEOF_LONG_LONG__` and
+    /// `__SIZE_TYPE__`. A row nobody
     /// measured is a machine this compiler would be inventing, so the test
     /// beside this writes the same numbers out again rather than walking this
     /// table against itself, which would hold for any numbers at all.
@@ -191,7 +196,7 @@ impl Target {
             8,
             true,
             (16, 64, 64),
-            64,
+            (64, Rank::Long),
             Widening::Required,
         ),
         Self::new(
@@ -200,7 +205,7 @@ impl Target {
             8,
             false,
             (16, 64, 64),
-            64,
+            (64, Rank::Long),
             Widening::None,
         ),
         Self::new(
@@ -209,7 +214,7 @@ impl Target {
             8,
             false,
             (16, 32, 64),
-            32,
+            (32, Rank::Int),
             Widening::Required,
         ),
         Self::new(
@@ -218,7 +223,7 @@ impl Target {
             8,
             true,
             (16, 32, 64),
-            32,
+            (32, Rank::Int),
             Widening::Required,
         ),
         Self::new(
@@ -227,7 +232,7 @@ impl Target {
             8,
             true,
             (16, 32, 64),
-            32,
+            (32, Rank::Long),
             Widening::Required,
         ),
         Self::new(
@@ -236,7 +241,7 @@ impl Target {
             8,
             true,
             (16, 64, 64),
-            64,
+            (64, Rank::Long),
             Widening::Required,
         ),
         Self::new(
@@ -245,7 +250,7 @@ impl Target {
             8,
             true,
             (16, 32, 64),
-            64,
+            (64, Rank::LongLong),
             Widening::None,
         ),
         Self::new(
@@ -254,7 +259,7 @@ impl Target {
             8,
             true,
             (16, 64, 64),
-            64,
+            (64, Rank::Long),
             Widening::Required,
         ),
     ];
@@ -270,11 +275,12 @@ impl Target {
         char_bits: u32,
         char_signed: bool,
         (short_bits, long_bits, long_long_bits): (u32, u32, u32),
-        pointer_bits: u32,
+        (pointer_bits, size): (u32, Rank),
         widening: Widening,
     ) -> Self {
         Self {
             triple,
+            size,
             short_bits,
             long_bits,
             long_long_bits,
@@ -338,6 +344,12 @@ impl Target {
                 unreachable!("{sign:?} {rank:?} is no type: `Plain` is `char`'s alone")
             }
         }
+    }
+
+    /// The type of `size_t` here, which `sizeof` has (C17 6.5.3.4 p5): always
+    /// unsigned, of the rank the target gives it.
+    pub fn size_type(self) -> (Rank, Sign) {
+        (self.size, Sign::Unsigned)
     }
 
     /// How many bits a pointer takes here: what an object holding one is
@@ -437,8 +449,9 @@ mod tests {
         // measurement, rather than the flag behind it, which is this module's
         // own business.
         // The triple, `int`'s bits, `char`'s bits, whether `char` is signed,
-        // a pointer's bits, what a `char` is widened by, and the bits of
-        // `short`, `long` and `long long`.
+        // a pointer's bits, what a `char` is widened by, the bits of
+        // `short`, `long` and `long long`, and the rank of `size_t`
+        // (`__SIZE_TYPE__`), which is unsigned.
         type Row = (
             &'static str,
             u32,
@@ -447,6 +460,7 @@ mod tests {
             u32,
             Option<Extend>,
             (u32, u32, u32),
+            Rank,
         );
         let measured: &[Row] = &[
             (
@@ -457,6 +471,7 @@ mod tests {
                 64,
                 Some(Extend::Sign),
                 (16, 64, 64),
+                Rank::Long,
             ),
             (
                 "aarch64-unknown-linux-gnu",
@@ -466,6 +481,7 @@ mod tests {
                 64,
                 None,
                 (16, 64, 64),
+                Rank::Long,
             ),
             (
                 "armv7-unknown-linux-gnueabihf",
@@ -475,6 +491,7 @@ mod tests {
                 32,
                 Some(Extend::Zero),
                 (16, 32, 64),
+                Rank::Int,
             ),
             (
                 "i686-unknown-linux-gnu",
@@ -484,6 +501,7 @@ mod tests {
                 32,
                 Some(Extend::Sign),
                 (16, 32, 64),
+                Rank::Int,
             ),
             (
                 "wasm32-unknown-unknown",
@@ -493,6 +511,7 @@ mod tests {
                 32,
                 Some(Extend::Sign),
                 (16, 32, 64),
+                Rank::Long,
             ),
             (
                 "x86_64-apple-darwin",
@@ -502,6 +521,7 @@ mod tests {
                 64,
                 Some(Extend::Sign),
                 (16, 64, 64),
+                Rank::Long,
             ),
             (
                 "x86_64-pc-windows-msvc",
@@ -511,6 +531,7 @@ mod tests {
                 64,
                 None,
                 (16, 32, 64),
+                Rank::LongLong,
             ),
             (
                 "x86_64-unknown-linux-gnu",
@@ -520,6 +541,7 @@ mod tests {
                 64,
                 Some(Extend::Sign),
                 (16, 64, 64),
+                Rank::Long,
             ),
         ];
 
@@ -537,9 +559,15 @@ mod tests {
             pointer_bits,
             extension,
             (short_bits, long_bits, long_long_bits),
+            size,
         ) in measured
         {
             let target = Target::from_triple(triple).expect("a measured triple is known");
+            assert_eq!(
+                target.size_type(),
+                (size, Sign::Unsigned),
+                "{triple}: size_t"
+            );
             // Every rank, signed and unsigned: the width is the rank's, the
             // sign what was written (C17 6.2.5 p6), and `signed char` and
             // `unsigned char` as wide as `char`.

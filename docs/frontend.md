@@ -198,7 +198,7 @@ where the declared type is scalar, and the parser does not know the type.
 
 The bit-field and the anonymous member are `SC0207`, the code for valid C the
 parser does not read yet, told apart from C it cannot parse where the parse
-failed. `typedef`, a cast, a prefixed string literal and the other constructs
+failed. `typedef`, a compound literal, a prefixed string literal and the other constructs
 the parser does not read are reported under it too, each naming the clause
 that makes it valid; `parser.rs::unread_keyword` and the checks beside it
 decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the

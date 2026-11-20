@@ -141,9 +141,9 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
         Element::Assign(operation) => {
             let at = operation.origin.span();
             match &operation.value {
-                Rvalue::Use(operand) | Rvalue::Unary { operand, .. } => {
-                    operand_reads(operand, at, &mut reads)
-                }
+                Rvalue::Use(operand)
+                | Rvalue::Unary { operand, .. }
+                | Rvalue::Reinterpret(operand) => operand_reads(operand, at, &mut reads),
                 Rvalue::Binary { lhs, rhs, .. } => {
                     operand_reads(lhs, at, &mut reads);
                     operand_reads(rhs, at, &mut reads);

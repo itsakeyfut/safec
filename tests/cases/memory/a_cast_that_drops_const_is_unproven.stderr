@@ -1,0 +1,20 @@
+error[SC0416]: the memory check does not follow a pointer through this cast
+   ╭─[ a_cast_that_drops_const_is_unproven.c:3:6 ]
+   │
+ 3 │     *(int *)&g = 2;
+   │      ────┬────  
+   │          ╰────── nothing about what this points at is proved from here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the value a pointer, and keep `const` on what it points at
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_cast_that_drops_const_is_unproven.c:3:5 ]
+   │
+ 3 │     *(int *)&g = 2;
+   │     ───────┬──────  
+   │            ╰──────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

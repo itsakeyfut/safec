@@ -1,0 +1,8 @@
+error[SC0309]: `sizeof` a type larger than this target can address
+   ╭─[ sizeof_a_type_larger_than_the_target_can_address_is_refused.c:2:38 ]
+   │
+ 2 │     return sizeof(int[0x3fffffff]) + sizeof(int[0x40000000]);
+   │                                      ───────────┬───────────  
+   │                                                 ╰───────────── this is 4294967296 bytes
+───╯
+  = note: an object here is smaller than 4294967296 bytes, the most this target can address

@@ -589,6 +589,31 @@ pub enum Expr {
         /// The base through the member's name.
         span: Span,
     },
+    /// `sizeof ( type-name )`. C17 6.5.3.4.
+    SizeofType {
+        /// The type whose size it is.
+        ty: TypeId,
+        /// The `sizeof` through the closing parenthesis.
+        span: Span,
+    },
+    /// `sizeof unary-expression`. C17 6.5.3.4.
+    ///
+    /// The operand is typed and never evaluated (p2): nothing lowers it.
+    SizeofExpr {
+        /// The expression whose type's size it is.
+        operand: ExprId,
+        /// The `sizeof` and its operand.
+        span: Span,
+    },
+    /// `( type-name ) cast-expression`. C17 6.5.4.
+    Cast {
+        /// The type converted to.
+        ty: TypeId,
+        /// What is converted.
+        operand: ExprId,
+        /// The opening parenthesis through the operand.
+        span: Span,
+    },
     /// The comma operator. C17 6.5.17.
     ///
     /// Not what separates the arguments of a call: an argument is an
@@ -910,6 +935,9 @@ impl Expr {
             Self::Call { .. } => "Call",
             Self::Subscript { .. } => "Subscript",
             Self::Member { .. } => "Member",
+            Self::SizeofType { .. } => "SizeofType",
+            Self::SizeofExpr { .. } => "SizeofExpr",
+            Self::Cast { .. } => "Cast",
             Self::Comma { .. } => "Comma",
             Self::Error { .. } => "Error",
         }
@@ -930,6 +958,9 @@ impl Expr {
             | Self::Call { span, .. }
             | Self::Subscript { span, .. }
             | Self::Member { span, .. }
+            | Self::SizeofType { span, .. }
+            | Self::SizeofExpr { span, .. }
+            | Self::Cast { span, .. }
             | Self::Comma { span, .. }
             | Self::Error { span, .. } => *span,
         }
@@ -978,8 +1009,15 @@ impl Expr {
             | Self::String { .. }
             | Self::Length { .. }
             | Self::Identifier { .. }
+            | Self::SizeofType { .. }
             | Self::Error { .. } => {}
-            Self::Unary { operand, .. } | Self::Member { base: operand, .. } => out.push(*operand),
+            // `sizeof`'s operand is a child for the walks that resolve and
+            // type it, and is never evaluated (C17 6.5.3.4 p2): what lowers
+            // an expression does not descend into it.
+            Self::Unary { operand, .. }
+            | Self::Member { base: operand, .. }
+            | Self::SizeofExpr { operand, .. }
+            | Self::Cast { operand, .. } => out.push(*operand),
             Self::Binary { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
             Self::Assign { place, value, .. } => out.extend([*place, *value]),
             Self::Comma { lhs, rhs, .. } => out.extend([*lhs, *rhs]),

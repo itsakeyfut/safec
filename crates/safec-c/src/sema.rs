@@ -1278,6 +1278,15 @@ impl Resolver<'_> {
                     None => diagnostics.report(undeclared(self.sources.snippet(span), span)),
                 }
             }
+            // **A type name is walked as a declaration's type is**, before
+            // the operand it is written ahead of: a struct in it is bound to
+            // its tag, and a name in an array length is looked up. Left
+            // unwalked, `(struct S *)p` reached a comparison with a struct
+            // bound to no tag and panicked. Mutation: walk no type name here;
+            // `a_struct_pointer_cast_is_read` panics.
+            if let Expr::Cast { ty, .. } | Expr::SizeofType { ty, .. } = *expr {
+                self.walk_type(ty, diagnostics);
+            }
 
             // Cleared per node, because `extend_children` appends. Pushed in
             // reverse so that they come back off in the order they were

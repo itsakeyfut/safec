@@ -1,0 +1,56 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_6 = alloca i32
+  %_7 = alloca i32
+  %_8 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = inttoptr i64 18446744073709551615 to ptr
+  store ptr %t0, ptr %_2
+  %t1 = load ptr, ptr %_2
+  store ptr %t1, ptr %_1
+  %t2 = inttoptr i64 4096 to ptr
+  store ptr %t2, ptr %_4
+  %t3 = load ptr, ptr %_4
+  store ptr %t3, ptr %_3
+  store ptr null, ptr %_5
+  %t4 = load ptr, ptr %_1
+  %t5 = load ptr, ptr %_5
+  %t6 = icmp eq ptr %t4, %t5
+  %t7 = zext i1 %t6 to i32
+  store i32 %t7, ptr %_6
+  %t8 = load i32, ptr %_6
+  %t9 = icmp ne i32 %t8, 0
+  %t10 = zext i1 %t9 to i32
+  store i32 %t10, ptr %_7
+  %t11 = load i32, ptr %_7
+  %t12 = icmp ne i32 %t11, 0
+  br i1 %t12, label %bb1, label %bb2
+
+bb1:
+  %t13 = load i32, ptr %_7
+  store i32 %t13, ptr %_0
+  %t14 = load i32, ptr %_0
+  ret i32 %t14
+
+bb2:
+  %t15 = load ptr, ptr %_3
+  %t16 = icmp eq ptr %t15, null
+  %t17 = zext i1 %t16 to i32
+  store i32 %t17, ptr %_8
+  %t18 = load i32, ptr %_8
+  %t19 = icmp ne i32 %t18, 0
+  %t20 = zext i1 %t19 to i32
+  store i32 %t20, ptr %_7
+  br label %bb1
+}

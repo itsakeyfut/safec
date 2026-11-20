@@ -59,6 +59,32 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast to or from `void *` is the implicit conversion, so a use
+        // after a free through `(int *)malloc(4)` is proved (ADR-0117).
+        // Mutation: lower every pointer cast as `Rvalue::Reinterpret`; this
+        // is `SC0416` and the use goes unproven.
+        a_cast_of_malloc_is_followed_as_its_implicit_conversion: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast between two other pointer types is followed as a conversion
+        // through `void *` is: the free through `p` reaches `c`, and `c` is
+        // read in bytes, so `c[7]` is inside eight and `c[8]` is not. See
+        // ADR-0117. Mutation: lower it as `Rvalue::Reinterpret`; both become
+        // `SC0416`.
+        a_use_after_free_through_a_char_cast_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_cast_reads_the_allocation_in_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(int *)0` converts a null pointer constant, which gives a null
+        // pointer (C17 6.3.2.3 p3). Mutation: lower it as
+        // `Rvalue::Reinterpret`; this is `SC0416`, not `SC0403`.
+        a_null_pointer_cast_is_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each conversion between a pointer and an integer is unproven where
+        // it is written, `SC0416`, and what follows it is not believed
+        // (ADR-0117). Mutation: push no finding for `Rvalue::Reinterpret` in
+        // `memory.rs`; both go silent and the read of `*q` with them.
+        a_cast_between_a_pointer_and_an_integer_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write through a cast that dropped `const` may write an object
+        // defined `const` (C17 6.7.3 p6), which nothing here can tell, so
+        // the cast is `SC0416` (ADR-0117). Mutation: lower it as
+        // `Rvalue::Use` in `Lowering::cast`; the program is believed.
+        a_cast_that_drops_const_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local nothing assigned, read by a null test and written
         // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
         // since no path assigns it.
@@ -4523,6 +4549,21 @@ cases! {
         // (#621), and `an_ir_shape_the_backend_cannot_write` holds a refusal
         // that is left.
         a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast between an integer and a pointer is `ptrtoint` and
+        // `inttoptr`, and an `int` narrower than a pointer is widened by its
+        // sign first, `sext` for `n` and `zext` for `u`, as `clang` writes
+        // it. Mutation: widen every integer with `zext` in `reinterpret`;
+        // `n`'s line changes.
+        a_narrow_integer_cast_to_a_pointer_is_widened_by_its_sign: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A null pointer cast to a pointer type initializes a static as the
+        // null it is (C17 6.3.2.3 p3 and p4), `(void *)0` included.
+        // Mutation: answer no initializer for it in `Lowering::static_init`;
+        // both are refused.
+        a_null_pointer_cast_initializes_a_static: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A constant cast to a pointer is `inttoptr` of its bits at a
+        // pointer's width, `(void *)-1` all ones. Mutation: refuse a
+        // constant in `reinterpret`; this is `SC0801`.
+        a_constant_cast_to_a_pointer_reaches_the_backend: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         // A message names the local its conclusion is about, read as itself
         // or read through at its first level: a double free, a free through
         // `q` then a use through `p` that names `p`, two uses at one caret
@@ -8256,6 +8297,31 @@ cases! {
         // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
         // the first half in `Parser::specifiers`; `SC0201`.
         a_storage_class_after_the_type_is_read: ["--emit", "ast"],
+        // C17 6.5.3.4 p1 refuses a function and an incomplete type, `SC0306`;
+        // a struct has no layout here yet, `SC0304`. Mutation: drop the
+        // incomplete arm in `Checker::sizeof`; `sizeof(void)` and `sizeof
+        // a` are `SC0304` instead.
+        sizeof_refuses_what_has_no_size: ["--emit", "ast"],
+        // 6.5.4 p2: to `void` or to a scalar from a scalar. Mutation: let a
+        // struct operand through in `Checker::cast`; the first is accepted.
+        a_cast_is_held_to_scalar_types: ["--emit", "ast"],
+        // A struct written in a type name is bound to its tag, as one in a
+        // declaration is: each of these is read and typed, and `(struct S
+        // *)v + 1` steps by a complete struct. Mutation: walk no type name in
+        // `Resolver::expr`; the check panics on the comparison.
+        a_struct_pointer_cast_is_read: ["--emit", "ast"],
+        // A cast to a pointer gives no integer constant (C17 6.6 p6), so an
+        // integer cast of one is no constant, and is said to be none rather
+        // than to overflow. Mutation: let a pointer cast be constant in shape
+        // in `Checker::constant_shaped`; this says it has no defined value.
+        a_pointer_cast_is_no_integer_constant: ["--emit", "ast"],
+        // On a 32-bit target `int[0x40000000]` is 2^32 bytes, which no
+        // object is and no `size_t` holds; one fewer is not. Mutation: skip
+        // the limit in `Checker::sizeof`; the second is accepted.
+        sizeof_a_type_larger_than_the_target_can_address_is_refused: ["--emit", "ast", "--target", "i686-unknown-linux-gnu"],
+        // 6.7.7: a type name is a declaration of nothing. Mutation: accept
+        // the name in `Parser::type_name`; the cast is read.
+        a_type_name_names_nothing: ["--emit", "ast"],
         // Every list C17 6.7.2 p2 gives an integer type, in the order it
         // gives them, and two out of order: each declaration's type is
         // spelled as `clang` spells it. Mutation: give a set with a `long`
@@ -8459,6 +8525,10 @@ cases! {
         // struct in the type checker again; the lowering is never reached,
         // `main` is not printed, and this fails.
         a_struct_program_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // 6.5.3.4 p2: the operand of `sizeof` is not evaluated, so `f` is
+        // not called and the function is a return of a constant. Mutation:
+        // lower a `sizeof` that has a value by its operand; a call appears.
+        sizeof_does_not_evaluate_its_operand: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a
         // declarator; this loses its `SC0206`.

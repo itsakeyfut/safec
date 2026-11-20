@@ -419,6 +419,77 @@ impl Emitter<'_> {
         Ok(result)
     }
 
+    /// The operand's bits as `to`, where one of the two is a pointer and the
+    /// other an integer (C17 6.3.2.3 p5 and p6): `ptrtoint` and `inttoptr`,
+    /// as `clang` spells a cast. An integer narrower than a pointer is
+    /// widened first by its own sign, as `clang` does, since `inttoptr`
+    /// alone would fill with zeros.
+    fn reinterpret(
+        &mut self,
+        function: &Function,
+        from: &Operand,
+        to: TyId,
+        out: &mut String,
+    ) -> Refuses<String> {
+        let pointer = format!("i{}", self.unit.target().pointer_bits());
+        let (value, from) = match from {
+            Operand::Copy(place) => self.read(function, place, out)?,
+            // `(void *)-1`: the integer's bits at a pointer's width, which
+            // is what widening it by its sign or its zeros came to when the
+            // constant was folded, and `inttoptr` of them.
+            Operand::Constant(value) => {
+                if !matches!(self.unit.ty(to), Ty::Pointer(_)) {
+                    return self.constant(*value, to);
+                }
+                let bits = self.unit.target().pointer_bits();
+                let wrapped = value.rem_euclid(1i128 << bits);
+                let result = self.temp();
+                writeln!(out, "  {result} = inttoptr {pointer} {wrapped} to ptr")
+                    .expect("writing to a string cannot fail");
+                return Ok(result);
+            }
+        };
+        let source = self.spell(from);
+        let wanted = self.spell(to);
+        match (self.unit.integer(from), self.unit.integer(to)) {
+            (None, Some(_)) if matches!(self.unit.ty(from), Ty::Pointer(_)) => {
+                let result = self.temp();
+                writeln!(out, "  {result} = ptrtoint ptr {value} to {wanted}")
+                    .expect("writing to a string cannot fail");
+                Ok(result)
+            }
+            (Some(int), None) if matches!(self.unit.ty(to), Ty::Pointer(_)) => {
+                let widened = if int.bits() < self.unit.target().pointer_bits() {
+                    let widened = self.temp();
+                    let instruction = if int.signed() { "sext" } else { "zext" };
+                    writeln!(
+                        out,
+                        "  {widened} = {instruction} {source} {value} to {pointer}"
+                    )
+                    .expect("writing to a string cannot fail");
+                    (widened, pointer)
+                } else {
+                    (value, source)
+                };
+                let result = self.temp();
+                writeln!(
+                    out,
+                    "  {result} = inttoptr {} {} to ptr",
+                    widened.1, widened.0
+                )
+                .expect("writing to a string cannot fail");
+                Ok(result)
+            }
+            // A pointer whose `const` was dropped is the same address.
+            _ if matches!(self.unit.ty(from), Ty::Pointer(_))
+                && matches!(self.unit.ty(to), Ty::Pointer(_)) =>
+            {
+                Ok(value)
+            }
+            _ => self.refuse(format!("`{source}` reinterpreted as `{wanted}`")),
+        }
+    }
+
     /// One operand, as the type `want` names.
     fn operand(
         &mut self,
@@ -821,6 +892,7 @@ impl Emitter<'_> {
                 }
                 self.global_name(*id)
             }
+            Rvalue::Reinterpret(from) => self.reinterpret(function, from, to, out)?,
         };
 
         let address = self.address(function, &operation.place, out)?;

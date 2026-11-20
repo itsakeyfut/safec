@@ -1,0 +1,24 @@
+error[SC0306]: cannot cast `struct S` to `int`
+   ╭─[ a_cast_is_held_to_scalar_types.c:6:12 ]
+   │
+ 6 │     return (int)s + (int)v();
+   │            ───┬──  
+   │               ╰──── a `struct S` cast to `int`
+───╯
+  = note: a cast is to `void`, or to a scalar type from one (C17 6.5.4 p2)
+error[SC0306]: cannot cast `void` to `int`
+   ╭─[ a_cast_is_held_to_scalar_types.c:6:21 ]
+   │
+ 6 │     return (int)s + (int)v();
+   │                     ────┬───  
+   │                         ╰───── a `void` cast to `int`
+───╯
+  = note: a cast is to `void`, or to a scalar type from one (C17 6.5.4 p2)
+error[SC0306]: cannot cast `int` to `struct S`
+   ╭─[ a_cast_is_held_to_scalar_types.c:9:12 ]
+   │
+ 9 │     return (struct S)x;
+   │            ─────┬─────  
+   │                 ╰─────── a `int` cast to `struct S`
+───╯
+  = note: a cast is to `void`, or to a scalar type from one (C17 6.5.4 p2)
