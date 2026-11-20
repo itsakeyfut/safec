@@ -662,7 +662,7 @@ pub(crate) fn tested_against_null(
                     op: UnOp::Neg | UnOp::BitNot,
                     operand: _,
                 } => None,
-                Rvalue::Use(_) | Rvalue::Address(_) => None,
+                Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Static(_) => None,
             })
             // **The refusal, and the only one this walk makes about a local it
             // can name.** The comparison read this local above; everything
@@ -795,6 +795,7 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
             }
             Rvalue::Use(_)
             | Rvalue::Address(_)
+            | Rvalue::Static(_)
             | Rvalue::Unary { op: _, operand: _ }
             | Rvalue::Binary {
                 op: _,
@@ -949,7 +950,7 @@ impl Nullability<'_> {
             // the lowering folds it away, which is ADR-0021, so the rule is
             // safe for a reason that has nothing to do with the clause it used
             // to name.
-            Rvalue::Address(_) => Nullness::NonNull,
+            Rvalue::Address(_) | Rvalue::Static(_) => Nullness::NonNull,
             // Anything computed. A pointer moved by `+` or `-` is answered in
             // `Analysis::element` before this is asked, where the move is
             // known to be a pointer's. See ADR-0084.
@@ -1722,9 +1723,10 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                             // A value computed rather than read is no
                             // local's own. Written out so that a new kind
                             // of value answers here.
-                            Rvalue::Unary { .. } | Rvalue::Binary { .. } | Rvalue::Address(_) => {
-                                None
-                            }
+                            Rvalue::Unary { .. }
+                            | Rvalue::Binary { .. }
+                            | Rvalue::Address(_)
+                            | Rvalue::Static(_) => None,
                         };
                         returned_at = Some((operation.origin.span(), local));
                     }

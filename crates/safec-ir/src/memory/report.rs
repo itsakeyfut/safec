@@ -1237,7 +1237,7 @@ fn leaving(
             };
             Some((fit, None))
         }
-        Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+        Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
             Some((Fit::Unknown, None))
         }
     }
@@ -1450,9 +1450,11 @@ fn contents_leaving(
     // goes silent.
     let arrived = match value {
         Rvalue::Use(Operand::Copy(place)) => analysis.contents_read(function, place, known),
-        Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
-            Levels::default()
-        }
+        Rvalue::Use(_)
+        | Rvalue::Address(_)
+        | Rvalue::Static(_)
+        | Rvalue::Unary { .. }
+        | Rvalue::Binary { .. } => Levels::default(),
     };
     // **The receiver's first level at least as wide as `carried`**, where
     // its memory says so rather than its type (#1079): `memcpy(vo, in, 8)`
@@ -1486,6 +1488,7 @@ fn contents_leaving(
                 }
                 Rvalue::Use(_)
                 | Rvalue::Address(_)
+                | Rvalue::Static(_)
                 | Rvalue::Unary { .. }
                 | Rvalue::Binary { .. } => None,
             };

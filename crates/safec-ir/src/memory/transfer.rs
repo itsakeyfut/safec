@@ -360,35 +360,37 @@ impl Allocations<'_> {
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
             // contents are gone.
-            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) => Held::from_marks(
-                value.points_to.len(),
-                Marks {
-                    lost: false,
-                    freed: None,
-                    writes_elsewhere: true,
-                    position: Position::START,
-                    loaded: false,
-                    foreign: false,
-                    stale_read: false,
-                    unreplaced_read: false,
-                    lost_read: false,
-                    from_caller: false,
-                    forged: false,
-                    returned_by: None,
-                    fresh_read: false,
-                    widths: Levels::new(vec![Width::Nothing]),
-                    arrived_holds_pointer: false,
-                    inner_address: false,
-                    element: None,
-                    site_element: None,
-                    array_edge: false,
-                    stored_through: false,
-                    may_be_null: false,
-                    vouched: false,
-                    // A constant or an address carried by a store is no grant. See ADR-0105.
-                    alone: None,
-                },
-            ),
+            Rvalue::Use(Operand::Constant(_)) | Rvalue::Address(_) | Rvalue::Static(_) => {
+                Held::from_marks(
+                    value.points_to.len(),
+                    Marks {
+                        lost: false,
+                        freed: None,
+                        writes_elsewhere: true,
+                        position: Position::START,
+                        loaded: false,
+                        foreign: false,
+                        stale_read: false,
+                        unreplaced_read: false,
+                        lost_read: false,
+                        from_caller: false,
+                        forged: false,
+                        returned_by: None,
+                        fresh_read: false,
+                        widths: Levels::new(vec![Width::Nothing]),
+                        arrived_holds_pointer: false,
+                        inner_address: false,
+                        element: None,
+                        site_element: None,
+                        array_edge: false,
+                        stored_through: false,
+                        may_be_null: false,
+                        vouched: false,
+                        // A constant or an address carried by a store is no grant. See ADR-0105.
+                        alone: None,
+                    },
+                )
+            }
         }
     }
 
@@ -3358,6 +3360,7 @@ impl Analysis for Allocations<'_> {
                         }
                         Rvalue::Use(_)
                         | Rvalue::Address(_)
+                        | Rvalue::Static(_)
                         | Rvalue::Unary { .. }
                         | Rvalue::Binary { .. } => None,
                     };
@@ -3625,7 +3628,13 @@ impl Analysis for Allocations<'_> {
                     Rvalue::Use(Operand::Constant(0)) => {
                         value.replace(at, Held::null(value.points_to.len()));
                     }
-                    Rvalue::Use(Operand::Constant(_)) => {
+                    // **The address of a static object is followed as a pointer
+                    // into storage this check does not follow**, as a constant
+                    // other than zero is: it names no allocation, and a write
+                    // through it lands somewhere this function does not own,
+                    // so what is stored there escapes and what is read back is
+                    // not believed. It is not null. See ADR-0115.
+                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Static(_) => {
                         value.replace(
                             at,
                             Held::from_marks(

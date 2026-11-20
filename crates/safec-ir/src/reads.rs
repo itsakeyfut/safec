@@ -134,7 +134,7 @@ pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Pl
                 } => Vec::new(),
                 Rvalue::Unary { op: _, operand } => named(operand).into_iter().collect(),
                 // A copy carries the value on; an address reads none.
-                Rvalue::Use(_) | Rvalue::Address(_) => Vec::new(),
+                Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Static(_) => Vec::new(),
             };
             Some((operation.origin.span(), places))
         }
@@ -213,7 +213,7 @@ fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
         // what does reach here is an address of a place a frontend really
         // meant to take. Reporting it would be a use of a freed value in a
         // program that never touched one.
-        Rvalue::Address(_) => Vec::new(),
+        Rvalue::Address(_) | Rvalue::Static(_) => Vec::new(),
     }
 }
 
@@ -264,7 +264,7 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
                 // names. The lowering applies C17 6.5.3.2 p3, so `&*p` is a
                 // copy of `p` and `&**p` a copy of `*p`, an operand this
                 // reads.
-                Rvalue::Address(_) => {}
+                Rvalue::Address(_) | Rvalue::Static(_) => {}
             }
             Some((operation.origin.span(), places))
         }

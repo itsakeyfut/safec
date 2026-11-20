@@ -148,6 +148,8 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                     operand_reads(lhs, at, &mut reads);
                     operand_reads(rhs, at, &mut reads);
                 }
+                // The address of a static object reads no local.
+                Rvalue::Static(_) => {}
                 // An address reads a local only where it goes through it,
                 // `&*p`: `&a[0]`, which converts an array (#621), reads
                 // nothing, and `&p` reads nothing either.
