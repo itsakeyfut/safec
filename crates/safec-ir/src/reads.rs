@@ -318,7 +318,14 @@ pub(crate) fn read_out_of_memory_after(
     // element that writes is what ends what a store's place is known to
     // hold, and one that writes nothing leaves it.
     *stored = match element {
-        Element::Assign(operation) if operation.place.derefs() > 1 => Some(operation.place.clone()),
+        Element::Assign(operation)
+            if (match operation.place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 1 =>
+        {
+            Some(operation.place.clone())
+        }
         Element::Assign(operation)
             if !(match operation.place.shape() {
                 Shape::Local => true,
@@ -420,7 +427,10 @@ fn read_as_value(place: &Place) -> Vec<Place> {
     // memory, and asking only the first and the last left an unwritten
     // middle level silent where the step-by-step spelling is doubted.
     // Found by review.
-    let depth = place.derefs();
+    let depth = match place.shape() {
+        Shape::Deref(depth) => depth,
+        Shape::Local | Shape::Indexed => 0,
+    };
     if depth > 1 {
         return (1..=depth)
             .map(|level| Place::new(place.local, vec![Projection::Deref; level]))

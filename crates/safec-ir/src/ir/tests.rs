@@ -827,8 +827,9 @@ fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
 /// names and lets a new one through in silence, which the compiler cannot see,
 /// so the sources are read for one. See ADR-0113.
 ///
-/// Mutation: write `matches!(place.shape(), Shape::Local)`, or `if let
-/// Shape::Local = place.shape()`, in any reader in `safec-ir`, `safec-c` or
+/// Mutation: write `matches!(place.shape(), Shape::Local)`, `if let
+/// Shape::Local = place.shape()`, or a `_ =>` arm in a `match` on a shape, in
+/// any reader in `safec-ir`, `safec-c` or
 /// `safec-llvm`; this fails and names the file. **What it cannot see** is a
 /// shape bound to a variable and then matched with `matches!` by that name,
 /// which only review catches.
@@ -890,6 +891,37 @@ fn every_reader_of_a_place_answers_every_shape() {
             let first = call["matches!(".len()..].split(',').next().unwrap_or("");
             if first.contains(".shape()") || call.contains("Projection::") {
                 evasions.push(format!("{}: {call})", file.display()));
+            }
+            rest = &tail[end..];
+        }
+        // And a `match` over a shape with a `_` arm, which answers a new
+        // shape as quietly as a `matches!` does. Found by review.
+        let mut rest = text.as_str();
+        while let Some(at) = rest.find(".shape() {") {
+            let tail = &rest[at + ".shape() ".len()..];
+            let mut depth = 0;
+            let mut end = tail.len();
+            for (index, c) in tail.char_indices() {
+                match c {
+                    '{' => depth += 1,
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            end = index;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            let block = &tail[..end];
+            let mut level = 0;
+            for line in block.lines() {
+                if level == 1 && line.trim_start().starts_with("_ =>") {
+                    evasions.push(format!("{}: `_` arm on a shape", file.display()));
+                }
+                level += line.matches('{').count();
+                level -= line.matches('}').count().min(level);
             }
             rest = &tail[end..];
         }

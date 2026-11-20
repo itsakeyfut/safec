@@ -219,7 +219,10 @@ pub(super) fn asked_unwritten_in_terminator(
                     // since it was given its value**, as a load is not: the
                     // copy reads the whole pointer just stored (#914).
                     if let Some(Operand::Copy(source)) = arguments.get(1) {
-                        let depth = source.derefs();
+                        let depth = match source.shape() {
+                            Shape::Deref(depth) => depth,
+                            Shape::Local | Shape::Indexed => 0,
+                        };
                         if ((match source.shape() {
                             Shape::Local => true,
                             Shape::Deref(_) | Shape::Indexed => false,
@@ -581,7 +584,10 @@ fn report_returned_unwritten(
     } {
         Some(known.sites_of(place.local).collect())
     } else {
-        match place.derefs() {
+        match match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        } {
             0 => None,
             depth => Some(
                 known
@@ -805,7 +811,10 @@ fn source_may_be_unwritten(
         Shape::Local => true,
         Shape::Deref(_) | Shape::Indexed => false,
     }) {
-        let depth = from.derefs();
+        let depth = match from.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth == 0 {
             return true;
         }
@@ -943,7 +952,11 @@ pub(super) fn loaded_indeterminate(
             // own read of an assignment's value among them. Asked there,
             // `void **b = m; *b = x;` after the partial copy was doubted
             // with no read in the source at all, found by review.
-            let rewritten = place.derefs() == 1 && known.points_to[place.local].stored_through;
+            let rewritten = (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) == 1
+                && known.points_to[place.local].stored_through;
             if !rewritten && analysis.may_be_pointer(function, &place) {
                 ask_partial(
                     PartialDoor::Load,
@@ -968,7 +981,10 @@ pub(super) fn loaded_indeterminate(
         // **Below the first dereference, what the pointer gone through last
         // may name**, and no name: the slot is not `*l` but a level further,
         // and saying `*m` of `int *r = **m;` named the wrong slot (#768).
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         let (reaches_allocation, reaches_local, named) = if depth > 1 {
             let (sites, locals) = known.levels_below(local, depth - 1);
             (!sites.is_empty(), !locals.is_empty(), None)
@@ -1030,7 +1046,10 @@ pub(super) fn loaded_indeterminate(
 /// (#768). **Locals as well as blocks**, since a local array keeps the
 /// partial pointer record too (ADR-0090).
 fn blocks_read(place: &Place, known: &Known) -> Vec<Storage> {
-    let depth = place.derefs();
+    let depth = match place.shape() {
+        Shape::Deref(depth) => depth,
+        Shape::Local | Shape::Indexed => 0,
+    };
     let (sites, locals): (Vec<Site>, Vec<LocalIdx>) = if depth > 1 {
         let (sites, locals) = known.levels_below(place.local, depth - 1);
         (sites.into_iter().collect(), locals.into_iter().collect())

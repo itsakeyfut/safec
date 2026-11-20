@@ -320,23 +320,6 @@ impl Place {
         }
     }
 
-    /// How many dereferences this place is, when it is nothing but
-    /// dereferences, and zero otherwise: [`Shape::Deref`]'s count.
-    ///
-    /// One answer for the load and for the report, so that the two cannot
-    /// disagree about which places are followed below their first level. A
-    /// place with an `Index` in it is an array's element and is not one of
-    /// them. No program this compiler accepts tells that apart from following
-    /// it too: the lowering builds an `Index` only under `Rvalue::Address`,
-    /// which is no place read or written, and `a[i]` is `*(a + i)` (#621).
-    /// See ADR-0045.
-    pub fn derefs(&self) -> usize {
-        match self.shape() {
-            Shape::Deref(derefs) => derefs,
-            Shape::Local | Shape::Indexed => 0,
-        }
-    }
-
     /// This place with one more dereference: what it points at.
     #[must_use]
     pub fn deref(&self) -> Self {
@@ -385,6 +368,16 @@ pub enum Shape {
     /// The local itself: no steps.
     Local,
     /// Nothing but dereferences, this many, at least one.
+    ///
+    /// **The only place a dereference count comes from**, so that a reader
+    /// that counts levels answers every other shape itself: a count of `0`
+    /// for a place with any other step was a named answer no new kind of
+    /// step would have made anybody revisit (found by review of #1092).
+    /// A place with an `Index` in it is an array's element and is not one of
+    /// these. No program this compiler accepts tells that apart from
+    /// following it too: the lowering builds an `Index` only under
+    /// `Rvalue::Address`, which is no place read or written, and `a[i]` is
+    /// `*(a + i)` (#621). See ADR-0045.
     Deref(usize),
     /// A step that is not a dereference: today an `Index`, which the lowering
     /// builds only under `Rvalue::Address` (#621).

@@ -88,7 +88,15 @@ pub(super) fn built_from(
     let loads: Vec<&Place> = operands
         .iter()
         .filter_map(|operand| match operand {
-            Operand::Copy(source) if source.derefs() > 0 && may_be_pointer(source) => Some(source),
+            Operand::Copy(source)
+                if (match source.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) > 0
+                    && may_be_pointer(source) =>
+            {
+                Some(source)
+            }
             _ => None,
         })
         .collect();
@@ -115,7 +123,15 @@ pub(super) fn built_from(
     let bytes: Vec<&Place> = operands
         .iter()
         .filter_map(|operand| match operand {
-            Operand::Copy(source) if source.derefs() > 0 && reads_a_byte(source) => Some(source),
+            Operand::Copy(source)
+                if (match source.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) > 0
+                    && reads_a_byte(source) =>
+            {
+                Some(source)
+            }
             _ => None,
         })
         .collect();
@@ -193,9 +209,18 @@ pub(super) fn built_from(
         value.load_into(
             &mut reached,
             load.local,
-            load.derefs(),
+            match load.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
             &is_array,
-            reads_caller_memory(load.local, load.derefs()),
+            reads_caller_memory(
+                load.local,
+                match load.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            ),
             // An operand keeps the position its arithmetic gives it, and is
             // never vouched for. See ADR-0100.
             None,

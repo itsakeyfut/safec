@@ -181,12 +181,24 @@ impl Allocations<'_> {
                 let placed = ((match dest.shape() {
                     Shape::Local => true,
                     Shape::Deref(_) | Shape::Indexed => false,
-                }) || dest.derefs() > 0)
+                }) || (match dest.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) > 0)
                     && ((match source.shape() {
                         Shape::Local => true,
                         Shape::Deref(_) | Shape::Indexed => false,
-                    }) || source.derefs() > 0);
-                let (sites, locals) = value.levels_below(source.local, source.derefs());
+                    }) || (match source.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    }) > 0);
+                let (sites, locals) = value.levels_below(
+                    source.local,
+                    match source.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    },
+                );
                 placed
                     && (sites.iter().any(|&site| {
                         value.written[site].may_hold_part() || value.part_before[site]
@@ -982,7 +994,10 @@ impl Allocations<'_> {
             .place_ty(function, place)
             .and_then(|ty| self.type_levels(ty))
             .unwrap_or_default();
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth > 0 {
             levels.bound_by(
                 &value
@@ -1020,7 +1035,10 @@ impl Allocations<'_> {
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
         let typed = self.typed_width(function, place);
         let as_read = typed.unwrap_or(0);
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         // **As its type where the read is reported as indeterminate**:
         // nothing was stored in fresh memory, so nothing records a width,
         // and the defect is the read, reported once where it happens, as the
@@ -1254,7 +1272,10 @@ impl Allocations<'_> {
         self.read_at(
             function,
             source.local,
-            source.derefs(),
+            match source.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
             value,
             ReadAs::Typed(source),
         )
@@ -1576,7 +1597,10 @@ impl Allocations<'_> {
         // the bytes of a pointer and put it back together. Never everything
         // stored anywhere, which is what refused a character handed to a call
         // in correct string code. See ADR-0046.
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth > 0 && self.reads_a_byte(function, place) {
             return known
                 .levels_below(place.local, depth)
@@ -1709,7 +1733,17 @@ impl Allocations<'_> {
                 } {
                     handed_locals.extend(value.written_through(place.local));
                 } else {
-                    handed_locals.extend(value.levels_below(place.local, place.derefs()).1);
+                    handed_locals.extend(
+                        value
+                            .levels_below(
+                                place.local,
+                                match place.shape() {
+                                    Shape::Deref(depth) => depth,
+                                    Shape::Local | Shape::Indexed => 0,
+                                },
+                            )
+                            .1,
+                    );
                 }
             }
         }
@@ -3057,7 +3091,10 @@ impl Analysis for Allocations<'_> {
                 // Where it lands, before anything here writes: the one
                 // description of this write the unwritten belief applies and
                 // the replacement below reads (#778).
-                let deep = operation.place.derefs();
+                let deep = match operation.place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                };
                 let before = self.landing(
                     value,
                     operation.place.local,
@@ -3104,8 +3141,13 @@ impl Analysis for Allocations<'_> {
                     Shape::Deref(_) | Shape::Indexed => false,
                 }) && certain.is_none())
                 .then(|| {
-                    value
-                        .locals_a_write_may_land_in(operation.place.local, operation.place.derefs())
+                    value.locals_a_write_may_land_in(
+                        operation.place.local,
+                        match operation.place.shape() {
+                            Shape::Deref(depth) => depth,
+                            Shape::Local | Shape::Indexed => 0,
+                        },
+                    )
                 });
                 // What it writes of what is unwritten, after the locals it may
                 // land in are asked. See `Allocations::initialised_by`.
@@ -3195,7 +3237,10 @@ impl Analysis for Allocations<'_> {
                     // `unnamed` below exposes it too, since that set is a lower
                     // bound. Unplaced, `**t3 = r; free(r); ***t3` read nothing
                     // of it. See ADR-0045.
-                    let deep = operation.place.derefs();
+                    let deep = match operation.place.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    };
                     let landing = self.landing(
                         value,
                         operation.place.local,

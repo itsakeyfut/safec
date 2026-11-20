@@ -146,7 +146,11 @@ pub(super) fn handed_places<'a>(
         } {
             analysis.is_pointer(function, place.local)
         } else {
-            place.derefs() > 0 && analysis.may_be_pointer(function, place)
+            (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 0
+                && analysis.may_be_pointer(function, place)
         };
         if !pointer || asked.contains(&place) {
             continue;

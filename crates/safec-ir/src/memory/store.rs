@@ -106,7 +106,10 @@ impl Allocations<'_> {
                 .contains(&LocalIdx::of(into.local));
             (StoreKind::Direct, leaves, None)
         } else {
-            let derefs = into.derefs();
+            let derefs = match into.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            };
             let kind = StoreKind::Through { derefs };
             let landing = (derefs > 0).then(|| {
                 let one_step = match into.shape() {
@@ -176,7 +179,10 @@ impl Allocations<'_> {
         let landing = self.landing(
             known,
             to.local,
-            to.derefs() + 1,
+            (match to.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) + 1,
             match to.shape() {
                 Shape::Local => true,
                 Shape::Deref(_) | Shape::Indexed => false,
@@ -570,7 +576,7 @@ impl Allocations<'_> {
     /// **Asked by the store and the library copy alike.** The store through
     /// one dereference, the store deeper down and the copy each spelled it
     /// once, so a rule changed in one could leave the others behind (#976).
-    /// A copy's destination is `*dest`, so it asks at `dest.derefs() + 1`,
+    /// A copy's destination is `*dest`, so it asks at `(match dest.shape() { Shape::Deref(depth) => depth, Shape::Local | Shape::Indexed => 0 }) + 1`,
     /// one exact dereference where `dest` is a plain local.
     ///
     /// Mutation: answer nothing, and

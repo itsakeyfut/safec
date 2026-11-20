@@ -935,7 +935,13 @@ impl Known {
         } {
             self.reached_by(place.local)
         } else {
-            self.reached_below(place.local, place.derefs())
+            self.reached_below(
+                place.local,
+                match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            )
         }
     }
 
@@ -1155,7 +1161,13 @@ impl Known {
         } {
             self.level_zero(place.local)
         } else {
-            Some(self.levels_below(place.local, place.derefs()))
+            Some(self.levels_below(
+                place.local,
+                match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            ))
         }
     }
 
@@ -2172,7 +2184,7 @@ impl Known {
     ///   lost local records no point at which it was fixed, so those still
     ///   take what is named now.
     ///
-    /// A store passes its place's [`Place::derefs`](crate::ir::Place::derefs), which is zero for a place that
+    /// A store passes its place's dereference count, [`Shape::Deref`]'s, which is zero for a place that
     /// is not dereferences alone; a library copy passes one more than its
     /// destination argument has, since it writes where that argument points.
     ///
@@ -2727,7 +2739,10 @@ impl Known {
     /// in silence; taken as an argument, it is asked here once and a caller
     /// cannot skip it.
     pub(super) fn leaves(&self, place: &Place, landing: &Landing) -> bool {
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if landing.unnamed(self) || landing.unplaced() || self.unnamed_below(place.local, depth) {
             return true;
         }

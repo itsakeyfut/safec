@@ -383,7 +383,15 @@ pub(super) fn through_locals(
     width: u64,
     known: &Known,
 ) -> Option<(Fit, Option<LocalId>)> {
-    let (locals, certain) = read_from_locals(function, known, place.local, place.derefs());
+    let (locals, certain) = read_from_locals(
+        function,
+        known,
+        place.local,
+        match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        },
+    );
     let mut answer: Option<Fit> = None;
     for &local in &locals {
         // A local holding nothing is a null, which is the nullability
@@ -492,8 +500,19 @@ pub(super) fn slots_leaving(
     // [`locals_reached`]'s; and what arithmetic builds is asked by
     // [`leaving`] and names nothing to walk.
     let (seed_sites, seed_locals): (Vec<Site>, Vec<LocalId>) = match value {
-        Rvalue::Use(Operand::Copy(place)) if place.derefs() > 0 => {
-            let (sites, locals) = known.levels_below(place.local, place.derefs());
+        Rvalue::Use(Operand::Copy(place))
+            if (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 0 =>
+        {
+            let (sites, locals) = known.levels_below(
+                place.local,
+                match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            );
             let locals = function
                 .locals()
                 .filter(|local| locals.contains(&LocalIdx::of(local)))

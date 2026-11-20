@@ -35,7 +35,7 @@ Chosen option: "an enum every reader matches", by the owner's decision on
 
 * `Place.projection` is private to `ir`. A place is built with `Place::local`,
   `Place::new`, `Place::deref`, `Place::prefix` and
-  `Place::without_last_deref`, and read with `Place::shape`, `Place::derefs`
+  `Place::without_last_deref`, and read with `Place::shape`
   and, for walks that match every `Projection` themselves (printing, the
   interpreter, liveness, the backend, and the few readers of an address's
   steps), `Place::steps`.
@@ -54,8 +54,9 @@ misread member would be a false report or a silence.
 
 * `every_reader_of_a_place_answers_every_shape` fails on a `matches!` whose
   subject is a place's shape or that names a `Projection`, on an `if let`,
-  `while let` or `let ... else` naming a `Shape` or a `Projection`, and on a
-  comparison of a place's steps outside a test module, in `safec-ir`,
+  `while let` or `let ... else` naming a `Shape` or a `Projection`, on a `_`
+  arm in a `match` on a shape, and on a comparison of a place's steps outside
+  a test module, in `safec-ir`,
   `safec-c` or `safec-llvm`. Mutation: write `matches!(place.shape(),
   Shape::Local)`, or `if let Shape::Local = place.shape()`, in
   `Strong::assigned`; it fails and names `store.rs`. It cannot see a shape
@@ -66,8 +67,12 @@ misread member would be a false report or a silence.
   answering differently for a place with an `Index` after the rewrite.
   `the_first_of_two_dereferences_is_read_whatever_follows` holds the first;
   the second is not reachable from C and is held by nothing.
-* Adding a variant to `Shape` was measured at 121 `E0004` sites in `safec-ir`
-  alone, where a new `Projection` had made none in `memory`.
+* **No dereference count but `Shape::Deref`'s.** A `Place::derefs` that
+  answered 0 for any other shape was a named question of the rejected kind:
+  its 57 callers would have gone on counting a member as no dereference,
+  found by review. Each reads the count from a `match` instead.
+* Adding a variant to `Shape` was measured at 176 `E0004` sites across the
+  workspace, where a new `Projection` had made none in `memory`.
 * A direct read of `projection` outside `ir` is `E0616`.
 
 ### Consequences

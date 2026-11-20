@@ -712,15 +712,19 @@ pub(super) fn used(
         )
         .map(|verdict| (verdict, Some(place.local), 0))
         .or_else(|| {
-            (1..place.derefs()).find_map(|depth| {
-                verdict(
-                    sources,
-                    Kind::UseAfterFree,
-                    known.reached_below(place.local, depth),
-                    known,
-                )
-                .map(|verdict| (verdict, None, depth))
-            })
+            (1..(match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }))
+                .find_map(|depth| {
+                    verdict(
+                        sources,
+                        Kind::UseAfterFree,
+                        known.reached_below(place.local, depth),
+                        known,
+                    )
+                    .map(|verdict| (verdict, None, depth))
+                })
         }) else {
             continue;
         };
@@ -1195,7 +1199,12 @@ fn leaving(
         // since a belief is a floor and the object may be wider.
         // Unless it may have been read from a local, which is asked instead
         // ([`through_locals`]), and alone where it certainly was.
-        Rvalue::Use(Operand::Copy(place)) if place.derefs() > 0 => {
+        Rvalue::Use(Operand::Copy(place))
+            if (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 0 =>
+        {
             let believed = analysis.believed_read(function, place, known);
             let belief = if believed >= width {
                 Fit::Inside
@@ -2030,7 +2039,10 @@ pub(super) fn departed_at_call(
                     Shape::Local => true,
                     Shape::Deref(_) | Shape::Indexed => false,
                 }),
-                place.derefs(),
+                (match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }),
             ) {
                 (true, _) => (
                     known.sites_of(place.local).collect(),
@@ -2187,7 +2199,10 @@ pub(super) fn returned(
     if !(match source.shape() {
         Shape::Local => true,
         Shape::Deref(_) | Shape::Indexed => false,
-    }) && source.derefs() == 0
+    }) && (match source.shape() {
+        Shape::Deref(depth) => depth,
+        Shape::Local | Shape::Indexed => 0,
+    }) == 0
     {
         return;
     }
@@ -2297,7 +2312,10 @@ pub(super) fn stored_away(
     if !(match source.shape() {
         Shape::Local => true,
         Shape::Deref(_) | Shape::Indexed => false,
-    }) && source.derefs() == 0
+    }) && (match source.shape() {
+        Shape::Deref(depth) => depth,
+        Shape::Local | Shape::Indexed => 0,
+    }) == 0
     {
         return;
     }

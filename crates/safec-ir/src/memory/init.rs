@@ -402,7 +402,13 @@ impl Allocations<'_> {
 
         // Written: a local of the type stored that the place may land in.
         let mut lands: Table<LocalIdx, bool> = Table::filled(false, may_hold.len());
-        for local in value.locals_a_write_may_land_in(place.local, place.derefs()) {
+        for local in value.locals_a_write_may_land_in(
+            place.local,
+            match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
+        ) {
             lands[local] = true;
         }
         // **Through a pointer moved off an array, an element of it**, as the
@@ -414,7 +420,10 @@ impl Allocations<'_> {
             function,
             value,
             place.local,
-            place.derefs(),
+            match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
             lands
                 .indices()
                 .filter(|&local| lands[local] && may_hold[local]),
@@ -455,11 +464,19 @@ impl Allocations<'_> {
         // pointer parameter makes so, doubting `a` after `memcpy(*t, &s, 8)`
         // with `*t` only `&a`, where the store `**t = s;` does not (#1006's
         // review).
-        let alone =
-            written_alone(value, place.local, place.derefs(), &landing).filter(|at| match kind {
-                StoreKind::Direct | StoreKind::Through { .. } => true,
-                StoreKind::Copy => self.covers_exactly(function, at.local(), copied),
-            });
+        let alone = written_alone(
+            value,
+            place.local,
+            match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
+            &landing,
+        )
+        .filter(|at| match kind {
+            StoreKind::Direct | StoreKind::Through { .. } => true,
+            StoreKind::Copy => self.covers_exactly(function, at.local(), copied),
+        });
         // **Put back as a may-write only for a store** (#721, the comment
         // above): a copy's `write_effects` already answers which elements of an
         // array it covers, and putting each local back as a may-write wrote
@@ -561,7 +578,11 @@ impl Allocations<'_> {
                 // believed written, and only the doubt whether a read past
                 // its start fits stood in for the slots nothing wrote, the
                 // shape #703 exposed (#932). See ADR-0094 rule 3.
-                if place.derefs() > 0 {
+                if (match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) > 0
+                {
                     let held = &value.points_to[pointer];
                     let placed = one_step && !held.beyond().any_unknown();
                     // The locals it may land in, taken before the blocks are
@@ -664,7 +685,10 @@ impl Allocations<'_> {
                         self.past_end_targets(
                             value,
                             dest.local,
-                            dest.derefs() + 1,
+                            (match dest.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }) + 1,
                             match dest.shape() {
                                 Shape::Local => true,
                                 Shape::Deref(_) | Shape::Indexed => false,
@@ -695,7 +719,10 @@ impl Allocations<'_> {
                             Shape::Indexed => false,
                         } =>
                     {
-                        let deep = dest.derefs() + 1;
+                        let deep = (match dest.shape() {
+                            Shape::Deref(depth) => depth,
+                            Shape::Local | Shape::Indexed => 0,
+                        }) + 1;
                         let landing = self.landing(
                             value,
                             dest.local,
@@ -804,7 +831,13 @@ impl Allocations<'_> {
                             Shape::Indexed => false,
                         } =>
                     {
-                        let (sites, locals) = value.levels_below(source.local, source.derefs());
+                        let (sites, locals) = value.levels_below(
+                            source.local,
+                            match source.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            },
+                        );
                         let maybe = sites
                             .iter()
                             .any(|&site| value.written[site].whole().may_be_unwritten())
@@ -976,7 +1009,13 @@ impl Allocations<'_> {
                             Shape::Indexed => false,
                         } =>
                     {
-                        Some(value.locals_a_write_may_land_in(dest.local, dest.derefs() + 1))
+                        Some(value.locals_a_write_may_land_in(
+                            dest.local,
+                            (match dest.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }) + 1,
+                        ))
                     }
                     // A constant writes nothing anyone can read back, and no
                     // other place reaches a call's argument from C.
@@ -992,7 +1031,10 @@ impl Allocations<'_> {
                             function,
                             value,
                             dest.local,
-                            dest.derefs() + 1,
+                            (match dest.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }) + 1,
                             lands.iter().copied(),
                             true,
                             bytes,
@@ -1241,7 +1283,10 @@ impl Allocations<'_> {
         // start, a local written on one path only was not doubted, where its
         // two-step spelling is. See ADR-0057.
         // `derefs` is zero for a place with anything but dereferences in it.
-        let depth = source.derefs();
+        let depth = match source.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth > 1 {
             if !self.may_be_pointer(function, source) {
                 return false;
@@ -1337,7 +1382,10 @@ impl Allocations<'_> {
         let landing = self.landing(
             value,
             dest.local,
-            dest.derefs() + 1,
+            (match dest.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) + 1,
             match dest.shape() {
                 Shape::Local => true,
                 Shape::Deref(_) | Shape::Indexed => false,

@@ -147,7 +147,10 @@ impl Allocations<'_> {
     /// must-fact with it, and `fill(*r)` believed what `h = *r; fill(h);`
     /// doubted (#1071). See ADR-0105.
     fn handed_value(&self, function: &Function, place: &Place, value: &Known) -> Held {
-        let depth = place.derefs();
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if match place.shape() {
             Shape::Local => true,
             Shape::Deref(_) | Shape::Indexed => false,
@@ -374,8 +377,14 @@ impl Allocations<'_> {
                         || (!(match place.shape() {
                             Shape::Local => true,
                             Shape::Deref(_) | Shape::Indexed => false,
-                        }) && value
-                            .marked_below(place.local, place.derefs(), |contents| contents.lost()))
+                        }) && value.marked_below(
+                            place.local,
+                            match place.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            },
+                            |contents| contents.lost(),
+                        ))
                         || value
                             .written_through(place.local)
                             .into_iter()
@@ -444,7 +453,10 @@ impl Allocations<'_> {
             let zero = matches!(arguments.get(1), Some(Operand::Constant(0)));
             if !zero && !matches!(covered, CopiedPointers::NoneWhole) {
                 if let Some(Operand::Copy(dest)) = arguments.first() {
-                    let into_depth = dest.derefs();
+                    let into_depth = match dest.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    };
                     if (match dest.shape() {
                         Shape::Local => true,
                         Shape::Deref(_) | Shape::Indexed => false,
@@ -472,7 +484,10 @@ impl Allocations<'_> {
             // Wherever it lands, as a store's write does. See
             // `Self::note_landing`.
             if let Some(Operand::Copy(dest)) = arguments.first() {
-                let into_depth = dest.derefs();
+                let into_depth = match dest.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                };
                 if (match dest.shape() {
                     Shape::Local => true,
                     Shape::Deref(_) | Shape::Indexed => false,
@@ -755,7 +770,16 @@ impl Allocations<'_> {
                 };
                 if copies {
                     if let [Operand::Copy(dest), Operand::Copy(source), ..] = arguments {
-                        let (into_depth, from_depth) = (dest.derefs(), source.derefs());
+                        let (into_depth, from_depth) = (
+                            (match dest.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }),
+                            (match source.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }),
+                        );
                         let placed = ((match dest.shape() {
                             Shape::Local => true,
                             Shape::Deref(_) | Shape::Indexed => false,
@@ -1342,7 +1366,10 @@ impl Allocations<'_> {
                             function,
                             value,
                             place.local,
-                            place.derefs() + 1,
+                            (match place.shape() {
+                                Shape::Deref(depth) => depth,
+                                Shape::Local | Shape::Indexed => 0,
+                            }) + 1,
                             lands,
                             true,
                             None,
@@ -1645,7 +1672,11 @@ impl Allocations<'_> {
             // lowering calls into a temporary and stores that, which the
             // store transfer clears for. It is here for a frontend that
             // does not.
-            if place.derefs() > 0 {
+            if (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 0
+            {
                 value.may_write_all_sites(Whole::Pointer);
             }
             // And an escaped local it may land in, as an unplaced store
@@ -2488,7 +2519,10 @@ impl Allocations<'_> {
                         .iter()
                         .any(|&parameter| held.has_site(Site::of(LocalIdx::of(parameter))))
             } else {
-                let depth = place.derefs();
+                let depth = match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                };
                 depth > 0 && self.reads_caller_memory(place.local, depth, value)
             }
         })
