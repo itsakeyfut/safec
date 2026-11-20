@@ -243,6 +243,27 @@ impl Cfg {
         loops
     }
 
+    /// Whether every loop is entered only at its head: no edge goes back,
+    /// in [`Cfg::order`], to a block that does not dominate where it leaves
+    /// from.
+    ///
+    /// A `goto` or a `case` label into the middle of a loop makes one that is
+    /// not. What the memory check reads of a loop assumes every turn starts at
+    /// its head, so a function with such a loop is not read (#1101).
+    /// `a_loop_with_two_entries_is_not_reducible` holds both answers.
+    pub fn reducible(&self) -> bool {
+        let dominators = self.dominators();
+        let mut position = vec![usize::MAX; self.reachable.len()];
+        for (at, &block) in self.order.iter().enumerate() {
+            position[block.index()] = at;
+        }
+        self.order.iter().all(|&to| {
+            self.predecessors(to).iter().all(|&from| {
+                position[to.index()] > position[from.index()] || dominators.dominates(to, from)
+            })
+        })
+    }
+
     /// Which reachable block dominates which: every path from the entry to a
     /// block passes through each of its dominators.
     ///
@@ -1035,6 +1056,59 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A graph with a cycle entered at two blocks is not reducible, and one
+    /// whose every cycle is entered at its head is.
+    ///
+    /// Mutation: have `Cfg::reducible` answer `true`, or `false`; the first
+    /// assertion or the second fails.
+    #[test]
+    fn a_loop_with_two_entries_is_not_reducible() {
+        let (_sources, span) = spans();
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        let done = || Block {
+            elements: Vec::new(),
+            terminator: Terminator::Return,
+        };
+
+        // entry -> a or b, a <-> b: the cycle is entered at both.
+        let (_unit, mut twice) = a_function(span);
+        let entry = twice.reserve_block();
+        let a = twice.reserve_block();
+        let b = twice.reserve_block();
+        let exit = twice.reserve_block();
+        twice.fill_block(entry, branch(a, b));
+        twice.fill_block(a, branch(b, exit));
+        twice.fill_block(b, go(a));
+        twice.fill_block(exit, done());
+        assert!(!Cfg::of(&twice).reducible());
+
+        // entry -> head <-> body, head -> exit, and a block looping on itself.
+        let (_unit, mut once) = a_function(span);
+        let entry = once.reserve_block();
+        let head = once.reserve_block();
+        let body = once.reserve_block();
+        let spin = once.reserve_block();
+        let exit = once.reserve_block();
+        once.fill_block(entry, go(head));
+        once.fill_block(head, branch(body, spin));
+        once.fill_block(body, go(head));
+        once.fill_block(spin, branch(spin, exit));
+        once.fill_block(exit, done());
+        assert!(Cfg::of(&once).reducible());
     }
 
     /// A loop whose back edge leaves from two blocks into its body is one

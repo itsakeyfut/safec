@@ -758,7 +758,7 @@ fn parameter_lengths(ast: &Ast) -> Vec<Span> {
 fn unread(finding: &memory::Finding) -> bool {
     matches!(
         finding.kind,
-        memory::Kind::TooLarge { .. } | memory::Kind::TooLong { .. }
+        memory::Kind::TooLarge { .. } | memory::Kind::TooLong { .. } | memory::Kind::EnteredInside
     )
 }
 

@@ -234,7 +234,7 @@ fn verdict(
         Kind::UnsequencedAccess { .. } => true,
         // Never asked: it is built before any value exists, and it is about
         // no free.
-        Kind::TooLarge { .. } | Kind::TooLong { .. } => true,
+        Kind::TooLarge { .. } | Kind::TooLong { .. } | Kind::EnteredInside => true,
         // Never asked: it is built by `memory::assigned` from where a local
         // was assigned, and it is about no free.
         Kind::Unassigned | Kind::SometimesUnassigned { .. } => true,

@@ -97,6 +97,14 @@ const UNSEQUENCED_ACCESS: Code = Code::new("SC0409");
 /// Not any of the codes above, which are each a class of program to fix: this
 /// is about this check, not the program, and the fix is a smaller function.
 const TOO_LARGE: Code = Code::new("SC0410");
+
+/// A function the memory check did not read because a loop in it is entered
+/// somewhere other than its head.
+///
+/// Not [`TOO_LARGE`], whose fix, a smaller function, does not apply: this is
+/// about the shape of the function's jumps, and the fix is to jump to the
+/// top of the loop. See `memory::Kind::EnteredInside`.
+const ENTERED_INSIDE: Code = Code::new("SC0415");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -865,6 +873,17 @@ pub(super) fn memory_finding(
             ),
             "nothing about this function's memory is proved",
             "split the function into smaller ones",
+        ),
+        // Built only `Unknown`, as the row above is.
+        (Kind::EnteredInside, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            ENTERED_INSIDE,
+            format!(
+                "`{}` has a loop entered other than at its top, which the memory check does \
+                 not read yet",
+                sources.snippet(finding.at)
+            ),
+            "nothing about this function's memory is proved",
+            "jump to the top of the loop instead",
         ),
         // Only ever a proof: a read some paths assigned is the next arm's.
         // `Unknown` takes the same words so the match stays exhaustive
