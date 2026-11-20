@@ -443,6 +443,13 @@ pub enum Expr {
         /// Where the constant is written.
         span: Span,
     },
+    /// A character constant, C17 6.4.4.4: one character between `'`s, its
+    /// escapes read by `crate::literal`. Its value is the type checker's, as
+    /// a number's is, since it turns on whether the target's `char` is signed.
+    Character {
+        /// The constant, quotes included.
+        span: Span,
+    },
     /// An identifier standing for something. C17 6.5.1.
     ///
     /// `Identifier` and not `Name`, because `--emit tokens` already calls this
@@ -830,6 +837,7 @@ impl Expr {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Number { .. } => "Number",
+            Self::Character { .. } => "Character",
             Self::Identifier { .. } => "Identifier",
             Self::Unary { .. } => "Unary",
             Self::Binary { .. } => "Binary",
@@ -847,6 +855,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         match self {
             Self::Number { span, .. }
+            | Self::Character { span }
             | Self::Identifier { span, .. }
             | Self::Unary { span, .. }
             | Self::Binary { span, .. }
@@ -898,7 +907,10 @@ impl Expr {
     /// files that are compared byte for byte.
     pub fn extend_children(&self, out: &mut Vec<ExprId>) {
         match self {
-            Self::Number { .. } | Self::Identifier { .. } | Self::Error { .. } => {}
+            Self::Number { .. }
+            | Self::Character { .. }
+            | Self::Identifier { .. }
+            | Self::Error { .. } => {}
             Self::Unary { operand, .. } | Self::Member { base: operand, .. } => out.push(*operand),
             Self::Binary { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
             Self::Assign { place, value, .. } => out.extend([*place, *value]),

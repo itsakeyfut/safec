@@ -38,6 +38,7 @@ fn a_program_reaches_every_part_through_the_facade_alone() {
         &mut ast,
         &resolution,
         target.int(),
+        target.char(),
         &mut diagnostics,
     );
     let unit = lower(

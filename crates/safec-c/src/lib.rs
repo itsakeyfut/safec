@@ -17,6 +17,7 @@ pub mod cli;
 pub mod diagnostics;
 pub mod driver;
 pub mod lexer;
+pub mod literal;
 pub mod lowering;
 pub mod options;
 pub mod parser;

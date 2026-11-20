@@ -709,6 +709,7 @@ fn sequences(expr: &Expr) -> bool {
         Expr::Comma { .. } | Expr::Conditional { .. } => true,
         Expr::Binary { op, .. } => matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr),
         Expr::Number { .. }
+        | Expr::Character { .. }
         | Expr::Identifier { .. }
         | Expr::Unary { .. }
         | Expr::Member { .. }
@@ -1691,7 +1692,10 @@ impl Lowering<'_> {
             // about, so no run reaches the list today. It is kept as the
             // defence it was: were that gate to open, a constant's error
             // would not gain a second caret and a note that contradicts it.
-            if !matches!(self.ast.expr(id), Expr::Number { .. }) {
+            if !matches!(
+                self.ast.expr(id),
+                Expr::Number { .. } | Expr::Character { .. }
+            ) {
                 diagnostics.report(
                     Diagnostic::error("cannot compile an expression whose type is not known")
                         .with_code(LOWERING)
@@ -2769,6 +2773,7 @@ impl Lowering<'_> {
             // Written out rather than `_`, so a kind added later is asked.
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Member { .. }
             | Expr::Conditional { .. }
@@ -2794,7 +2799,7 @@ impl Lowering<'_> {
     /// does, by reporting the conflict as `SC0409` (#525, ADR-0052).
     fn inert(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
-            Expr::Number { .. } | Expr::Identifier { .. } => true,
+            Expr::Number { .. } | Expr::Character { .. } | Expr::Identifier { .. } => true,
             Expr::Unary { op, operand, .. } => match op {
                 AstUnOp::AddrOf => matches!(self.ast.expr(*operand), Expr::Identifier { .. }),
                 AstUnOp::Plus | AstUnOp::Minus | AstUnOp::Not | AstUnOp::BitNot => {
@@ -2863,7 +2868,7 @@ impl Lowering<'_> {
         // A literal is left to its own arm below, which says why its value
         // is asked there; it would give the same operand here.
         let folded = match self.ast.expr(id) {
-            Expr::Number { .. } => None,
+            Expr::Number { .. } | Expr::Character { .. } => None,
             _ => self.types.value(id),
         };
         if let Some(value) = folded {
@@ -2880,7 +2885,7 @@ impl Lowering<'_> {
 
         match self.ast.expr(id) {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
-            Expr::Number { .. } => {
+            Expr::Number { .. } | Expr::Character { .. } => {
                 // Worked out by `types.rs`, where the base, the suffix and
                 // the range of `int` are all one question. A constant it
                 // could not read has no value and has already been reported,
@@ -3072,6 +3077,7 @@ impl Lowering<'_> {
             // expression kind added later is `error[E0004]` here and has to say
             // whether it names a place.
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Unary { .. }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -3179,7 +3185,7 @@ impl Lowering<'_> {
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
-            Expr::Number { .. } => {}
+            Expr::Number { .. } | Expr::Character { .. } => {}
             Expr::Identifier { .. } | Expr::Subscript { .. } => {
                 let place = places.pop().expect("a place");
                 let span = self.ast.expr(id).span();
@@ -3537,6 +3543,7 @@ impl Lowering<'_> {
             // paid elsewhere: an arm that pushed no place would leave the next
             // `places.pop()` taking an outer expression's place instead.
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -3694,6 +3701,7 @@ impl Lowering<'_> {
             // reserved and never filled, which is a panic at whatever later
             // moment somebody walks the graph.
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Assign { .. }
@@ -4093,7 +4101,10 @@ impl Lowering<'_> {
                 }
                 // A member is refused before anything reads it, and the other
                 // two name nothing.
-                Expr::Member { .. } | Expr::Number { .. } | Expr::Error { .. } => {}
+                Expr::Member { .. }
+                | Expr::Number { .. }
+                | Expr::Character { .. }
+                | Expr::Error { .. } => {}
             }
         }
         found
@@ -4162,6 +4173,7 @@ impl Lowering<'_> {
             // `discard` answers. Written out rather than `_`, so a kind added
             // later is asked whether its operands are unsequenced.
             Expr::Number { .. }
+            | Expr::Character { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Conditional { .. }
@@ -4336,6 +4348,7 @@ impl Lowering<'_> {
                 }
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
+                | Expr::Character { .. }
                 | Expr::Member { .. }
                 | Expr::Error { .. } => {}
             }

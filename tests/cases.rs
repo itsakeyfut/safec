@@ -9019,6 +9019,13 @@ cases! {
         unterminated_string_literal: ["--emit", "tokens"],
         void_is_not_the_only_parameter: ["--emit", "ast"],
         while_statement: ["--emit", "ast"],
+        // A character constant C17 does not define, `'\\q'`, is not C, and
+        // says so. Mutation: read an escape `literal::unescape` does not know
+        // as its character; this is accepted.
+        a_character_constant_c_does_not_define_is_refused: ["--emit", "ast"],
+        // An integer constant expression, so an array length. Mutation: give
+        // a character constant no value in `values`; the length is refused.
+        a_character_constant_is_an_array_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
         // `++` and `--` to a `const` object, and an assignment to a `const`
         // pointer, are each `SC0318`; what it points to may be written. A

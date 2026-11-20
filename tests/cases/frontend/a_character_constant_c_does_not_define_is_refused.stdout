@@ -1,0 +1,4 @@
+Function a_character_constant_c_does_not_define_is_refused.c:1:1 "main" "int (void)"
+  Compound a_character_constant_c_does_not_define_is_refused.c:1:16
+    Return a_character_constant_c_does_not_define_is_refused.c:2:5
+      Error a_character_constant_c_does_not_define_is_refused.c:2:12
