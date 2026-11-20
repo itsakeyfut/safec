@@ -436,11 +436,31 @@ tables above are.
 | `int x = 1e;` | `error[SC0106]` | error | error |
 | `int x = 0x1.8;` | `error[SC0106]` | error | error |
 | `int x = 0b101;` | `error[SC0106]` | accepts | error |
+| `long long x = 9223372036854775808;` | `error[SC0305]` | accepts | error |
+| `unsigned char *q = p;` with `char *p` | `error[SC0302]` | accepts | error |
+| `unsigned char *p = "abc";` | `error[SC0302]` | accepts | error |
+| `signed signed x;` | `error[SC0201]` | accepts | error |
 
 **Only the floating constant is a gap.** `SC0305` for a value past every type
-in its list is the program's, and `clang` refuses it too; for a floating
-constant it is this compiler's, which has no floating type. `SC0106` says the
-spelling is not a constant at all, and `clang` refuses each of those too.
+in its list is the program's: `clang` refuses one past 2^64 - 1, and an
+unsuffixed decimal from 2^63 up, which 6.4.4.1 p5's list for it cannot hold,
+it takes as an `unsigned long long` and refuses only under
+`-pedantic-errors`. For a floating constant `SC0305` is this compiler's gap,
+which has no floating type. `SC0106` says the spelling is not a constant at
+all, and `clang` refuses each of those too.
+
+The last three rows are constraints `clang` makes a warning by default.
+`char`, `signed char` and `unsigned char` are three types (6.2.5 p15), so a
+pointer to one is not a pointer to another and 6.5.16.1 p1 does not let one
+be assigned to the other; and 6.7.2 p2 has no list with a sign twice. Code
+that mixes `char *` and `unsigned char *` is common, and is refused here
+until it says which it means.
+
+**Against `x86_64-pc-windows-msvc` a constant can mean something else.**
+`clang` defaults to Microsoft compatibility there and gives a hexadecimal or
+octal `ll` constant from 2^63 up the type `long long`, so
+`0x8000000000000000ll < 0` is 1; C17 6.4.4.1 p5 makes it `unsigned long long`
+and this compiler answers 0, as `clang -fno-ms-compatibility` does.
 
 The last four are where that line is easiest to draw wrongly, so each is
 measured rather than reasoned about. `1e` has an exponent with no digits and
@@ -452,20 +472,16 @@ binary constant is C23, `clang` takes it as an extension, and only
 leaves every extension on, and what `clang` tolerates has been written up here
 as valid C before.
 
-A value beyond `INT_MAX` is reported as this compiler's gap rather than as a
-violation of 6.4.4 p2, although the two are the same sentence read against this
-implementation's type list. Blaming the program would be telling someone whose
-program `clang` compiles that they wrote it wrong, when what is missing is
-`long`. `int x = -2147483648;` is inside that: the constant is 2147483648 and
-the minus is an operator, so the smallest `int` cannot be written yet.
+`int x = -2147483648;` is read: the constant is 2147483648, a `long` or a
+`long long`, and the minus an operator whose result converts to `int`.
 
-**Whether `SC0305` fires depends on the target**, because it is decided against
-the range of `int`. [`architecture.md`](architecture.md)'s output table says a
-diagnostic depends on neither the host nor the target, and this is a divergence
-from it, recorded there as well. Nothing observes it today: `int` is 32 bits on
-every row of `Target::ALL`. It becomes observable the day `long` is in that
-table, because `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
-`x86_64-unknown-linux-gnu`.
+**A constant's type depends on the target**, because p5 decides it against
+each type's range: `2147483648` is a `long` on `x86_64-unknown-linux-gnu` and a
+`long long` on `x86_64-pc-windows-msvc`. [`architecture.md`](architecture.md)'s
+output table says a diagnostic depends on neither the host nor the target, and
+a diagnostic that spells such a type is a divergence from it, recorded there as
+well. Whether `SC0305` fires does not: the widest type is 64 bits on every row
+of `Target::ALL`.
 
 A character constant (6.4.4.4) has type `int` and the value of a `char`, so
 it too turns on the target: `'\xff'` is -1 where `char` is signed and 255

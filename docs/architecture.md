@@ -114,21 +114,18 @@ compiler does not, and [ADR-0015](adr/0015-make-an-object-by-spawning-clang.md)
 argues it. What follows from it is that these two diagnostics can never join the
 corpus, which compares bytes this compiler wrote.
 
-The second is `SC0305`, which says that no integer type this compiler has can
-hold a constant. Whether it fires is decided against the range of `int`, so it
-is a diagnostic that depends on the target, which the table above says a
-diagnostic does not. See
+The second is a constant's type, which C17 6.4.4.1 p5 decides against each
+type's range on the target, so a diagnostic that spells it depends on the
+target, which the table above says a diagnostic does not. See
 [frontend.md](frontend.md), *What an integer constant is worth*.
 
 This one is not taken on purpose and is not the shape of the first: what a
 constant's type is turns on the target under C17 6.4.4.1 p5, so the dependency
 is C's rather than this compiler's, and the row above was written before
-anything read a width in the frontend. Nothing observes it yet, because `int`
-is 32 bits on every row of `Target::ALL`. It becomes observable when `long`
-arrives, since `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
-`x86_64-unknown-linux-gnu`, and the corpus is where it will show: a case whose
-stderr can turn on a width has to name a `--target`, and the `--emit ast` cases
-do not.
+anything read a width in the frontend. It is observable since `long` arrived,
+which is 32 bits on `x86_64-pc-windows-msvc` and 64 on
+`x86_64-unknown-linux-gnu`, and the corpus is where it shows: a case whose
+output can turn on a width names a `--target`.
 
 The shape of the fix is to split the table's diagnostics row into what a
 diagnostic *says*, which depends on neither, and whether it *fires*, which may

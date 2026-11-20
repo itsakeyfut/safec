@@ -17,7 +17,7 @@ use safec::c::driver;
 /// per level of nesting up to `safec::c::parser::MAX_NESTING`, and that limit
 /// only turns a deep program into a report if the stack outlasts it. The main
 /// thread's is the platform's to choose, 1 MiB on Windows, and an unoptimised
-/// build used 98% of it to refuse a struct nested past the limit: measured at
+/// build used 94% of it to refuse a struct nested past the limit: measured at
 /// 987,616 bytes, and 1,052,896 bytes once #1112 widened the driver, which
 /// overflowed with no diagnostic and an exit code nobody chose
 /// (`a_struct_nested_past_the_limit_is_refused_rather_than_read`). Eight times

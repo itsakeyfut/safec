@@ -141,8 +141,9 @@ enum Widening {
 /// A machine, and what C's types are worth on it, and what it asks of a value
 /// crossing a call.
 ///
-/// Only `int` and `char` are described among the integers, because they are
-/// the only integer types the frontend parses. A pointer's width is here
+/// Every standard integer type's width is here, by rank, because what a
+/// constant's type is and what the usual arithmetic conversions answer turn
+/// on them (ADR-0116, ADR-0119). A pointer's width is here
 /// because the memory check asks whether an access fits the object it reaches,
 /// and a pointer written into four bytes does not fit on a machine whose
 /// pointers take eight. See ADR-0060, which amends ADR-0013 on that point.
@@ -166,7 +167,8 @@ impl Target {
     /// Written out, and each row measured with
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null` reading
     /// `__SIZEOF_INT__`, `__CHAR_BIT__`, `__CHAR_UNSIGNED__` and
-    /// `__SIZEOF_POINTER__`. A row nobody
+    /// `__SIZEOF_POINTER__`, and with `clang 22.1.8` the same way reading
+    /// `__SIZEOF_SHORT__`, `__SIZEOF_LONG__` and `__SIZEOF_LONG_LONG__`. A row nobody
     /// measured is a machine this compiler would be inventing, so the test
     /// beside this writes the same numbers out again rather than walking this
     /// table against itself, which would hold for any numbers at all.
