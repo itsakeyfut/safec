@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-11-20
 decision-makers: itsakeyfut
 ---
@@ -49,12 +49,18 @@ Chosen option: "one variant", by the owner's decision on #615.
 
 ### Confirmation
 
-Proposed until #1112 lands the rest. Since #1111, a third `Rank` is
-`E0004` at 25 sites in `safec-ir` and `safec-llvm` before the frontend is
-compiled, measured in a scratch build, and
-`every_target_is_what_clang_says_it_is` reads `int` and `char` through
-`Target::integer`. #1112 adds the target table against measurements
-written out for every rank, and a case per conversion 6.3.1.8 makes.
+A rank added later is `E0004` at every site that answers for an integer: a
+third one was, at 25 sites in `safec-ir` and `safec-llvm` before the
+frontend compiled, measured in a scratch build during #1111.
+`every_target_is_what_clang_says_it_is` writes every rank's width out per
+triple, measured with `clang 22.1.8 -dM -E`, and fails on any width wrong.
+`minus_one_is_not_below_one_unsigned`,
+`a_char_is_promoted_before_it_is_added`,
+`a_long_compared_with_an_unsigned_int_depends_on_the_target` and
+`unsigned_arithmetic_is_modulo_and_sees_no_sign` in
+`crates/safec-c/tests/interp.rs` fail when a conversion of 6.3.1.1 or
+6.3.1.8 is answered by rank alone, and `integer_arithmetic_is_what_clang_computes`
+builds the same program with `clang` and compares.
 
 ### Consequences
 

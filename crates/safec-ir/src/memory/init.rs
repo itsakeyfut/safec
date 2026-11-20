@@ -388,7 +388,7 @@ impl Allocations<'_> {
                         sign: _,
                     }) => true,
                     Some(Ty::Integer {
-                        rank: Rank::Int,
+                        rank: Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }) => false,
                     Some(Ty::Void | Ty::Pointer(_) | Ty::Array { .. }) => false,
@@ -408,7 +408,13 @@ impl Allocations<'_> {
             function
                 .locals()
                 .map(|local| {
-                    everything || written_ty == Some(innermost_element(unit, function.local(local)))
+                    everything
+                        || written_ty.is_some_and(|written| {
+                            unit.same_or_counterpart(
+                                written,
+                                innermost_element(unit, function.local(local)),
+                            )
+                        })
                 })
                 .collect(),
         );

@@ -1,0 +1,15 @@
+Function two_case_values_that_convert_to_one_are_one_case.c:1:1 "f" "int (unsigned int)"
+  Parameter two_case_values_that_convert_to_one_are_one_case.c:1:7 "u" "unsigned int"
+  Compound two_case_values_that_convert_to_one_are_one_case.c:1:23
+    Switch two_case_values_that_convert_to_one_are_one_case.c:2:5
+      Identifier two_case_values_that_convert_to_one_are_one_case.c:2:13 "u"
+      Compound two_case_values_that_convert_to_one_are_one_case.c:2:16
+        Case two_case_values_that_convert_to_one_are_one_case.c:3:5
+          Unary two_case_values_that_convert_to_one_are_one_case.c:3:10 "-"
+            Number two_case_values_that_convert_to_one_are_one_case.c:3:11 "1"
+          Case two_case_values_that_convert_to_one_are_one_case.c:4:5
+            Number two_case_values_that_convert_to_one_are_one_case.c:4:10 "4294967295u"
+            Return two_case_values_that_convert_to_one_are_one_case.c:5:9
+              Number two_case_values_that_convert_to_one_are_one_case.c:5:16 "1"
+    Return two_case_values_that_convert_to_one_are_one_case.c:7:5
+      Number two_case_values_that_convert_to_one_are_one_case.c:7:12 "0"

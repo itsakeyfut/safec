@@ -34,7 +34,7 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
 use crate::preprocessor::cut_words;
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
-use safec_ir::ir::Rank;
+use safec_ir::ir::{Rank, Sign};
 use safec_ir::source::{SourceMap, Span};
 
 /// Something was expected and something else was there.
@@ -303,29 +303,179 @@ enum Derivation {
     Function(Parameters),
 }
 
-/// The type a C17 6.7.2 type-specifier written as one keyword names, if this
-/// token is one: `int`, `char` or `void`.
-///
-/// Not the whole of 6.7.2, whose `struct-or-union-specifier` is more than one
-/// token and is [`Parser::struct_specifier`]'s, and not 6.7's
-/// `declaration-specifiers`, which adds qualifiers, storage classes and
-/// function and alignment specifiers. Whether a declaration begins here, the
-/// wider question, is [`begins_specifiers`]'s.
-///
-/// `docs/frontend.md` gives Stage 1 `int`, `char` and `void`. C's other
-/// specifiers, its qualifiers and its storage classes are later stages, and
-/// the module comment lists them among what is not read yet.
-fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
-    match kind {
-        TokenKind::Keyword(Keyword::Int) => Some(Type::INT),
-        TokenKind::Keyword(Keyword::Char) => Some(Type::CHAR),
-        TokenKind::Keyword(Keyword::Void) => Some(Type::Void),
-        _ => None,
+/// One of C17 6.7.2's type specifiers that is a single keyword and names a
+/// basic type, alone or with the others: `void`, `char`, `short`, `int`,
+/// `long`, `signed` and `unsigned`. `struct` is more than one token and is
+/// [`Parser::struct_specifier`]'s; `float`, `double`, `_Bool` and `_Complex`
+/// are not read yet ([`unread_keyword`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Word {
+    Void,
+    Char,
+    Short,
+    Int,
+    Long,
+    Signed,
+    Unsigned,
+}
+
+impl Word {
+    /// The word this token is, if it is one.
+    fn of(kind: TokenKind) -> Option<Self> {
+        Some(match kind {
+            TokenKind::Keyword(Keyword::Void) => Self::Void,
+            TokenKind::Keyword(Keyword::Char) => Self::Char,
+            TokenKind::Keyword(Keyword::Short) => Self::Short,
+            TokenKind::Keyword(Keyword::Int) => Self::Int,
+            TokenKind::Keyword(Keyword::Long) => Self::Long,
+            TokenKind::Keyword(Keyword::Signed) => Self::Signed,
+            TokenKind::Keyword(Keyword::Unsigned) => Self::Unsigned,
+            _ => return None,
+        })
+    }
+
+    /// How C writes it.
+    fn spelled(self) -> &'static str {
+        match self {
+            Self::Void => "void",
+            Self::Char => "char",
+            Self::Short => "short",
+            Self::Int => "int",
+            Self::Long => "long",
+            Self::Signed => "signed",
+            Self::Unsigned => "unsigned",
+        }
+    }
+}
+
+/// Why [`Parser::refuse_specifier`] refuses a type specifier.
+#[derive(Clone, Copy, Debug)]
+enum Refused {
+    /// A word no list holds beside this one written before it.
+    Clash(&'static str),
+    /// Any type specifier after a `struct`.
+    AfterStruct,
+    /// A `struct` after other type specifiers.
+    BeforeStruct,
+}
+
+/// The words a declaration's specifiers have written so far, as the multiset
+/// C17 6.7.2 p2 compares against its lists: each of them at most once but
+/// `long`, which may be written twice.
+#[derive(Clone, Copy, Debug, Default)]
+struct Words {
+    void: bool,
+    char: bool,
+    short: bool,
+    int: bool,
+    longs: u8,
+    sign: Option<Word>,
+}
+
+impl Words {
+    fn is_empty(self) -> bool {
+        !self.void
+            && !self.char
+            && !self.short
+            && !self.int
+            && self.longs == 0
+            && self.sign.is_none()
+    }
+
+    /// These words and `word`, or the word already written that 6.7.2 p2 has
+    /// no list for beside it. Asked a word at a time, so that what is
+    /// reported is the word that made the set one no list holds, where it is
+    /// written, as `clang` reports it.
+    #[inline(never)]
+    fn with(self, word: Word) -> Result<Self, &'static str> {
+        let mut next = self;
+        let clash = |taken: bool, with: &'static str| if taken { Err(with) } else { Ok(()) };
+        match word {
+            Word::Void => {
+                clash(self.char, "char")?;
+                clash(self.short, "short")?;
+                clash(self.int, "int")?;
+                clash(self.longs > 0, "long")?;
+                if let Some(sign) = self.sign {
+                    return Err(sign.spelled());
+                }
+                clash(self.void, "void")?;
+                next.void = true;
+            }
+            Word::Char => {
+                clash(self.void, "void")?;
+                clash(self.short, "short")?;
+                clash(self.int, "int")?;
+                clash(self.longs > 0, "long")?;
+                clash(self.char, "char")?;
+                next.char = true;
+            }
+            Word::Short => {
+                clash(self.void, "void")?;
+                clash(self.char, "char")?;
+                clash(self.longs > 0, "long")?;
+                clash(self.short, "short")?;
+                next.short = true;
+            }
+            Word::Int => {
+                clash(self.void, "void")?;
+                clash(self.char, "char")?;
+                clash(self.int, "int")?;
+                next.int = true;
+            }
+            Word::Long => {
+                clash(self.void, "void")?;
+                clash(self.char, "char")?;
+                clash(self.short, "short")?;
+                clash(self.longs == 2, "long long")?;
+                next.longs += 1;
+            }
+            Word::Signed | Word::Unsigned => {
+                clash(self.void, "void")?;
+                if let Some(sign) = self.sign {
+                    return Err(sign.spelled());
+                }
+                next.sign = Some(word);
+            }
+        }
+        Ok(next)
+    }
+
+    /// The type a set 6.7.2 p2 lists names, which every set [`Words::with`]
+    /// built is: `void`, or an integer of the rank its words give and the
+    /// sign it wrote, `signed` where it wrote none but `char`'s, which is
+    /// plain (6.2.5 p15). `None` for a set with no word at all.
+    #[inline(never)]
+    fn ty(self) -> Option<Type> {
+        if self.is_empty() {
+            return None;
+        }
+        if self.void {
+            return Some(Type::Void);
+        }
+        let rank = if self.char {
+            Rank::Char
+        } else if self.short {
+            Rank::Short
+        } else {
+            match self.longs {
+                0 => Rank::Int,
+                1 => Rank::Long,
+                _ => Rank::LongLong,
+            }
+        };
+        let sign = match (self.sign, rank) {
+            (Some(Word::Unsigned), _) => Sign::Unsigned,
+            (Some(_), _) => Sign::Signed,
+            (None, Rank::Char) => Sign::Plain,
+            (None, Rank::Short | Rank::Int | Rank::Long | Rank::LongLong) => Sign::Signed,
+        };
+        Some(Type::Integer { rank, sign })
     }
 }
 
 /// Whether declaration specifiers begin at this token: one
-/// [`type_specifier_keyword`] names, or `struct`, which is more than one token
+/// [`Word`] names, or `struct`, which is more than one token
 /// and is read by [`Parser::struct_specifier`]. The one test for where a
 /// declaration, a parameter list or a `for`'s declaration begins.
 ///
@@ -338,7 +488,7 @@ fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
 /// them stop agreeing, and two spellings of one decision have already left a
 /// case here answered by neither.
 fn begins_specifiers(kind: TokenKind) -> bool {
-    type_specifier_keyword(kind).is_some()
+    Word::of(kind).is_some()
         || matches!(
             kind,
             TokenKind::Keyword(
@@ -412,10 +562,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         // The qualifier's clause. `Parser::refuse_unread` cites 6.7.2.4 instead
         // where a `(` follows, which C17 6.7.2.4 p4 makes the type specifier.
         Keyword::Atomic => ("`_Atomic`", "6.7.3", SPECIFIER),
-        Keyword::Short => ("`short`", "6.7.2", SPECIFIER),
-        Keyword::Long => ("`long`", "6.7.2", SPECIFIER),
-        Keyword::Signed => ("`signed`", "6.7.2", SPECIFIER),
-        Keyword::Unsigned => ("`unsigned`", "6.7.2", SPECIFIER),
         Keyword::Float => ("`float`", "6.7.2", SPECIFIER),
         Keyword::Double => ("`double`", "6.7.2", SPECIFIER),
         Keyword::Bool => ("`_Bool`", "6.7.2", SPECIFIER),
@@ -1179,12 +1325,59 @@ impl Parser<'_> {
         // cleared the outer `static` of `static struct S { int a; } *p;`.
         // Mutation: write each half straight into `Parser::storage`;
         // `a_storage_class_before_a_struct_definition_is_kept` fails.
+        //
+        // **The type is a multiset of words** (6.7.2 p2), in any order and
+        // among the qualifiers and the storage class: `long unsigned const
+        // int` is an `unsigned long`. Each word is checked as it is read, see
+        // [`Words::with`], and a `struct` stands alone.
         let scoped = matches!(at, Position::FileScope | Position::BlockScope);
         let mut storage = None;
-        let mut constant = self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
-        let ty = self.type_specifier(at, diagnostics)?;
+        let mut constant = false;
+        let mut words = Words::default();
         constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+        // A `struct` stands alone, so it is read before the loop rather than
+        // in it: called from inside the loop, the refusal of a struct nested
+        // past `MAX_NESTING` cost some 65 KB more stack, and one nested to the
+        // limit overflowed the stack rather than being refused, measured.
+        let tagged = if self.check(TokenKind::Keyword(Keyword::Struct)) {
+            Some(self.struct_specifier(diagnostics)?)
+        } else {
+            None
+        };
+        loop {
+            constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+            let next = self.peek().kind;
+            if let Some(word) = Word::of(next) {
+                if tagged.is_some() {
+                    return self.refuse_specifier(Refused::AfterStruct, diagnostics);
+                }
+                match words.with(word) {
+                    Ok(next) => words = next,
+                    Err(previous) => {
+                        return self.refuse_specifier(Refused::Clash(previous), diagnostics);
+                    }
+                }
+                self.advance();
+                continue;
+            }
+            if next == TokenKind::Keyword(Keyword::Struct) {
+                return self.refuse_specifier(
+                    if tagged.is_some() {
+                        Refused::AfterStruct
+                    } else {
+                        Refused::BeforeStruct
+                    },
+                    diagnostics,
+                );
+            }
+            break;
+        }
         self.storage = storage;
+        let ty = match (tagged, words.ty()) {
+            (Some(tagged), _) => tagged,
+            (None, Some(ty)) => self.ast.push_type(ty),
+            (None, None) => return self.no_type_specifier(at, diagnostics),
+        };
         let ty = if constant {
             self.ast.push_const(ty)
         } else {
@@ -1193,10 +1386,72 @@ impl Parser<'_> {
         self.no_unread_specifier_after(ty, at, diagnostics)
     }
 
+    /// Report where declaration specifiers named no type: valid C this
+    /// compiler does not read yet, or no declaration at all. Out of
+    /// [`Parser::specifiers`]' frame for the reason
+    /// [`Parser::refuse_specifier`] gives.
+    #[inline(never)]
+    #[cold]
+    fn no_type_specifier(
+        &mut self,
+        at: Position,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        if self.refuse_unread(at, diagnostics) {
+            return None;
+        }
+        self.report(
+            "expected a declaration",
+            "this cannot begin one",
+            diagnostics,
+        );
+        None
+    }
+
+    /// Report a type specifier C17 6.7.2 p2 has no list for beside the ones
+    /// before it, where it is written, and answer nothing.
+    ///
+    /// **Its own function, never inlined**, because [`Parser::specifiers`]
+    /// is on the path a struct nested in a struct recurses through, once per
+    /// level up to [`MAX_NESTING`], and a diagnostic built in its body made
+    /// its frame large enough that a struct nested to the limit overflowed
+    /// the stack, where it is refused as nested too deep.
+    /// `a_struct_nested_past_the_limit_is_refused_rather_than_read` is what
+    /// found it.
+    #[inline(never)]
+    #[cold]
+    fn refuse_specifier(
+        &mut self,
+        refused: Refused,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let (message, label) = match refused {
+            Refused::Clash("long long") => (
+                "`long long long` is too long".to_owned(),
+                "C17 6.7.2 p2 lists no type with these specifiers",
+            ),
+            Refused::Clash(previous) => (
+                format!("cannot combine with previous `{previous}` declaration specifier"),
+                "C17 6.7.2 p2 lists no type with these specifiers",
+            ),
+            Refused::AfterStruct => (
+                "cannot combine with previous `struct` declaration specifier".to_owned(),
+                "a second type",
+            ),
+            Refused::BeforeStruct => (
+                "cannot combine a `struct` with the type specifiers before it".to_owned(),
+                "a second type",
+            ),
+        };
+        self.report(message, label, diagnostics);
+        None
+    }
+
     /// Every `const` here, and every storage class where `scoped` says one
     /// may stand, recorded in `storage`; whether there was a `const`. A
     /// second storage class is a constraint violation (C17 6.7.1 p2),
     /// reported where it is written.
+    #[inline(never)]
     fn eat_qualifiers_and_storage(
         &mut self,
         scoped: bool,
@@ -1236,29 +1491,6 @@ impl Parser<'_> {
         any
     }
 
-    /// The one type specifier [`Parser::specifiers`] reads: a keyword
-    /// [`type_specifier_keyword`] names, or a `struct`.
-    fn type_specifier(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
-        if self.check(TokenKind::Keyword(Keyword::Struct)) {
-            return self.struct_specifier(diagnostics);
-        }
-
-        let Some(ty) = type_specifier_keyword(self.peek().kind) else {
-            if self.refuse_unread(at, diagnostics) {
-                return None;
-            }
-            self.report(
-                "expected a declaration",
-                "this cannot begin one",
-                diagnostics,
-            );
-            return None;
-        };
-
-        self.advance();
-        Some(self.ast.push_type(ty))
-    }
-
     /// `ty`, unless what follows it is a second specifier C allows here and this
     /// parser does not read, which is refused as one.
     ///
@@ -1266,6 +1498,7 @@ impl Parser<'_> {
     /// and `int unsigned` are as valid as `const int` and `unsigned int`, and
     /// the second word is what this parser does not read. Without this it is
     /// read as the declarator, which then says a name is missing.
+    #[inline(never)]
     fn no_unread_specifier_after(
         &mut self,
         ty: TypeId,
@@ -1284,6 +1517,12 @@ impl Parser<'_> {
     /// member list goes through [`Parser::deeper`], because a member can be a
     /// struct and so can its, and the tree would otherwise be as deep as the
     /// source cared to make it.
+    ///
+    /// **Never inlined**, for the reason [`Parser::refuse_specifier`] gives:
+    /// this is on the path a nested struct recurses through, and inlined
+    /// into [`Parser::specifiers`] its frame was paid at every level, which
+    /// overflowed the stack before the nesting limit was reached.
+    #[inline(never)]
     fn struct_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         self.advance();
 
@@ -1609,6 +1848,7 @@ impl Parser<'_> {
 
     /// Refuse the `__attribute__` that is there, which is not before a
     /// function definition at file scope.
+    #[inline(never)]
     fn misplaced_attribute(&mut self, diagnostics: &mut DiagnosticSink) {
         self.report_as(
             MISPLACED_ANNOTATION,
@@ -1794,7 +2034,7 @@ impl Parser<'_> {
                 }
                 Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void
@@ -3297,6 +3537,7 @@ impl Parser<'_> {
     /// some at `at`, and say whether it did.
     ///
     /// A keyword asks [`unread_keyword`].
+    #[inline(never)]
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
         let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {

@@ -29,9 +29,9 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
-use safec_ir::ir::Rank;
+use safec_ir::ir::{Rank, Sign};
 use safec_ir::source::{SourceMap, Span};
-use safec_ir::target::Integer;
+use safec_ir::target::Target;
 
 /// A spelling that is not a constant C allows, C17 6.4.4.1 p1.
 ///
@@ -43,15 +43,13 @@ const MALFORMED_CONSTANT: Code = Code::new("SC0106");
 
 /// A constant this compiler has no type for, C17 6.4.4 p2.
 ///
-/// One code for three messages, because they are one rule met three ways:
-/// 6.4.4.1 p5 picks a constant's type from a list, and this compiler has only
-/// `int` on it. A value too large, a suffix, and a floating constant are the
-/// three ways to ask for an entry that is not there. Same arrangement as
-/// `MISMATCH` below, for the same reason.
-///
-/// Every one of the three is a program `clang` compiles, which is what makes
-/// the code's wording this compiler's own gap rather than the program's
-/// fault. The spelling that is no constant at all is the other code.
+/// One code for two messages, because they are one rule met two ways: a
+/// constant has to have a type that holds it. A value no type in its 6.4.4.1
+/// p5 list holds is the program's fault, though `clang` takes an unsuffixed
+/// decimal from 2^63 to 2^64 - 1 as an extension and refuses it only under
+/// `-pedantic-errors`; a floating constant is this compiler's gap, because it
+/// has no floating type to give one. Same arrangement as `MISMATCH` below, for the same reason.
+/// The spelling that is no constant at all is the other code.
 const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
@@ -238,6 +236,8 @@ pub struct Types {
     of: Vec<Option<TypeId>>,
     value: Vec<Option<i128>>,
     member: Vec<Option<Member>>,
+    operated: Vec<Option<TypeId>>,
+    controlling: HashMap<ExprId, TypeId>,
 }
 
 /// The member a member access names: the struct definition its base's tag
@@ -255,6 +255,24 @@ pub struct Member {
 }
 
 impl Types {
+    /// The type the operation `id` is performed at, where that is not the
+    /// type of its result: the common type C17 6.3.1.8 gives the operands of
+    /// a comparison, whose result is an `int`, and the type a compound
+    /// assignment or an increment computes at before the result is
+    /// converted back to its left operand's (6.5.16.2 p3), and a `switch`'s
+    /// controlling expression promoted (6.8.4.2 p5). `None` for every other
+    /// expression, which is performed at its own type.
+    pub fn operated(&self, id: ExprId) -> Option<TypeId> {
+        self.operated[id.index()]
+    }
+
+    /// The type a `switch` whose controlling expression is `condition`
+    /// compares at: that expression promoted (C17 6.8.4.2 p5), to which each
+    /// `case` value is converted.
+    pub fn controlling(&self, condition: ExprId) -> Option<TypeId> {
+        self.controlling.get(&condition).copied()
+    }
+
     /// The type of the expression `id`, or `None` where this stage could not
     /// say what it is.
     ///
@@ -308,20 +326,17 @@ impl Types {
 /// They go in the same arena as the rest, so that there is one representation
 /// of a type in this compiler rather than two.
 ///
-/// Takes `int_range` and `character` rather than a whole
-/// [`safec_ir::target::Target`] because that is all it reads: whether an
-/// integer constant's value is in the range of `int`, and what a character
-/// constant's is once read as a `char`. ADR-0013 asks that a stage be
-/// given only what it reads, and its *Only what something reads* section names
-/// this stage as the second reader of `int`'s width. A diagnostic that turns
-/// on a width is a divergence from `docs/architecture.md`'s output table,
-/// recorded there.
+/// Takes the [`Target`], because what an integer constant's type is (C17
+/// 6.4.4.1 p5) and what type the usual arithmetic conversions give two
+/// operands (6.3.1.8) turn on every integer type's width there. See ADR-0119,
+/// which replaces what ADR-0013 said this stage is given. A diagnostic that
+/// turns on a width is a divergence from `docs/architecture.md`'s output
+/// table, recorded there.
 pub fn check(
     sources: &SourceMap,
     ast: &mut Ast,
     resolution: &Resolution,
-    int_range: Integer,
-    character: Integer,
+    target: Target,
     diagnostics: &mut DiagnosticSink,
 ) -> Types {
     let mut checker = Checker {
@@ -335,8 +350,10 @@ pub fn check(
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::INT),
-        int_range,
-        character,
+        target,
+        integers: HashMap::new(),
+        operated: vec![None; ast.expr_ids().count()],
+        controlling: HashMap::new(),
         receivers: HashMap::new(),
         at: None,
     };
@@ -383,6 +400,20 @@ pub fn check(
         of: checker.types,
         value: checker.values,
         member: checker.members,
+        operated: checker.operated,
+        controlling: checker.controlling,
+    }
+}
+
+/// The rank and sign of `ty`, where it is an integer type.
+fn integer_of(ast: &Ast, ty: TypeId) -> Option<(Rank, Sign)> {
+    match ast.ty(ty) {
+        Type::Integer { rank, sign } => Some((*rank, *sign)),
+        Type::Void
+        | Type::Pointer(_)
+        | Type::Array { .. }
+        | Type::Function { .. }
+        | Type::Struct { .. } => None,
     }
 }
 
@@ -547,11 +578,17 @@ struct Checker<'a> {
     /// differently for an operand and [`Checker::member`] for a base.
     reported_within: Vec<bool>,
     int: TypeId,
-    /// The range of `int` on the target this run is for.
-    int_range: Integer,
-    /// The range of `char` on that target, which decides the value of a
-    /// character constant whose character does not fit a signed `char`.
-    character: Integer,
+    /// The machine this run is for, which says how wide each integer type is.
+    target: Target,
+    /// One type per integer type this stage has had to name itself, such as
+    /// the `unsigned long` two operands convert to, so that one name is one
+    /// node rather than a node per expression.
+    integers: HashMap<(Rank, Sign), TypeId>,
+    /// What [`Types::operated`] answers, by expression.
+    operated: Vec<Option<TypeId>>,
+    /// What [`Types::controlling`] answers, by a `switch`'s controlling
+    /// expression.
+    controlling: HashMap<ExprId, TypeId>,
     /// The value of each `return` that has one and of each initializer, and
     /// what it has to be assignable to.
     ///
@@ -701,7 +738,7 @@ impl Checker<'_> {
                         current = *returns;
                     }
                     Type::Integer {
-                        rank: Rank::Char | Rank::Int,
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }
                     | Type::Void => break,
@@ -806,7 +843,7 @@ impl Checker<'_> {
                     Diagnostic::error(format!("the initializer of `{name}` has no defined value"))
                         .with_label(Label::primary(
                             span,
-                            "this overflows `int`, divides by zero, or shifts too far",
+                            "this overflows its type, divides by zero, or shifts too far",
                         ))
                         .with_note(
                             "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
@@ -1027,7 +1064,7 @@ impl Checker<'_> {
                 }
                 Type::Array { .. } => continue,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_)
@@ -1105,7 +1142,7 @@ impl Checker<'_> {
                 match ast.ty(declaration.ty) {
                     Type::Function { .. } => {}
                     Type::Integer {
-                        rank: Rank::Char | Rank::Int,
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }
                     | Type::Void
@@ -1516,13 +1553,33 @@ impl Checker<'_> {
             // Complete where the array is written (C17 6.7.2.1 p8).
             Type::Struct { .. } => !self.resolution.complete(ast, element),
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Type::Pointer(_)
             | Type::Array {
                 length: Some(_), ..
             } => false,
+        }
+    }
+
+    /// How many bytes an object of `ty` takes on the target, where this stage
+    /// can say: an integer, a pointer, and an array of either with a constant
+    /// length. `None` for a struct, which has no layout here and whose
+    /// objects the lowering refuses, and for what is no object type.
+    fn bytes_of(&self, ast: &Ast, ty: TypeId) -> Option<u128> {
+        match *ast.ty(ty) {
+            Type::Integer { rank, sign } => {
+                Some(u128::from(self.target.integer(rank, sign).bits() / 8))
+            }
+            Type::Pointer(_) => Some(u128::from(self.target.pointer_bits() / 8)),
+            Type::Array {
+                element, length, ..
+            } => {
+                let count = u128::try_from(self.values[length?.index()]?).ok()?;
+                count.checked_mul(self.bytes_of(ast, element)?)
+            }
+            Type::Struct { .. } | Type::Void | Type::Function { .. } => None,
         }
     }
 
@@ -1577,7 +1634,7 @@ impl Checker<'_> {
             !matches!(
                 ast.ty(ty),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _
                 }
             )
@@ -1609,6 +1666,35 @@ impl Checker<'_> {
             );
             return true;
         }
+        // **No object larger than this target can address**: a local one
+        // moves the stack pointer by its size, and past the address space
+        // that wraps, so the program writes outside its own stack where
+        // every access is inside the array. Fewer than 2^61 bytes on a 64-bit
+        // target, where the size in bits has to fit 64 bits, and fewer than
+        // 2^32 on a 32-bit one, which is also where `clang` stops. C17 5.2.4.1
+        // asks only that an object of 65535 bytes be allowed. Mutation: skip
+        // this; `an_array_larger_than_the_target_can_address_is_refused`
+        // compiles.
+        if let Some(count) = self.values[length.index()] {
+            let bytes = self
+                .bytes_of(ast, element)
+                .and_then(|each| u128::try_from(count).ok()?.checked_mul(each));
+            let limit = 1u128 << self.target.pointer_bits().min(61);
+            if let Some(bytes) = bytes.filter(|&bytes| bytes >= limit) {
+                diagnostics.report(
+                    Diagnostic::error("an array this large cannot be an object on this target")
+                        .with_code(DECLARATOR)
+                        .with_label(Label::primary(
+                            ast.expr(length).span(),
+                            format!("this makes it {bytes} bytes"),
+                        ))
+                        .with_note(format!(
+                            "an object here is smaller than {limit} bytes, the most this target can address"
+                        )),
+                );
+                return true;
+            }
+        }
         // At file scope a length has to be a constant with a value. Untyped,
         // it was asked nothing above and is asked nothing here: an undeclared
         // name has been reported already, and `p - q`, the one untyped length
@@ -1618,7 +1704,7 @@ impl Checker<'_> {
             diagnostics.report(if self.undefined[length.index()] {
                 Diagnostic::error("the length of an array has no defined value")
                     .with_code(DECLARATOR)
-                    .with_label(Label::primary(at, "this overflows `int` or divides by zero"))
+                    .with_label(Label::primary(at, "this overflows its type, divides by zero, or shifts too far"))
                     .with_note(
                         "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
                     )
@@ -1730,7 +1816,7 @@ impl Checker<'_> {
                 (arrow && matches!(ast.ty(*element), Type::Struct { .. })).then_some(*element)
             }
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Type::Void
@@ -1997,7 +2083,7 @@ impl Checker<'_> {
         let expr = ast.expr(id).clone();
 
         match expr {
-            Expr::Number { span } => self.constant(id, span, diagnostics),
+            Expr::Number { span } => self.constant(ast, id, span, diagnostics),
             Expr::Character { span } => {
                 // C17 6.4.4.4 p10: type `int`, and the value of a `char`
                 // whose object representation is the character's, so
@@ -2010,8 +2096,9 @@ impl Checker<'_> {
                     .and_then(|values| values.first().copied())
                     .expect("the parser keeps only a constant of one character it reads");
                 let value = i128::from(value);
-                let value = if self.character.signed() && value > self.character.max() {
-                    value - (1i128 << self.character.bits())
+                let character = self.target.integer(Rank::Char, Sign::Plain);
+                let value = if character.signed() && value > character.max() {
+                    value - (1i128 << character.bits())
                 } else {
                     value
                 };
@@ -2072,8 +2159,8 @@ impl Checker<'_> {
                 };
                 Some(if qualified { qualify(ast, ty) } else { ty })
             }
-            Expr::Unary { op, operand, .. } => self.unary(ast, op, operand, diagnostics),
-            Expr::Binary { op, lhs, rhs, .. } => self.binary(ast, op, lhs, rhs, diagnostics),
+            Expr::Unary { op, operand, .. } => self.unary(ast, id, op, operand, diagnostics),
+            Expr::Binary { op, lhs, rhs, .. } => self.binary(ast, id, op, lhs, rhs, diagnostics),
             Expr::Assign {
                 op, place, value, ..
             } => {
@@ -2098,7 +2185,12 @@ impl Checker<'_> {
                 match op {
                     _ if refused => {}
                     None => self.assignment(ast, place, value, diagnostics),
-                    Some(op) => self.compound_assignment(ast, op, place, value, diagnostics),
+                    Some(op) => {
+                        self.compound_assignment(ast, op, place, value, diagnostics);
+                        // 6.5.16.2 p3: `a op= b` is `a = a op b`, computed at
+                        // the type `a op b` has, and converted to `a`'s.
+                        self.operated[id.index()] = self.operated_at(ast, op, place, value);
+                    }
                 }
                 // 6.5.16 p3: the type is "the type the left operand would have
                 // after lvalue conversion", which is the place's own while
@@ -2143,6 +2235,7 @@ impl Checker<'_> {
     fn unary(
         &mut self,
         ast: &mut Ast,
+        id: ExprId,
         op: UnOp,
         operand: ExprId,
         diagnostics: &mut DiagnosticSink,
@@ -2181,7 +2274,7 @@ impl Checker<'_> {
                 // after the type check reads the tree once it has reported,
                 // so no later stage speaks about the missing type.
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void
@@ -2210,18 +2303,22 @@ impl Checker<'_> {
                 if self.refuse_unwritable(ast, operand, &what, "C17 6.5.2.4 p1", diagnostics) {
                     return None;
                 }
-                self.increment(ast, op, operand, "C17 6.5.2.4 p2", diagnostics)
+                let ty = self.increment(ast, op, operand, "C17 6.5.2.4 p2", diagnostics);
+                self.operated[id.index()] = self.stepped_at(ast, operand);
+                ty
             }
             UnOp::PreInc | UnOp::PreDec => {
                 let what = format!("the operand of `{}`", op.as_str());
                 if self.refuse_unwritable(ast, operand, &what, "C17 6.5.3.1 p1", diagnostics) {
                     return None;
                 }
-                self.increment(ast, op, operand, "C17 6.5.3.1 p2", diagnostics)
+                let ty = self.increment(ast, op, operand, "C17 6.5.3.1 p2", diagnostics);
+                self.operated[id.index()] = self.stepped_at(ast, operand);
+                ty
             }
-            // 6.5.3.3: the integer promotions of 6.3.1.1 make the result of
-            // `+`, `-` and `~` an `int` for every operand p1 lets them take,
-            // and p5 makes `!` an `int` outright. Still `None` for an operand
+            // 6.5.3.3: the integer promotions of 6.3.1.1 give `+`, `-` and
+            // `~` their result's type, and p5 makes `!` an `int` outright.
+            // Still `None` for an operand
             // nothing typed, because an operand that is not a number at all
             // makes an expression with no type rather than an `int`: an `int`
             // there would have `p = -nowhere` reported a second time, as an
@@ -2237,7 +2334,7 @@ impl Checker<'_> {
                 // is an integer type; a floating type would split it.
                 let takes = match ast.ty(ty) {
                     Type::Integer {
-                        rank: Rank::Char | Rank::Int,
+                        rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     } => true,
                     // `decayed` answers neither an array nor a function, and
@@ -2263,7 +2360,15 @@ impl Checker<'_> {
                     // `*`.
                     return None;
                 }
-                Some(self.int)
+                // p5: `!` is an `int`; `+`, `-` and `~` are the promoted
+                // operand's type (p2 to p4).
+                match (op, integer_of(ast, ty)) {
+                    (UnOp::Plus | UnOp::Minus | UnOp::BitNot, Some(integer)) => {
+                        let promoted = self.promoted_of(integer);
+                        Some(self.integer_type(ast, promoted))
+                    }
+                    _ => Some(self.int),
+                }
             }
         }
     }
@@ -2389,7 +2494,7 @@ impl Checker<'_> {
             match ast.ty(ty) {
                 Type::Pointer(pointee) => Some(*pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void
@@ -2483,6 +2588,7 @@ impl Checker<'_> {
     fn binary(
         &mut self,
         ast: &mut Ast,
+        id: ExprId,
         op: BinOp,
         lhs: ExprId,
         rhs: ExprId,
@@ -2508,29 +2614,167 @@ impl Checker<'_> {
             return None;
         }
 
-        match op {
-            BinOp::Add | BinOp::Sub => self.additive(ast, op, left, right),
-            // Everything else this compiler reads is arithmetic on operands
-            // the integer promotions make `int`, or a comparison, which
-            // 6.5.8 p6 and 6.5.9 p3 make `int`, or `&&` and `||`, which
-            // 6.5.13 p3 and 6.5.14 p3 make `int`.
-            BinOp::Mul
-            | BinOp::Div
-            | BinOp::Rem
-            | BinOp::Shl
-            | BinOp::Shr
-            | BinOp::Lt
-            | BinOp::Gt
-            | BinOp::Le
-            | BinOp::Ge
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::BitAnd
-            | BinOp::BitXor
-            | BinOp::BitOr
-            | BinOp::LogAnd
-            | BinOp::LogOr => Some(self.int),
+        let integers = (integer_of(ast, left), integer_of(ast, right));
+        match (op, integers) {
+            // 6.5.5 p3, 6.5.6 p4 and 6.5.10 to 6.5.12 p3: the usual
+            // arithmetic conversions are performed on the operands, and the
+            // result has the type they give.
+            (
+                BinOp::Mul
+                | BinOp::Div
+                | BinOp::Rem
+                | BinOp::Add
+                | BinOp::Sub
+                | BinOp::BitAnd
+                | BinOp::BitXor
+                | BinOp::BitOr,
+                (Some(left), Some(right)),
+            ) => {
+                let common = self.usual_of(left, right);
+                Some(self.integer_type(ast, common))
+            }
+            (BinOp::Add | BinOp::Sub, _) => self.additive(ast, op, left, right),
+            // 6.5.7 p3: each operand is promoted, and the result has the
+            // promoted left operand's type; the right does not convert it.
+            (BinOp::Shl | BinOp::Shr, (Some(left), Some(_))) => {
+                let promoted = self.promoted_of(left);
+                Some(self.integer_type(ast, promoted))
+            }
+            // 6.5.8 p3 and 6.5.9 p4: the usual arithmetic conversions are
+            // performed on two arithmetic operands, and the result is an
+            // `int` (p6, p3); the common type is what the comparison is made
+            // at, which is [`Types::operated`].
+            (
+                BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne,
+                (Some(left), Some(right)),
+            ) => {
+                let common = self.usual_of(left, right);
+                self.operated[id.index()] = Some(self.integer_type(ast, common));
+                Some(self.int)
+            }
+            // A pointer compared, and `&&` and `||`, which 6.5.13 p3 and
+            // 6.5.14 p3 make `int`. A shift or an arithmetic operator on an
+            // operand that is no integer was refused above.
+            (
+                BinOp::Lt
+                | BinOp::Gt
+                | BinOp::Le
+                | BinOp::Ge
+                | BinOp::Eq
+                | BinOp::Ne
+                | BinOp::LogAnd
+                | BinOp::LogOr
+                | BinOp::Mul
+                | BinOp::Div
+                | BinOp::Rem
+                | BinOp::Shl
+                | BinOp::Shr
+                | BinOp::BitAnd
+                | BinOp::BitXor
+                | BinOp::BitOr,
+                _,
+            ) => Some(self.int),
         }
+    }
+
+    /// The type a compound assignment `place op= value` computes at
+    /// (6.5.16.2 p3): what `place op value` would have, the promoted left
+    /// operand's for a shift (6.5.7 p3) and the usual arithmetic
+    /// conversions' otherwise. `None` where either is not an integer, which
+    /// is a pointer moved by an integer and performed at the pointer.
+    fn operated_at(
+        &mut self,
+        ast: &mut Ast,
+        op: BinOp,
+        place: ExprId,
+        value: ExprId,
+    ) -> Option<TypeId> {
+        let left = integer_of(ast, self.types[place.index()]?)?;
+        let right = integer_of(ast, self.types[value.index()]?)?;
+        let at = match op {
+            BinOp::Shl | BinOp::Shr => self.promoted_of(left),
+            _ => self.usual_of(left, right),
+        };
+        Some(self.integer_type(ast, at))
+    }
+
+    /// The type an increment or a decrement of `operand` computes at: `E +=
+    /// 1`'s (6.5.3.1 p2, 6.5.2.4 p2), so the usual arithmetic conversions of
+    /// the operand and the `int` 1. `None` for a pointer.
+    fn stepped_at(&mut self, ast: &mut Ast, operand: ExprId) -> Option<TypeId> {
+        let integer = integer_of(ast, self.types[operand.index()]?)?;
+        let at = self.usual_of(integer, (Rank::Int, Sign::Signed));
+        Some(self.integer_type(ast, at))
+    }
+
+    /// What C17 6.3.1.1 p2's integer promotions make an integer type: one
+    /// whose rank is below `int`'s becomes `int` where `int` holds every
+    /// value it does and `unsigned int` otherwise; any other is itself. A
+    /// rank and a sign rather than a type, so that [`Checker::evaluate`],
+    /// which pushes nothing, can ask it too.
+    ///
+    /// Mutation: promote nothing; `a_char_is_promoted_before_it_is_added`
+    /// overflows.
+    fn promoted_of(&self, (rank, sign): (Rank, Sign)) -> (Rank, Sign) {
+        match rank {
+            Rank::Char | Rank::Short => {
+                let from = self.target.integer(rank, sign);
+                let int = self.target.integer(Rank::Int, Sign::Signed);
+                if int.holds(from.min()) && int.holds(from.max()) {
+                    (Rank::Int, Sign::Signed)
+                } else {
+                    (Rank::Int, Sign::Unsigned)
+                }
+            }
+            Rank::Int | Rank::Long | Rank::LongLong => (rank, sign),
+        }
+    }
+
+    /// The common type C17 6.3.1.8 p1's usual arithmetic conversions give
+    /// two integer types: each promoted, then the same type stays; the
+    /// higher rank wins between two of one signedness; an unsigned type of
+    /// rank at least the signed one's wins; a signed type that holds every
+    /// value of the unsigned one wins; and otherwise the unsigned type of
+    /// the signed one's rank, which is where `long` and `unsigned int`
+    /// differ between a 64-bit and a 32-bit `long`.
+    ///
+    /// Mutation: answer the higher rank whatever the sign; `minus_one_is_not_below_one_unsigned`
+    /// answers 1.
+    fn usual_of(&self, left: (Rank, Sign), right: (Rank, Sign)) -> (Rank, Sign) {
+        let (left, right) = (self.promoted_of(left), self.promoted_of(right));
+        if left == right {
+            return left;
+        }
+        let signed = |(_, sign): (Rank, Sign)| sign == Sign::Signed;
+        if signed(left) == signed(right) {
+            return if left.0 >= right.0 { left } else { right };
+        }
+        let (unsigned, signed_one) = if signed(left) {
+            (right, left)
+        } else {
+            (left, right)
+        };
+        if unsigned.0 >= signed_one.0 {
+            return unsigned;
+        }
+        let wide = self.target.integer(signed_one.0, signed_one.1);
+        let narrow = self.target.integer(unsigned.0, unsigned.1);
+        if wide.holds(narrow.max()) {
+            signed_one
+        } else {
+            (signed_one.0, Sign::Unsigned)
+        }
+    }
+
+    /// The node for an integer type this stage names itself, one per type.
+    fn integer_type(&mut self, ast: &mut Ast, (rank, sign): (Rank, Sign)) -> TypeId {
+        if (rank, sign) == (Rank::Int, Sign::Signed) {
+            return self.int;
+        }
+        *self
+            .integers
+            .entry((rank, sign))
+            .or_insert_with(|| ast.push_type(Type::Integer { rank, sign }))
     }
 
     /// C17 6.5.6, which is the one place an operand's type decides the
@@ -2549,8 +2793,8 @@ impl Checker<'_> {
         );
 
         match pointers {
-            // p9 makes a pointer minus a pointer `ptrdiff_t`, which this
-            // compiler has no name for. Two pointers added, which p2 forbids,
+            // p9 makes a pointer minus a pointer `ptrdiff_t`, an integer
+            // type `<stddef.h>` names and this compiler does not ship yet. Two pointers added, which p2 forbids,
             // are refused by `binary_operable` before they reach here, and
             // the arm answers the same for them.
             (true, true) => None,
@@ -2562,7 +2806,9 @@ impl Checker<'_> {
             (false, true) if op == BinOp::Sub => None,
             // p2 lets an addition be written the other way round.
             (false, true) => Some(rhs),
-            (false, false) => Some(self.int),
+            // Two integers are [`Checker::binary`]'s, at their common type;
+            // anything else was refused there.
+            (false, false) => None,
         }
     }
 
@@ -2723,16 +2969,20 @@ impl Checker<'_> {
         );
 
         let paired = match (ast.ty(left), ast.ty(right)) {
+            // p5: the usual arithmetic conversions, as for `+`.
             (
-                Type::Integer {
-                    rank: Rank::Char | Rank::Int,
-                    sign: _,
+                &Type::Integer {
+                    rank: left_rank,
+                    sign: left_sign,
                 },
-                Type::Integer {
-                    rank: Rank::Char | Rank::Int,
-                    sign: _,
+                &Type::Integer {
+                    rank: right_rank,
+                    sign: right_sign,
                 },
-            ) => Some(self.int),
+            ) => {
+                let common = self.usual_of((left_rank, left_sign), (right_rank, right_sign));
+                Some(self.integer_type(ast, common))
+            }
             (Type::Void, Type::Void) => Some(left),
             (Type::Pointer(left_pointee), Type::Pointer(right_pointee)) => {
                 // p3 pairs a pointer to `void` only with a pointer to an
@@ -2779,13 +3029,13 @@ impl Checker<'_> {
             (
                 Type::Pointer(_),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => nulls.1.then_some(left),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
                 Type::Pointer(_),
@@ -2794,7 +3044,7 @@ impl Checker<'_> {
             // be the pointer it decays to if it did.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -2803,7 +3053,7 @@ impl Checker<'_> {
             | (
                 Type::Void,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -2873,7 +3123,7 @@ impl Checker<'_> {
                 Type::Void | Type::Struct { .. } => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Array { .. }
@@ -2934,7 +3184,7 @@ impl Checker<'_> {
             }
             Type::Function { .. } => ast.push_type(Type::Pointer(ty)),
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Type::Void
@@ -3217,7 +3467,7 @@ impl Checker<'_> {
             (
                 Type::Pointer(pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) if matches!(op, BinOp::Add | BinOp::Sub) => {
@@ -3231,7 +3481,7 @@ impl Checker<'_> {
         let (primary, secondary) = if !matches!(
             ast.ty(source),
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _
             }
         ) {
@@ -3294,18 +3544,18 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => Some(true),
             (
                 Type::Pointer(pointee),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => match op {
@@ -3339,7 +3589,7 @@ impl Checker<'_> {
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_)
@@ -3349,7 +3599,7 @@ impl Checker<'_> {
             | (
                 Type::Void,
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => Some(false),
@@ -3399,7 +3649,7 @@ impl Checker<'_> {
     ) {
         match ast.ty(ty) {
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             } => return,
             Type::Void
@@ -3425,13 +3675,30 @@ impl Checker<'_> {
     /// most one `default`.
     ///
     /// After every expression has its value, which is what the first two
-    /// ask. A value is compared as `types.rs` worked it out, at `int`, the
-    /// promoted type of every controlling expression here (p5); #615's wider
-    /// types are what will make the conversion p5 asks for change one.
-    fn check_switches(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        for id in ast.stmt_ids() {
-            let Stmt::Switch { .. } = ast.stmt(id) else {
+    /// ask. Each value is converted to the promoted controlling type before
+    /// two are compared (p5), which is also the type recorded for the
+    /// controlling expression in [`Types::controlling`] and
+    /// [`Types::operated`].
+    fn check_switches(&mut self, ast: &mut Ast, diagnostics: &mut DiagnosticSink) {
+        for id in ast.stmt_ids().collect::<Vec<_>>() {
+            let Stmt::Switch { condition, .. } = *ast.stmt(id) else {
                 continue;
+            };
+            // p5: the controlling expression is promoted, and each `case`
+            // value converted to the promoted type before it is compared, so
+            // two values that convert to one are the same `case`.
+            let controlling = self.types[condition.index()]
+                .and_then(|ty| integer_of(ast, ty))
+                .map(|integer| self.promoted_of(integer));
+            if let Some(controlling) = controlling {
+                let ty = self.integer_type(ast, controlling);
+                self.operated[condition.index()].get_or_insert(ty);
+                self.controlling.insert(condition, ty);
+            }
+            let convert = |number: i128| {
+                controlling.map_or(number, |(rank, sign)| {
+                    self.target.integer(rank, sign).convert(number)
+                })
             };
             let mut seen: HashMap<i128, Span> = HashMap::new();
             let mut default: Option<Span> = None;
@@ -3451,7 +3718,7 @@ impl Checker<'_> {
                                         .with_code(NOT_CONSTANT)
                                         .with_label(Label::primary(
                                             at,
-                                            "this overflows `int` or divides by zero",
+                                            "this overflows its type, divides by zero, or shifts too far",
                                         ))
                                         .with_note(
                                             "a constant expression evaluates to a value its type \
@@ -3470,6 +3737,7 @@ impl Checker<'_> {
                             }
                             continue;
                         };
+                        let number = convert(number);
                         match seen.get(&number) {
                             Some(&first) => diagnostics.report(
                                 Diagnostic::error("duplicate case value")
@@ -3820,7 +4088,7 @@ impl Checker<'_> {
             // whether it does.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Void
@@ -3855,11 +4123,11 @@ impl Checker<'_> {
             // ordinary C rather than a mismatch.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => Some(true),
@@ -3879,13 +4147,13 @@ impl Checker<'_> {
             (
                 Type::Pointer(_),
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
             ) => Some(source_is_null),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
                 Type::Pointer(_),
@@ -3897,7 +4165,7 @@ impl Checker<'_> {
             // returning `int` build in silence.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Pointer(_),
@@ -3917,7 +4185,7 @@ impl Checker<'_> {
             ),
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Type::Struct { .. },
@@ -3973,9 +4241,9 @@ impl Checker<'_> {
     /// an assignment, a call, `++`, `*`, `&`, a subscript and a comma (6.6
     /// p3) have none, and nor does anything built on them.
     ///
-    /// Computed at `int`, the only integer type with a range here, and given
-    /// no value where C gives the operation no defined result: a result
-    /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
+    /// Computed at the type the operation is performed at, and given no
+    /// value where C gives the operation no defined result: a signed result
+    /// outside that type (6.6 p4 for a constant, 6.5 p5 at run time), a division
     /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
     /// width or more, and a left shift of a negative value or out of range.
     /// Such an expression has no value and nothing is said about it here;
@@ -3991,24 +4259,43 @@ impl Checker<'_> {
     /// is `-4` here as it is when the program runs.
     fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
         let value = |id: ExprId| self.values[id.index()];
-        let int = self.int_range;
-        let fits = |result: i128| int.holds(result).then_some(result);
-        match *ast.expr(id) {
-            Expr::Unary { op, operand, .. } => {
-                let operand = value(operand)?;
-                match op {
-                    UnOp::Plus => Some(operand),
-                    UnOp::Minus => fits(-operand),
-                    UnOp::BitNot => Some(!operand),
-                    UnOp::Not => Some(i128::from(operand == 0)),
-                    UnOp::Deref
-                    | UnOp::AddrOf
-                    | UnOp::PreInc
-                    | UnOp::PreDec
-                    | UnOp::PostInc
-                    | UnOp::PostDec => None,
-                }
+        // **At the type the operation is performed at** (6.3.1.8): the
+        // common type for a comparison, the result's for anything else. An
+        // operand is converted to it first, so `-1 < 1u` compares 4294967295
+        // with 1, and a result is held to it: reduced modulo its range where
+        // it is unsigned (6.2.5 p9), and no value where a signed one does not
+        // hold it (6.5 p5).
+        let range =
+            |ty: TypeId| integer_of(ast, ty).map(|(rank, sign)| self.target.integer(rank, sign));
+        let at = self.operated[id.index()]
+            .or(self.types[id.index()])
+            .and_then(range);
+        let held = |result: i128| {
+            let at = at?;
+            if at.signed() {
+                at.holds(result).then_some(result)
+            } else {
+                Some(at.convert(result))
             }
+        };
+        let converted = |id: ExprId| {
+            let value = value(id)?;
+            Some(at.map_or(value, |at| at.convert(value)))
+        };
+        match *ast.expr(id) {
+            Expr::Unary { op, operand, .. } => match op {
+                UnOp::Plus => converted(operand),
+                UnOp::Minus => held(-converted(operand)?),
+                UnOp::BitNot => held(!converted(operand)?),
+                // p5 compares the operand itself with zero.
+                UnOp::Not => Some(i128::from(value(operand)? == 0)),
+                UnOp::Deref
+                | UnOp::AddrOf
+                | UnOp::PreInc
+                | UnOp::PreDec
+                | UnOp::PostInc
+                | UnOp::PostDec => None,
+            },
             Expr::Binary { op, lhs, rhs, .. } => {
                 let left = value(lhs)?;
                 // 6.5.13 p4 and 6.5.14 p4: where the left operand decides,
@@ -4022,36 +4309,62 @@ impl Checker<'_> {
                 if let Some(answer) = decided {
                     return self.unevaluated_constant(ast, rhs).then_some(answer);
                 }
-                let (lhs, rhs) = (left, value(rhs)?);
                 let truth = |holds: bool| Some(i128::from(holds));
-                let width = i128::from(int.bits());
+                if let BinOp::LogAnd | BinOp::LogOr = op {
+                    let right = value(rhs)?;
+                    return match op {
+                        BinOp::LogAnd => truth(left != 0 && right != 0),
+                        _ => truth(left != 0 || right != 0),
+                    };
+                }
+                let width = i128::from(at?.bits());
+                let signed = at?.signed();
+                // A shift's right operand is promoted on its own (6.5.7 p3)
+                // and is a count, not converted to the left's type.
+                if let BinOp::Shl | BinOp::Shr = op {
+                    let (lhs, rhs) = (converted(lhs)?, value(rhs)?);
+                    if !(0..width).contains(&rhs) {
+                        return None;
+                    }
+                    return match op {
+                        // 6.5.7 p4: a signed left shift of a negative value,
+                        // or one whose result the type does not hold, has
+                        // none; an unsigned one is reduced.
+                        BinOp::Shl if signed && lhs < 0 => None,
+                        BinOp::Shl => held(lhs << rhs),
+                        // Arithmetic for a signed value, as the backend's
+                        // `ashr` is; an unsigned one is never negative here.
+                        _ => Some(lhs >> rhs),
+                    };
+                }
+                let (lhs, rhs) = (converted(lhs)?, converted(rhs)?);
                 match op {
-                    BinOp::Mul => fits(lhs * rhs),
-                    BinOp::Div => (rhs != 0).then(|| lhs / rhs).and_then(fits),
+                    // Two `unsigned long long`s near 2^64 multiply past
+                    // `i128`; wrapping keeps the low 128 bits, of which an
+                    // unsigned result keeps the low 64, and a product of two
+                    // signed values of 64 bits or fewer never wraps.
+                    BinOp::Mul => held(lhs.wrapping_mul(rhs)),
+                    BinOp::Div => (rhs != 0).then(|| lhs / rhs).and_then(held),
                     // 6.5.5 p6 defines `a % b` only where `a / b` is
                     // representable, so `INT_MIN % -1` has no value though
                     // its remainder, zero, would fit.
                     BinOp::Rem => (rhs != 0)
                         .then(|| lhs % rhs)
-                        .and_then(|r| fits(lhs / rhs).map(|_| r)),
-                    BinOp::Add => fits(lhs + rhs),
-                    BinOp::Sub => fits(lhs - rhs),
-                    BinOp::Shl => ((0..width).contains(&rhs) && lhs >= 0)
-                        .then(|| lhs << rhs)
-                        .and_then(fits),
-                    // Arithmetic, as the backend's `ashr` is; see above.
-                    BinOp::Shr => (0..width).contains(&rhs).then(|| lhs >> rhs),
+                        .and_then(|r| held(lhs / rhs).map(|_| r)),
+                    BinOp::Add => held(lhs + rhs),
+                    BinOp::Sub => held(lhs - rhs),
                     BinOp::Lt => truth(lhs < rhs),
                     BinOp::Gt => truth(lhs > rhs),
                     BinOp::Le => truth(lhs <= rhs),
                     BinOp::Ge => truth(lhs >= rhs),
                     BinOp::Eq => truth(lhs == rhs),
                     BinOp::Ne => truth(lhs != rhs),
-                    BinOp::BitAnd => Some(lhs & rhs),
-                    BinOp::BitXor => Some(lhs ^ rhs),
-                    BinOp::BitOr => Some(lhs | rhs),
-                    BinOp::LogAnd => truth(lhs != 0 && rhs != 0),
-                    BinOp::LogOr => truth(lhs != 0 || rhs != 0),
+                    BinOp::BitAnd => held(lhs & rhs),
+                    BinOp::BitXor => held(lhs ^ rhs),
+                    BinOp::BitOr => held(lhs | rhs),
+                    BinOp::Shl | BinOp::Shr | BinOp::LogAnd | BinOp::LogOr => {
+                        unreachable!("answered above")
+                    }
                 }
             }
             // 6.5.15 p4 evaluates one arm, so only that one is asked for a
@@ -4072,7 +4385,7 @@ impl Checker<'_> {
                 if !self.unevaluated_constant(ast, skipped) {
                     return None;
                 }
-                value(taken)
+                converted(taken)
             }
             // Counted, and so known.
             Expr::Length { value, .. } => Some(i128::from(value)),
@@ -4131,14 +4444,14 @@ impl Checker<'_> {
     /// Both at once, because `read_number` answers both from one pass over
     /// the spelling and because a constant with no type has no value either.
     ///
-    /// The type is `int`, and only ever `int`. 6.4.4.1 p5 asks for the first
-    /// type in a list that holds the value, and this compiler has no other
-    /// integer type to offer: there is no `unsigned int` and no `long` in
-    /// [`Type`] or in [`Integer`]. So a constant that p5's table would give
-    /// one of those is refused rather than read as an `int`, which is what
-    /// [`Reading::Suffixed`] is for: the suffix is not decoration, it decides
-    /// what arithmetic on the constant means, and C computes `-6 / 3u` as an
-    /// unsigned division. `docs/frontend.md` records the divergence.
+    /// The type is the first in 6.4.4.1 p5's list for the constant's suffix
+    /// and base that holds its value, on this target: `2147483648` is a
+    /// `long` where `long` is 64 bits and a `long long` where it is 32, and
+    /// `0xffffffff` an `unsigned int`. A value no type in its list holds is
+    /// refused (6.4.4 p2).
+    ///
+    /// Mutation: take the first type of the list whatever holds the value;
+    /// `a_constant_takes_the_first_type_that_holds_it` fails.
     ///
     /// Nothing that reaches a diagnostic below is the file's own text, which
     /// is what every new message owes, since source text is content: the
@@ -4146,6 +4459,7 @@ impl Checker<'_> {
     /// compiler's.
     fn constant(
         &mut self,
+        ast: &mut Ast,
         id: ExprId,
         span: Span,
         diagnostics: &mut DiagnosticSink,
@@ -4153,22 +4467,52 @@ impl Checker<'_> {
         // `Reading` is matched exhaustively so that a sixth answer has to be
         // given a report rather than falling into one written for another.
         let reported = match read_number(self.sources.snippet(span)) {
-            Reading::Integer(value) => {
+            Reading::Integer {
+                value,
+                decimal,
+                unsigned,
+                longs,
+            } => {
+                use Rank::{Int, Long, LongLong};
+                use Sign::{Signed, Unsigned};
+                let list: &[(Rank, Sign)] = match (unsigned, longs, decimal) {
+                    (false, 0, true) => &[(Int, Signed), (Long, Signed), (LongLong, Signed)],
+                    (false, 0, false) => &[
+                        (Int, Signed),
+                        (Int, Unsigned),
+                        (Long, Signed),
+                        (Long, Unsigned),
+                        (LongLong, Signed),
+                        (LongLong, Unsigned),
+                    ],
+                    (true, 0, _) => &[(Int, Unsigned), (Long, Unsigned), (LongLong, Unsigned)],
+                    (false, 1, true) => &[(Long, Signed), (LongLong, Signed)],
+                    (false, 1, false) => &[
+                        (Long, Signed),
+                        (Long, Unsigned),
+                        (LongLong, Signed),
+                        (LongLong, Unsigned),
+                    ],
+                    (true, 1, _) => &[(Long, Unsigned), (LongLong, Unsigned)],
+                    (false, _, true) => &[(LongLong, Signed)],
+                    (false, _, false) => &[(LongLong, Signed), (LongLong, Unsigned)],
+                    (true, _, _) => &[(LongLong, Unsigned)],
+                };
                 // `holds` takes an `i128`, and a value that does not fit one
-                // does not fit `int` either, so the conversion failing is the
-                // same answer as the range check failing.
-                match i128::try_from(value)
-                    .ok()
-                    .filter(|value| self.int_range.holds(*value))
-                {
-                    Some(value) => {
+                // fits no type here either.
+                let held = i128::try_from(value).ok().and_then(|value| {
+                    list.iter()
+                        .find(|&&(rank, sign)| self.target.integer(rank, sign).holds(value))
+                        .map(|&integer| (value, integer))
+                });
+                match held {
+                    Some((value, integer)) => {
                         self.values[id.index()] = Some(value);
-                        return Some(self.int);
+                        return Some(self.integer_type(ast, integer));
                     }
                     None => TOO_LARGE,
                 }
             }
-            Reading::Suffixed => SUFFIXED,
             Reading::TooLarge => TOO_LARGE,
             Reading::Floating => FLOATING,
             Reading::Malformed(why) => Reported {
@@ -4211,7 +4555,7 @@ impl OperandClass {
     fn of(ast: &Ast, ty: TypeId) -> Option<Self> {
         match ast.ty(ty) {
             Type::Integer {
-                rank: Rank::Char | Rank::Int,
+                rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             } => Some(Self::Arithmetic),
             Type::Pointer(pointee) => Some(Self::Pointer(*pointee)),
@@ -4246,7 +4590,7 @@ fn unsteppable(
             (!complete(pointee)).then_some("a struct that is not complete here has no size")
         }
         Type::Integer {
-            rank: Rank::Char | Rank::Int,
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Type::Pointer(_)
@@ -4341,14 +4685,13 @@ struct Reported {
     note: &'static str,
 }
 
-/// A value outside the range of the only integer type this compiler has.
+/// A value no type in its list holds.
 const TOO_LARGE: Reported = Reported {
     code: NO_TYPE,
-    message: "no integer type this compiler has can hold this constant",
-    label: "this needs a type wider than `int`",
-    note: "C17 6.4.4.1 p5 gives a constant the first type in a list that holds it; this compiler \
-           has only `int`, and 6.4.4 p2 requires a constant's value to be in the range of its \
-           type",
+    message: "no integer type can hold this constant",
+    label: "this is wider than every type its spelling allows",
+    note: "C17 6.4.4.1 p5 gives a constant the first type in a list that holds it, and 6.4.4 p2 \
+           requires a constant's value to be in the range of its type",
 };
 
 /// A constant with a fractional part or an exponent, C17 6.4.4.2.
@@ -4360,32 +4703,18 @@ const FLOATING: Reported = Reported {
            floating type",
 };
 
-/// A well-formed integer constant whose suffix asks for a type there is none
-/// of here.
-///
-/// A refusal and not a silent `int`. The suffix is not decoration: 6.4.4.1 p5
-/// makes `3u` an `unsigned int`, and 6.3.1.8's conversions then make `-6 / 3u`
-/// an unsigned division, which is 1431655763 rather than -2. Reading it as an
-/// `int` would compile that program to a signed division and report nothing,
-/// which is the one thing this stage exists to stop.
-const SUFFIXED: Reported = Reported {
-    code: NO_TYPE,
-    message: "this compiler has no type for a suffixed constant",
-    label: "this suffix asks for `unsigned int`, `long` or `long long`",
-    note: "C17 6.4.4.1 p5 gives a suffixed constant a type from a list this compiler has only \
-           `int` from, and the suffix decides what arithmetic on it means: C computes `-6 / 3u` \
-           as an unsigned division",
-};
-
 /// What reading the text of a numeric constant comes to, C17 6.4.4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Reading {
-    /// The value of a constant with no suffix, which 6.4.4.1 p5 gives the
-    /// first type in a list that holds it. `int` is the only entry here.
-    Integer(u128),
-    /// A well-formed constant whose suffix asks for a type off the end of
-    /// that list. See [`SUFFIXED`].
-    Suffixed,
+    /// An integer constant: its value, and what 6.4.4.1 p5's list for it is
+    /// chosen by, whether it is decimal, whether its suffix has a `u`, and
+    /// how many `l`s.
+    Integer {
+        value: u128,
+        decimal: bool,
+        unsigned: bool,
+        longs: u8,
+    },
     /// More than a `u128` holds, which no type here could.
     TooLarge,
     /// A well-formed floating constant, C17 6.4.4.2. Checked against that
@@ -4506,13 +4835,6 @@ fn read_number(text: &str) -> Reading {
         return Reading::Malformed(NO_DIGITS);
     }
 
-    // Answered after the spelling is known to be well formed, so that `1lL`
-    // is reported as the mistake it is rather than as a type this compiler
-    // does not have.
-    if !suffix.is_empty() {
-        return Reading::Suffixed;
-    }
-
     let mut value: u128 = 0;
     for byte in digits.bytes() {
         let digit = char::from(byte)
@@ -4530,7 +4852,12 @@ fn read_number(text: &str) -> Reading {
         };
     }
 
-    Reading::Integer(value)
+    Reading::Integer {
+        value,
+        decimal: radix == 10,
+        unsigned: suffix.contains(['u', 'U']),
+        longs: u8::try_from(suffix.matches(['l', 'L']).count()).expect("a suffix has at most two"),
+    }
 }
 
 /// Whether `text` is a floating constant, C17 6.4.4.2 p1.

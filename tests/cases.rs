@@ -6481,6 +6481,12 @@ cases! {
         // (ADR-0115). Mutation: give `Rvalue::Static` no marks in the memory
         // check's transfer; all three exit zero.
         memset_past_a_global_array_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An index of any integer type is read as one of `int` is: past the
+        // end of `int a[4]`, `SC0412` (#1112), where the program used to be
+        // refused for `unsigned long`. The memory check does not tell an
+        // index's rank apart, so no mutation there changes this; it guards
+        // the frontend reading the declaration.
+        an_index_of_unsigned_long_past_the_end_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_int_written_through_a_chars_global_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_global_handed_where_a_wider_object_is_believed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a call does not end that belief, since no call frees a static's
@@ -7195,9 +7201,6 @@ cases! {
         // Mutation: the width a local was handed as skips an array of
         // pointers rather than reading its element; this goes silent.
         a_pointer_a_callee_may_have_written_into_an_array_of_pointers_is_believed_no_wider_than_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: `size_of` wraps an array too large to count rather than
-        // answering `None`; this goes silent.
-        an_array_too_large_to_count_is_not_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: `innermost_element` strips one dimension only; this panics at
         // `type_levels`.
         a_pointer_read_out_of_an_array_of_arrays_of_pointers_behind_a_parameter_is_proved_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8253,6 +8256,30 @@ cases! {
         // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
         // the first half in `Parser::specifiers`; `SC0201`.
         a_storage_class_after_the_type_is_read: ["--emit", "ast"],
+        // Every list C17 6.7.2 p2 gives an integer type, in the order it
+        // gives them, and two out of order: each declaration's type is
+        // spelled as `clang` spells it. Mutation: give a set with a `long`
+        // and an `int` the rank `int` in `Words::ty`; `long int` is an `int`.
+        every_integer_specifier_list_is_read: ["--emit", "ast"],
+        // No list holds either. Mutation: let `short` follow a `long` in
+        // `Words::with`; the first is read as a type. Mutation: let a second
+        // sign replace the first; the second is.
+        long_and_short_are_one_type_too_many: ["--emit", "ast"],
+        signed_and_unsigned_are_one_type_too_many: ["--emit", "ast"],
+        // No list has three. Mutation: drop the `long long` clash in
+        // `Words::with`; the third `long` is read.
+        long_long_long_is_one_long_too_many: ["--emit", "ast"],
+        // An object of 2^61 bytes or more is refused on a 64-bit target, one
+        // length or three, where a local one would wrap the stack pointer;
+        // the largest allowed, `c`, is not and the next, `d`, is (#1112).
+        // Mutation: skip the size check in `Checker::report_array`; nothing
+        // is reported. Mutation: let an object of the limit through; `d` is.
+        an_array_larger_than_the_target_can_address_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // `const` sets the qualifier aside and nothing else: `const long long
+        // *` takes no `int *`, and `const int *` does (C17 6.5.16.1 p1).
+        // Mutation: compare kinds alone in `Ast::compatible_ignoring`; the
+        // first is accepted.
+        a_const_pointer_takes_no_other_integer_type: ["--emit", "ast"],
         // C17 6.8.5 p3 lets a `for` declare only `auto` and `register`
         // objects. Mutation: drop the storage test in the type checker's
         // `for` walk; nothing is reported and the loop builds.
@@ -8270,17 +8297,16 @@ cases! {
         // and `--emit safety-ir` rather than `--emit ast` because what each one
         // pins is that there is exactly one report on a run asked to go past
         // the type check. `types.rs` says it, and the driver lowers nothing
-        // after it. A value `int` does not hold is this compiler's gap, and
-        // `clang 20.1.6 -std=c17 -pedantic-errors` compiles this program; a
-        // spelling that is no constant at all is the program's, and `clang`
-        // refuses it too.
+        // after it. A value no type in its list holds, 2^64 here, and a
+        // spelling that is no constant at all are each the program's, and
+        // `clang 22.1.8 -std=c17 -pedantic-errors` refuses both too.
         a_constant_no_integer_type_here_can_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_spelling_that_is_not_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The suffix is refused rather than read, and the note says why: C
-        // computes `-6 / 3u` as an unsigned division. Reading `3u` as an `int`
-        // compiled this program to a signed division and reported nothing,
-        // which is the one shape this stage exists to stop.
-        a_suffixed_constant_has_no_type_here: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `3u` is an `unsigned int`, so C17 6.3.1.8 makes `-6 / 3u` an
+        // unsigned division, a constant expression folded to 1431655763
+        // rather than -2. Mutation: give a suffixed constant the decimal list;
+        // `3u` is an `int` and this folds to -2.
+        a_suffix_makes_a_division_unsigned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_comma_in_a_controlling_expression: ["--emit", "ast"],
         a_dangling_else: ["--emit", "ast"],
         a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -9199,6 +9225,12 @@ cases! {
         // Mutation: drop any of the four; its report goes. Ask `undefined`
         // no more; the overflow is called no constant.
         a_switch_is_held_to_what_c_allows_in_it: ["--emit", "ast"],
+        // p5 converts each `case` value to the promoted controlling type
+        // before comparing, so on an `unsigned int` `-1` and `4294967295u`
+        // are one value, `SC0321` (#1112). Mutation: convert no `case` value
+        // in `Checker::check_switches`; the two differ and nothing is
+        // reported.
+        two_case_values_that_convert_to_one_are_one_case: ["--emit", "ast"],
         // A label defined twice is `SC0312`, and a `goto` to no label of its
         // function is `SC0301`, each at the name. Mutation: drop either
         // check; its report goes.
@@ -9481,9 +9513,9 @@ cases! {
         // every target. One of the two takes the other group.
         win32_is_defined_for_msvc: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         win32_is_not_defined_for_linux: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
-        // `201710L` reaches the parser, which refuses its suffix as it would
-        // written out. Mutation: predefine nothing. `__STDC_VERSION__` is a
-        // name nothing declares.
+        // `201710L` reaches the type check as written out, a `long` (C17
+        // 6.4.4.1 p5), and initializes `v`. Mutation: predefine nothing.
+        // `__STDC_VERSION__` is a name nothing declares.
         the_standard_version_expands_to_c17: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // The double free #547's review found analysed away under `#ifdef
         // __STDC_VERSION__` is reported. Mutation: predefine nothing. The

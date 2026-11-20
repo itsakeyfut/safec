@@ -1,0 +1,11 @@
+error[SC0321]: duplicate case value
+   ╭─[ two_case_values_that_convert_to_one_are_one_case.c:4:10 ]
+   │
+ 3 │     case -1:
+   │          ─┬  
+   │           ╰── first here
+ 4 │     case 4294967295u:
+   │          ─────┬─────  
+   │               ╰─────── this value again
+───╯
+  = note: C17 6.8.4.2 p3

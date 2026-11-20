@@ -1,0 +1,24 @@
+error[SC0309]: an array this large cannot be an object on this target
+   ╭─[ an_array_larger_than_the_target_can_address_is_refused.c:1:8 ]
+   │
+ 1 │ char a[18446744073709551615u];
+   │        ──────────┬──────────  
+   │                  ╰──────────── this makes it 18446744073709551615 bytes
+───╯
+  = note: an object here is smaller than 2305843009213693952 bytes, the most this target can address
+error[SC0309]: an array this large cannot be an object on this target
+   ╭─[ an_array_larger_than_the_target_can_address_is_refused.c:2:8 ]
+   │
+ 2 │ char b[65535][42009217][6700417];
+   │        ──┬──  
+   │          ╰──── this makes it 18446744073709551615 bytes
+───╯
+  = note: an object here is smaller than 2305843009213693952 bytes, the most this target can address
+error[SC0309]: an array this large cannot be an object on this target
+   ╭─[ an_array_larger_than_the_target_can_address_is_refused.c:4:15 ]
+   │
+ 4 │ extern char d[2305843009213693952ull];
+   │               ───────────┬──────────  
+   │                          ╰──────────── this makes it 2305843009213693952 bytes
+───╯
+  = note: an object here is smaller than 2305843009213693952 bytes, the most this target can address

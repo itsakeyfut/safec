@@ -1,0 +1,7 @@
+error[SC0201]: `long long long` is too long
+   ╭─[ long_long_long_is_one_long_too_many.c:1:11 ]
+   │
+ 1 │ long long long x;
+   │           ──┬─  
+   │             ╰─── C17 6.7.2 p2 lists no type with these specifiers
+───╯

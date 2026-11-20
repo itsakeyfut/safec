@@ -1272,7 +1272,7 @@ impl Ast {
             // different from everything including itself.
             (
                 Type::Integer {
-                    rank: Rank::Char | Rank::Int,
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 },
                 _,
@@ -1330,7 +1330,35 @@ impl Ast {
                 self.compatible(*left, *right, same_struct)
             }
             (Type::Struct { .. }, Type::Struct { .. }) => same_struct(qualified, plain),
-            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
+            // Two integer types are compatible only where they are one type
+            // (C17 6.2.7 p1): `const long long *` takes no `int *`. Every
+            // kind is named on the left, so one added later has to answer
+            // here. Mutation: compare kinds alone; `a_const_pointer_takes_no_other_integer_type`
+            // fails.
+            (
+                Type::Integer {
+                    rank: left_rank,
+                    sign: left_sign,
+                },
+                Type::Integer {
+                    rank: right_rank,
+                    sign: right_sign,
+                },
+            ) => left_rank == right_rank && left_sign == right_sign,
+            (Type::Void, Type::Void) => true,
+            // 6.7.3 p9 leaves a qualified function type undefined, so no
+            // valid program asks this, and the answer is the one this gave
+            // before its arms were written out.
+            (Type::Function { .. }, Type::Function { .. }) => true,
+            (
+                Type::Pointer(_)
+                | Type::Array { .. }
+                | Type::Struct { .. }
+                | Type::Integer { .. }
+                | Type::Void
+                | Type::Function { .. },
+                _,
+            ) => false,
         }
     }
 
@@ -1375,18 +1403,20 @@ impl Ast {
     /// Whether the default argument promotions change this type, C17 6.5.2.2
     /// p6.
     ///
-    /// They promote a `char` to an `int` and a `float` to a `double`. This
-    /// compiler has no `float`, so `char` is the whole of it, and an arm for
+    /// They promote a `char` or a `short` to an `int` and a `float` to a
+    /// `double`. This compiler has no `float`, so the integers are the whole
+    /// of it, and an arm for
     /// each of the others rather than a wildcard so that a type added later
     /// has to say which side it is on.
     pub(crate) fn is_promoted_by_default(&self, ty: TypeId) -> bool {
         match self.ty(ty) {
+            // C17 6.3.1.1 p2: a rank below `int`'s is promoted.
             Type::Integer {
-                rank: Rank::Char,
+                rank: Rank::Char | Rank::Short,
                 sign: _,
             } => true,
             Type::Integer {
-                rank: Rank::Int,
+                rank: Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             } => false,
             Type::Void
@@ -1430,26 +1460,9 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
         let constant = if ast.is_const(id) { "const " } else { "" };
         let base = match ast.ty(id) {
             Type::Integer { rank, sign } => {
-                let spelled = match (rank, sign) {
-                    (Rank::Int, Sign::Signed) => "int",
-                    (Rank::Char, Sign::Plain) => "char",
-                    (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
-                        unreachable!(
-                            "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
-                        )
-                    }
-                };
-                if ast.is_const(id) {
-                    match spelled {
-                        "int" => "const int",
-                        _ => "const char",
-                    }
-                } else {
-                    spelled
-                }
+                format!("{constant}{}", safec_ir::ir::integer_name(*rank, *sign))
             }
-            Type::Void if ast.is_const(id) => "const void",
-            Type::Void => "void",
+            Type::Void => format!("{constant}void"),
             // The tag as written, and `(anonymous)` for none. A base of more
             // than one word, so it is spelled here and returned with the same
             // spacing as the others below.
@@ -1535,7 +1548,7 @@ fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
     match ty {
         Type::Array { .. } | Type::Function { .. } => true,
         Type::Integer {
-            rank: Rank::Char | Rank::Int,
+            rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Type::Void

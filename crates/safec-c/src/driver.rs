@@ -25,7 +25,6 @@ mod backend;
 mod dumps;
 mod words;
 
-use safec_ir::ir::{Rank, Sign};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -50,7 +49,7 @@ use safec_ir::memory;
 use safec_ir::nullability;
 use safec_ir::print::{dump_ir, quoted};
 use safec_ir::source::{FileName, SourceMap, Span};
-use safec_ir::target::Integer;
+use safec_ir::target::Target;
 
 use backend::{Module, assembled, clang_failure, link_failure, linked, module};
 use dumps::{dump_ast, dump_hatches, dump_tokens};
@@ -352,8 +351,7 @@ pub fn compile(options: &Options) -> Compiled {
                     &sources,
                     &tokens,
                     read_whole,
-                    options.target.integer(Rank::Int, Sign::Signed),
-                    options.target.integer(Rank::Char, Sign::Plain),
+                    options.target,
                     false,
                     &mut diagnostics,
                 ) else {
@@ -582,8 +580,7 @@ fn analysed(
     sources: &SourceMap,
     tokens: &Preprocessed,
     read_whole: usize,
-    int_range: Integer,
-    character: Integer,
+    target: Target,
     memory_checked: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Analysed> {
@@ -597,14 +594,7 @@ fn analysed(
     }
 
     let resolution = resolve(sources, &ast, memory_checked, diagnostics);
-    let types = check(
-        sources,
-        &mut ast,
-        &resolution,
-        int_range,
-        character,
-        diagnostics,
-    );
+    let types = check(sources, &mut ast, &resolution, target, diagnostics);
     if diagnostics.error_count() != read_whole {
         return Some(Analysed { ast, typed: None });
     }
@@ -633,8 +623,7 @@ fn lowered(
         sources,
         tokens,
         read_whole,
-        options.target.integer(Rank::Int, Sign::Signed),
-        options.target.integer(Rank::Char, Sign::Plain),
+        options.target,
         options.safety >= SafetyLevel::Memory,
         diagnostics,
     )?;

@@ -412,51 +412,55 @@ of a parameter's own function type, may still go unnamed.
 ### What an integer constant is worth, and what type it is not
 
 The scan settles where a constant ends and stops there. `crates/safec-c/src/types.rs`
-is what reads it, because deciding the type needs the range of `int` and the
-scan is below the target. Three bases, C17 6.4.4.1 p1: a leading `0x` or `0X`
-is hexadecimal, a leading `0` is octal, and anything else is decimal, so `010`
-is eight. The suffixes of p1 are read far enough to reject a spelling C does not
-have, and then discarded.
+is what reads it, because deciding the type needs every integer type's range
+on the target and the scan is below the target (ADR-0119). Three bases, C17
+6.4.4.1 p1: a leading `0x` or `0X` is hexadecimal, a leading `0` is octal, and
+anything else is decimal, so `010` is eight.
 
-**Rejected, because there is no type to give them to.** 6.4.4.1 p5 asks for the
-first type in a list that holds the value, and the list is `int`,
-`unsigned int`, `long`, and so on. `crates/safec-c/src/ast.rs`'s `Type` has `Int`,
-`Char`, `Void` and the types derived from them, and
-`crates/safec-ir/src/target.rs`'s `Target` answers `int()` and `char()`. There
-is no `unsigned int` and no `long` for p5's table to select, so `int` is the
-only type a constant can get here, and a constant p5 would give any other is
-reported rather than read as an `int`.
+**The type is the first in p5's list that holds the value**, the list chosen
+by the suffix and by whether the constant is decimal: `2147483648` is a `long`
+where `long` is 64 bits and a `long long` where it is 32, `0xffffffff` is an
+`unsigned int`, and `3u` an `unsigned int`, so 6.3.1.8 makes `-6 / 3u` an
+unsigned division whose value is 1431655763. A value no type in its list holds
+is refused (6.4.4 p2).
 
-**A suffix is not decoration, which is why it is refused rather than dropped.**
-It decides what arithmetic on the constant means: 6.4.4.1 p5 makes `3u` an
-`unsigned int`, 6.3.1.8's conversions then make `-6 / 3u` an unsigned division,
-and its value is 1431655763 and not -2. An earlier version of this section said
-the suffix was read and then discarded, and priced the divergence entirely in
-refused programs; that was false, and what it left out was the expensive half.
-Discarding it compiled `-6 / 3u` to a signed division and `2147483647l + 1l` to
-a 32-bit `add nsw`, both silently. A refusal is visible and a wrongly-signed
-division is not.
-
-What the missing types cost is the rows below. Measured against
-`clang 20.1.6 --target=x86_64-unknown-linux-gnu`, as the tables above are.
+Measured against `clang 22.1.8 --target=x86_64-unknown-linux-gnu`, as the
+tables above are.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
-| `int x = 2147483648;` | `error[SC0305]` | accepts | accepts |
-| `int x = 1u;` | `error[SC0305]` | accepts | accepts |
-| `int x = 0L;` | `error[SC0305]` | accepts | accepts |
+| `int x = 18446744073709551616;` | `error[SC0305]` | error | error |
 | `int x = 1.5;` | `error[SC0305]` | accepts | accepts |
 | `int x = 09;` | `error[SC0106]` | error | error |
 | `int x = 1lL;` | `error[SC0106]` | error | error |
 | `int x = 1e;` | `error[SC0106]` | error | error |
 | `int x = 0x1.8;` | `error[SC0106]` | error | error |
 | `int x = 0b101;` | `error[SC0106]` | accepts | error |
+| `long long x = 9223372036854775808;` | `error[SC0305]` | accepts | error |
+| `unsigned char *q = p;` with `char *p` | `error[SC0302]` | accepts | error |
+| `unsigned char *p = "abc";` | `error[SC0302]` | accepts | error |
+| `signed signed x;` | `error[SC0201]` | accepts | error |
 
-**The first four are gaps and the rest are not.** `SC0305` says this compiler
-has no type for a constant C gives one to, which is what the paragraphs above
-are about; a floating constant is the same sentence with no floating type in
-it. `SC0106` says the spelling is not a constant at all, and `clang` refuses
-each of those too.
+**Only the floating constant is a gap.** `SC0305` for a value past every type
+in its list is the program's: `clang` refuses one past 2^64 - 1, and an
+unsuffixed decimal from 2^63 up, which 6.4.4.1 p5's list for it cannot hold,
+it takes as an `unsigned long long` and refuses only under
+`-pedantic-errors`. For a floating constant `SC0305` is this compiler's gap,
+which has no floating type. `SC0106` says the spelling is not a constant at
+all, and `clang` refuses each of those too.
+
+The last three rows are constraints `clang` makes a warning by default.
+`char`, `signed char` and `unsigned char` are three types (6.2.5 p15), so a
+pointer to one is not a pointer to another and 6.5.16.1 p1 does not let one
+be assigned to the other; and 6.7.2 p2 has no list with a sign twice. Code
+that mixes `char *` and `unsigned char *` is common, and is refused here
+until it says which it means.
+
+**Against `x86_64-pc-windows-msvc` a constant can mean something else.**
+`clang` defaults to Microsoft compatibility there and gives a hexadecimal or
+octal `ll` constant from 2^63 up the type `long long`, so
+`0x8000000000000000ll < 0` is 1; C17 6.4.4.1 p5 makes it `unsigned long long`
+and this compiler answers 0, as `clang -fno-ms-compatibility` does.
 
 The last four are where that line is easiest to draw wrongly, so each is
 measured rather than reasoned about. `1e` has an exponent with no digits and
@@ -468,20 +472,16 @@ binary constant is C23, `clang` takes it as an extension, and only
 leaves every extension on, and what `clang` tolerates has been written up here
 as valid C before.
 
-A value beyond `INT_MAX` is reported as this compiler's gap rather than as a
-violation of 6.4.4 p2, although the two are the same sentence read against this
-implementation's type list. Blaming the program would be telling someone whose
-program `clang` compiles that they wrote it wrong, when what is missing is
-`long`. `int x = -2147483648;` is inside that: the constant is 2147483648 and
-the minus is an operator, so the smallest `int` cannot be written yet.
+`int x = -2147483648;` is read: the constant is 2147483648, a `long` or a
+`long long`, and the minus an operator whose result converts to `int`.
 
-**Whether `SC0305` fires depends on the target**, because it is decided against
-the range of `int`. [`architecture.md`](architecture.md)'s output table says a
-diagnostic depends on neither the host nor the target, and this is a divergence
-from it, recorded there as well. Nothing observes it today: `int` is 32 bits on
-every row of `Target::ALL`. It becomes observable the day `long` is in that
-table, because `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
-`x86_64-unknown-linux-gnu`.
+**A constant's type depends on the target**, because p5 decides it against
+each type's range: `2147483648` is a `long` on `x86_64-unknown-linux-gnu` and a
+`long long` on `x86_64-pc-windows-msvc`. [`architecture.md`](architecture.md)'s
+output table says a diagnostic depends on neither the host nor the target, and
+a diagnostic that spells such a type is a divergence from it, recorded there as
+well. Whether `SC0305` fires does not: the widest type is 64 bits on every row
+of `Target::ALL`.
 
 A character constant (6.4.4.4) has type `int` and the value of a `char`, so
 it too turns on the target: `'\xff'` is -1 where `char` is signed and 255

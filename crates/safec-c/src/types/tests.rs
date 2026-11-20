@@ -4,7 +4,6 @@ use crate::lexer::lex;
 use crate::parser::parse;
 use crate::preprocessor::preprocess;
 use crate::sema::resolve;
-use safec_ir::ir::{Rank, Sign};
 use safec_ir::target::Target;
 
 struct Checked {
@@ -35,20 +34,14 @@ fn checked(text: &str) -> Checked {
         diagnostics.diagnostics()
     );
     let resolution = resolve(&sources, &ast, false, &mut diagnostics);
-    // Named rather than taken from the host: what a constant's type is
-    // turns on the range of `int`, so a test that did not name a target
-    // would be asserting about whichever machine ran it. `int` is 32 bits
-    // on every row of `Target::ALL`, which is
-    // what makes one triple enough here.
+    // Named rather than taken from the host: what a constant's type is,
+    // and what the usual arithmetic conversions answer, turn on the
+    // target's widths, so a test that did not name a target would be
+    // asserting about whichever machine ran it. Here `long` is 32 bits, as
+    // `int` is; a test about a 64-bit `long` runs the interpreter on
+    // another triple.
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
 
     Checked {
         ast,
@@ -153,8 +146,8 @@ fn returning(spelling: &str) -> Checked {
 /// because a table that works the expectation out the
 /// way the code does agrees with the code however wrong both are.
 ///
-/// Every row is unsuffixed, because a suffix is refused rather than read:
-/// `a_suffix_asks_for_a_type_this_compiler_does_not_have` is that half.
+/// Every row is unsuffixed: what a suffix decides is the type, which
+/// `a_constant_takes_the_first_type_that_holds_it` holds.
 ///
 /// Mutation: give the hexadecimal arm radix ten. `0x10` is ten and this
 /// fails. Mutation: give the octal arm radix ten. `010` is ten and this
@@ -179,47 +172,67 @@ fn an_integer_constant_is_worth_what_its_base_says() {
     }
 }
 
-/// Every suffix C17 6.4.4.1 p1 allows is refused, and refused as a type
-/// this compiler lacks rather than as a spelling C lacks.
+/// A constant takes the first type in C17 6.4.4.1 p5's list for its suffix
+/// and base that holds its value, on the target: here
+/// `x86_64-pc-windows-msvc`, where `long` is 32 bits, so `2147483648` is a
+/// `long long` and `0xffffffff` an `unsigned int`.
 ///
-/// The whole table is walked, written out as literals, because a suffix
+/// Every suffix 6.4.4.1 p1 allows is a row, written out, because a suffix
 /// arm is the contents of a table and nothing else checks them: a typo
-/// turning `ULL` into `ULK` makes `1ULL` a malformed spelling rather than
-/// an unsupported type, which is this compiler blaming the program for
-/// its own gap. Measured: that typo passed the entire suite before this
-/// test existed.
+/// turning `ULL` into `ULK` makes `1ULL` a malformed spelling.
 ///
-/// **Refused rather than read.** A suffix decides what arithmetic on the
-/// constant means. With `3u` read as an `int`, `-6 / 3u` compiles to a
-/// signed division, and C17 6.3.1.8 makes it an unsigned one whose answer
-/// is 1431655763 rather than -2. Measured against `clang 20.1.6 -std=c17
-/// -pedantic-errors`, whose constant evaluator agrees.
-///
-/// Mutation: read a suffixed constant as an `int` instead of answering
-/// `Reading::Suffixed`. Every row stops being reported and this fails.
+/// Mutation: take the first type of the list whatever holds the value, in
+/// `Checker::constant`; `2147483648` is an `int` it does not fit and this
+/// fails. Mutation: give a decimal constant the hexadecimal list;
+/// `2147483648` is no longer a `long long`.
 #[test]
-fn a_suffix_asks_for_a_type_this_compiler_does_not_have() {
-    for suffix in [
-        "u", "U", "l", "L", "ll", "LL", "ul", "uL", "Ul", "UL", "lu", "lU", "Lu", "LU", "ull",
-        "uLL", "Ull", "ULL", "llu", "llU", "LLu", "LLU",
+fn a_constant_takes_the_first_type_that_holds_it() {
+    for (spelling, spelled, value) in [
+        ("1u", "unsigned int", 1),
+        ("1U", "unsigned int", 1),
+        ("1l", "long", 1),
+        ("1L", "long", 1),
+        ("1ll", "long long", 1),
+        ("1LL", "long long", 1),
+        ("1ul", "unsigned long", 1),
+        ("1uL", "unsigned long", 1),
+        ("1Ul", "unsigned long", 1),
+        ("1UL", "unsigned long", 1),
+        ("1lu", "unsigned long", 1),
+        ("1lU", "unsigned long", 1),
+        ("1Lu", "unsigned long", 1),
+        ("1LU", "unsigned long", 1),
+        ("1ull", "unsigned long long", 1),
+        ("1uLL", "unsigned long long", 1),
+        ("1Ull", "unsigned long long", 1),
+        ("1ULL", "unsigned long long", 1),
+        ("1llu", "unsigned long long", 1),
+        ("1llU", "unsigned long long", 1),
+        ("1LLu", "unsigned long long", 1),
+        ("1LLU", "unsigned long long", 1),
+        ("2147483647", "int", 2_147_483_647),
+        ("2147483648", "long long", 2_147_483_648),
+        ("0x7fffffff", "int", 2_147_483_647),
+        ("0xffffffff", "unsigned int", 4_294_967_295),
+        ("4294967296", "long long", 4_294_967_296),
+        ("0x100000000", "long long", 4_294_967_296),
+        ("4294967295u", "unsigned int", 4_294_967_295),
+        ("4294967296u", "unsigned long long", 4_294_967_296),
+        (
+            "0xffffffffffffffff",
+            "unsigned long long",
+            18_446_744_073_709_551_615,
+        ),
+        (
+            "18446744073709551615u",
+            "unsigned long long",
+            18_446_744_073_709_551_615,
+        ),
     ] {
-        let spelling = format!("1{suffix}");
-        let checked = returning(&spelling);
-        assert_eq!(
-            checked.messages(),
-            ["this compiler has no type for a suffixed constant"],
-            "{spelling}"
-        );
-        assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
-        assert_eq!(checked.value_of(&spelling), None, "{spelling}");
-    }
-
-    // The zero of each base with a suffix on it, because those are the
-    // ones `a_pointer_takes_a_zero_and_not_a_one` used to accept as null
-    // pointer constants and no longer does.
-    for spelling in ["0L", "0u", "0UL", "0x0u"] {
         let checked = returning(spelling);
-        assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
+        assert_eq!(checked.messages(), Vec::<&str>::new(), "{spelling}");
+        assert_eq!(checked.spelling(spelling), spelled, "{spelling}");
+        assert_eq!(checked.value_of(spelling), Some(value), "{spelling}");
     }
 }
 
@@ -252,13 +265,10 @@ fn a_hexadecimal_digit_e_is_not_an_exponent() {
     }
 }
 
-/// A value outside `int` is reported rather than wrapped, C17 6.4.4 p2.
-///
-/// The first is a constant `clang 20.1.6 -std=c17 -pedantic-errors
-/// --target=x86_64-pc-windows-msvc` accepts, which is why the message
-/// blames this compiler rather than the program: what is missing is
-/// `long`, not a well-formed constant. `docs/frontend.md` carries the
-/// divergence.
+/// A value no type in its list holds is reported rather than wrapped,
+/// C17 6.4.4 p2: a decimal constant past `long long` with no `u` in its
+/// suffix, which `clang 22.1.8 -std=c17 -pedantic-errors` refuses as too
+/// large too, and values past what any type here holds.
 ///
 /// **The last two are the two ways the carrier itself can be overrun, and
 /// each is here for one line.**
@@ -270,21 +280,18 @@ fn a_hexadecimal_digit_e_is_not_an_exponent() {
 ///
 /// `2^128` is one more, and it is congruent to zero. A wrapping
 /// accumulator reaches the end of it holding zero, which `int` also
-/// holds, so the constant would be accepted silently as nought. The forty
-/// nines cannot catch that: they wrap to a number still outside `int`, so
-/// they are reported either way. Both are the `010`-lowers-to-ten shape,
-/// a plausible wrong number rather than a refusal.
+/// holds, so the constant would be accepted silently as nought.
 ///
 /// Mutation: answer `true` from `Integer::holds`. The first is accepted
-/// with a value `int` does not hold and this fails. Mutation: accumulate
-/// with `wrapping_mul` and `wrapping_add`. `2^128` becomes zero, nothing
-/// is reported, and this fails. Mutation: replace
-/// `i128::try_from(value).ok()` with `Some(value as i128)`. `u128::MAX`
-/// becomes `Constant -1` with nothing reported and this fails.
+/// and this fails. Mutation: accumulate with `wrapping_mul` and
+/// `wrapping_add`. `2^128` becomes zero, nothing is reported, and this
+/// fails. Mutation: replace `i128::try_from(value).ok()` with `Some(value
+/// as i128)`. `u128::MAX` becomes `Constant -1` with nothing reported and
+/// this fails.
 #[test]
 fn a_constant_no_type_here_can_hold_is_reported_and_has_no_value() {
     for spelling in [
-        "2147483648",
+        "18446744073709551615",
         "9999999999999999999999999999999999999999",
         "340282366920938463463374607431768211455",
         "340282366920938463463374607431768211456",
@@ -292,7 +299,7 @@ fn a_constant_no_type_here_can_hold_is_reported_and_has_no_value() {
         let checked = returning(spelling);
         assert_eq!(
             checked.messages(),
-            ["no integer type this compiler has can hold this constant"],
+            ["no integer type can hold this constant"],
             "{spelling}"
         );
         assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
@@ -480,18 +487,15 @@ fn every_shape_of_expression_has_the_type_c_gives_it() {
 /// Both halves in one test, because a test for the silence alone passes
 /// against a compiler that checks nothing.
 ///
-/// The suffixed zeros `0u`, `0L` and `0UL` are C's null pointer constants
-/// too and are not here, because a suffix is refused before this rule is
-/// reached: `a_suffix_asks_for_a_type_this_compiler_does_not_have` holds
-/// that, and holds those three spellings by name so that what left this
-/// list is findable from where it went.
+/// The suffixed zeros are C's null pointer constants too, being integer
+/// constant expressions of value 0 (C17 6.3.2.3 p3) whatever their type.
 ///
 /// Mutation: have `is_null_pointer_constant` answer `false` always. The
 /// first program starts reporting and this fails. Mutation: have it answer
 /// `true` always. The second stops and this fails.
 #[test]
 fn a_pointer_takes_a_zero_and_not_a_one() {
-    for zero in ["0", "0x0", "0X0", "00", "000"] {
+    for zero in ["0", "0x0", "0X0", "00", "000", "0u", "0L", "0UL", "0ll"] {
         let checked = checked(&format!(
             "int main(void) {{ int *p; p = {zero}; return 0; }}\n"
         ));
@@ -1854,6 +1858,58 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         // The right of the one assignment, rather than an expression found
         // by its text, because a parenthesised operand's span leaves the
         // parentheses out.
+        let assigned = checked
+            .ast
+            .expr_ids()
+            .find_map(|id| match checked.ast.expr(id) {
+                Expr::Assign { value, .. } => Some(*value),
+                _ => None,
+            })
+            .expect("the assignment");
+        assert_eq!(checked.types.value(assigned), value, "{written}");
+    }
+}
+
+/// A constant expression is evaluated at the type its operation is
+/// performed at (C17 6.6 p4, 6.3.1.8), on `x86_64-pc-windows-msvc` where
+/// `long` is 32 bits: `1LL << 40` and `1LL << 62` have their values rather
+/// than overflowing `int`, `1L << 31` overflows its `long` and has none, an
+/// unsigned result wraps (6.2.5 p9) rather than having none, and `-1 < 1u`
+/// and `-1L < 1u` compare at an unsigned type.
+///
+/// Mutation: evaluate every operation at `int`, as before #1112; the shifts
+/// and `2147483647 + 1u` have no value. Mutation: hold an unsigned result
+/// to its range rather than wrapping it; `0u - 1` and `4294967295u + 1`
+/// have none. Mutation: multiply without wrapping; the product of two
+/// largest `unsigned long long`s overflows `i128` and the check panics.
+/// Mutation: return `!` of an unsigned operand without converting it, or
+/// the arm `?:` takes without converting it to the conditional's type;
+/// `~0u` or `1 ? -1 : 0u` is -1.
+#[test]
+fn a_constant_expression_is_evaluated_at_its_type() {
+    for (written, value) in [
+        ("1LL << 40", Some(1_099_511_627_776)),
+        ("1LL << 62", Some(4_611_686_018_427_387_904)),
+        ("2147483647 + 1u", Some(2_147_483_648)),
+        ("0u - 1", Some(4_294_967_295)),
+        ("4294967295u + 1", Some(0)),
+        ("-1 < 1u", Some(0)),
+        ("-1L < 1u", Some(0)),
+        ("1L << 31", None),
+        ("4294967295u", Some(4_294_967_295)),
+        ("9223372036854775807LL + 1", None),
+        ("18446744073709551615ull * 18446744073709551615ull", Some(1)),
+        ("~0u", Some(4_294_967_295)),
+        ("1 ? -1 : 0u", Some(4_294_967_295)),
+    ] {
+        let checked = checked(&format!(
+            "int main(void) {{
+    long long r;
+    r = {written};
+    return 0;
+}}
+"
+        ));
         let assigned = checked
             .ast
             .expr_ids()

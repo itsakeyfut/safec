@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its sentence on what the type check is handed superseded by ADR-0119)"
 date: 2026-09-11
 decision-makers: itsakeyfut
 ---

@@ -1,0 +1,16 @@
+Function a_const_pointer_takes_no_other_integer_type.c:1:1 "main" "int (void)"
+  Compound a_const_pointer_takes_no_other_integer_type.c:1:16
+    Declaration a_const_pointer_takes_no_other_integer_type.c:2:5 "x" "int"
+      Number a_const_pointer_takes_no_other_integer_type.c:2:13 "1"
+    Declaration a_const_pointer_takes_no_other_integer_type.c:3:5 "q" "const long long *"
+      Unary a_const_pointer_takes_no_other_integer_type.c:3:26 "&"
+        Identifier a_const_pointer_takes_no_other_integer_type.c:3:27 "x"
+    Declaration a_const_pointer_takes_no_other_integer_type.c:4:5 "r" "const int *"
+      Unary a_const_pointer_takes_no_other_integer_type.c:4:20 "&"
+        Identifier a_const_pointer_takes_no_other_integer_type.c:4:21 "x"
+    Return a_const_pointer_takes_no_other_integer_type.c:5:5
+      Binary a_const_pointer_takes_no_other_integer_type.c:5:12 "!="
+        Unary a_const_pointer_takes_no_other_integer_type.c:5:12 "*"
+          Identifier a_const_pointer_takes_no_other_integer_type.c:5:13 "q"
+        Unary a_const_pointer_takes_no_other_integer_type.c:5:18 "*"
+          Identifier a_const_pointer_takes_no_other_integer_type.c:5:19 "r"

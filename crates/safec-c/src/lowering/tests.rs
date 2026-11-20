@@ -4,7 +4,6 @@ use crate::parser::parse;
 use crate::preprocessor::preprocess;
 use crate::sema::resolve;
 use crate::types::check;
-use safec_ir::ir::{Rank, Sign};
 
 /// The assignments in a block, in order, with the storage markers dropped.
 ///
@@ -80,14 +79,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
     // as well now, because the range of `int` is what says whether a
     // constant has a type.
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
-    let types = check(
-        &sources,
-        &mut ast,
-        &resolution,
-        target.integer(Rank::Int, Sign::Signed),
-        target.integer(Rank::Char, Sign::Plain),
-        &mut diagnostics,
-    );
+    let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
     assert!(
         !must_check || !diagnostics.has_errors(),
         "the input did not check"
@@ -862,16 +854,15 @@ fn a_constant_reaches_the_ir_as_the_value_the_frontend_read() {
 /// Mutation: let `typed` report for an `Expr::Number` too. Two codes and
 /// this fails, and so do the corpus cases
 /// `a_constant_no_integer_type_here_can_hold`,
-/// `a_spelling_that_is_not_a_constant` and
-/// `a_suffixed_constant_has_no_type_here`, whose blessed stderr picks up
-/// the second diagnostic. Three guards rather than one, which is worth
-/// knowing because this test is the only one of the four that also says
+/// and `a_spelling_that_is_not_a_constant`, whose blessed stderr picks up
+/// the second diagnostic. Two guards rather than one, which is worth
+/// knowing because this test is the only one of the three that also says
 /// the function is left a declaration.
 #[test]
 fn a_constant_the_frontend_could_not_read_is_reported_once_and_lowers_nothing() {
     for (spelling, code) in [
         ("1.5", "SC0305"),
-        ("2147483648", "SC0305"),
+        ("18446744073709551615", "SC0305"),
         ("9999999999999999999999999999999999999999", "SC0305"),
         ("123abc", "SC0106"),
         ("09", "SC0106"),
