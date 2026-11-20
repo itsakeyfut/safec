@@ -493,7 +493,10 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
 
         // What this node says about itself, and nothing about what is under it.
         match expr {
-            Expr::Number { span } | Expr::Character { span } | Expr::Identifier { span } => {
+            Expr::Number { span }
+            | Expr::Character { span }
+            | Expr::Identifier { span }
+            | Expr::Length { span, .. } => {
                 write!(out, " {:?}", quoted(sources, *span))
                     .expect("writing to a string cannot fail");
             }

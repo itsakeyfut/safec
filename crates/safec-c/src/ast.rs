@@ -460,6 +460,20 @@ pub enum Expr {
         parts: Vec<Span>,
         /// The whole run.
         span: Span,
+        /// How many `char`s the array holds, terminating zero included, as
+        /// an [`Expr::Length`] the type's length can name.
+        length: ExprId,
+    },
+    /// A length this compiler counted rather than one the source wrote: a
+    /// string literal's, which C17 6.4.5 p6 makes the bytes of the run and a
+    /// zero. A node of its own because an array type holds its length as an
+    /// expression, so that a literal's type is `char[N]` to every rule that
+    /// reads one. No walk reaches it: it is no operand of anything.
+    Length {
+        /// The count.
+        value: u64,
+        /// The literal it counts.
+        span: Span,
     },
     /// An identifier standing for something. C17 6.5.1.
     ///
@@ -868,6 +882,7 @@ impl Expr {
             Self::Number { .. } => "Number",
             Self::Character { .. } => "Character",
             Self::String { .. } => "String",
+            Self::Length { .. } => "Length",
             Self::Identifier { .. } => "Identifier",
             Self::Unary { .. } => "Unary",
             Self::Binary { .. } => "Binary",
@@ -887,6 +902,7 @@ impl Expr {
             Self::Number { span, .. }
             | Self::Character { span }
             | Self::String { span, .. }
+            | Self::Length { span, .. }
             | Self::Identifier { span, .. }
             | Self::Unary { span, .. }
             | Self::Binary { span, .. }
@@ -941,6 +957,7 @@ impl Expr {
             Self::Number { .. }
             | Self::Character { .. }
             | Self::String { .. }
+            | Self::Length { .. }
             | Self::Identifier { .. }
             | Self::Error { .. } => {}
             Self::Unary { operand, .. } | Self::Member { base: operand, .. } => out.push(*operand),
@@ -1406,7 +1423,7 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             }
             Type::Array {
                 element,
-                length: _,
+                length,
                 written,
             } => {
                 // The length is the source's own bytes and is not evaluated, so
@@ -1415,9 +1432,12 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
                 // constraint, and constraints are checked later. The bytes are
                 // what was written between the brackets, not the length's span,
                 // which would drop a leading `(` and keep its `)`.
-                let length = match written {
-                    Some(written) => sources.snippet(*written),
-                    None => "",
+                // A length nobody wrote, a string literal's, is spelled as
+                // the count it is.
+                let length = match (written, length.map(|length| ast.expr(length))) {
+                    (Some(written), _) => sources.snippet(*written).to_owned(),
+                    (None, Some(Expr::Length { value, .. })) => value.to_string(),
+                    (None, _) => String::new(),
                 };
                 inner = format!("{inner}[{length}]");
                 id = *element;

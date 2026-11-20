@@ -2931,6 +2931,8 @@ impl Parser<'_> {
     fn string(&mut self, first: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
         let mut parts = Vec::new();
         let mut refused = false;
+        // The terminating zero (C17 6.4.5 p6).
+        let mut count: u64 = 1;
         while self.check(TokenKind::String) {
             let span = self.peek().span;
             if !refused {
@@ -2939,7 +2941,7 @@ impl Parser<'_> {
                     .strip_prefix('"')
                     .and_then(|text| text.strip_suffix('"'));
                 match body.map(crate::literal::unescape) {
-                    Some(Ok(_)) => {}
+                    Some(Ok(values)) => count += values.len() as u64,
                     None => {
                         refused = true;
                         self.report_unread(
@@ -2973,12 +2975,16 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Error { span: first });
         }
         let span = self.join(first, self.previous().span, diagnostics);
-        self.ast.push_expr(Expr::String { parts, span })
+        let length = self.ast.push_expr(Expr::Length { value: count, span });
+        self.ast.push_expr(Expr::String {
+            parts,
+            span,
+            length,
+        })
     }
 
-    /// Part of C17 6.5.1: an integer constant, a character constant, an
-    /// identifier, or a parenthesised expression.
-    ///
+    /// Part of C17 6.5.1: an integer constant, a character constant, a
+    /// string literal, an identifier, or a parenthesised expression.
     fn primary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let span = self.peek().span;
 

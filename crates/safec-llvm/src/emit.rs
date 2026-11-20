@@ -1161,13 +1161,9 @@ impl Emitter<'_> {
     }
 }
 
-/// Whether LLVM takes this name without quotes.
-///
-/// Its unquoted name is `[-a-zA-Z$._][-a-zA-Z$._0-9]*`. A leading digit is not
-/// in it, because `@0` is an unnamed value rather than a name.
 /// Bytes as LLVM's `c"..."` spells them: a printable ASCII character as
-/// itself, and `"`, `\` and every other byte as `\` and two hex digits, the
-/// only escape LLVM reads.
+/// itself, and `"`, `\` and every other byte as `\` and two hex digits,
+/// which LLVM reads for any byte.
 fn bytes_spelled(bytes: &[u8]) -> String {
     let mut spelled = String::new();
     for &byte in bytes {
@@ -1180,6 +1176,10 @@ fn bytes_spelled(bytes: &[u8]) -> String {
     spelled
 }
 
+/// Whether LLVM takes this name without quotes.
+///
+/// Its unquoted name is `[-a-zA-Z$._][-a-zA-Z$._0-9]*`. A leading digit is not
+/// in it, because `@0` is an unnamed value rather than a name.
 fn plain(name: &str) -> bool {
     let mut characters = name.chars();
     let Some(first) = characters.next() else {

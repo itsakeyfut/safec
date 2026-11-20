@@ -8214,6 +8214,16 @@ cases! {
         // Mutation: read one token in `Parser::string`; the second is a
         // syntax error.
         a_run_of_string_literals_is_one_expression: ["--emit", "ast"],
+        // A literal is a `char[N]` whose length the parser counted (C17 6.4.5
+        // p6), so `&"a"` is a `char (*)[2]` and no `char (*)[9]` (6.7.6.2
+        // p6), and `(&"ab")[0]` is an array. Mutation: give the literal's
+        // type no length in the type checker; `wrong` is accepted and the
+        // subscript is refused.
+        a_string_literal_s_address_is_a_pointer_to_its_whole_array: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An lvalue of array type, which no assignment may write (C17
+        // 6.3.2.1 p1). Mutation: answer `Designates::Unknown` for a literal in
+        // `Checker::designates`; the report becomes the lowering's `SC0304`.
+        a_string_literal_cannot_be_written_to: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `\\q` is no escape C17 6.4.4.4 defines. Mutation: ignore what
         // `unescape` says in `Parser::string`; the literal reaches the
         // lowering, which panics reading its bytes.

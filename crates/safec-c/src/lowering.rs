@@ -733,6 +733,7 @@ fn sequences(expr: &Expr) -> bool {
         Expr::Binary { op, .. } => matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr),
         Expr::Number { .. }
         | Expr::Character { .. }
+        | Expr::Length { .. }
         | Expr::String { .. }
         | Expr::Identifier { .. }
         | Expr::Unary { .. }
@@ -2009,7 +2010,7 @@ impl Lowering<'_> {
             // would not gain a second caret and a note that contradicts it.
             if !matches!(
                 self.ast.expr(id),
-                Expr::Number { .. } | Expr::Character { .. }
+                Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. }
             ) {
                 diagnostics.report(
                     Diagnostic::error("cannot compile an expression whose type is not known")
@@ -2074,13 +2075,6 @@ impl Lowering<'_> {
 
     /// The IR type of an expression, or a report that it has none.
     fn ty_of(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
-        // **A literal's length is its bytes'**, which the type checker does
-        // not count: it holds an array's length as an expression, and a
-        // literal has none. See `Lowering::string`.
-        if let Expr::String { .. } = self.ast.expr(id) {
-            let object = self.string(id);
-            return Some(self.unit.static_object(object).ty);
-        }
         let ty = self.typed(id, diagnostics)?;
         self.ty(self.ast.expr(id).span(), ty, diagnostics)
     }
@@ -3105,6 +3099,7 @@ impl Lowering<'_> {
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Member { .. }
@@ -3133,6 +3128,7 @@ impl Lowering<'_> {
         match self.ast.expr(id) {
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::String { .. }
             | Expr::Identifier { .. } => true,
             Expr::Unary { op, operand, .. } => match op {
@@ -3203,7 +3199,7 @@ impl Lowering<'_> {
         // A literal is left to its own arm below, which says why its value
         // is asked there; it would give the same operand here.
         let folded = match self.ast.expr(id) {
-            Expr::Number { .. } | Expr::Character { .. } => None,
+            Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. } => None,
             _ => self.types.value(id),
         };
         if let Some(value) = folded {
@@ -3220,7 +3216,7 @@ impl Lowering<'_> {
 
         match self.ast.expr(id) {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
-            Expr::Number { .. } | Expr::Character { .. } => {
+            Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. } => {
                 // Worked out by `types.rs`, where the base, the suffix and
                 // the range of `int` are all one question. A constant it
                 // could not read has no value and has already been reported,
@@ -3420,6 +3416,7 @@ impl Lowering<'_> {
             // whether it names a place.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::Unary { .. }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -3527,7 +3524,7 @@ impl Lowering<'_> {
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
-            Expr::Number { .. } | Expr::Character { .. } => {}
+            Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. } => {}
             Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
                 let place = places.pop().expect("a place");
                 let span = self.ast.expr(id).span();
@@ -3886,6 +3883,7 @@ impl Lowering<'_> {
             // `places.pop()` taking an outer expression's place instead.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Binary { .. }
@@ -4045,6 +4043,7 @@ impl Lowering<'_> {
             // moment somebody walks the graph.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
@@ -4448,6 +4447,7 @@ impl Lowering<'_> {
                 Expr::Member { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }
+                | Expr::Length { .. }
                 | Expr::String { .. }
                 | Expr::Error { .. } => {}
             }
@@ -4519,6 +4519,7 @@ impl Lowering<'_> {
             // later is asked whether its operands are unsequenced.
             Expr::Number { .. }
             | Expr::Character { .. }
+            | Expr::Length { .. }
             | Expr::String { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
@@ -4695,6 +4696,7 @@ impl Lowering<'_> {
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
                 | Expr::Character { .. }
+                | Expr::Length { .. }
                 | Expr::String { .. }
                 | Expr::Member { .. }
                 | Expr::Error { .. } => {}
