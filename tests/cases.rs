@@ -8668,11 +8668,12 @@ cases! {
         // `a_void_condition_of_a_conditional_is_a_type_error` builds.
         // Mutation: let a refused conditional keep its arms' type; that case
         // gains an `SC0302` on the pointer it initializes. Mutation: refuse
-        // any scalar type at any of the four places;
+        // any scalar type at any of the five places;
         // `a_scalar_condition_builds` is refused. Mutation: unwrap the
         // conditional's condition type rather than passing over an untyped
         // one; `an_untyped_condition_of_a_conditional_is_reported_once`
-        // panics.
+        // panics. Mutation: do not register a `do`'s condition in
+        // `receivers_in`; its `SC0306` goes.
         a_void_condition_is_a_type_error: ["--emit", "ast"],
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
         // C17 6.5.2.1 p1 wants an integer beside the pointer, and a `void`

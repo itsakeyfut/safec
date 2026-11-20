@@ -19,3 +19,10 @@ error[SC0306]: `for` cannot take `void`
     │            ─┬─  
     │             ╰─── this is `void`
 ────╯
+error[SC0306]: `do` cannot take `void`
+    ╭─[ a_void_condition_is_a_type_error.c:16:14 ]
+    │
+ 16 │     } while (h());
+    │              ─┬─  
+    │               ╰─── this is `void`
+────╯
