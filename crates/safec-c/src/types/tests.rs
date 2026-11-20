@@ -34,11 +34,12 @@ fn checked(text: &str) -> Checked {
         diagnostics.diagnostics()
     );
     let resolution = resolve(&sources, &ast, false, &mut diagnostics);
-    // Named rather than taken from the host: what a constant's type is
-    // turns on the range of `int`, so a test that did not name a target
-    // would be asserting about whichever machine ran it. `int` is 32 bits
-    // on every row of `Target::ALL`, which is
-    // what makes one triple enough here.
+    // Named rather than taken from the host: what a constant's type is,
+    // and what the usual arithmetic conversions answer, turn on the
+    // target's widths, so a test that did not name a target would be
+    // asserting about whichever machine ran it. Here `long` is 32 bits, as
+    // `int` is; a test about a 64-bit `long` runs the interpreter on
+    // another triple.
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
     let types = check(&sources, &mut ast, &resolution, target, &mut diagnostics);
 
@@ -1857,6 +1858,51 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         // The right of the one assignment, rather than an expression found
         // by its text, because a parenthesised operand's span leaves the
         // parentheses out.
+        let assigned = checked
+            .ast
+            .expr_ids()
+            .find_map(|id| match checked.ast.expr(id) {
+                Expr::Assign { value, .. } => Some(*value),
+                _ => None,
+            })
+            .expect("the assignment");
+        assert_eq!(checked.types.value(assigned), value, "{written}");
+    }
+}
+
+/// A constant expression is evaluated at the type its operation is
+/// performed at (C17 6.6 p4, 6.3.1.8), on `x86_64-pc-windows-msvc` where
+/// `long` is 32 bits: `1LL << 40` and `1LL << 62` have their values rather
+/// than overflowing `int`, `1L << 31` overflows its `long` and has none, an
+/// unsigned result wraps (6.2.5 p9) rather than having none, and `-1 < 1u`
+/// and `-1L < 1u` compare at an unsigned type.
+///
+/// Mutation: evaluate every operation at `int`, as before #1112; the shifts
+/// and `2147483647 + 1u` have no value. Mutation: hold an unsigned result
+/// to its range rather than wrapping it; `0u - 1` and `4294967295u + 1`
+/// have none.
+#[test]
+fn a_constant_expression_is_evaluated_at_its_type() {
+    for (written, value) in [
+        ("1LL << 40", Some(1_099_511_627_776)),
+        ("1LL << 62", Some(4_611_686_018_427_387_904)),
+        ("2147483647 + 1u", Some(2_147_483_648)),
+        ("0u - 1", Some(4_294_967_295)),
+        ("4294967295u + 1", Some(0)),
+        ("-1 < 1u", Some(0)),
+        ("-1L < 1u", Some(0)),
+        ("1L << 31", None),
+        ("4294967295u", Some(4_294_967_295)),
+        ("9223372036854775807LL + 1", None),
+    ] {
+        let checked = checked(&format!(
+            "int main(void) {{
+    long long r;
+    r = {written};
+    return 0;
+}}
+"
+        ));
         let assigned = checked
             .ast
             .expr_ids()
