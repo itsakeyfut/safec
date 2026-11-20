@@ -170,6 +170,29 @@ impl<'a> Lexer<'a> {
     }
 
     fn scan(&mut self, c: char, diagnostics: &mut DiagnosticSink) -> TokenKind {
+        // C17 6.4.4.4 p1 and 6.4.5 p1: an encoding prefix is part of the
+        // constant or the literal it is written against, one token. Scanned
+        // as a word and a literal, a `#define L` expanded the prefix away and
+        // `L'\xff'` built as the `char` constant `'\xff'`, with another value.
+        // Found by review. The parser refuses a prefixed one as not read yet.
+        let prefix = ["u8\"", "L'", "u'", "U'", "L\"", "u\"", "U\""]
+            .into_iter()
+            .find(|prefix| self.rest().starts_with(prefix));
+        if let Some(prefix) = prefix {
+            for _ in 1..prefix.len() {
+                self.bump();
+            }
+            return if prefix.ends_with('\'') {
+                self.scan_quoted(
+                    '\'',
+                    TokenKind::Character,
+                    "character constant",
+                    diagnostics,
+                )
+            } else {
+                self.scan_quoted('"', TokenKind::String, "string literal", diagnostics)
+            };
+        }
         if is_identifier_start(c) {
             return self.scan_word();
         }

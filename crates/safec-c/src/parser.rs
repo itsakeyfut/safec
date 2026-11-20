@@ -2799,6 +2799,18 @@ impl Parser<'_> {
     /// [`unescape`]: crate::literal::unescape
     fn character(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
         let text = self.sources.snippet(span);
+        // The lexer scans an encoding prefix into the token (C17 6.4.4.4 p1).
+        if !text.starts_with('\'') {
+            self.report_unread(
+                Unread {
+                    what: "a prefixed character constant",
+                    clause: "6.4.4.4",
+                },
+                diagnostics,
+            );
+            self.advance();
+            return self.ast.push_expr(Expr::Error { span });
+        }
         let body = text
             .strip_prefix('\'')
             .and_then(|text| text.strip_suffix('\''))
@@ -2854,32 +2866,6 @@ impl Parser<'_> {
 
         if self.check(TokenKind::Character) {
             return self.character(span, diagnostics);
-        }
-
-        // C17 6.4.4.4 p1 and 6.4.5 p1: `L`, `u`, `U` written against a
-        // character constant, or `u8` against a string literal, is one token
-        // the lexer scans as two. Refused as one, as not read yet, rather than
-        // as a name followed by something no expression has there.
-        if self.check(TokenKind::Identifier) {
-            let next = self.peek_at(1);
-            let prefix = self.sources.snippet(span);
-            let attached = next.span.start() == span.end();
-            let prefixed = match next.kind {
-                TokenKind::Character => matches!(prefix, "L" | "u" | "U"),
-                TokenKind::String => matches!(prefix, "L" | "u" | "U" | "u8"),
-                _ => false,
-            };
-            if attached && prefixed {
-                let (what, clause) = if next.kind == TokenKind::Character {
-                    ("a prefixed character constant", "6.4.4.4")
-                } else {
-                    ("a prefixed string literal", "6.4.5")
-                };
-                self.report_unread(Unread { what, clause }, diagnostics);
-                self.advance();
-                self.advance();
-                return self.ast.push_expr(Expr::Error { span });
-            }
         }
 
         if self.eat(TokenKind::Identifier) {

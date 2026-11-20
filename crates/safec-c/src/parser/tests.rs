@@ -725,7 +725,7 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "6.4.4.4",
         ),
         (
-            "int main(void) { return '\\u0041'; }\n",
+            "int main(void) { return '\\u00e9'; }\n",
             "a universal character name",
             "6.4.4.4",
         ),

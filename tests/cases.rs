@@ -9026,6 +9026,12 @@ cases! {
         // An integer constant expression, so an array length. Mutation: give
         // a character constant no value in `values`; the length is refused.
         a_character_constant_is_an_array_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.4.4.4 p1: `L'\xff'` is one token, so no macro named `L`
+        // reaches it, and it is refused as not read yet rather than read as
+        // the `char` constant it would be without its prefix. Mutation: scan
+        // the prefix as a word of its own; the run builds, and answers what
+        // `clang` does not. Found by review.
+        an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says: ["--emit", "ast"],
         // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
         // `++` and `--` to a `const` object, and an assignment to a `const`
         // pointer, are each `SC0318`; what it points to may be written. A
