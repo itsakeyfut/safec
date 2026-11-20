@@ -1,0 +1,10 @@
+extern int g[10];
+int g[2];
+int h[2][3];
+int h[2][4];
+int (*p)[2];
+int (*p)[3];
+extern int k[];
+int k[4];
+int m[2];
+int m[1 + 1];

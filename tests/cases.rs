@@ -8310,6 +8310,12 @@ cases! {
         // *)v + 1` steps by a complete struct. Mutation: walk no type name in
         // `Resolver::expr`; the check panics on the comparison.
         a_struct_pointer_cast_is_read: ["--emit", "ast"],
+        // Two declarations of one object whose array lengths differ, at the
+        // top, inside or behind a pointer, conflict (C17 6.7.6.2 p6); a
+        // length left out, or one written differently with the same value,
+        // does not. Mutation: skip `Checker::check_redeclared_lengths`; the
+        // first three are accepted.
+        an_array_redeclared_with_another_length_is_refused: ["--emit", "ast"],
         // A cast to a pointer gives no integer constant (C17 6.6 p6), so an
         // integer cast of one is no constant, and is said to be none rather
         // than to overflow. Mutation: let a pointer cast be constant in shape

@@ -187,6 +187,11 @@ const FOR_DECLARATION: Code = Code::new("SC0311");
 /// refused by the lowering, whose IR holds no struct, under the same code.
 const NOT_YET: Code = Code::new("SC0304");
 
+/// Two declarations of one name whose types are not compatible, C17 6.7 p4:
+/// the code the name resolution gives the same fault, where what differs is
+/// an array's length, which only this stage has the value of.
+const CONFLICTING: Code = Code::new("SC0313");
+
 /// An object whose type is a struct that is not complete where C needs it
 /// to be: at the end of its declarator for one with no linkage (C17 6.7 p7),
 /// and by the end of the translation unit for one at file scope (6.9.2 p2,
@@ -388,6 +393,7 @@ pub fn check(
     // After every expression is typed, because a length's type and value are
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
+    checker.check_redeclared_lengths(ast, diagnostics);
     checker.check_complete_objects(ast, diagnostics);
     checker.check_definition_parameters(ast, diagnostics);
     checker.check_incomplete_values(ast, diagnostics);
@@ -973,6 +979,85 @@ impl Checker<'_> {
                 }
                 _ => return false,
             };
+        }
+    }
+
+    /// Report a file-scope declaration of a name whose array lengths differ
+    /// from an earlier one's, at any level of its type: two array types with
+    /// constant lengths are compatible only where the lengths are equal (C17
+    /// 6.7.6.2 p6), and 6.7 p4 asks every declaration of one object to have
+    /// compatible types. The name resolution compares the rest of the type
+    /// and cannot compare this, having no values, so `extern int g[10]; int
+    /// g[2];` gave the object its first length. Mutation: skip this;
+    /// `an_array_redeclared_with_another_length_is_refused` is accepted.
+    fn check_redeclared_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut first: HashMap<&str, (Span, TypeId)> = HashMap::new();
+        for item in ast.items() {
+            let Item::Declaration { declarators, .. } = item else {
+                continue;
+            };
+            for declarator in declarators {
+                let declaration = &declarator.declaration;
+                let Some(name) = declaration.name else {
+                    continue;
+                };
+                let spelled = self.sources.snippet(name);
+                let Some(&(earlier, earlier_ty)) = first.get(spelled) else {
+                    first.insert(spelled, (name, declaration.ty));
+                    continue;
+                };
+                if self.lengths_disagree(ast, earlier_ty, declaration.ty) {
+                    diagnostics.report(
+                        Diagnostic::error(format!("conflicting types for `{spelled}`"))
+                            .with_code(CONFLICTING)
+                            .with_label(Label::primary(
+                                name,
+                                format!("declared here as `{}`", self.spelled(ast, declaration.ty)),
+                            ))
+                            .with_label(Label::secondary(
+                                earlier,
+                                format!(
+                                    "previously declared as `{}`",
+                                    self.spelled(ast, earlier_ty)
+                                ),
+                            ))
+                            .with_note("C17 6.7 p4 and 6.7.6.2 p6"),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Whether `left` and `right` hold, at one level of their derivations,
+    /// two arrays whose lengths are both constants and differ. Through
+    /// pointers and arrays alike, as `Ast::compatible` walks them.
+    fn lengths_disagree(&self, ast: &Ast, mut left: TypeId, mut right: TypeId) -> bool {
+        loop {
+            match (ast.ty(left), ast.ty(right)) {
+                (
+                    Type::Array {
+                        element: left_element,
+                        length: left_length,
+                        ..
+                    },
+                    Type::Array {
+                        element: right_element,
+                        length: right_length,
+                        ..
+                    },
+                ) => {
+                    let value =
+                        |length: &Option<ExprId>| length.and_then(|id| self.values[id.index()]);
+                    if let (Some(l), Some(r)) = (value(left_length), value(right_length)) {
+                        if l != r {
+                            return true;
+                        }
+                    }
+                    (left, right) = (*left_element, *right_element);
+                }
+                (Type::Pointer(l), Type::Pointer(r)) => (left, right) = (*l, *r),
+                _ => return false,
+            }
         }
     }
 
