@@ -119,6 +119,42 @@ fn a_loop_and_a_branch_run() {
     assert_eq!(short, Ok(Value::Int(0)));
 }
 
+/// A `do` runs its body once before it asks anything. C17 6.8.5.2 p1.
+///
+/// Mutation: lower `do` as `while`, branching before the body. The body never
+/// runs and this answers 0.
+#[test]
+fn a_do_loop_runs_its_body_before_asking() {
+    let ran_once = ran("int main(void) {
+    int n;
+    n = 0;
+    do {
+        n = n + 1;
+    } while (0);
+    return n;
+}
+");
+    assert_eq!(ran_once, Ok(Value::Int(1)));
+}
+
+/// And asks after every turn, going round again while the condition holds.
+///
+/// Mutation: swap the branch's two targets, leaving on a non-zero condition.
+/// The loop stops after one turn and this answers 1.
+#[test]
+fn a_do_loop_asks_after_every_turn() {
+    let counted = ran("int main(void) {
+    int n;
+    n = 0;
+    do {
+        n = n + 1;
+    } while (n < 3);
+    return n;
+}
+");
+    assert_eq!(counted, Ok(Value::Int(3)));
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.

@@ -1703,6 +1703,13 @@ impl Checker<'_> {
                     .insert(*condition, Receiving::Condition { keyword: "while" });
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
+            Stmt::Do {
+                body, condition, ..
+            } => {
+                self.receivers_in(ast, *body, returning, diagnostics);
+                self.receivers
+                    .insert(*condition, Receiving::Condition { keyword: "do" });
+            }
             Stmt::For {
                 start,
                 condition,

@@ -1,0 +1,17 @@
+Function do_statement.c:1:1 "main" "int (void)"
+  Compound do_statement.c:1:16
+    Declaration do_statement.c:2:5 "i" "int"
+    Do do_statement.c:3:5
+      Expression do_statement.c:3:8
+      Identifier do_statement.c:3:17 "i"
+    Do do_statement.c:4:5
+      Compound do_statement.c:4:8
+        Expression do_statement.c:4:10
+          Assign do_statement.c:4:10 "="
+            Identifier do_statement.c:4:10 "i"
+            Binary do_statement.c:4:14 "-"
+              Identifier do_statement.c:4:14 "i"
+              Number do_statement.c:4:18 "1"
+      Identifier do_statement.c:4:30 "i"
+    Return do_statement.c:5:5
+      Number do_statement.c:5:12 "0"

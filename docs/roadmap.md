@@ -234,8 +234,8 @@ Phase 9.
   `unsigned` and `const`, character constants and string literals, `sizeof`
   and casts
 - the jump and selection statements the subset does not read: `break`,
-  `continue`, `do`, `switch` and `goto`, each refused today as `SC0207`. No
-  Stage in [frontend.md](frontend.md) lists them
+  `continue`, `switch` and `goto`, each refused today as `SC0207`, and `do`,
+  read since #1099. No Stage in [frontend.md](frontend.md) lists them
 - compiling the rest of a function pointer, which already parses and
   type-checks ([frontend.md](frontend.md), Stage 1): storing one, calling
   through one, and comparing two. Phase 8 names one and passes it (#115)

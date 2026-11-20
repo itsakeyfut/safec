@@ -985,6 +985,12 @@ impl Resolver<'_> {
                 self.expr(*condition, diagnostics);
                 self.stmt(*body, diagnostics);
             }
+            Stmt::Do {
+                body, condition, ..
+            } => {
+                self.stmt(*body, diagnostics);
+                self.expr(*condition, diagnostics);
+            }
             Stmt::For {
                 start,
                 condition,

@@ -1,0 +1,32 @@
+error[SC0401]: this frees `p`, which may have been freed already
+   ╭─[ a_use_after_a_free_in_a_do_body_is_reported.c:7:9 ]
+   │
+ 7 │         free(p);
+   │         ───┬───  
+   │            ╰───── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `p` after it was freed
+   ╭─[ a_use_after_a_free_in_a_do_body_is_reported.c:8:9 ]
+   │
+ 7 │         free(p);
+   │         ───┬───  
+   │            ╰───── freed here
+ 8 │         *p = 1;
+   │         ───┬──  
+   │            ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference `p` while it is null
+   ╭─[ a_use_after_a_free_in_a_do_body_is_reported.c:8:9 ]
+   │
+ 8 │         *p = 1;
+   │         ───┬──  
+   │            ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

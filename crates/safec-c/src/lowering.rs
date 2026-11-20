@@ -1885,6 +1885,47 @@ impl Lowering<'_> {
 
                 builder.enter(after, Some(asked));
             }
+            Stmt::Do {
+                body, condition, ..
+            } => {
+                let (body, condition) = (*body, *condition);
+                let top = builder.function.reserve_block();
+                builder.end(Terminator::Goto(top));
+
+                builder.switch(top);
+                self.stmt(builder, body, diagnostics)?;
+                let test = builder.function.reserve_block();
+                if builder.reachable() {
+                    builder.end(Terminator::Goto(test));
+                }
+
+                // Asked after each turn, in a block of its own that nothing
+                // reaches when the body cannot fall through.
+                builder.switch(test);
+                let asked = self.ast.expr(condition).span();
+                let decides = self.decides(condition);
+                let constant = self.constant_expression(condition);
+                let condition = self.value(builder, condition, diagnostics)?;
+                let again = builder.function.reserve_block();
+                let after = builder.function.reserve_block();
+                builder.end(decided(
+                    condition,
+                    constant,
+                    again,
+                    after,
+                    Origin::Written(decides),
+                ));
+
+                // **Not straight back to `top`**: the condition's sequence
+                // point belongs on the edge that evaluated it (ADR-0023), and
+                // the first turn reaches `top` without evaluating anything.
+                // A marker there would end a full expression that has not
+                // begun.
+                builder.enter(again, Some(asked));
+                builder.end(Terminator::Goto(top));
+
+                builder.enter(after, Some(asked));
+            }
             Stmt::For {
                 start,
                 condition,

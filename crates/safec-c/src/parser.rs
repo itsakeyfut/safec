@@ -3,9 +3,9 @@
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
-//! `return`, an expression statement, `if`, `while` and both forms of `for`,
+//! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
 //! and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is `switch`, `do`, `goto`, a labelled statement,
+//! it does not read yet is `switch`, `goto`, a labelled statement,
 //! `break`, `continue`, `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
@@ -390,7 +390,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
         Keyword::Switch => ("`switch`", "6.8.4.2", STATEMENT),
-        Keyword::Do => ("`do`", "6.8.5.2", STATEMENT),
         Keyword::Goto => ("`goto`", "6.8.6.1", STATEMENT),
         Keyword::Continue => ("`continue`", "6.8.6.2", STATEMENT),
         Keyword::Break => ("`break`", "6.8.6.3", STATEMENT),
@@ -628,7 +627,7 @@ struct Parser<'a> {
     /// is what stops any of this file's recursions reaching the end of the
     /// native stack.
     depth: usize,
-    /// How many `while` and `for` bodies are being read right now.
+    /// How many `while`, `do` and `for` bodies are being read right now.
     ///
     /// C17 6.8.6.2 p1 and 6.8.6.3 p1 allow `continue` only in a loop body and
     /// `break` only in a loop or `switch` body, and this parser reads no
@@ -2017,6 +2016,10 @@ impl Parser<'_> {
             return self.for_statement(start, diagnostics);
         }
 
+        if self.check(TokenKind::Keyword(Keyword::Do)) {
+            return self.do_statement(start, diagnostics);
+        }
+
         // A statement C allows here that this parser does not read: a keyword
         // that begins one, or a label.
         if self.refuse_unread(Position::Statement, diagnostics) {
@@ -2127,6 +2130,52 @@ impl Parser<'_> {
             },
             |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
         )
+    }
+
+    /// `do statement while ( expression ) ;`. C17 6.8.5 p1.
+    ///
+    /// The body is read inside `deeper` and counts in `loops`, as a `while`'s
+    /// does; the condition after it is not a nested statement and takes no
+    /// level.
+    fn do_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let body = self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                parser.loops += 1;
+                let body = parser.statement(diagnostics);
+                parser.loops -= 1;
+                Some(body)
+            },
+            |_, _| None,
+        );
+        let Some(body) = body else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        if self
+            .expect(TokenKind::Keyword(Keyword::While), "`while`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        let span = self.join(start, self.previous().span, diagnostics);
+        self.ast.push_stmt(Stmt::Do {
+            body,
+            condition,
+            span,
+        })
     }
 
     /// `for ( expression_opt ; expression_opt ; expression_opt ) statement` and

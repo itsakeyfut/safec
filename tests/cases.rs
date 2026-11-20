@@ -3747,6 +3747,23 @@ cases! {
         a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `do` body runs before its condition is asked, so a free in it has
+        // happened by the time the loop is left, whatever the condition says:
+        // proved. Mutation: lower `do` as `while`, asking before the body;
+        // the use is only doubted.
+        a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read as any loop body is: the free and the use in one turn are
+        // proved, and the next turn's free is a second one. Mutation: enter
+        // the loop at its condition rather than its body; this fails with the
+        // case above.
+        a_use_after_a_free_in_a_do_body_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The condition reads `*p` and the next turn frees `p`. The condition
+        // is a full expression, so its read is ordered before the free and
+        // nothing about the order is reported. The sequence point is written
+        // on the edge back into the body, and **only this case's IR holds
+        // it**: measured, writing none there changes no diagnostic here or in
+        // the two cases above, only the `.stdout`.
+        a_do_condition_is_ordered_before_the_next_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_that_is_not_known_to_allocate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8927,6 +8944,10 @@ cases! {
         unterminated_string_literal: ["--emit", "tokens"],
         void_is_not_the_only_parameter: ["--emit", "ast"],
         while_statement: ["--emit", "ast"],
+        // The body before the condition, as they run. Mutation: drop the
+        // dump's `Do` arm; it does not build. Print the condition first; the
+        // children swap.
+        do_statement: ["--emit", "ast"],
     }
 
     "preprocessor" => {
