@@ -49,6 +49,16 @@ error[SC0412]: this may reach outside the object it points at
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:21:5 ]
+    │
+ 21 │     memset(&q, 0, n);
+    │     ────────┬───────  
+    │             ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers
 error[SC0411]: `q` may be read before anything was assigned to it
     ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:22:5 ]
     │
@@ -81,6 +91,16 @@ error[SC0411]: this may read a pointer out of memory before anything was assigne
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: assign it on every path before it is read
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
+    ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:33:5 ]
+    │
+ 33 │     memset(&r, 0, 1);
+    │     ────────┬───────  
+    │             ╰───────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
 error[SC0412]: this may reach outside the object it points at
     ╭─[ a_local_a_library_copy_or_fill_of_a_length_not_read_wrote_is_doubted.c:34:5 ]
     │

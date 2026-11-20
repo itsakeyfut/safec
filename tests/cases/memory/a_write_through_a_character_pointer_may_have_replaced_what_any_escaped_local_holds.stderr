@@ -1,3 +1,13 @@
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
+    ╭─[ a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 ]
+    │
+ 13 │         c[i] = d[i];
+    │         ─────┬─────  
+    │              ╰─────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
 error[SC0412]: this may reach outside the object it points at
     ╭─[ a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 ]
     │

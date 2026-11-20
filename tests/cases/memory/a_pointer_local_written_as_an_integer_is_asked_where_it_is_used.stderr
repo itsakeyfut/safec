@@ -1,0 +1,10 @@
+error[SC0413]: this writes a value that is not a pointer into memory that is read back as pointers
+    ╭─[ a_pointer_local_written_as_an_integer_is_asked_where_it_is_used.c:18:5 ]
+    │
+ 18 │     *(long long *)&q = *(long long *)a;
+    │     ─────────────────┬────────────────  
+    │                      ╰────────────────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: store a pointer there, or keep values that are not pointers out of memory read as pointers

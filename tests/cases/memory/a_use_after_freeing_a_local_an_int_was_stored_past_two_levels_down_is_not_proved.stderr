@@ -17,6 +17,16 @@ error[SC0412]: this reaches 12 bytes into an object of 8 bytes
 ────╯
   = note: this check belongs to safety level 1
   = help: make the object at least as wide as this access, or reach less of it
+error[SC0413]: this writes less than a pointer into memory that is read back as pointers
+    ╭─[ a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:20:5 ]
+    │
+ 20 │     **ppi = n;
+    │     ────┬────  
+    │         ╰────── written here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write a pointer whole, or keep bytes written over part of one out of memory read as pointers
 error[SC0401]: this frees `z`, which may have been freed already
     ╭─[ a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:21:5 ]
     │

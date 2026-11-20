@@ -1122,6 +1122,25 @@ pub(super) fn unwritten_read(
 ) {
     let function = analysis.unit.function(analysis.function);
     for (local, at) in reads {
+        // **A pointer local's own value is read as memory read as pointers
+        // is**, where a store through its address may have left part of a
+        // pointer or something that is no pointer in it: `*(long long *)&q
+        // = n; g(q);` used `q` in silence, where the same store into an
+        // array local is asked at the load out of it (#1123). Only a local
+        // whose address is taken, since nothing else writes it by bytes.
+        // Mutation: skip this; `a_pointer_local_written_as_an_integer_is_asked_where_it_is_used`
+        // goes silent.
+        if taken.get(LocalIdx::of(local))
+            && stored_pointer(analysis.unit, function.local(local)).is_some()
+        {
+            ask_partial(
+                PartialDoor::Load,
+                [(Storage::Local(LocalIdx::of(local)), at)],
+                findings,
+                analysis,
+                known,
+            );
+        }
         // **A doubt where an element may still be unwritten**, a proof
         // where nothing wrote any of it. See `Known::written`. **Only a local
         // that holds a pointer**: every local starts unwritten, and an
