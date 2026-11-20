@@ -1,0 +1,9 @@
+error[SC0302]: cannot assign `const char *` to `char *`
+   ╭─[ a_conversion_cannot_discard_const.c:7:9 ]
+   │
+ 7 │     t = s;
+   │     ┬   ┬  
+   │     ╰────── this holds `char *`
+   │         │  
+   │         ╰── this is `const char *`
+───╯

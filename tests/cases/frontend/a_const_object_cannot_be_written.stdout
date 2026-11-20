@@ -1,0 +1,39 @@
+Function a_const_object_cannot_be_written.c:1:1 "main" "int (void)"
+  Compound a_const_object_cannot_be_written.c:1:16
+    Declaration a_const_object_cannot_be_written.c:2:5 "x" "const int"
+      Number a_const_object_cannot_be_written.c:2:19 "1"
+    Declaration a_const_object_cannot_be_written.c:3:5 "y" "const int"
+      Number a_const_object_cannot_be_written.c:3:19 "1"
+    Declaration a_const_object_cannot_be_written.c:4:5 "v" "int"
+    Declaration a_const_object_cannot_be_written.c:5:5 "p" "int *const"
+      Unary a_const_object_cannot_be_written.c:5:20 "&"
+        Identifier a_const_object_cannot_be_written.c:5:21 "v"
+    Expression a_const_object_cannot_be_written.c:6:5
+      Assign a_const_object_cannot_be_written.c:6:5 "="
+        Identifier a_const_object_cannot_be_written.c:6:5 "x"
+        Number a_const_object_cannot_be_written.c:6:9 "2"
+    Expression a_const_object_cannot_be_written.c:7:5
+      Assign a_const_object_cannot_be_written.c:7:5 "+="
+        Identifier a_const_object_cannot_be_written.c:7:5 "x"
+        Number a_const_object_cannot_be_written.c:7:10 "1"
+    Expression a_const_object_cannot_be_written.c:8:5
+      Unary a_const_object_cannot_be_written.c:8:5 postfix "++"
+        Identifier a_const_object_cannot_be_written.c:8:5 "x"
+    Expression a_const_object_cannot_be_written.c:9:5
+      Unary a_const_object_cannot_be_written.c:9:5 prefix "--"
+        Identifier a_const_object_cannot_be_written.c:9:7 "x"
+    Expression a_const_object_cannot_be_written.c:10:5
+      Assign a_const_object_cannot_be_written.c:10:5 "="
+        Identifier a_const_object_cannot_be_written.c:10:5 "p"
+        Number a_const_object_cannot_be_written.c:10:9 "0"
+    Expression a_const_object_cannot_be_written.c:11:5
+      Assign a_const_object_cannot_be_written.c:11:5 "="
+        Identifier a_const_object_cannot_be_written.c:11:5 "y"
+        Number a_const_object_cannot_be_written.c:11:9 "2"
+    Expression a_const_object_cannot_be_written.c:12:5
+      Assign a_const_object_cannot_be_written.c:12:5 "="
+        Unary a_const_object_cannot_be_written.c:12:5 "*"
+          Identifier a_const_object_cannot_be_written.c:12:6 "p"
+        Number a_const_object_cannot_be_written.c:12:10 "3"
+    Return a_const_object_cannot_be_written.c:13:5
+      Identifier a_const_object_cannot_be_written.c:13:12 "v"

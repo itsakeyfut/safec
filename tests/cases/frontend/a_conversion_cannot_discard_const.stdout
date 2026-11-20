@@ -1,0 +1,26 @@
+Function a_conversion_cannot_discard_const.c:1:1 "main" "int (void)"
+  Compound a_conversion_cannot_discard_const.c:1:16
+    Declaration a_conversion_cannot_discard_const.c:2:5 "c" "char"
+    Declaration a_conversion_cannot_discard_const.c:3:5 "s" "const char *"
+    Declaration a_conversion_cannot_discard_const.c:4:5 "t" "char *"
+    Declaration a_conversion_cannot_discard_const.c:5:5 "u" "const char *"
+    Expression a_conversion_cannot_discard_const.c:6:5
+      Assign a_conversion_cannot_discard_const.c:6:5 "="
+        Identifier a_conversion_cannot_discard_const.c:6:5 "s"
+        Unary a_conversion_cannot_discard_const.c:6:9 "&"
+          Identifier a_conversion_cannot_discard_const.c:6:10 "c"
+    Expression a_conversion_cannot_discard_const.c:7:5
+      Assign a_conversion_cannot_discard_const.c:7:5 "="
+        Identifier a_conversion_cannot_discard_const.c:7:5 "t"
+        Identifier a_conversion_cannot_discard_const.c:7:9 "s"
+    Expression a_conversion_cannot_discard_const.c:8:5
+      Assign a_conversion_cannot_discard_const.c:8:5 "="
+        Identifier a_conversion_cannot_discard_const.c:8:5 "u"
+        Unary a_conversion_cannot_discard_const.c:8:9 "&"
+          Identifier a_conversion_cannot_discard_const.c:8:10 "c"
+    Expression a_conversion_cannot_discard_const.c:9:5
+      Assign a_conversion_cannot_discard_const.c:9:5 "="
+        Identifier a_conversion_cannot_discard_const.c:9:5 "u"
+        Identifier a_conversion_cannot_discard_const.c:9:9 "t"
+    Return a_conversion_cannot_discard_const.c:10:5
+      Number a_conversion_cannot_discard_const.c:10:12 "0"

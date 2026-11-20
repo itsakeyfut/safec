@@ -1,0 +1,11 @@
+Error a_const_void_parameter_list_is_refused.c:1:1
+Function a_const_void_parameter_list_is_refused.c:2:1 "g" "int (int *const)"
+  Parameter a_const_void_parameter_list_is_refused.c:2:7 "p" "int *const" _Nonnull
+  Compound a_const_void_parameter_list_is_refused.c:2:30
+    Return a_const_void_parameter_list_is_refused.c:3:5
+      Unary a_const_void_parameter_list_is_refused.c:3:12 "*"
+        Identifier a_const_void_parameter_list_is_refused.c:3:13 "p"
+Function a_const_void_parameter_list_is_refused.c:5:1 "main" "int (void)"
+  Compound a_const_void_parameter_list_is_refused.c:5:16
+    Return a_const_void_parameter_list_is_refused.c:6:5
+      Number a_const_void_parameter_list_is_refused.c:6:12 "0"

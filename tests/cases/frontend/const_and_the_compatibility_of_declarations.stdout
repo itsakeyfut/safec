@@ -1,0 +1,12 @@
+Declaration const_and_the_compatibility_of_declarations.c:1:1 "f" "void (const int)"
+  Parameter const_and_the_compatibility_of_declarations.c:1:8 "a" "const int"
+Declaration const_and_the_compatibility_of_declarations.c:2:1 "f" "void (int)"
+  Parameter const_and_the_compatibility_of_declarations.c:2:8 "a" "int"
+Declaration const_and_the_compatibility_of_declarations.c:3:1 "g" "void (const int *)"
+  Parameter const_and_the_compatibility_of_declarations.c:3:8 "a" "const int *"
+Declaration const_and_the_compatibility_of_declarations.c:4:1 "g" "void (int *)"
+  Parameter const_and_the_compatibility_of_declarations.c:4:8 "a" "int *"
+Function const_and_the_compatibility_of_declarations.c:5:1 "main" "int (void)"
+  Compound const_and_the_compatibility_of_declarations.c:5:16
+    Return const_and_the_compatibility_of_declarations.c:6:5
+      Number const_and_the_compatibility_of_declarations.c:6:12 "0"

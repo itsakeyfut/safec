@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `int *` with `const void *`
+    ╭─[ a_conditional_reads_its_arms_after_lvalue_conversion.c:15:14 ]
+    │
+ 15 │     int *u = 1 ? vp : cp;
+    │          ┬   ─────┬─────  
+    │          ╰──────────────── this holds `int *`
+    │                   │       
+    │                   ╰─────── this is `const void *`
+────╯

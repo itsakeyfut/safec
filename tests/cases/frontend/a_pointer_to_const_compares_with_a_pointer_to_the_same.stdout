@@ -1,0 +1,42 @@
+Function a_pointer_to_const_compares_with_a_pointer_to_the_same.c:1:1 "main" "int (void)"
+  Compound a_pointer_to_const_compares_with_a_pointer_to_the_same.c:1:16
+    Declaration a_pointer_to_const_compares_with_a_pointer_to_the_same.c:2:5 "x" "int"
+    Declaration a_pointer_to_const_compares_with_a_pointer_to_the_same.c:3:5 "c" "const int *"
+    Declaration a_pointer_to_const_compares_with_a_pointer_to_the_same.c:4:5 "n" "int *"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:5:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:5:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:5:5 "c"
+        Unary a_pointer_to_const_compares_with_a_pointer_to_the_same.c:5:9 "&"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:5:10 "x"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:6:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:6:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:6:5 "n"
+        Unary a_pointer_to_const_compares_with_a_pointer_to_the_same.c:6:9 "&"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:6:10 "x"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:5 "x"
+        Binary a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:9 "<"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:9 "c"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:7:13 "n"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:5 "x"
+        Binary a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:9 "-"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:9 "c"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:8:13 "n"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:5 "x"
+        Binary a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:9 "=="
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:9 "c"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:9:14 "n"
+    Expression a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:5
+      Assign a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:5 "="
+        Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:5 "c"
+        Conditional a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:9
+          Number a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:9 "1"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:13 "c"
+          Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:10:17 "n"
+    Return a_pointer_to_const_compares_with_a_pointer_to_the_same.c:11:5
+      Identifier a_pointer_to_const_compares_with_a_pointer_to_the_same.c:11:12 "x"

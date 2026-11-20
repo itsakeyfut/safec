@@ -3751,6 +3751,10 @@ cases! {
         a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `const` qualifier changes nothing the memory check reads: a use
+        // after a free through a `const int *` is proved as through an
+        // `int *`.
+        a_use_after_a_free_through_a_pointer_to_const_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `do` body runs before its condition is asked, so a free in it has
         // happened by the time the loop is left, whatever the condition says:
         // proved. Mutation: lower `do` as `while`, asking before the body;
@@ -9015,6 +9019,56 @@ cases! {
         unterminated_string_literal: ["--emit", "tokens"],
         void_is_not_the_only_parameter: ["--emit", "ast"],
         while_statement: ["--emit", "ast"],
+        // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
+        // `++` and `--` to a `const` object, and an assignment to a `const`
+        // pointer, are each `SC0318`; what it points to may be written. A
+        // `const` after the type specifier is one too. Mutation: read only a
+        // `const` before it; this fails.
+        // Mutation: have `refuse_unwritable` not ask `Ast::is_const`; every
+        // report goes.
+        a_const_object_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.2.3 p3 and p4: a member of a `const` structure, through
+        // `.` or `->`, is `const`, and so is an element of its array member
+        // (6.7.3 p10). Mutation: leave a member access's type unqualified;
+        // the three reports go. Qualify only the array, not its elements;
+        // the third goes. A structure with a `const` member is no
+        // modifiable lvalue either (6.3.2.1 p1). Mutation: have
+        // `has_const_member` answer false; the last report goes. Found by
+        // review.
+        a_member_of_a_const_struct_cannot_be_written: ["--emit", "ast"],
+        // C17 6.5.15 p3 and p6, after the lvalue conversion of 6.3.2.1 p2:
+        // a `const struct S` arm beside a `struct S` and an `int *const` arm
+        // beside an `int *` are accepted, and a `void *` arm beside a
+        // `const int *` gives a `const void *`, which `int *` may not take.
+        // Mutation: give the `void *` arm's type unqualified; the `SC0302`
+        // goes. Compare struct arms with their qualifiers; the first is
+        // refused. Found by review.
+        a_conditional_reads_its_arms_after_lvalue_conversion: ["--emit", "ast"],
+        // C17 J.2 leaves a `const void` parameter list undefined and clang
+        // refuses it; refused here, not read as `(void)`. Mutation: drop the
+        // check; the report goes. Found by review.
+        a_const_void_parameter_list_is_refused: ["--emit", "ast"],
+        // A nullability specifier after a pointer's `const`, as clang reads
+        // it, and before it. Mutation: read one only before the `const`;
+        // the first is refused. Found by review.
+        a_nullability_is_read_before_or_after_const: ["--emit", "ast"],
+        // C17 6.5.6 p3, 6.5.8 p2, 6.5.9 p2 and 6.5.15 p3 take pointers to
+        // qualified or unqualified versions of compatible types: nothing
+        // here is reported. Mutation: ask `compatible` rather than
+        // `compatible_unqualified` of the two pointees in any of the four;
+        // its operator is refused. Found by review.
+        a_pointer_to_const_compares_with_a_pointer_to_the_same: ["--emit", "ast"],
+        // C17 6.5.16.1 p1: a pointer to `const` may not become a pointer to
+        // what is not, and may be made from one. Mutation: drop the
+        // qualifier rule from `assignable`; the `SC0302` goes. Require the
+        // qualifiers to be equal; the conversion that adds one is refused.
+        a_conversion_cannot_discard_const: ["--emit", "ast"],
+        // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
+        // of the function's type, and one on what a pointer points to is.
+        // Mutation: have `compatible` not ask `Ast::is_const`; the second pair
+        // is accepted. Have `compatible_unqualified` keep the qualifier; the
+        // first is refused.
+        const_and_the_compatibility_of_declarations: ["--emit", "ast"],
         // The body before the condition, as they run. Mutation: drop the
         // dump's `Do` arm; it does not build. Print the condition first; the
         // children swap.

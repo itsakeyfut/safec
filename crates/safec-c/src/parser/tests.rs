@@ -620,10 +620,8 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`register`",
             "6.7.1",
         ),
-        ("const int x;\n", "`const`", "6.7.3"),
         ("volatile int x;\n", "`volatile`", "6.7.3"),
         ("int *restrict p;\n", "a qualifier after `*`", "6.7.6.1"),
-        ("int *const p;\n", "a qualifier after `*`", "6.7.6.1"),
         ("int *volatile p;\n", "a qualifier after `*`", "6.7.6.1"),
         ("int *_Atomic p;\n", "a qualifier after `*`", "6.7.6.1"),
         (
@@ -680,7 +678,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`inline`",
             "6.7.4",
         ),
-        ("int main(void) { const int x = 0; }\n", "`const`", "6.7.3"),
         (
             "int main(void) { _Alignas(4) int x; }\n",
             "`_Alignas`",
@@ -691,20 +688,13 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "`_Static_assert`",
             "6.7.10",
         ),
-        ("struct S { const int a; };\n", "`const`", "6.7.3"),
         ("struct S { _Alignas(4) int a; };\n", "`_Alignas`", "6.7.5"),
         (
             "struct S { _Static_assert(1, \"x\"); int a; };\n",
             "`_Static_assert`",
             "6.7.10",
         ),
-        ("void f(const int a);\n", "`const`", "6.7.3"),
         ("void f(register int a);\n", "`register`", "6.7.1"),
-        (
-            "int main(void) { for (const int i = 0; i; ) ; }\n",
-            "`const`",
-            "6.7.3",
-        ),
         (
             "int main(void) { for (auto int i = 0; i; ) ; }\n",
             "`auto`",
@@ -721,10 +711,7 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "6.7.5",
         ),
         // A second specifier, after one this parser reads.
-        ("int const x;\n", "`const`", "6.7.3"),
         ("int unsigned x;\n", "`unsigned`", "6.7.2"),
-        ("struct S { int a; } const s;\n", "`const`", "6.7.3"),
-        ("void f(int const a);\n", "`const`", "6.7.3"),
         ("int main(void) { int static x; }\n", "`static`", "6.7.1"),
         // The token pairs.
         (
@@ -936,7 +923,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
         ("_Thread_local", "6.7.1", &[FileScope]),
         ("auto", "6.7.1", &[BlockScope, ForInit]),
         ("register", "6.7.1", &[BlockScope, Parameter, ForInit]),
-        ("const", "6.7.3", SPECIFIER),
         ("volatile", "6.7.3", SPECIFIER),
         ("_Atomic", "6.7.3", SPECIFIER),
         ("short", "6.7.2", SPECIFIER),
