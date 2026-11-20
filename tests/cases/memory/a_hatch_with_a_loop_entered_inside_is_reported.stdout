@@ -1,0 +1,2 @@
+Hatch a_hatch_with_a_loop_entered_inside_is_reported.c:3:50 "f"
+  Conclusion a_hatch_with_a_loop_entered_inside_is_reported.c:3:50 "SC0415" "unknown" "`f` has a loop entered other than at its top, which the memory check does not read yet"

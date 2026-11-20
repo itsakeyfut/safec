@@ -1,0 +1,8 @@
+Function a_label_defined_twice_and_a_goto_to_none.c:1:1 "f" "int (void)"
+  Compound a_label_defined_twice_and_a_goto_to_none.c:1:13
+    Goto a_label_defined_twice_and_a_goto_to_none.c:2:5 "nowhere"
+    Labeled a_label_defined_twice_and_a_goto_to_none.c:3:1 "l"
+      Expression a_label_defined_twice_and_a_goto_to_none.c:4:5
+    Labeled a_label_defined_twice_and_a_goto_to_none.c:5:1 "l"
+      Return a_label_defined_twice_and_a_goto_to_none.c:6:5
+        Number a_label_defined_twice_and_a_goto_to_none.c:6:12 "0"

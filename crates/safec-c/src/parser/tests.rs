@@ -601,21 +601,16 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// outside a loop. Mutation: drop any of those checks; its control fails.
 ///
 /// Mutations: delete any row of `unread_keyword`, change the clause of any
-/// token pair, or drop any of the label, character, string, cast, `...`,
+/// token pair, or drop any of the character, string, cast, `...`,
 /// bracket, `[*]` or pointer-qualifier checks, or any one qualifier from
 /// either qualifier check. A row in the first list fails. Let a `...` come
-/// first, `static` into brackets outside a parameter, or a label, character
+/// first, `static` into brackets outside a parameter, or a character
 /// constant or string literal be asked about anywhere but its own position;
 /// a row in the second list fails.
 #[test]
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
         ("int main(void) { switch (1) { } }\n", "`switch`", "6.8.4.2"),
-        (
-            "int main(void) { goto l; l: return 0; }\n",
-            "`goto`",
-            "6.8.6.1",
-        ),
         ("typedef int T;\n", "`typedef`", "6.7.8"),
         ("extern int x;\n", "`extern`", "6.7.1"),
         ("static int x;\n", "`static`", "6.7.1"),
@@ -733,7 +728,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ("void f(int const a);\n", "`const`", "6.7.3"),
         ("int main(void) { int static x; }\n", "`static`", "6.7.1"),
         // The token pairs.
-        ("int main(void) { l: return 0; }\n", "a label", "6.8.1"),
         (
             "int main(void) { return 'a'; }\n",
             "a character constant",
@@ -938,7 +932,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
 
     let keywords: &[(&str, &str, &[At])] = &[
         ("switch", "6.8.4.2", &[Statement]),
-        ("goto", "6.8.6.1", &[Statement]),
         ("typedef", "6.7.8", &[FileScope, BlockScope]),
         ("extern", "6.7.1", &[FileScope, BlockScope]),
         ("static", "6.7.1", &[FileScope, BlockScope]),

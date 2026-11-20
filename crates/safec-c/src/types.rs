@@ -1731,9 +1731,11 @@ impl Checker<'_> {
                 }
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
+            Stmt::Labeled { body, .. } => self.receivers_in(ast, *body, returning, diagnostics),
             Stmt::Expression { .. }
             | Stmt::Break { .. }
             | Stmt::Continue { .. }
+            | Stmt::Goto { .. }
             | Stmt::Error { .. } => {}
         }
     }

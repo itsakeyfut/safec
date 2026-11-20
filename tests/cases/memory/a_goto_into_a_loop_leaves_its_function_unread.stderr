@@ -1,0 +1,10 @@
+error[SC0415]: `f` has a loop entered other than at its top, which the memory check does not read yet
+   ╭─[ a_goto_into_a_loop_leaves_its_function_unread.c:3:5 ]
+   │
+ 3 │ int f(int c) {
+   │     ┬  
+   │     ╰── nothing about this function's memory is proved
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: jump to the top of the loop instead

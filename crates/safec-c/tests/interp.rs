@@ -225,6 +225,70 @@ fn a_jump_out_of_a_loop_body_ends_its_storage() {
     assert!(trap.why.contains("scope has ended"), "{trap:?}");
 }
 
+/// A forward `goto` skips what is between it and its label, and a backward
+/// one goes round again. C17 6.8.6.1 p2.
+///
+/// Mutation: end a backward `goto` with a `return` rather than the jump; this
+/// fails.
+#[test]
+fn a_goto_goes_to_its_label_forward_and_backward() {
+    let forward = ran(
+        "int main(void) {\n    int n;\n    n = 1;\n    goto done;\n    n = 100;\ndone:\n    return n;\n}\n",
+    );
+    assert_eq!(forward, Ok(Value::Int(1)));
+    let backward = ran(
+        "int main(void) {\n    int n;\n    n = 0;\nagain:\n    n = n + 1;\n    if (n < 3) goto again;\n    return n;\n}\n",
+    );
+    assert_eq!(backward, Ok(Value::Int(3)));
+}
+
+/// A `goto` into a block begins the storage of what the block declared
+/// before the label, which the jump skips. ADR-0114.
+///
+/// The block runs once from its top and ends, so its local is dead when the
+/// second jump enters it past the declaration.
+///
+/// Mutation: have `jump` begin nothing in a scope only the label has open;
+/// the write to `x` after the second jump stops the run.
+#[test]
+fn a_goto_into_a_block_begins_what_it_skips() {
+    let entered = ran(
+        "int main(void) {\n    int n;\n    int r;\n    n = 0;\n    r = 0;\nagain:\n    if (n == 1) goto inside;\n    {\n        int x;\n        x = 5;\ninside:\n        x = 7;\n        r = r + x;\n    }\n    n = n + 1;\n    if (n < 2) goto again;\n    return r;\n}\n",
+    );
+    assert_eq!(entered, Ok(Value::Int(14)));
+}
+
+/// A forward `goto` within one block begins what it skips there, and only
+/// that: what the block declared before the jump keeps its value.
+///
+/// Mutation: have `jump` begin nothing the deepest shared scope declared;
+/// the second turn writes `z` after the first turn's end of it, and the run
+/// stops. Mutation: have it begin that scope's whole list at the label; `y`
+/// is begun again, unwritten, and the read of it stops the run.
+#[test]
+fn a_goto_past_a_declaration_begins_only_what_it_skips() {
+    let skipped = ran(
+        "int main(void) {\n    int n;\n    int r;\n    n = 0;\n    r = 0;\n    while (n < 2) {\n        int y;\n        y = 1;\n        goto past;\n        int z;\n    past:\n        z = 2;\n        r = r + y + z;\n        n = n + 1;\n    }\n    return r;\n}\n",
+    );
+    assert_eq!(skipped, Ok(Value::Int(6)));
+}
+
+/// A `goto` out of a block ends the storage of what it leaves, as the
+/// block's closing brace would have.
+///
+/// Mutation: have `jump` end nothing in a scope only the `goto` has open;
+/// the read through `p` answers 1.
+#[test]
+fn a_goto_out_of_a_block_ends_what_it_leaves() {
+    let left = ran(
+        "int main(void) {\n    int *p;\n    {\n        int x;\n        x = 1;\n        p = &x;\n        goto out;\n    }\nout:\n    return *p;\n}\n",
+    );
+    let Err(trap) = left else {
+        panic!("a read of storage a `goto` ended: {left:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
 /// A pointer is a place, and writing through one writes the place.
 ///
 /// Mutation: have `Rvalue::Address` answer a copy of what the place holds.

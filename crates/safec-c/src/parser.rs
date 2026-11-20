@@ -4,8 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! with `break` and `continue` from 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is `switch`, `goto`, a labelled statement, `union`, a bit-field, an anonymous member, casts,
+//! with `break`, `continue`, `goto` and labels from 6.8.1 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is `switch`, `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
@@ -389,7 +389,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
         Keyword::Switch => ("`switch`", "6.8.4.2", STATEMENT),
-        Keyword::Goto => ("`goto`", "6.8.6.1", STATEMENT),
         Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
         Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
         Keyword::Static => ("`static`", "6.7.1", STORAGE),
@@ -2026,6 +2025,24 @@ impl Parser<'_> {
             return self.jump_statement(start, diagnostics);
         }
 
+        // C17 6.8.6.1's `goto identifier ;`. A `goto` followed by anything
+        // else is not C, and is left to read as the expression it cannot be.
+        if self.check(TokenKind::Keyword(Keyword::Goto))
+            && self.peek_at(1).kind == TokenKind::Identifier
+        {
+            return self.goto_statement(start, diagnostics);
+        }
+
+        // C17 6.8.1's `identifier : statement`. A label with nothing after it
+        // in its block, or with a declaration after it, is C23 and not C17,
+        // and is left to read as an expression, which reports it.
+        if self.check(TokenKind::Identifier)
+            && self.peek_at(1).kind == TokenKind::Punct(Punct::Colon)
+            && !self.ends_a_label_c17_forbids()
+        {
+            return self.labeled_statement(start, diagnostics);
+        }
+
         // A statement C allows here that this parser does not read: a keyword
         // that begins one, or a label.
         if self.refuse_unread(Position::Statement, diagnostics) {
@@ -2177,6 +2194,38 @@ impl Parser<'_> {
         } else {
             Stmt::Continue { span }
         })
+    }
+
+    /// `goto identifier ;`, its keyword and name already known to be here.
+    /// Which label it names is name resolution's (C17 6.2.1 p3).
+    fn goto_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+        let label = self.advance().span;
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+        let span = self.join(start, self.previous().span, diagnostics);
+        self.ast.push_stmt(Stmt::Goto { label, span })
+    }
+
+    /// `identifier : statement`, its name and `:` already known to be here.
+    ///
+    /// The statement nests inside the label, so it takes a level.
+    fn labeled_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let label = self.advance().span;
+        self.advance();
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = parser.join(start, parser.previous().span, diagnostics);
+                parser.ast.push_stmt(Stmt::Labeled { label, body, span })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
     }
 
     /// `do statement while ( expression ) ;`. C17 6.8.5 p1.
@@ -2896,15 +2945,12 @@ impl Parser<'_> {
     /// Report valid C this parser does not read yet, if the token here begins
     /// some at `at`, and say whether it did.
     ///
-    /// A keyword asks [`unread_keyword`]. Two more need a second token or a
-    /// token kind: an identifier and a `:` begin a label (C17 6.8.1), and a
-    /// character constant or a string literal (6.4.4.4, 6.4.5) begins an
-    /// expression this parser does not read.
+    /// A keyword asks [`unread_keyword`]. One more needs a second token or a
+    /// token kind: a character constant or a string literal (6.4.4.4, 6.4.5)
+    /// begins an expression this parser does not read.
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
         let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {
-            // 6.8.6.1's `goto identifier ;`: anything else after it is not C.
-            TokenKind::Keyword(Keyword::Goto) if next != TokenKind::Identifier => None,
             TokenKind::Keyword(Keyword::Atomic) if next == TokenKind::Punct(Punct::LeftParen) => {
                 unread_keyword(Keyword::Atomic, at).map(|unread| Unread {
                     clause: "6.7.2.4",
@@ -2912,18 +2958,6 @@ impl Parser<'_> {
                 })
             }
             TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
-            // 6.8.1's `identifier : statement`. A label with nothing after it
-            // in its block, or with a declaration after it, is C23 and not C17.
-            TokenKind::Identifier
-                if at == Position::Statement
-                    && next == TokenKind::Punct(Punct::Colon)
-                    && !self.ends_a_label_c17_forbids() =>
-            {
-                Some(Unread {
-                    what: "a label",
-                    clause: "6.8.1",
-                })
-            }
             TokenKind::Character if at == Position::Expression => Some(Unread {
                 what: "a character constant",
                 clause: "6.4.4.4",

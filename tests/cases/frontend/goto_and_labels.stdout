@@ -1,0 +1,21 @@
+Function goto_and_labels.c:1:1 "main" "int (void)"
+  Compound goto_and_labels.c:1:16
+    Declaration goto_and_labels.c:2:5 "n" "int"
+    Expression goto_and_labels.c:3:5
+      Assign goto_and_labels.c:3:5 "="
+        Identifier goto_and_labels.c:3:5 "n"
+        Number goto_and_labels.c:3:9 "0"
+    Labeled goto_and_labels.c:4:1 "again"
+      Expression goto_and_labels.c:5:5
+        Assign goto_and_labels.c:5:5 "="
+          Identifier goto_and_labels.c:5:5 "n"
+          Binary goto_and_labels.c:5:9 "+"
+            Identifier goto_and_labels.c:5:9 "n"
+            Number goto_and_labels.c:5:13 "1"
+    If goto_and_labels.c:6:5
+      Binary goto_and_labels.c:6:9 "<"
+        Identifier goto_and_labels.c:6:9 "n"
+        Number goto_and_labels.c:6:13 "3"
+      Goto goto_and_labels.c:6:16 "again"
+    Return goto_and_labels.c:7:5
+      Identifier goto_and_labels.c:7:12 "n"
