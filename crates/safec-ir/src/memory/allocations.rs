@@ -7,9 +7,8 @@
 //! report reads in. See ADR-0063.
 
 use crate::cfg::Cfg;
-use crate::ir::{FuncId, Function, LocalId, Operand, Place, TranslationUnit};
+use crate::ir::{FuncId, Function, LocalId, Operand, Place, Shape, TranslationUnit};
 use crate::library::Callee;
-use crate::reads::derefs;
 use crate::source::SourceMap;
 
 use super::index::{LocalIdx, Table};
@@ -141,10 +140,17 @@ pub(super) fn handed_places<'a>(
         let Operand::Copy(place) = argument else {
             continue;
         };
-        let pointer = if place.projection.is_empty() {
+        let pointer = if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             analysis.is_pointer(function, place.local)
         } else {
-            derefs(place) > 0 && analysis.may_be_pointer(function, place)
+            (match place.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) > 0
+                && analysis.may_be_pointer(function, place)
         };
         if !pointer || asked.contains(&place) {
             continue;

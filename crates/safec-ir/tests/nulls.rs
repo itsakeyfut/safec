@@ -68,10 +68,7 @@ fn a_unit(names: &Names, parameters: &[TyId]) -> (TranslationUnit, Function, TyI
 /// `*place = 1;`, which is a write through whatever `place` names.
 fn write_through(local: LocalId, at: Span) -> Element {
     Element::Assign(Operation {
-        place: Place {
-            local,
-            projection: vec![Projection::Deref],
-        },
+        place: Place::new(local, vec![Projection::Deref]),
         value: Rvalue::Use(Operand::Constant(1)),
         origin: Origin::Written(at),
     })
@@ -545,10 +542,7 @@ fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
                 // `pp = *pp;`
                 Element::Assign(Operation {
                     place: Place::local(pp),
-                    value: Rvalue::Use(Operand::Copy(Place {
-                        local: pp,
-                        projection: vec![Projection::Deref],
-                    })),
+                    value: Rvalue::Use(Operand::Copy(Place::new(pp, vec![Projection::Deref]))),
                     origin: Origin::Written(names.at[0]),
                 }),
                 write_through(pp, names.at[1]),
@@ -614,10 +608,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
             elements: vec![],
             terminator: Terminator::Call {
                 callee,
-                arguments: vec![Operand::Copy(Place {
-                    local: p,
-                    projection: vec![Projection::Deref],
-                })],
+                arguments: vec![Operand::Copy(Place::new(p, vec![Projection::Deref]))],
                 destination: Some(Place::local(p)),
                 then: Some(after),
                 origin: Origin::Written(names.at[0]),
@@ -737,13 +728,10 @@ fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
                     origin: Origin::Written(names.at[0]),
                 }),
                 Element::Assign(Operation {
-                    place: Place {
-                        local: t,
-                        projection: vec![
-                            Projection::Index(Operand::Constant(0)),
-                            Projection::Deref,
-                        ],
-                    },
+                    place: Place::new(
+                        t,
+                        vec![Projection::Index(Operand::Constant(0)), Projection::Deref],
+                    ),
                     value: Rvalue::Use(Operand::Constant(1)),
                     origin: Origin::Written(names.at[1]),
                 }),
@@ -797,13 +785,10 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
                     origin: Origin::Written(names.at[0]),
                 }),
                 Element::Assign(Operation {
-                    place: Place {
-                        local: p,
-                        projection: vec![
-                            Projection::Deref,
-                            Projection::Index(Operand::Constant(0)),
-                        ],
-                    },
+                    place: Place::new(
+                        p,
+                        vec![Projection::Deref, Projection::Index(Operand::Constant(0))],
+                    ),
                     value: Rvalue::Use(Operand::Constant(1)),
                     origin: Origin::Written(names.at[1]),
                 }),
@@ -1235,10 +1220,7 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
 
     let computed = |s: LocalId| {
         [
-            Rvalue::Use(Operand::Copy(Place {
-                local: s,
-                projection: vec![Projection::Deref],
-            })),
+            Rvalue::Use(Operand::Copy(Place::new(s, vec![Projection::Deref]))),
             Rvalue::Use(Operand::Constant(8)),
             Rvalue::Unary {
                 op: UnOp::Neg,
@@ -1517,10 +1499,7 @@ fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy
 
         let plain = write_through(p, names.at[0]);
         let through_memory = Element::Assign(Operation {
-            place: Place {
-                local: pp,
-                projection: vec![Projection::Deref, Projection::Deref],
-            },
+            place: Place::new(pp, vec![Projection::Deref, Projection::Deref]),
             value: Rvalue::Use(Operand::Constant(1)),
             origin: Origin::Written(names.at[0]),
         });

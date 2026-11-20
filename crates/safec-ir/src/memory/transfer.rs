@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::dataflow::Analysis;
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
-    Projection, Rvalue, Terminator, Ty, TyId,
+    Projection, Rvalue, Shape, Terminator, Ty, TyId,
 };
 use crate::source::Span;
 
@@ -25,7 +25,7 @@ use super::parts::{
 };
 use super::store::{Landing, StoreKind, Strong};
 use crate::library::{Callee, Library};
-use crate::reads::{dereferenced_in_element, dereferenced_in_terminator, derefs};
+use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 
 /// **What a write writes, as the transfer asks it**: whether what it
 /// writes may be a pointer, how many levels below it hold pointers, and how
@@ -178,9 +178,27 @@ impl Allocations<'_> {
         let copies = matches!(kind, Callee::Copies);
         let from_part = match arguments {
             [Operand::Copy(dest), Operand::Copy(source), ..] if copies => {
-                let placed = (dest.projection.is_empty() || derefs(dest) > 0)
-                    && (source.projection.is_empty() || derefs(source) > 0);
-                let (sites, locals) = value.levels_below(source.local, derefs(source));
+                let placed = ((match dest.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) || (match dest.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) > 0)
+                    && ((match source.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    }) || (match source.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    }) > 0);
+                let (sites, locals) = value.levels_below(
+                    source.local,
+                    match source.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    },
+                );
                 placed
                     && (sites.iter().any(|&site| {
                         value.written[site].may_hold_part() || value.part_before[site]
@@ -271,7 +289,12 @@ impl Allocations<'_> {
             // is: `*vp = &a[0];` with `vp` a `void **` stores a pointer that
             // walks `a[0]`'s row, and read back as an `int *` it still does.
             // Found by review (#947). See `Self::converted`.
-            Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+            Rvalue::Use(Operand::Copy(source))
+                if (match source.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) =>
+            {
                 let mut held = value.points_to[source.local].clone();
                 if let Some(to) = self.unit.place_ty(function, into) {
                     self.converted(&mut held, function.local(source.local), to, &value.extent);
@@ -411,7 +434,10 @@ impl Allocations<'_> {
             (BinOp::Sub, Operand::Copy(place), Operand::Constant(c)) => (place, *c, -1),
             _ => return None,
         };
-        if !pointer.projection.is_empty() {
+        if !(match pointer.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        }) {
             return None;
         }
         let pointee = match self.unit.ty(function.local(pointer.local)) {
@@ -494,8 +520,9 @@ impl Allocations<'_> {
         landing: &Landing,
         value: &Known,
     ) -> Option<Site> {
-        if place.projection.as_slice() != [Projection::Deref] {
-            return None;
+        match place.shape() {
+            Shape::Deref(1) => {}
+            Shape::Local | Shape::Deref(_) | Shape::Indexed => return None,
         }
         self.replaces(
             landing,
@@ -956,7 +983,10 @@ impl Allocations<'_> {
         place: &Place,
         value: &Known,
     ) -> Levels {
-        if place.projection.is_empty() {
+        if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             return value.points_to[place.local].contents_at_most();
         }
         let mut levels = self
@@ -964,7 +994,10 @@ impl Allocations<'_> {
             .place_ty(function, place)
             .and_then(|ty| self.type_levels(ty))
             .unwrap_or_default();
-        let depth = derefs(place);
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth > 0 {
             levels.bound_by(
                 &value
@@ -1002,7 +1035,10 @@ impl Allocations<'_> {
     pub(super) fn believed_read(&self, function: &Function, place: &Place, value: &Known) -> u64 {
         let typed = self.typed_width(function, place);
         let as_read = typed.unwrap_or(0);
-        let depth = derefs(place);
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         // **As its type where the read is reported as indeterminate**:
         // nothing was stored in fresh memory, so nothing records a width,
         // and the defect is the read, reported once where it happens, as the
@@ -1236,7 +1272,10 @@ impl Allocations<'_> {
         self.read_at(
             function,
             source.local,
-            derefs(source),
+            match source.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            },
             value,
             ReadAs::Typed(source),
         )
@@ -1558,7 +1597,10 @@ impl Allocations<'_> {
         // the bytes of a pointer and put it back together. Never everything
         // stored anywhere, which is what refused a character handed to a call
         // in correct string code. See ADR-0046.
-        let depth = derefs(place);
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if depth > 0 && self.reads_a_byte(function, place) {
             return known
                 .levels_below(place.local, depth)
@@ -1570,15 +1612,20 @@ impl Allocations<'_> {
             return Vec::new();
         }
         let held = &known.points_to[place.local];
-        if place.projection.is_empty() {
+        if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             return if held.beyond().any_unknown() {
                 known.stored()
             } else {
                 Vec::new()
             };
         }
-        if place.projection.as_slice() == [Projection::Deref]
-            && !held.beyond().any_unknown()
+        if (match place.shape() {
+            Shape::Deref(1) => true,
+            Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+        }) && !held.beyond().any_unknown()
             && held.sites().next().is_some()
         {
             return held
@@ -1657,7 +1704,12 @@ impl Allocations<'_> {
                     // same, as ADR-0051 believes it.
                     | Callee::Ends => false,
                 };
-                if handed_over && place.projection.is_empty() {
+                if handed_over
+                    && (match place.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    })
+                {
                     marks[place.local] = true;
                 }
             }
@@ -1675,10 +1727,23 @@ impl Allocations<'_> {
         let mut handed_locals: Vec<LocalIdx> = Vec::new();
         for argument in handed {
             if let Operand::Copy(place) = argument {
-                if place.projection.is_empty() {
+                if match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                } {
                     handed_locals.extend(value.written_through(place.local));
                 } else {
-                    handed_locals.extend(value.levels_below(place.local, derefs(place)).1);
+                    handed_locals.extend(
+                        value
+                            .levels_below(
+                                place.local,
+                                match place.shape() {
+                                    Shape::Deref(depth) => depth,
+                                    Shape::Local | Shape::Indexed => 0,
+                                },
+                            )
+                            .1,
+                    );
                 }
             }
         }
@@ -1752,7 +1817,10 @@ impl Allocations<'_> {
                 Operand::Copy(place) => place,
             };
 
-            if !place.projection.is_empty() {
+            if !(match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) {
                 // `free(*pp)` frees whatever `pp` points at, and this check
                 // follows locals rather than what they point at.
                 reached.push(Reached::Lost(LostReason::ReadOutOfMemory));
@@ -3013,14 +3081,20 @@ impl Analysis for Allocations<'_> {
                 // second. `**ppp = q` is therefore a write this check cannot
                 // follow at all, and so is a write through any other
                 // projection.
-                let one_step = operation.place.projection.as_slice() == [Projection::Deref];
+                let one_step = match operation.place.shape() {
+                    Shape::Deref(1) => true,
+                    Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+                };
                 // What was unwritten before this store, for a local it may
                 // have written past. See `Allocations::written_past_its_end`.
                 let unwritten_before = value.unwritten_locals();
                 // Where it lands, before anything here writes: the one
                 // description of this write the unwritten belief applies and
                 // the replacement below reads (#778).
-                let deep = derefs(&operation.place);
+                let deep = match operation.place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                };
                 let before = self.landing(
                     value,
                     operation.place.local,
@@ -3062,13 +3136,19 @@ impl Analysis for Allocations<'_> {
                 // The locals it may land in, asked before it lands, so that
                 // what they record below is about this store. See
                 // `Known::named_after_a_store`.
-                let landed =
-                    (!operation.place.projection.is_empty() && certain.is_none()).then(|| {
-                        value.locals_a_write_may_land_in(
-                            operation.place.local,
-                            derefs(&operation.place),
-                        )
-                    });
+                let landed = (!(match operation.place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && certain.is_none())
+                .then(|| {
+                    value.locals_a_write_may_land_in(
+                        operation.place.local,
+                        match operation.place.shape() {
+                            Shape::Deref(depth) => depth,
+                            Shape::Local | Shape::Indexed => 0,
+                        },
+                    )
+                });
                 // What it writes of what is unwritten, after the locals it may
                 // land in are asked. See `Allocations::initialised_by`.
                 self.initialised_by(
@@ -3100,7 +3180,10 @@ impl Analysis for Allocations<'_> {
                 // indices are lowered, has no targets and lands in the
                 // exposing branch, which is a false report the reader can see
                 // until it is recorded inside the local instead. See ADR-0039.
-                if !operation.place.projection.is_empty() {
+                if !(match operation.place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) {
                     let written = self.carried(function, &operation.value, &operation.place, value);
                     // **A pointer that reaches an array only by #639's rule,
                     // stored**, into memory or into a local through its
@@ -3139,7 +3222,7 @@ impl Analysis for Allocations<'_> {
                     let recorded_load = matches!(
                         &operation.value,
                         Rvalue::Use(Operand::Copy(source))
-                            if source.projection.is_empty()
+                            if (match source.shape() { Shape::Local => true, Shape::Deref(_) | Shape::Indexed => false })
                                 && value.points_to[source.local]
                                     .beyond()
                                     .believed_to_reach_only_its_edges()
@@ -3154,7 +3237,10 @@ impl Analysis for Allocations<'_> {
                     // `unnamed` below exposes it too, since that set is a lower
                     // bound. Unplaced, `**t3 = r; free(r); ***t3` read nothing
                     // of it. See ADR-0045.
-                    let deep = derefs(&operation.place);
+                    let deep = match operation.place.shape() {
+                        Shape::Deref(depth) => depth,
+                        Shape::Local | Shape::Indexed => 0,
+                    };
                     let landing = self.landing(
                         value,
                         operation.place.local,
@@ -3262,7 +3348,12 @@ impl Analysis for Allocations<'_> {
                     // value was copied out of, whose bound a join keeps
                     // where the value's own belief it drops.
                     let held_in = match &operation.value {
-                        Rvalue::Use(Operand::Copy(place)) if place.projection.is_empty() => {
+                        Rvalue::Use(Operand::Copy(place))
+                            if (match place.shape() {
+                                Shape::Local => true,
+                                Shape::Deref(_) | Shape::Indexed => false,
+                            }) =>
+                        {
                             Some(LocalIdx::of(place.local))
                         }
                         Rvalue::Use(_)
@@ -3429,7 +3520,12 @@ impl Analysis for Allocations<'_> {
                     // a call into a temporary and a copy out of it, so without
                     // this the allocation never leaves the temporary and the
                     // headline program is not an error at all.
-                    Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+                    Rvalue::Use(Operand::Copy(source))
+                        if (match source.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }) =>
+                    {
                         let indeterminate = value.holds_fresh_read(LocalIdx::of(source.local));
                         // **Taken as the type it is assigned to**: a pointer
                         // to a row taken as a pointer to its elements walks
@@ -3581,10 +3677,10 @@ impl Analysis for Allocations<'_> {
                         // its first element: the lowering builds an index
                         // only as a constant zero, and every other element
                         // is reached by arithmetic.
-                        let at_start = taken
-                            .projection
-                            .iter()
-                            .all(|step| matches!(step, Projection::Index(Operand::Constant(0))));
+                        let at_start = taken.steps().iter().all(|step| match step {
+                            Projection::Index(Operand::Constant(0)) => true,
+                            Projection::Index(_) | Projection::Deref => false,
+                        });
                         value.replace(
                             at,
                             Held::from_marks(
@@ -3611,7 +3707,10 @@ impl Analysis for Allocations<'_> {
                                     // `Address`, and a store through it is a may-write for the
                                     // same answer, since one element written does not replace
                                     // what the rest of the array holds (#621).
-                                    writes_elsewhere: !taken.projection.is_empty(),
+                                    writes_elsewhere: !(match taken.shape() {
+                                        Shape::Local => true,
+                                        Shape::Deref(_) | Shape::Indexed => false,
+                                    }),
                                     position: Position::START,
                                     loaded: false,
                                     foreign: false,
@@ -3641,11 +3740,14 @@ impl Analysis for Allocations<'_> {
                                     // **Certainly the local**, where what was taken is the whole of it or
                                     // a one-level array's start: the one grant of the fact besides an
                                     // allocation. `&arr[k]` and `&m[0][0]` grant nothing. See ADR-0105.
-                                    alone: (taken.projection.is_empty()
-                                        || matches!(
-                                            taken.projection.as_slice(),
-                                            [Projection::Index(Operand::Constant(0))]
-                                        ))
+                                    alone: ((match taken.shape() {
+                                        Shape::Local => true,
+                                        Shape::Deref(_) | Shape::Indexed => false,
+                                    }) || match taken.steps() {
+                                        [Projection::Index(Operand::Constant(0))] => true,
+                                        [Projection::Index(_) | Projection::Deref] => false,
+                                        _ => false,
+                                    })
                                     .then(|| Referent::Local(LocalIdx::of(taken.local))),
                                 },
                             ),

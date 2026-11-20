@@ -816,10 +816,7 @@ fn address_of_deref(to: LocalId, through: LocalId, at: Span, then: BlockId) -> B
 
 /// `*local`, as a place.
 fn deref(local: LocalId) -> Place {
-    Place {
-        local,
-        projection: vec![Projection::Deref],
-    }
+    Place::new(local, vec![Projection::Deref])
 }
 
 /// Reading through a pointer after it was freed is proved unsafe, and reading
@@ -2593,8 +2590,8 @@ fn a_call_into_a_local_whose_address_escaped() {
 /// Either way the free is reported. Without the guard the pointer holds a live
 /// allocation and a first free of one is reported by nobody.
 ///
-/// Mutation: remove the `if !place.projection.is_empty() { return; }` above
-/// the call's destination in the terminator's transfer. Nothing is reported
+/// Mutation: answer `Strong::assigned` for a place of dereferences, the guard
+/// above the call's destination in `Allocations::call`. Nothing is reported
 /// and this fails on the length, which is the direction that matters: it is
 /// the check going quiet.
 #[test]
@@ -2617,10 +2614,7 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
             terminator: Terminator::Call {
                 callee: callees.malloc,
                 arguments: vec![],
-                destination: Some(Place {
-                    local: pointer,
-                    projection: vec![Projection::Deref],
-                }),
+                destination: Some(Place::new(pointer, vec![Projection::Deref])),
                 then: Some(release),
                 origin: Origin::Written(names.at[0]),
             },

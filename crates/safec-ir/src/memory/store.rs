@@ -10,7 +10,7 @@
 //! its [`StoreKind`] with no wildcard, so a kind added later is
 //! `error[E0004]` at each of them (#688).
 
-use crate::ir::{Element, LocalId, Operand, Place, Projection, Rvalue, Terminator};
+use crate::ir::{Element, LocalId, Operand, Place, Rvalue, Shape, Terminator};
 use crate::library::Callee;
 use crate::source::Span;
 
@@ -18,7 +18,6 @@ use super::allocations::Allocations;
 use super::index::{Idx, LocalIdx, Site};
 use super::known::Known;
 use super::parts::Held;
-use crate::reads::derefs;
 
 /// One write of a value into a place.
 pub(super) struct Store<'a> {
@@ -98,16 +97,25 @@ impl Allocations<'_> {
             return None;
         };
         let into = operation.place.clone();
-        let (kind, leaves, landing) = if into.projection.is_empty() {
+        let (kind, leaves, landing) = if match into.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             let leaves = known
                 .locals_named_by_unknown_code()
                 .contains(&LocalIdx::of(into.local));
             (StoreKind::Direct, leaves, None)
         } else {
-            let derefs = derefs(&into);
+            let derefs = match into.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            };
             let kind = StoreKind::Through { derefs };
             let landing = (derefs > 0).then(|| {
-                let one_step = into.projection.as_slice() == [Projection::Deref];
+                let one_step = match into.shape() {
+                    Shape::Deref(1) => true,
+                    Shape::Local | Shape::Deref(_) | Shape::Indexed => false,
+                };
                 self.landing(known, into.local, derefs, one_step, kind)
             });
             let leaves = landing
@@ -164,15 +172,21 @@ impl Allocations<'_> {
             return None;
         };
         let mut into = to.clone();
-        into.projection.push(Projection::Deref);
+        into = into.deref();
         // Where it lands as the transfer finds it: a store one dereference
         // further than its destination, so one exact dereference down where
         // the destination is a plain local, as `store_in`'s `[Deref]` is.
         let landing = self.landing(
             known,
             to.local,
-            derefs(to) + 1,
-            to.projection.is_empty(),
+            (match to.shape() {
+                Shape::Deref(depth) => depth,
+                Shape::Local | Shape::Indexed => 0,
+            }) + 1,
+            match to.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            },
             StoreKind::Copy,
         );
         let leaves = known.leaves(&into, &landing);
@@ -262,10 +276,11 @@ impl Strong {
     /// The local `place` writes by name, where it is one: no projection, as
     /// an assignment's or a call's destination with none is.
     pub(super) fn assigned(place: &Place) -> Option<Strong> {
-        place
-            .projection
-            .is_empty()
-            .then(|| Strong(LocalIdx::of(place.local)))
+        match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        }
+        .then(|| Strong(LocalIdx::of(place.local)))
     }
 
     /// The local the write replaces.
@@ -561,7 +576,7 @@ impl Allocations<'_> {
     /// **Asked by the store and the library copy alike.** The store through
     /// one dereference, the store deeper down and the copy each spelled it
     /// once, so a rule changed in one could leave the others behind (#976).
-    /// A copy's destination is `*dest`, so it asks at `derefs(dest) + 1`,
+    /// A copy's destination is `*dest`, so it asks at `(match dest.shape() { Shape::Deref(depth) => depth, Shape::Local | Shape::Indexed => 0 }) + 1`,
     /// one exact dereference where `dest` is a plain local.
     ///
     /// Mutation: answer nothing, and

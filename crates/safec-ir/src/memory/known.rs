@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ir::{LocalId, Operand, Place, TyId};
+use crate::ir::{LocalId, Operand, Place, Shape, TyId};
 use crate::source::{SourceMap, Span};
 
 use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
@@ -17,7 +17,6 @@ use super::parts::{
 };
 use super::store::{Certain, Landing, Strong, WrittenLocal};
 use super::{LostReason, named};
-use crate::reads::derefs;
 use crate::source::inside;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -930,10 +929,19 @@ impl Known {
     /// thing, and so that it is asked what `q = *tab; release(q);` is asked.
     /// See ADR-0042 and ADR-0045.
     pub(super) fn handed_reached(&self, place: &Place) -> Vec<Reached> {
-        if place.projection.is_empty() {
+        if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             self.reached_by(place.local)
         } else {
-            self.reached_below(place.local, derefs(place))
+            self.reached_below(
+                place.local,
+                match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            )
         }
     }
 
@@ -1147,10 +1155,19 @@ impl Known {
     /// for a local this check lost, whose contents are not named. See
     /// ADR-0045.
     fn handed_level(&self, place: &Place) -> Option<(BTreeSet<Site>, BTreeSet<LocalIdx>)> {
-        if place.projection.is_empty() {
+        if match place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        } {
             self.level_zero(place.local)
         } else {
-            Some(self.levels_below(place.local, derefs(place)))
+            Some(self.levels_below(
+                place.local,
+                match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                },
+            ))
         }
     }
 
@@ -1470,10 +1487,8 @@ impl Known {
             // (free(t), 0)` was two `SC0402` at `**t`, `used`'s and this
             // read's, where one freed pointer at one caret is one report
             // (#987).
-            let read_through = Place {
-                local: place.local,
-                projection: place.projection.iter().take(1).cloned().collect(),
-            };
+            let read_through =
+                Place::new(place.local, place.steps().iter().take(1).cloned().collect());
             self.meeting(at, &read_through, Read::Dereference, &reached);
         }
     }
@@ -2169,7 +2184,7 @@ impl Known {
     ///   lost local records no point at which it was fixed, so those still
     ///   take what is named now.
     ///
-    /// A store passes its place's [`derefs`], which is zero for a place that
+    /// A store passes its place's dereference count, [`Shape::Deref`]'s, which is zero for a place that
     /// is not dereferences alone; a library copy passes one more than its
     /// destination argument has, since it writes where that argument points.
     ///
@@ -2724,7 +2739,10 @@ impl Known {
     /// in silence; taken as an argument, it is asked here once and a caller
     /// cannot skip it.
     pub(super) fn leaves(&self, place: &Place, landing: &Landing) -> bool {
-        let depth = derefs(place);
+        let depth = match place.shape() {
+            Shape::Deref(depth) => depth,
+            Shape::Local | Shape::Indexed => 0,
+        };
         if landing.unnamed(self) || landing.unplaced() || self.unnamed_below(place.local, depth) {
             return true;
         }
@@ -3085,7 +3103,10 @@ impl Known {
             let Operand::Copy(place) = argument else {
                 continue;
             };
-            if !place.projection.is_empty() {
+            if !(match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) {
                 continue;
             }
             if let Some(target) = self.points_to[place.local].certain_target() {

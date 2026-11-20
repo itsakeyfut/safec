@@ -50,7 +50,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
     BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
-    Rvalue, Terminator, TranslationUnit,
+    Rvalue, Shape, Terminator, TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
 
@@ -99,7 +99,12 @@ impl Analysis for Assigned {
 
     fn element(&self, _function: &Function, element: &Element, value: &mut State) {
         match element {
-            Element::Assign(operation) if operation.place.projection.is_empty() => {
+            Element::Assign(operation)
+                if (match operation.place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) =>
+            {
                 value[operation.place.local.index()] = true;
             }
             // Each entry to the block a local is declared in is a new object,
@@ -118,7 +123,10 @@ impl Analysis for Assigned {
             ..
         } = terminator
         {
-            if place.projection.is_empty() {
+            if match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            } {
                 value[place.local.index()] = true;
             }
         }
@@ -144,11 +152,10 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                 // `&*p`: `&a[0]`, which converts an array (#621), reads
                 // nothing, and `&p` reads nothing either.
                 Rvalue::Address(place) => {
-                    if place
-                        .projection
-                        .iter()
-                        .any(|step| matches!(step, Projection::Deref))
-                    {
+                    if place.steps().iter().any(|step| match step {
+                        Projection::Deref => true,
+                        Projection::Index(_) => false,
+                    }) {
                         reads.push((place.local, at));
                     }
                 }
@@ -206,7 +213,10 @@ fn operand_reads(operand: &Operand, at: Span, reads: &mut Vec<(LocalId, Span)>) 
 /// A place reads its local where it goes through it: `*p = 1;` reads `p`,
 /// and `p = 1;` does not.
 fn place_reads(place: &Place, at: Span, reads: &mut Vec<(LocalId, Span)>) {
-    if !place.projection.is_empty() {
+    if !(match place.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) {
         reads.push((place.local, at));
     }
 }
@@ -221,13 +231,16 @@ fn assigns(function: &Function, (block, index): At, local: LocalId) -> bool {
     let block = function.block(block);
     match block.elements.get(index) {
         Some(Element::Assign(operation)) => {
-            operation.place.projection.is_empty() && operation.place.local == local
+            (match operation.place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && operation.place.local == local
         }
         Some(_) => false,
         None => matches!(
             &block.terminator,
             Terminator::Call { destination: Some(place), .. }
-                if place.projection.is_empty() && place.local == local
+                if (match place.shape() { Shape::Local => true, Shape::Deref(_) | Shape::Indexed => false }) && place.local == local
         ),
     }
 }

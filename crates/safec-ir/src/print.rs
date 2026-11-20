@@ -442,12 +442,13 @@ fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out:
     write!(out, " {:?}", name_of(place.local)).expect("writing to a string cannot fail");
     out.push('\n');
 
-    for (step, projection) in place.projection.iter().enumerate() {
+    for (step, projection) in place.steps().iter().enumerate() {
         dump_line(projection.name(), depth + 1 + step, out);
         out.push('\n');
 
-        if let Projection::Index(index) = projection {
-            dump_operand(sources, index, depth + 2 + step, out);
+        match projection {
+            Projection::Index(index) => dump_operand(sources, index, depth + 2 + step, out),
+            Projection::Deref => {}
         }
     }
 }
@@ -950,10 +951,10 @@ mod tests {
         function.push_block(Block {
             elements: vec![Element::Assign(Operation {
                 place: Place::local(function.return_place()),
-                value: Rvalue::Use(Operand::Copy(Place {
-                    local: p,
-                    projection: vec![Projection::Index(Operand::Constant(0))],
-                })),
+                value: Rvalue::Use(Operand::Copy(Place::new(
+                    p,
+                    vec![Projection::Index(Operand::Constant(0))],
+                ))),
                 origin: Origin::Written(at),
             })],
             terminator: Terminator::Return,

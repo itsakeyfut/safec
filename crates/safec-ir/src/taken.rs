@@ -28,11 +28,10 @@ pub(crate) fn address_taken(function: &Function) -> Bits<LocalIdx> {
                 // **The whole local's address, or an element's.** `&a[0]` is
                 // the address an array converts to (#621), and its own start.
                 // `&*p` is `p`'s value and not `p`'s address.
-                if !place
-                    .projection
-                    .iter()
-                    .any(|step| matches!(step, Projection::Deref))
-                {
+                if !place.steps().iter().any(|step| match step {
+                    Projection::Deref => true,
+                    Projection::Index(_) => false,
+                }) {
                     taken.set(LocalIdx::of(place.local));
                 }
             }

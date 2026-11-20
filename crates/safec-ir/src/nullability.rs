@@ -41,7 +41,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, Solution, solve};
 use crate::ir::{
     BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
-    Projection, Promise, Rvalue, Terminator, TranslationUnit, UnOp,
+    Projection, Promise, Rvalue, Shape, Terminator, TranslationUnit, UnOp,
 };
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
@@ -430,7 +430,7 @@ impl Nullability<'_> {
             .filter_map(|index| match arguments.get(index) {
                 Some(Operand::Copy(place)) => {
                     let mut through = place.clone();
-                    through.projection.push(Projection::Deref);
+                    through = through.deref();
                     Some(through)
                 }
                 Some(Operand::Constant(_)) | None => None,
@@ -506,7 +506,10 @@ pub(crate) fn tested_against_null(
     // would take the arm where `*q` is zero for the call failing.
     // `a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call`
     // loses its double free without this line.
-    if !condition.projection.is_empty() {
+    if !(match condition.shape() {
+        Shape::Local => true,
+        Shape::Deref(_) | Shape::Indexed => false,
+    }) {
         return None;
     }
     // The first shape: the branch tests the pointer itself, so it is refined
@@ -594,7 +597,10 @@ pub(crate) fn tested_against_null(
             // A store through a projection may have landed in any local,
             // because nothing in such an element says which one it lands in, so
             // there is no single local to record and the walk cannot carry on.
-            if !operation.place.projection.is_empty() {
+            if !(match operation.place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) {
                 return None;
             }
             // A direct store says exactly which local it changed, so the walk
@@ -622,7 +628,11 @@ pub(crate) fn tested_against_null(
             // conditions, and a chain that left them out would still end in
             // a comparison with zero or in no answer.
             if let Rvalue::Use(Operand::Copy(from)) = &operation.value {
-                if from.projection.is_empty() && !pointer_typed(unit, function, from.local) {
+                if (match from.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && !pointer_typed(unit, function, from.local)
+                {
                     asked = from.local;
                     continue;
                 }
@@ -759,7 +769,10 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
             }
         };
 
-        if !operation.place.projection.is_empty() {
+        if !(match operation.place.shape() {
+            Shape::Local => true,
+            Shape::Deref(_) | Shape::Indexed => false,
+        }) {
             return sources;
         }
         if operation.place.local != following {
@@ -772,7 +785,10 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
         // computed it, and there is nothing further to follow.
         match &operation.value {
             Rvalue::Use(Operand::Copy(source))
-                if source.projection.is_empty() && !changed[source.local.index()] =>
+                if (match source.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && !changed[source.local.index()] =>
             {
                 sources.push(source.local);
                 following = source.local;
@@ -807,7 +823,10 @@ fn compared_to_null(
     let local = match (lhs, rhs) {
         (Operand::Copy(place), Operand::Constant(0))
         | (Operand::Constant(0), Operand::Copy(place))
-            if place.projection.is_empty() =>
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
         {
             place.local
         }
@@ -869,7 +888,10 @@ fn through_zero(
     };
     match operand {
         Operand::Copy(place)
-            if place.projection.is_empty() && !pointer_typed(unit, function, place.local) =>
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) && !pointer_typed(unit, function, place.local) =>
         {
             Some((place.local, equal))
         }
@@ -905,7 +927,10 @@ impl Nullability<'_> {
             // not have, so nothing is claimed about it.
             Rvalue::Use(Operand::Constant(_)) => Nullness::Unknown,
             Rvalue::Use(Operand::Copy(place)) => {
-                if place.projection.is_empty() {
+                if match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                } {
                     self.known(known, place.local)
                 } else {
                     // What `*pp` holds is a question about a place rather than a
@@ -1033,7 +1058,10 @@ impl Analysis for Nullability<'_> {
         // to a variant that already exists walk past an exhaustive match.
         match element {
             Element::Assign(operation) => {
-                if operation.place.projection.is_empty() {
+                if match operation.place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                } {
                     value[operation.place.local.index()] = if moves {
                         Nullness::NonNull
                     } else {
@@ -1131,7 +1159,10 @@ impl Analysis for Nullability<'_> {
                 // Two `if`s rather than a let chain, which the workspace's
                 // `rust-version` of 1.85 does not have.
                 if let Some(place) = destination {
-                    if place.projection.is_empty() {
+                    if match place.shape() {
+                        Shape::Local => true,
+                        Shape::Deref(_) | Shape::Indexed => false,
+                    } {
                         value[place.local.index()] = match self.unit.function(*callee).promised() {
                             Some(_) => Nullness::NonNull,
                             None => Nullness::Unknown,
@@ -1339,7 +1370,10 @@ fn moved_in_element<'e>(
         .into_iter()
         .filter_map(|operand| match operand {
             Operand::Copy(place)
-                if place.projection.is_empty() && pointer_typed(unit, function, place.local) =>
+                if (match place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                }) && pointer_typed(unit, function, place.local) =>
             {
                 Some(place)
             }
@@ -1354,7 +1388,14 @@ fn moved_in_element<'e>(
 /// about what `pp`'s allocation held, which no local holds.
 fn own_local(operand: &Operand) -> Option<LocalId> {
     match operand {
-        Operand::Copy(place) if place.projection.is_empty() => Some(place.local),
+        Operand::Copy(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
+            Some(place.local)
+        }
         Operand::Copy(_) | Operand::Constant(_) => None,
     }
 }
@@ -1368,11 +1409,10 @@ fn own_local(operand: &Operand) -> Option<LocalId> {
 /// through (#621), so a unit test with IR built by hand is what holds that
 /// half.
 fn read_out_of_memory(place: &Place) -> bool {
-    place
-        .projection
-        .iter()
-        .skip(1)
-        .any(|projection| matches!(projection, Projection::Deref))
+    place.steps().iter().skip(1).any(|step| match step {
+        Projection::Deref => true,
+        Projection::Index(_) => false,
+    })
 }
 
 /// One finding for each argument a call passes to a `_Nonnull` parameter,
@@ -1507,9 +1547,11 @@ fn report_library(
     // survives, as `**pp = x;` is one finding. Found by review.
     for (_, about) in &mut findings[before..] {
         if let About::Place(place) = about {
-            let mut argument = place.clone();
-            argument.projection.pop();
-            if !argument.projection.is_empty() {
+            let argument = place.prefix(place.steps().len().saturating_sub(1));
+            if !(match argument.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) {
                 *place = argument;
             }
         }

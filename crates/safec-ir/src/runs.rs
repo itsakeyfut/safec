@@ -15,7 +15,8 @@
 
 use crate::cfg::{Cfg, Loop};
 use crate::ir::{
-    BinOp, BlockId, Element, Function, LocalId, Operand, Rvalue, Terminator, TranslationUnit, Ty,
+    BinOp, BlockId, Element, Function, LocalId, Operand, Rvalue, Shape, Terminator,
+    TranslationUnit, Ty,
 };
 
 use super::bits::Bits;
@@ -171,7 +172,12 @@ fn head_test(
     let mut written: Vec<(LocalId, Option<i128>)> = Vec::new();
     let value = |written: &[(LocalId, Option<i128>)], operand: &Operand| match operand {
         Operand::Constant(c) => small(*c),
-        Operand::Copy(place) if place.projection.is_empty() => {
+        Operand::Copy(place)
+            if (match place.shape() {
+                Shape::Local => true,
+                Shape::Deref(_) | Shape::Indexed => false,
+            }) =>
+        {
             if taken.get(LocalIdx::of(place.local)) || !holds_int(place.local) {
                 return None;
             }
@@ -194,7 +200,10 @@ fn head_test(
                     .any(|(local, _)| *local == operation.place.local);
                 let known = if again {
                     None
-                } else if operation.place.projection.is_empty() {
+                } else if match operation.place.shape() {
+                    Shape::Local => true,
+                    Shape::Deref(_) | Shape::Indexed => false,
+                } {
                     match &operation.value {
                         Rvalue::Use(operand) => value(&written, operand),
                         Rvalue::Binary { op, lhs, rhs } => {
@@ -250,7 +259,13 @@ fn constant_on_the_way_in(
         for element in here.elements.iter().rev() {
             match element {
                 Element::Assign(operation) if operation.place.local == local => {
-                    return match (&operation.value, operation.place.projection.is_empty()) {
+                    return match (
+                        &operation.value,
+                        (match operation.place.shape() {
+                            Shape::Local => true,
+                            Shape::Deref(_) | Shape::Indexed => false,
+                        }),
+                    ) {
                         (Rvalue::Use(Operand::Constant(c)), true) => small(*c),
                         _ => None,
                     };

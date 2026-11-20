@@ -723,7 +723,7 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
         instance: frames[current].instances[place.local.index()],
     };
 
-    for projection in &place.projection {
+    for projection in place.steps() {
         match projection {
             Projection::Deref => match load(frames, at)? {
                 Value::Pointer(pointee) => at = pointee,
@@ -921,10 +921,7 @@ mod tests {
                 origin: Origin::Written(at),
             })
         };
-        let through = |local| Place {
-            local,
-            projection: vec![Projection::Deref],
-        };
+        let through = |local| Place::new(local, vec![Projection::Deref]);
 
         main.push_block(Block {
             elements: vec![
@@ -1046,10 +1043,7 @@ mod tests {
                 }),
                 Element::Assign(Operation {
                     place: Place::local(function.return_place()),
-                    value: Rvalue::Use(Operand::Copy(Place {
-                        local: holding,
-                        projection: vec![Projection::Deref],
-                    })),
+                    value: Rvalue::Use(Operand::Copy(Place::new(holding, vec![Projection::Deref]))),
                     origin: Origin::Written(at),
                 }),
             ],
@@ -1276,10 +1270,10 @@ mod tests {
                 }),
                 Element::Assign(Operation {
                     place: Place::local(function.return_place()),
-                    value: Rvalue::Use(Operand::Copy(Place {
-                        local: holding,
-                        projection: vec![Projection::Index(Operand::Constant(0))],
-                    })),
+                    value: Rvalue::Use(Operand::Copy(Place::new(
+                        holding,
+                        vec![Projection::Index(Operand::Constant(0))],
+                    ))),
                     origin: Origin::Written(at),
                 }),
             ],
