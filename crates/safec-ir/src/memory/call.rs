@@ -6,6 +6,7 @@
 use crate::ir::{
     BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Rvalue, Shape, Terminator, Ty, TyId,
 };
+use crate::ir::{Rank, Sign};
 use crate::library::Library;
 use crate::source::Span;
 
@@ -125,7 +126,10 @@ impl Allocations<'_> {
             return false;
         };
         match self.unit.ty(innermost_element(self.unit, pointee)) {
-            Ty::Char | Ty::Int => true,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => true,
             Ty::Void | Ty::Pointer(_) => false,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
@@ -1999,7 +2003,8 @@ impl Allocations<'_> {
             // writes one and leaves the rest (#873). See `Known::written` and
             // ADR-0081.
             let target = self.unit.target();
-            let pointer = u64::from(target.pointer_bits() / target.char().bits());
+            let pointer =
+                u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
             if let Some(Extent::Exactly(bytes)) = value.extent[site] {
                 let count = bytes / pointer;
                 if bytes % pointer == 0 && (2..=ELEMENTS_KEPT).contains(&count) {
@@ -2430,7 +2435,11 @@ impl Allocations<'_> {
         // An array of pointers holds pointers, as `type_levels` reads it.
         let width = match self.unit.ty(innermost_element(self.unit, read_as)) {
             Ty::Pointer(pointee) => self.unit.size_of(pointee).unwrap_or(0),
-            Ty::Void | Ty::Int | Ty::Char => 0,
+            Ty::Void
+            | Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => 0,
             Ty::Array { .. } => {
                 unreachable!("`innermost_element` strips every array")
             }
@@ -2486,14 +2495,25 @@ impl Allocations<'_> {
                     below = innermost_element(self.unit, next);
                 }
                 match self.unit.ty(below) {
-                    Ty::Void | Ty::Char => true,
-                    Ty::Int => false,
+                    Ty::Void
+                    | Ty::Integer {
+                        rank: Rank::Char,
+                        sign: _,
+                    } => true,
+                    Ty::Integer {
+                        rank: Rank::Int,
+                        sign: _,
+                    } => false,
                     Ty::Pointer(_) | Ty::Array { .. } => {
                         unreachable!("the loop strips every pointer and array")
                     }
                 }
             }
-            Ty::Void | Ty::Int | Ty::Char => true,
+            Ty::Void
+            | Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2605,7 +2625,8 @@ impl Allocations<'_> {
         carried: Option<Carried>,
     ) {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         let old: Vec<Site> = if match handed.shape() {
             Shape::Local => true,
             Shape::Deref(_) | Shape::Indexed => false,
@@ -2722,12 +2743,20 @@ impl Allocations<'_> {
         };
         let copied = match self.unit.ty(innermost_element(self.unit, side_ty)) {
             Ty::Pointer(copied) => innermost_element(self.unit, copied),
-            Ty::Int | Ty::Char | Ty::Void => return usize::MAX,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
+            | Ty::Void => return usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         };
         match self.unit.ty(copied) {
             Ty::Pointer(_) => self.levels_holding_pointers(copied),
-            Ty::Int | Ty::Char | Ty::Void => usize::MAX,
+            Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
+            | Ty::Void => usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }

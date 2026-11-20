@@ -3524,7 +3524,7 @@ mod position {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let ptr = unit.push_type(Ty::Pointer(int));
         let function = Function::new(Span::new(file, 0, 1), int, [ptr, ptr, ptr]);
         let mut parameters = function.parameters();

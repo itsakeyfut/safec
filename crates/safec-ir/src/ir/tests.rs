@@ -12,7 +12,7 @@ use super::*;
 #[test]
 fn the_type_a_place_reaches_follows_its_projections() {
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
 
     let (_sources, at) = spans();
@@ -50,7 +50,7 @@ fn a_pointer_is_a_pointer_and_an_array_of_pointers_is_not() {
         length: 2,
     };
     assert!(!pointers.is_pointer());
-    for scalar in [Ty::Int, Ty::Char, Ty::Void] {
+    for scalar in [Ty::INT, Ty::CHAR, Ty::Void] {
         assert!(!scalar.is_pointer());
     }
 }
@@ -65,8 +65,8 @@ fn what_a_type_is_worth_is_the_target_s_to_say() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
-    let character = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let character = unit.push_type(Ty::CHAR);
     let void = unit.push_type(Ty::Void);
     let pointer = unit.push_type(Ty::Pointer(int));
 
@@ -120,9 +120,9 @@ fn spans() -> (SourceMap, Span) {
 fn a_function_is_built_and_read_back() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
 
-    let character = unit.push_type(Ty::Char);
+    let character = unit.push_type(Ty::CHAR);
 
     let mut add = Function::new(at, int, [int, character]);
     let [a, b] = add.parameters().collect::<Vec<_>>()[..] else {
@@ -330,9 +330,9 @@ fn an_id_still_names_its_block_after_more_are_pushed() {
 fn one_type_has_one_id() {
     let mut unit = TranslationUnit::new(a_target());
 
-    let int = unit.push_type(Ty::Int);
-    let also_int = unit.push_type(Ty::Int);
-    let character = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let also_int = unit.push_type(Ty::INT);
+    let character = unit.push_type(Ty::CHAR);
     let pointer = unit.push_type(Ty::Pointer(int));
     let also_pointer = unit.push_type(Ty::Pointer(also_int));
 
@@ -358,7 +358,7 @@ fn one_type_has_one_id() {
 fn an_operation_can_say_nobody_wrote_it() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut function = Function::new(at, int, []);
     let temporary = function.push_local(int);
 
@@ -393,8 +393,8 @@ fn an_operation_can_say_nobody_wrote_it() {
 fn two_functions_with_one_name_have_two_ids() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
-    let character = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let character = unit.push_type(Ty::CHAR);
 
     let first = Function::new(at, int, []);
     let mut second = Function::new(at, int, []);
@@ -425,7 +425,7 @@ fn two_functions_with_one_name_have_two_ids() {
 fn an_address_can_be_taken_of_an_element() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
 
     let mut function = Function::new(at, pointer, []);
@@ -471,7 +471,7 @@ fn an_address_can_be_taken_of_an_element() {
 fn a_loop_is_built_by_reserving_the_block_it_jumps_back_to() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut function = Function::new(at, int, []);
     let counter = function.push_local(int);
 
@@ -531,7 +531,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
     let void = unit.push_type(Ty::Void);
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
 
     let free = unit.push_function(Function::declaration(at, void, [pointer]));
@@ -579,7 +579,7 @@ fn a_declaration_is_not_a_definition_with_no_blocks() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
     let void = unit.push_type(Ty::Void);
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
 
     let declared = Function::declaration(at, void, [int]);
     let defined = Function::new(at, void, [int]);
@@ -617,7 +617,7 @@ fn a_place_is_a_key() {
 fn a_declared_function_can_be_given_its_body() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
 
     let first = unit.push_function(Function::declaration(at, int, []));
     let second = unit.push_function(Function::declaration(at, int, []));
@@ -640,7 +640,7 @@ fn a_declared_function_can_be_given_its_body() {
 fn a_function_is_not_given_a_body_twice() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
 
     let id = unit.push_function(Function::declaration(at, int, []));
     unit.fill_function(id, Function::new(at, int, []));
@@ -659,7 +659,7 @@ fn a_function_is_not_given_a_body_twice() {
 fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
 
     for (empty, same) in [(true, true), (false, true), (true, false)] {
         let mut function = Function::new(at, int, []);
@@ -721,7 +721,7 @@ fn a_branch_is_threaded_only_through_an_empty_rebranch_on_its_own_local() {
 fn a_branch_is_threaded_along_a_chain_and_never_through_a_place_read_through_a_pointer() {
     let (_sources, at) = spans();
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let branch = |tested: Place, then: BlockId, otherwise: BlockId| Block {
         elements: Vec::new(),
         terminator: Terminator::Branch {
@@ -801,7 +801,7 @@ fn a_branch_is_threaded_along_a_chain_and_never_through_a_place_read_through_a_p
 #[test]
 fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
     let mut unit = TranslationUnit::new(a_target());
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let array = unit.push_type(Ty::Array {
         element: int,
         length: 4,

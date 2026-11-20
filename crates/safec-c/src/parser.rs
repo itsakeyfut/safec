@@ -34,6 +34,7 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
 use crate::preprocessor::cut_words;
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
+use safec_ir::ir::Rank;
 use safec_ir::source::{SourceMap, Span};
 
 /// Something was expected and something else was there.
@@ -316,8 +317,8 @@ enum Derivation {
 /// the module comment lists them among what is not read yet.
 fn type_specifier_keyword(kind: TokenKind) -> Option<Type> {
     match kind {
-        TokenKind::Keyword(Keyword::Int) => Some(Type::Int),
-        TokenKind::Keyword(Keyword::Char) => Some(Type::Char),
+        TokenKind::Keyword(Keyword::Int) => Some(Type::INT),
+        TokenKind::Keyword(Keyword::Char) => Some(Type::CHAR),
         TokenKind::Keyword(Keyword::Void) => Some(Type::Void),
         _ => None,
     }
@@ -1792,9 +1793,13 @@ impl Parser<'_> {
                     self.ast.push_type(Type::Pointer(element))
                 }
                 Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
-                Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => {
-                    written
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
                 }
+                | Type::Void
+                | Type::Pointer(_)
+                | Type::Struct { .. } => written,
             };
 
             let span = self.join(start, self.previous().span, diagnostics);

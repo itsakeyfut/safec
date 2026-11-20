@@ -4,6 +4,7 @@ use crate::lexer::lex;
 use crate::parser::parse;
 use crate::preprocessor::preprocess;
 use crate::sema::resolve;
+use safec_ir::ir::{Rank, Sign};
 use safec_ir::target::Target;
 
 struct Checked {
@@ -44,8 +45,8 @@ fn checked(text: &str) -> Checked {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
 

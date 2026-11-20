@@ -7,6 +7,7 @@
 //! `verdict`, stays in `report.rs`.
 
 use super::report::{made_where_all_agree, say};
+use crate::ir::{Rank, Sign};
 
 use crate::analysis::Conclusion;
 use crate::ir::{
@@ -336,7 +337,12 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
 pub(super) fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) -> bool {
     match analysis.unit.ty(ty) {
         Ty::Pointer(pointee) => matches!(analysis.unit.ty(pointee), Ty::Void),
-        Ty::Int | Ty::Char | Ty::Void | Ty::Array { .. } => false,
+        Ty::Integer {
+            rank: Rank::Char | Rank::Int,
+            sign: _,
+        }
+        | Ty::Void
+        | Ty::Array { .. } => false,
     }
 }
 
@@ -430,7 +436,7 @@ pub(super) fn ask_partial(
     // part of, as the notes skip it (`Allocations::note_written`): a read of
     // a pointer out of an `int` is the bounds rule's (#940).
     let target = analysis.unit.target();
-    let pointer = u64::from(target.pointer_bits() / target.char().bits());
+    let pointer = u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
     let narrower =
         |at: Storage| matches!(known.extent[at], Some(Extent::Exactly(size)) if size < pointer);
     for (at, caret) in storages {

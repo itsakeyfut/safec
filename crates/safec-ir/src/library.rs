@@ -7,6 +7,7 @@
 //! [`misdeclares_library`], [`takes`] and [`Shape`] leave the crate: the frontend asks
 //! them which definitions and which declarations to refuse.
 
+use crate::ir::Rank;
 use crate::ir::{FuncId, TranslationUnit, Ty};
 use crate::source::SourceMap;
 
@@ -98,7 +99,10 @@ pub(crate) fn read_as_library(
         .parameters()
         .map(|parameter| match unit.ty(function.local(parameter)) {
             Ty::Pointer(_) => Some(Shape::Pointer),
-            Ty::Int | Ty::Char => Some(Shape::Integer),
+            Ty::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => Some(Shape::Integer),
             Ty::Void | Ty::Array { .. } => None,
         })
         .collect();

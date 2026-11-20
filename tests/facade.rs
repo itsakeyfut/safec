@@ -11,6 +11,7 @@ use safec::c::parser::parse;
 use safec::c::preprocessor::preprocess;
 use safec::c::sema::resolve;
 use safec::c::types::check;
+use safec::ir::ir::{Rank, Sign};
 use safec::ir::print::dump_ir;
 use safec::ir::source::SourceMap;
 use safec::ir::target::Target;
@@ -37,8 +38,8 @@ fn a_program_reaches_every_part_through_the_facade_alone() {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
     let unit = lower(

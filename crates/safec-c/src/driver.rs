@@ -25,6 +25,7 @@ mod backend;
 mod dumps;
 mod words;
 
+use safec_ir::ir::{Rank, Sign};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -351,8 +352,8 @@ pub fn compile(options: &Options) -> Compiled {
                     &sources,
                     &tokens,
                     read_whole,
-                    options.target.int(),
-                    options.target.char(),
+                    options.target.integer(Rank::Int, Sign::Signed),
+                    options.target.integer(Rank::Char, Sign::Plain),
                     false,
                     &mut diagnostics,
                 ) else {
@@ -632,8 +633,8 @@ fn lowered(
         sources,
         tokens,
         read_whole,
-        options.target.int(),
-        options.target.char(),
+        options.target.integer(Rank::Int, Sign::Signed),
+        options.target.integer(Rank::Char, Sign::Plain),
         options.safety >= SafetyLevel::Memory,
         diagnostics,
     )?;

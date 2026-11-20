@@ -20,6 +20,7 @@
 //! `name_lookup_does_not_grow_with_how_far_back_the_name_was_declared` in
 //! `tests/exit_code.rs` holds it.
 
+use safec_ir::ir::Rank;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
@@ -343,7 +344,11 @@ impl Resolution {
         let mut current = ty;
         loop {
             match ast.ty(current) {
-                Type::Int | Type::Char | Type::Pointer(_) => return true,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_) => return true,
                 Type::Void | Type::Function { .. } => return false,
                 Type::Struct { .. } => return struct_complete(current),
                 Type::Array {
@@ -933,7 +938,11 @@ impl Resolver<'_> {
                 }
             };
             match ast.ty(ty) {
-                Type::Int | Type::Char | Type::Void => {}
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Void => {}
                 Type::Pointer(pointee) => pending.push(Step::Type(*pointee)),
                 Type::Array {
                     element,
@@ -1482,23 +1491,28 @@ impl Resolver<'_> {
             return;
         };
         let shapes: Option<Vec<Option<library::Shape>>> = match parameters {
-            Parameters::Prototype(declared) => Some(
-                declared
-                    .iter()
-                    .map(|parameter| match self.ast.ty(parameter.ty) {
-                        Type::Pointer(_) => Some(library::Shape::Pointer),
-                        Type::Int | Type::Char => Some(library::Shape::Integer),
-                        // A parameter is adjusted from an array or a function to a
-                        // pointer (C17 6.7.6.3 p7, p8) before this reads it, and
-                        // `(void)` is parsed as an empty list, so neither these nor
-                        // `void` arrive from this parser; a struct is no row's.
-                        Type::Void
-                        | Type::Array { .. }
-                        | Type::Function { .. }
-                        | Type::Struct { .. } => None,
-                    })
-                    .collect(),
-            ),
+            Parameters::Prototype(declared) => {
+                Some(
+                    declared
+                        .iter()
+                        .map(|parameter| match self.ast.ty(parameter.ty) {
+                            Type::Pointer(_) => Some(library::Shape::Pointer),
+                            Type::Integer {
+                                rank: Rank::Char | Rank::Int,
+                                sign: _,
+                            } => Some(library::Shape::Integer),
+                            // A parameter is adjusted from an array or a function to a
+                            // pointer (C17 6.7.6.3 p7, p8) before this reads it, and
+                            // `(void)` is parsed as an empty list, so neither these nor
+                            // `void` arrive from this parser; a struct is no row's.
+                            Type::Void
+                            | Type::Array { .. }
+                            | Type::Function { .. }
+                            | Type::Struct { .. } => None,
+                        })
+                        .collect(),
+                )
+            }
             Parameters::Unspecified => None,
         };
         let spelled = self.sources.snippet(name);
@@ -1895,7 +1909,12 @@ fn push_declarator(ast: &Ast, root: TypeId, pending: &mut Vec<Step>) {
         leaf = match ast.ty(leaf) {
             Type::Pointer(next) | Type::Array { element: next, .. } => *next,
             Type::Function { returns, .. } => *returns,
-            Type::Int | Type::Char | Type::Void | Type::Struct { .. } => break,
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
+            | Type::Void
+            | Type::Struct { .. } => break,
         };
     }
     if leaf != root
@@ -3241,7 +3260,15 @@ mod tests {
         let int = resolved
             .ast
             .type_ids()
-            .find(|&ty| matches!(resolved.ast.ty(ty), Type::Int))
+            .find(|&ty| {
+                matches!(
+                    resolved.ast.ty(ty),
+                    Type::Integer {
+                        rank: Rank::Int,
+                        sign: safec_ir::ir::Sign::Signed
+                    }
+                )
+            })
             .expect("`int` is in the tree");
         let _ = resolved.resolution.tag(int);
     }

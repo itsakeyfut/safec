@@ -29,6 +29,7 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
+use safec_ir::ir::Rank;
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Integer;
 
@@ -333,7 +334,7 @@ pub fn check(
         reported_within: vec![false; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
-        int: ast.push_type(Type::Int),
+        int: ast.push_type(Type::INT),
         int_range,
         character,
         receivers: HashMap::new(),
@@ -699,7 +700,11 @@ impl Checker<'_> {
                         }
                         current = *returns;
                     }
-                    Type::Int | Type::Char | Type::Void => break,
+                    Type::Integer {
+                        rank: Rank::Char | Rank::Int,
+                        sign: _,
+                    }
+                    | Type::Void => break,
                 }
             }
         }
@@ -1021,7 +1026,12 @@ impl Checker<'_> {
                     )
                 }
                 Type::Array { .. } => continue,
-                Type::Int | Type::Char | Type::Pointer(_) | Type::Struct { .. } => continue,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_)
+                | Type::Struct { .. } => continue,
             };
             diagnostics.report(
                 Diagnostic::error(message)
@@ -1094,8 +1104,10 @@ impl Checker<'_> {
                 // Every variant named, so that a type added later is asked here.
                 match ast.ty(declaration.ty) {
                     Type::Function { .. } => {}
-                    Type::Int
-                    | Type::Char
+                    Type::Integer {
+                        rank: Rank::Char | Rank::Int,
+                        sign: _,
+                    }
                     | Type::Void
                     | Type::Pointer(_)
                     | Type::Array { .. }
@@ -1503,8 +1515,10 @@ impl Checker<'_> {
             Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
             // Complete where the array is written (C17 6.7.2.1 p8).
             Type::Struct { .. } => !self.resolution.complete(ast, element),
-            Type::Int
-            | Type::Char
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
             | Type::Pointer(_)
             | Type::Array {
                 length: Some(_), ..
@@ -1559,7 +1573,15 @@ impl Checker<'_> {
         // "the expression shall have an integer type", and an untyped one,
         // `p - q`, is asked nothing, as `subscript` asks nothing of it.
         let ty = self.types[length.index()];
-        if let Some(ty) = ty.filter(|&ty| !matches!(ast.ty(ty), Type::Int | Type::Char)) {
+        if let Some(ty) = ty.filter(|&ty| {
+            !matches!(
+                ast.ty(ty),
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _
+                }
+            )
+        }) {
             let spelled = self.spelled(ast, ty);
             diagnostics.report(
                 Diagnostic::error(format!("the length of an array cannot be `{spelled}`"))
@@ -1707,7 +1729,12 @@ impl Checker<'_> {
             Type::Pointer(element) | Type::Array { element, .. } => {
                 (arrow && matches!(ast.ty(*element), Type::Struct { .. })).then_some(*element)
             }
-            Type::Int | Type::Char | Type::Void | Type::Function { .. } => None,
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
+            | Type::Void
+            | Type::Function { .. } => None,
         };
         let Some(structure) = structure else {
             let spelled = self.spelled(ast, base_ty);
@@ -1997,7 +2024,7 @@ impl Checker<'_> {
             // length; `a_string_literal_s_address_is_a_pointer_to_its_whole_array`
             // accepts `char (*)[9]`.
             Expr::String { length, .. } => {
-                let element = ast.push_type(Type::Char);
+                let element = ast.push_type(Type::CHAR);
                 Some(ast.push_type(Type::Array {
                     element,
                     length: Some(length),
@@ -2153,7 +2180,12 @@ impl Checker<'_> {
                 // and `None`: there is no type `*x` would have had. Nothing
                 // after the type check reads the tree once it has reported,
                 // so no later stage speaks about the missing type.
-                Type::Int | Type::Char | Type::Void | Type::Struct { .. } => {
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Void
+                | Type::Struct { .. } => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
                         Diagnostic::error(format!("`*` cannot take `{spelled}`"))
@@ -2204,7 +2236,10 @@ impl Checker<'_> {
                 // first two, because every arithmetic type this compiler has
                 // is an integer type; a floating type would split it.
                 let takes = match ast.ty(ty) {
-                    Type::Int | Type::Char => true,
+                    Type::Integer {
+                        rank: Rank::Char | Rank::Int,
+                        sign: _,
+                    } => true,
                     // `decayed` answers neither an array nor a function, and
                     // each would be the pointer it decays to if it did.
                     Type::Pointer(_) | Type::Array { .. } | Type::Function { .. } => {
@@ -2353,8 +2388,10 @@ impl Checker<'_> {
             let ty = self.decayed(ast, ty);
             match ast.ty(ty) {
                 Type::Pointer(pointee) => Some(*pointee),
-                Type::Int
-                | Type::Char
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
                 | Type::Void
                 | Type::Array { .. }
                 | Type::Function { .. }
@@ -2686,7 +2723,16 @@ impl Checker<'_> {
         );
 
         let paired = match (ast.ty(left), ast.ty(right)) {
-            (Type::Int | Type::Char, Type::Int | Type::Char) => Some(self.int),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => Some(self.int),
             (Type::Void, Type::Void) => Some(left),
             (Type::Pointer(left_pointee), Type::Pointer(right_pointee)) => {
                 // p3 pairs a pointer to `void` only with a pointer to an
@@ -2730,12 +2776,38 @@ impl Checker<'_> {
                     None
                 }
             }
-            (Type::Pointer(_), Type::Int | Type::Char) => nulls.1.then_some(left),
-            (Type::Int | Type::Char, Type::Pointer(_)) => nulls.0.then_some(right),
+            (
+                Type::Pointer(_),
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => nulls.1.then_some(left),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+                Type::Pointer(_),
+            ) => nulls.0.then_some(right),
             // `decayed` answers neither an array nor a function; each would
             // be the pointer it decays to if it did.
-            (Type::Int | Type::Char | Type::Pointer(_), Type::Void)
-            | (Type::Void, Type::Int | Type::Char | Type::Pointer(_))
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_),
+                Type::Void,
+            )
+            | (
+                Type::Void,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_),
+            )
             | (Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
             // p3: both of one structure type, which two structs are when
@@ -2800,7 +2872,12 @@ impl Checker<'_> {
             Refused::Pairing => match ast.ty(left) {
                 Type::Void | Type::Struct { .. } => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
-                Type::Int | Type::Char | Type::Array { .. } | Type::Function { .. } => false,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Array { .. }
+                | Type::Function { .. } => false,
             },
         };
         let (primary, secondary) = if left_is_refused {
@@ -2856,7 +2933,13 @@ impl Checker<'_> {
                 ast.push_type(Type::Pointer(element))
             }
             Type::Function { .. } => ast.push_type(Type::Pointer(ty)),
-            Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => ty,
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            }
+            | Type::Void
+            | Type::Pointer(_)
+            | Type::Struct { .. } => ty,
         }
     }
 
@@ -3131,9 +3214,13 @@ impl Checker<'_> {
         // pair of that shape was refused for what the pointer points to, and
         // is the one refusal that needs saying why.
         let why = match (ast.ty(target), ast.ty(source)) {
-            (Type::Pointer(pointee), Type::Int | Type::Char)
-                if matches!(op, BinOp::Add | BinOp::Sub) =>
-            {
+            (
+                Type::Pointer(pointee),
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) if matches!(op, BinOp::Add | BinOp::Sub) => {
                 unsteppable(ast, *pointee, &|ty| self.complete_here(ast, ty))
             }
             _ => None,
@@ -3141,7 +3228,13 @@ impl Checker<'_> {
 
         let target_spelled = self.spelled(ast, target);
         let source_spelled = self.spelled(ast, source);
-        let (primary, secondary) = if !matches!(ast.ty(source), Type::Int | Type::Char) {
+        let (primary, secondary) = if !matches!(
+            ast.ty(source),
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _
+            }
+        ) {
             ((value, &source_spelled), (place, &target_spelled))
         } else {
             ((place, &target_spelled), (value, &source_spelled))
@@ -3199,8 +3292,23 @@ impl Checker<'_> {
         source: TypeId,
     ) -> Option<bool> {
         match (ast.ty(target), ast.ty(source)) {
-            (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
-            (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => Some(true),
+            (
+                Type::Pointer(pointee),
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => match op {
                 BinOp::Add | BinOp::Sub => {
                     Some(unsteppable(ast, *pointee, &|ty| self.complete_here(ast, ty)).is_none())
                 }
@@ -3230,10 +3338,21 @@ impl Checker<'_> {
             // is neither.
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
             (
-                Type::Int | Type::Char | Type::Pointer(_) | Type::Void,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_)
+                | Type::Void,
                 Type::Pointer(_) | Type::Void | Type::Array { .. } | Type::Function { .. },
             )
-            | (Type::Void, Type::Int | Type::Char) => Some(false),
+            | (
+                Type::Void,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => Some(false),
         }
     }
 
@@ -3279,7 +3398,10 @@ impl Checker<'_> {
         diagnostics: &mut DiagnosticSink,
     ) {
         match ast.ty(ty) {
-            Type::Int | Type::Char => return,
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => return,
             Type::Void
             | Type::Pointer(_)
             | Type::Array { .. }
@@ -3697,8 +3819,10 @@ impl Checker<'_> {
             // not already compared: written out so a kind added later says
             // whether it does.
             (
-                Type::Int
-                | Type::Char
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
                 | Type::Void
                 | Type::Pointer(_)
                 | Type::Array { .. }
@@ -3729,7 +3853,16 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             // Both arithmetic: the value is converted, and `char c; c = 1;` is
             // ordinary C rather than a mismatch.
-            (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => Some(true),
             // p1's pointer case, with the `void *` half of it, and the
             // qualifier rule both halves share: what the target points to has
             // every qualifier of what the source points to, so a conversion
@@ -3743,14 +3876,33 @@ impl Checker<'_> {
             ),
             // 6.3.2.3 p3: only a null pointer constant may be assigned to a
             // pointer from an integer.
-            (Type::Pointer(_), Type::Int | Type::Char) => Some(source_is_null),
-            (Type::Int | Type::Char, Type::Pointer(_)) => Some(false),
+            (
+                Type::Pointer(_),
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+            ) => Some(source_is_null),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                },
+                Type::Pointer(_),
+            ) => Some(false),
             // 6.5.16.1 p1 lists what may be assigned to an object, and a
             // `void` expression has no value to be any of it; 6.8.6.4 p3 and
             // 6.7.9 p11 hold a returned value and an initializer to the same
             // list. Answering `None` here let `return h();` from a function
             // returning `int` build in silence.
-            (Type::Int | Type::Char | Type::Pointer(_), Type::Void) => Some(false),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Pointer(_),
+                Type::Void,
+            ) => Some(false),
             // **An array source is the pointer to its first element it has
             // become** (6.3.2.1 p3) before anything is assigned, so p1 asks
             // that pointer: `int **pp = a;` with `a` an `int[2]` is a pointer
@@ -3763,7 +3915,14 @@ impl Checker<'_> {
                     && (self.compatible_unqualified(ast, *target_pointee, *element)
                         || matches!(ast.ty(*target_pointee), Type::Void)),
             ),
-            (Type::Int | Type::Char | Type::Struct { .. }, Type::Array { .. }) => Some(false),
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Struct { .. },
+                Type::Array { .. },
+            ) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Function { .. }) => None,
             // p1: a structure type compatible with the target's, which two
@@ -4051,7 +4210,10 @@ impl OperandClass {
     /// operator sees it, so that one arriving here is not answered.
     fn of(ast: &Ast, ty: TypeId) -> Option<Self> {
         match ast.ty(ty) {
-            Type::Int | Type::Char => Some(Self::Arithmetic),
+            Type::Integer {
+                rank: Rank::Char | Rank::Int,
+                sign: _,
+            } => Some(Self::Arithmetic),
             Type::Pointer(pointee) => Some(Self::Pointer(*pointee)),
             Type::Void => Some(Self::Void),
             Type::Struct { .. } => Some(Self::Struct),
@@ -4083,7 +4245,12 @@ fn unsteppable(
         Type::Struct { .. } => {
             (!complete(pointee)).then_some("a struct that is not complete here has no size")
         }
-        Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => None,
+        Type::Integer {
+            rank: Rank::Char | Rank::Int,
+            sign: _,
+        }
+        | Type::Pointer(_)
+        | Type::Array { .. } => None,
     }
 }
 

@@ -197,7 +197,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
         let mut function = Function::new(at, int, []);
         let x = function.push_local(pointer);
@@ -329,7 +329,7 @@ mod tests {
     fn a_local_handed_to_a_call_is_read() {
         let (at_read, at_write) = liveness(|unit, x, _, at, then| {
             let void = unit.push_type(Ty::Void);
-            let int = unit.push_type(Ty::Int);
+            let int = unit.push_type(Ty::INT);
             let pointer = unit.push_type(Ty::Pointer(int));
             let callee = unit.push_function(Function::declaration(at, void, [pointer]));
             Block {
@@ -362,7 +362,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         let returned = function.return_place();
         let writes = function.reserve_block();

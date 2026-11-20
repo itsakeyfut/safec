@@ -1382,7 +1382,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(Span::new(file, 0, 1), int, []);
         // Eight, beside the one `Function::new` makes for what it returns
         // and the last, below.
@@ -1535,7 +1535,7 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(Span::new(file, 0, 1), int, []);
         let at = Span::new(file, 0, 1);
         let entry = function.reserve_block();
@@ -1628,7 +1628,7 @@ mod tests {
             let mut unit = TranslationUnit::new(
                 Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
             );
-            let int = unit.push_type(Ty::Int);
+            let int = unit.push_type(Ty::INT);
             let void = unit.push_type(Ty::Void);
             let ptr = unit.push_type(Ty::Pointer(int));
             let ptr_ptr = unit.push_type(Ty::Pointer(ptr));

@@ -42,7 +42,7 @@ fn module(sources: &SourceMap, unit: &TranslationUnit) -> (String, Vec<Refusal>)
 fn a_unit_built_by_hand_becomes_a_module() {
     let (sources, at) = named("twice");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut twice = Function::new(at, int, [int]);
     let n = twice.parameters().next().expect("one parameter");
     twice.push_block(Block {
@@ -89,15 +89,15 @@ fn a_unit_built_by_hand_becomes_a_module() {
 /// Each type is spelled the way the target says, and a `void` local gets no
 /// storage: `alloca void` is not a thing, and nothing reads one.
 ///
-/// Mutation: spell `Ty::Char` as the target's `int`. The `i8` lines become
+/// Mutation: spell `Ty::CHAR` as the target's `int`. The `i8` lines become
 /// `i32` and this fails. Mutation: give every local an `alloca`. The `void`
 /// return place gets one and this fails.
 #[test]
 fn each_type_is_spelled_as_the_target_says() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
-    let char = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let char = unit.push_type(Ty::CHAR);
     let pointer = unit.push_type(Ty::Pointer(int));
     let void = unit.push_type(Ty::Void);
     let mut f = Function::new(at, void, [int, char, pointer]);
@@ -136,8 +136,8 @@ fn a_narrower_type_widens_the_way_its_own_target_says() {
     ] {
         let (sources, at) = named("f");
         let mut unit = TranslationUnit::new(target(triple));
-        let int = unit.push_type(Ty::Int);
-        let char = unit.push_type(Ty::Char);
+        let int = unit.push_type(Ty::INT);
+        let char = unit.push_type(Ty::CHAR);
         let mut f = Function::new(at, int, [char]);
         let c = f.parameters().next().expect("one parameter");
         f.push_block(Block {
@@ -183,7 +183,7 @@ fn an_operation_on_an_unsigned_type_is_unsigned() {
     ] {
         let (sources, at) = named("f");
         let mut unit = TranslationUnit::new(target(triple));
-        let char = unit.push_type(Ty::Char);
+        let char = unit.push_type(Ty::CHAR);
         let mut f = Function::new(at, char, [char, char]);
         let mut parameters = f.parameters();
         let a = parameters.next().expect("two parameters");
@@ -237,7 +237,7 @@ fn an_operation_on_an_unsigned_type_is_unsigned() {
 fn a_name_llvm_would_not_take_is_quoted() {
     let (sources, at) = named("a\u{1b}b");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     unit.push_function(Function::declaration(at, int, []));
 
     let (out, refusals) = module(&sources, &unit);
@@ -256,7 +256,7 @@ fn a_name_llvm_would_not_take_is_quoted() {
 fn a_declaration_has_no_body() {
     let (sources, at) = named("other");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     unit.push_function(Function::declaration(at, int, [int]));
 
     let (out, refusals) = module(&sources, &unit);
@@ -280,7 +280,7 @@ fn a_declaration_has_no_body() {
 fn an_edge_no_statement_produced_is_refused() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut f = Function::new(at, int, []);
     let block = f.reserve_block();
     f.fill_block(
@@ -317,7 +317,7 @@ fn an_edge_no_statement_produced_is_refused() {
 fn arithmetic_on_a_pointer_other_than_moving_it_is_refused() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut f = Function::new(at, pointer, [pointer]);
     let p = f.parameters().next().expect("one parameter");
@@ -358,8 +358,8 @@ fn arithmetic_on_a_pointer_other_than_moving_it_is_refused() {
 fn a_pointer_moved_by_an_integer_is_a_getelementptr_over_its_element() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
-    let char = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let char = unit.push_type(Ty::CHAR);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut f = Function::new(at, pointer, [pointer, char]);
     let mut parameters = f.parameters();
@@ -400,8 +400,8 @@ fn a_pointer_moved_by_an_integer_is_a_getelementptr_over_its_element() {
 fn a_pointer_moved_by_an_unsigned_count_widens_it_without_a_sign() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("aarch64-unknown-linux-gnu"));
-    let int = unit.push_type(Ty::Int);
-    let char = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let char = unit.push_type(Ty::CHAR);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut f = Function::new(at, pointer, [pointer, char]);
     let mut parameters = f.parameters();
@@ -439,7 +439,7 @@ fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
     for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
         let (sources, at) = named("f");
         let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
         let mut f = Function::new(at, int, [pointer]);
         let p = f.parameters().next().expect("one parameter");
@@ -481,7 +481,7 @@ fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
 fn two_pointers_can_be_compared() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut f = Function::new(at, int, [pointer, pointer]);
     let mut parameters = f.parameters();
@@ -523,7 +523,7 @@ fn a_call_that_returns_nothing_stores_nothing() {
     let (v, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
 
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let callee = unit.push_function(Function::declaration(v, void, []));
 
@@ -574,7 +574,7 @@ fn a_call_that_returns_nothing_into_a_local_stores_nothing() {
     let (v, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
 
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let callee = unit.push_function(Function::declaration(v, void, []));
 
@@ -630,7 +630,7 @@ fn a_call_that_returns_nothing_into_a_local_stores_nothing() {
 fn a_parameter_that_holds_nothing_leaves_no_function() {
     let (sources, at) = named("g");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     unit.push_function(Function::declaration(at, int, [void]));
 
@@ -672,7 +672,7 @@ fn a_place_this_cannot_reach_is_refused() {
     ] {
         let (sources, at) = named("f");
         let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
         let mut f = Function::new(at, pointer, [int]);
         let n = f.parameters().next().expect("one parameter");
@@ -713,7 +713,7 @@ fn a_place_this_cannot_reach_is_refused() {
 fn a_conversion_with_no_instruction_is_refused() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut f = Function::new(at, pointer, [int]);
     let n = f.parameters().next().expect("one parameter");
@@ -775,7 +775,7 @@ fn a_name_is_quoted_for_every_reason_llvm_has() {
 fn the_header_names_the_target_once() {
     let (sources, at) = named("f");
     let mut unit = TranslationUnit::new(target("wasm32-unknown-unknown"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     unit.push_function(Function::declaration(at, int, []));
 
     let mut out = header(unit.target());
@@ -803,7 +803,7 @@ fn the_header_names_the_target_once() {
 fn a_branch_on_a_constant_tests_the_constant() {
     let (sources, at) = named("pick");
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut pick = Function::new(at, int, []);
     let entry = pick.reserve_block();
     let taken = pick.reserve_block();
@@ -896,7 +896,7 @@ fn a_refused_function_leaves_the_next_one_written() {
     let file = sources.add_virtual("t.c", "g f");
     let (g, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     unit.push_function(Function::declaration(g, int, [void]));
     let mut f = Function::new(at, void, []);
@@ -931,7 +931,7 @@ fn a_call_to_a_refused_function_is_refused_where_it_is_written() {
     let file = sources.add_virtual("t.c", "g f");
     let (g, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
     let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let callee = unit.push_function(Function::declaration(g, int, [void]));
     let mut f = Function::new(at, void, []);

@@ -5,6 +5,7 @@
 //! In a file of its own so that one description of where a write lands can
 //! be read beside the one belief that applies it. See ADR-0063.
 
+use crate::ir::{Rank, Sign};
 use std::collections::BTreeSet;
 
 use crate::ir::{Function, Operand, Place, Shape, Ty};
@@ -298,7 +299,8 @@ impl Allocations<'_> {
     /// `fresh_memcpy_part_d1_both`).
     fn copied_into(&self, value: &mut Known, site: Site, at: At, width: Option<u64>, whole: Whole) {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         if value.covers_whole(Storage::Heap(site), at, width) {
             value.written[site].set(Init::Written(whole));
             return;
@@ -379,7 +381,18 @@ impl Allocations<'_> {
         // escaped local may hold what it wrote.
         let everything = match kind {
             StoreKind::Direct | StoreKind::Through { .. } => {
-                matches!(written_ty.map(|ty| unit.ty(ty)), None | Some(Ty::Char))
+                match written_ty.map(|ty| unit.ty(ty)) {
+                    None
+                    | Some(Ty::Integer {
+                        rank: Rank::Char,
+                        sign: _,
+                    }) => true,
+                    Some(Ty::Integer {
+                        rank: Rank::Int,
+                        sign: _,
+                    }) => false,
+                    Some(Ty::Void | Ty::Pointer(_) | Ty::Array { .. }) => false,
+                }
             }
             StoreKind::Copy => true,
         };
@@ -1179,7 +1192,8 @@ impl Allocations<'_> {
     /// pointers; anywhere else it names none.
     fn slot_read(&self, through: &Held) -> Option<u64> {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         through.site_element.or(match through.position.at {
             At::Bytes(at) if at % pointer == 0 => Some(at / pointer),
             At::Bytes(_) | At::Within { .. } | At::Moved | At::Unknown => None,
@@ -1222,7 +1236,8 @@ impl Allocations<'_> {
         bytes: Option<u64>,
     ) -> Option<(u64, u64)> {
         let target = self.unit.target();
-        let pointer = u64::from(target.pointer_bits() / target.char().bits());
+        let pointer =
+            u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
         let start = match slot {
             Some(element) => element.checked_mul(pointer)?,
             None => match offset {

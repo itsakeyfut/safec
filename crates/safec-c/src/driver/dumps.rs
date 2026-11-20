@@ -5,6 +5,7 @@
 //! `--emit safety-ir` is not here: what an IR line says is a fact about the IR,
 //! and it is written by `safec_ir::print`.
 
+use safec_ir::ir::Rank;
 use std::collections::HashSet;
 use std::fmt::Write as _;
 
@@ -244,7 +245,12 @@ fn dump_fields(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &m
                     }
                     return;
                 }
-                Type::Struct { members: None, .. } | Type::Int | Type::Char | Type::Void => {
+                Type::Struct { members: None, .. }
+                | Type::Integer {
+                    rank: Rank::Char | Rank::Int,
+                    sign: _,
+                }
+                | Type::Void => {
                     return;
                 }
             }

@@ -18,6 +18,7 @@
 //! from inside a dump. The renderer asks the same question of a message, so
 //! the answer is one function and this is the crate both sides can reach.
 
+use crate::ir::{Rank, Sign};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
@@ -439,8 +440,17 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
 
     let base = loop {
         match unit.ty(current) {
-            Ty::Int => break "int",
-            Ty::Char => break "char",
+            Ty::Integer { rank, sign } => {
+                break match (rank, sign) {
+                    (Rank::Int, Sign::Signed) => "int",
+                    (Rank::Char, Sign::Plain) => "char",
+                    (Rank::Char, Sign::Signed) | (Rank::Int, Sign::Plain) => {
+                        unreachable!(
+                            "{sign:?} {rank:?} is no type a program can write yet: `signed char` is #1112's, and `Plain` is `char`'s alone"
+                        )
+                    }
+                };
+            }
             Ty::Void => break "void",
             // In parentheses where what it points at is an array, which binds
             // more tightly than a pointer (C17 6.7.6 p6): `int (*)[4]` is a
@@ -448,7 +458,12 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
             Ty::Pointer(pointee) => {
                 inner = match unit.ty(pointee) {
                     Ty::Array { .. } => format!("(*{inner})"),
-                    Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => format!("*{inner}"),
+                    Ty::Integer {
+                        rank: Rank::Char | Rank::Int,
+                        sign: _,
+                    }
+                    | Ty::Void
+                    | Ty::Pointer(_) => format!("*{inner}"),
                 };
                 current = pointee;
             }
@@ -736,7 +751,7 @@ mod tests {
         let at = Span::new(file, 4, 5);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         function.push_block(Block {
             elements: Vec::new(),
@@ -786,7 +801,7 @@ mod tests {
         let at = Span::new(file, 14, 20);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         let local = function.push_local(int);
         function.push_block(Block {
@@ -958,7 +973,7 @@ mod tests {
         let here = Span::new(file, 17, 18);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         unit.push_function(Function::declaration(there, int, []));
 
         let mut defined = Function::new(here, int, []);
@@ -995,7 +1010,7 @@ mod tests {
         let at = Span::new(file, 23, 27);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
 
         let mut function = Function::new(at, int, [pointer]);

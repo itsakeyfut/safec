@@ -60,7 +60,7 @@ fn a_unit(names: &Names, parameters: &[TyId]) -> (TranslationUnit, Function, TyI
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let function = Function::new(names.function, int, parameters.to_vec());
     (unit, function, int)
 }
@@ -123,7 +123,7 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
     let mut function = Function::new(names.function, int, vec![pointer, pointer_to_pointer]);
@@ -214,7 +214,7 @@ fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer, pointer]);
 
@@ -382,7 +382,7 @@ fn a_marker_between_a_comparison_and_its_branch_is_stepped_over() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer]);
 
@@ -527,7 +527,7 @@ fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
     let mut function = Function::new(names.function, int, vec![pointer_to_pointer]);
@@ -592,7 +592,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let callee = unit.push_function(Function::declaration(names.function, pointer, [int]));
     let mut function = Function::new(names.function, int, vec![pointer]);
@@ -709,7 +709,7 @@ fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
     let mut function = Function::new(names.function, int, vec![]);
@@ -767,7 +767,7 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![]);
     let x = function.push_local(int);
@@ -825,7 +825,7 @@ fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refine
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer]);
 
@@ -893,7 +893,7 @@ fn a_pointer_condition_written_just_above_its_branch_is_refined() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer]);
 
@@ -954,7 +954,7 @@ fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function =
         Function::new(names.function, pointer, vec![]).promising(Promise::Declared(names.at[0]));
@@ -1000,7 +1000,7 @@ fn a_copy_whose_source_is_overwritten_before_the_branch_refines_only_the_copy() 
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer, pointer]);
 
@@ -1068,7 +1068,7 @@ fn a_store_through_a_pointer_between_a_copy_and_its_branch_refines_only_the_copy
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer, pointer]);
 
@@ -1141,7 +1141,7 @@ fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer]);
 
@@ -1214,7 +1214,7 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
 
@@ -1315,7 +1315,7 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer]);
 
@@ -1566,7 +1566,7 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let callee = unit.push_function(Function::declaration_with_parameters(
         names.function,
@@ -1628,7 +1628,7 @@ fn a_comparison_before_a_goto_into_the_branch_refines_it_and_one_before_a_call_d
         let mut unit = TranslationUnit::new(
             Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
         let callee = unit.push_function(Function::declaration_with_parameters(
             names.function,
@@ -1738,7 +1738,7 @@ fn a_goto_back_into_the_entry_block_is_not_its_only_way_in() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer, int]);
     let mut parameters = function.parameters();
@@ -1815,7 +1815,7 @@ fn a_write_to_the_pointer_after_a_goto_refuses_the_comparison_before_it() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function = Function::new(names.function, int, vec![pointer, pointer]);
     let mut parameters = function.parameters();
@@ -1881,7 +1881,7 @@ fn a_null_handed_to_a_function_named_memcpy(defined: bool) -> Vec<nullability::F
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let pointer = unit.push_type(Ty::Pointer(void));
     let callee = if defined {
@@ -1973,7 +1973,7 @@ fn a_library_name_declared_with_another_shape_is_read_as_any_call() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let callee = unit.push_function(Function::declaration(callee_name, int, [int]));
 
     let mut function = Function::new(function_name, int, vec![]);
@@ -2025,8 +2025,8 @@ fn a_library_call_declared_over_a_char_is_read_by_its_row() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
-    let char_ty = unit.push_type(Ty::Char);
+    let int = unit.push_type(Ty::INT);
+    let char_ty = unit.push_type(Ty::CHAR);
     let void = unit.push_type(Ty::Void);
     let pointer = unit.push_type(Ty::Pointer(void));
     let callee = unit.push_function(Function::declaration(

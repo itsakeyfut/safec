@@ -121,7 +121,7 @@ fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, Types
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let ptr = unit.push_type(Ty::Pointer(int));
     let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
@@ -3226,7 +3226,7 @@ fn a_free_after_the_write_into_the_return_place_is_not_asked_about() {
 fn a_free_of_a_byte_read_out_of_memory_proves_nothing() {
     let (sources, names) = sources();
     let (mut unit, mut function, types, callees) = a_unit(&names, 0);
-    let char_ty = unit.push_type(Ty::Char);
+    let char_ty = unit.push_type(Ty::CHAR);
     let bytes = unit.push_type(Ty::Pointer(char_ty));
     let table = function.push_local(types.ptr_ptr);
     let held = function.push_local(types.ptr);
@@ -3329,7 +3329,7 @@ fn defined_under(name: &str) -> (Vec<memory::Finding>, Span) {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let void = unit.push_type(Ty::Void);
     let ptr = unit.push_type(Ty::Pointer(int));
     let callees = Callees {

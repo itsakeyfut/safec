@@ -1617,7 +1617,7 @@ fn a_node_is_placed_against_the_file_its_span_names() {
         body: Vec::new(),
         span: Span::new(second, 9, 14),
     });
-    let ty = ast.push_type(Type::Int);
+    let ty = ast.push_type(Type::INT);
     ast.push_item(Item::Function(Function {
         ty,
         name: Span::new(first, 4, 9),
@@ -1927,7 +1927,7 @@ mod too_long {
 
     fn a_finding(sources: &mut SourceMap, unit: &mut TranslationUnit, hatched: bool) -> Finding {
         let file = sources.add_virtual("t.c", "f");
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let function = Function::new(Span::new(file, 0, 1), int, []);
         let function = if hatched {
             function.hatched()
@@ -2017,7 +2017,7 @@ mod unassigned {
         let file = sources.add_virtual("t.c", "f");
         let mut unit =
             TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let function = unit.push_function(Function::new(Span::new(file, 0, 1), int, []));
         let finding = Finding {
             function,
@@ -2061,7 +2061,7 @@ mod unassigned {
         let file = sources.add_virtual("t.c", "if (c) use(p);");
         let mut unit =
             TranslationUnit::new(Target::from_triple("x86_64-pc-windows-msvc").expect("known"));
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let function = unit.push_function(Function::new(Span::new(file, 0, 1), int, []));
         let finding = Finding {
             function,

@@ -5,6 +5,7 @@
 //! two places drifts: "does memory of this type hold pointers" was written
 //! five times once (#843) and twice again until #895.
 
+use crate::ir::Rank;
 use crate::ir::{TranslationUnit, Ty, TyId};
 
 /// The type an array's elements have, through every dimension, and `ty`
@@ -15,7 +16,12 @@ use crate::ir::{TranslationUnit, Ty, TyId};
 pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
     match unit.ty(ty) {
         Ty::Array { element, .. } => innermost_element(unit, element),
-        Ty::Int | Ty::Char | Ty::Void | Ty::Pointer(_) => ty,
+        Ty::Integer {
+            rank: Rank::Char | Rank::Int,
+            sign: _,
+        }
+        | Ty::Void
+        | Ty::Pointer(_) => ty,
     }
 }
 
@@ -48,7 +54,11 @@ pub(crate) fn stored_pointer(unit: &TranslationUnit, stored: TyId) -> Option<TyI
 pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
     match unit.ty(ty) {
         Ty::Pointer(pointee) => 1 + pointer_depth(unit, pointee),
-        Ty::Int | Ty::Char | Ty::Void => 0,
+        Ty::Integer {
+            rank: Rank::Char | Rank::Int,
+            sign: _,
+        }
+        | Ty::Void => 0,
         // As deep as its element: `int ***a[2]` holds pointers three `*`s
         // deep, which `Allocations::deepest_pointer` has to be long enough for.
         // **Held by nothing, measured**: answering `0` changes no case,

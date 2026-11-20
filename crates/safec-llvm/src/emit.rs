@@ -13,6 +13,7 @@
 //! until it is given arrays of its own. Where the *reason* for a refusal is
 //! the same it is said in the same words, and where it is not it is not.
 
+use safec_ir::ir::{Rank, Sign};
 use std::fmt::Write as _;
 
 use safec_ir::ir::{
@@ -183,8 +184,9 @@ impl Emitter<'_> {
     /// a pointer has no width here and nothing needs one.
     fn spell(&self, id: TyId) -> String {
         match self.unit.ty(id) {
-            Ty::Int => format!("i{}", self.unit.target().int().bits()),
-            Ty::Char => format!("i{}", self.unit.target().char().bits()),
+            Ty::Integer { rank, sign } => {
+                format!("i{}", self.unit.target().integer(rank, sign).bits())
+            }
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
             Ty::Array { element, length } => format!("[{length} x {}]", self.spell(element)),
@@ -927,7 +929,7 @@ impl Emitter<'_> {
     ) -> Refuses<(String, String)> {
         match operand {
             Operand::Constant(value) => {
-                let int = self.unit.target().int();
+                let int = self.unit.target().integer(Rank::Int, Sign::Signed);
                 Ok((int.convert(*value).to_string(), format!("i{}", int.bits())))
             }
             Operand::Copy(place) => {

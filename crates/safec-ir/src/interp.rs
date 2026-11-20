@@ -986,7 +986,7 @@ mod tests {
         let at = Span::new(file, 4, 8);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
 
         let mut main = Function::new(at, int, []);
@@ -1040,7 +1040,7 @@ mod tests {
         let at = Span::new(file, 4, 8);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let pointer = unit.push_type(Ty::Pointer(int));
         let g = unit.push_static(crate::ir::Static {
             name: "g".to_owned(),
@@ -1115,7 +1115,7 @@ mod tests {
         let at = Span::new(file, 4, 9);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut twice = Function::new(at, int, [int]);
         let n = twice.parameters().next().expect("one parameter");
         twice.push_block(Block {
@@ -1151,7 +1151,7 @@ mod tests {
         let at = Span::new(file, 4, 9);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut twice = Function::new(at, int, [int]);
         twice.push_block(Block {
             elements: vec![Element::Assign(Operation {
@@ -1184,7 +1184,7 @@ mod tests {
         let at = Span::new(file, 4, 5);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         let holding = function.push_local(int);
 
@@ -1244,8 +1244,8 @@ mod tests {
         let mut unit = TranslationUnit::new(
             Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
         );
-        let int = unit.push_type(Ty::Int);
-        let character = unit.push_type(Ty::Char);
+        let int = unit.push_type(Ty::INT);
+        let character = unit.push_type(Ty::CHAR);
 
         let mut function = Function::new(at, int, []);
         let narrow = function.push_local(character);
@@ -1285,7 +1285,7 @@ mod tests {
         let at = Span::new(file, 5, 12);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let void = unit.push_type(Ty::Void);
 
         let mut callee = Function::new(at, void, []);
@@ -1366,7 +1366,7 @@ mod tests {
         let at = Span::new(file, 5, 12);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let void = unit.push_type(Ty::Void);
 
         let mut callee = Function::new(at, void, []);
@@ -1411,7 +1411,7 @@ mod tests {
         let at = Span::new(file, 4, 5);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
         let holding = function.push_local(int);
 
@@ -1457,7 +1457,7 @@ mod tests {
         let at = Span::new(file, 4, 5);
 
         let mut unit = TranslationUnit::new(a_target());
-        let int = unit.push_type(Ty::Int);
+        let int = unit.push_type(Ty::INT);
         let mut function = Function::new(at, int, []);
 
         // The entry is the block whose id came first, so it is the one that has

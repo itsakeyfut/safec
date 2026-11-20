@@ -15,6 +15,7 @@ use safec_c::lexer::lex;
 use safec_c::lowering::lower;
 use safec_c::parser::parse;
 use safec_c::preprocessor::preprocess;
+use safec_ir::ir::{Rank, Sign};
 // Renamed, because the interpreter has a `resolve` of its own and the two
 // answer different questions: one resolves a name, the other a place.
 use safec_c::sema::resolve as resolve_names;
@@ -51,8 +52,8 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
     let unit = lower(
@@ -795,8 +796,8 @@ fn a_trap_points_at_what_stopped_it() {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
     let unit = lower(
@@ -851,8 +852,8 @@ fn a_trap_on_a_call_points_at_the_call() {
         &sources,
         &mut ast,
         &resolution,
-        target.int(),
-        target.char(),
+        target.integer(Rank::Int, Sign::Signed),
+        target.integer(Rank::Char, Sign::Plain),
         &mut diagnostics,
     );
     let unit = lower(

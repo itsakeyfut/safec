@@ -31,7 +31,7 @@ fn a_function_built_by_hand_from_the_public_api_is_printed() {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
-    let int = unit.push_type(Ty::Int);
+    let int = unit.push_type(Ty::INT);
     let mut function = Function::new(name, int, []);
     function.push_block(Block {
         elements: Vec::new(),
