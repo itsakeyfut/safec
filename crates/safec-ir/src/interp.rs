@@ -1232,65 +1232,59 @@ mod tests {
         assert!(trap.why.contains("not a pointer"), "{trap:?}");
     }
 
-    /// An unsigned destination overflows too, and says so in its own words.
+    /// An operation at an unsigned type is reduced modulo its range, never
+    /// stopped: C17 6.2.5 p9, "a result that cannot be represented by the
+    /// resulting unsigned integer type is reduced modulo the number that is
+    /// one greater than the largest value". `0 - 1` at an unsigned `char` is
+    /// 255, and the run returns it.
     ///
-    /// Built by hand, because the frontend cannot reach this shape: every
-    /// arithmetic expression it lowers lands in a temporary of the promoted
-    /// type, and C17 6.3.1.1 p2 promotes every integer type it has to `int`,
-    /// which is signed on every row of `Target::ALL`. So the unsigned half of
-    /// `fits` has no producer above it and is reachable only from a unit like
-    /// this one, which is exactly what a Clang adapter or a later IR pass would
-    /// build.
+    /// Built by hand, so that what is under test is the interpreter's rule
+    /// and not the conversions the frontend writes around it.
     ///
-    /// The sentence matters as much as the stop. "8 bits signed" for an
-    /// unsigned type would send a reader looking for a sign bit that is not
-    /// there.
-    ///
-    /// Mutation: check only signed types, `ty.signed() && !ty.holds(value)`.
-    /// Nothing else in the workspace fails and this does. Mutation: say
-    /// "signed" whatever the type. The last assertion fails.
+    /// Mutation: hold an unsigned result to its range in `result`, as a
+    /// signed one is; the run stops and this fails.
     #[test]
-    fn an_unsigned_destination_overflows_in_its_own_words() {
+    fn unsigned_arithmetic_wraps() {
         let mut sources = SourceMap::new();
-        let file = sources.add_virtual(
-            "t.c",
-            "int f(void);
-",
-        );
+        let file = sources.add_virtual("t.c", "int f(void);\n");
         let at = Span::new(file, 4, 5);
 
-        // One of the two rows of `Target::ALL` where `char` is unsigned, so
-        // that `holds` has a lower bound of zero rather than of a negative
-        // number.
-        let mut unit = TranslationUnit::new(
-            Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
-        );
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::INT);
-        let character = unit.push_type(Ty::CHAR);
+        let narrow_ty = unit.push_type(Ty::Integer {
+            rank: crate::ir::Rank::Char,
+            sign: crate::ir::Sign::Unsigned,
+        });
 
         let mut function = Function::new(at, int, []);
-        let narrow = function.push_local(character);
-        function.push_block(Block {
-            elements: vec![Element::Assign(Operation {
-                place: Place::local(narrow),
-                // 0 - 1, which an unsigned `char` cannot hold. Written as an
-                // operation rather than as a `Use`, because a `Use` would
-                // convert it to 255 and that is the defined half.
-                value: Rvalue::Binary {
-                    op: BinOp::Sub,
-                    lhs: Operand::Constant(0),
-                    rhs: Operand::Constant(1),
-                },
+        let narrow = function.push_local(narrow_ty);
+        let write = |place: Place, value: Rvalue| {
+            Element::Assign(Operation {
+                place,
+                value,
                 origin: Origin::Written(at),
-            })],
+            })
+        };
+        function.push_block(Block {
+            elements: vec![
+                write(
+                    Place::local(narrow),
+                    Rvalue::Binary {
+                        op: BinOp::Sub,
+                        lhs: Operand::Constant(0),
+                        rhs: Operand::Constant(1),
+                    },
+                ),
+                write(
+                    Place::local(function.return_place()),
+                    Rvalue::Use(Operand::Copy(Place::local(narrow))),
+                ),
+            ],
             terminator: Terminator::Return,
         });
         let id = unit.push_function(function);
 
-        let Err(trap) = run(&unit, id, &[]) else {
-            panic!("an unsigned type cannot hold -1");
-        };
-        assert!(trap.why.contains("8 bits unsigned"), "{trap:?}");
+        assert_eq!(run(&unit, id, &[]), Ok(Value::Int(255)));
     }
 
     /// A caller that calls a `void` function and then returns 7, with the
