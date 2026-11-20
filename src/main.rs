@@ -11,7 +11,33 @@ use std::process::ExitCode;
 use safec::c::cli::Cli;
 use safec::c::driver;
 
+/// The stack the compiler runs on.
+///
+/// **Chosen, rather than the platform's**, because the parser recurses once
+/// per level of nesting up to `safec::c::parser::MAX_NESTING`, and that limit
+/// only turns a deep program into a report if the stack outlasts it. The main
+/// thread's is the platform's to choose, 1 MiB on Windows, and an unoptimised
+/// build used 98% of it to refuse a struct nested past the limit: measured at
+/// 987,616 bytes, and 1,052,896 bytes once #1112 widened the driver, which
+/// overflowed with no diagnostic and an exit code nobody chose
+/// (`a_struct_nested_past_the_limit_is_refused_rather_than_read`). Eight times
+/// what that needs leaves a margin no ordinary change to a frame can spend.
+const STACK: usize = 8 << 20;
+
 fn main() -> ExitCode {
+    // A panic on the compiler's thread is resumed here, so that it ends the
+    // process as one on the main thread would.
+    std::thread::Builder::new()
+        .name("safec".to_owned())
+        .stack_size(STACK)
+        .spawn(compile)
+        .expect("the operating system gives a thread its stack")
+        .join()
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
+/// Everything `main` did before it ran on a thread of its own.
+fn compile() -> ExitCode {
     let cli = Cli::parse_in_order();
 
     // Refused here rather than inside the compiler: an invocation that asks for
