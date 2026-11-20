@@ -551,6 +551,9 @@ pub enum StaticInit {
     Zero,
     /// An integer constant, converted to the object's type.
     Int(i128),
+    /// The bytes of a string literal, its terminating zero included (C17
+    /// 6.4.5 p6), one per element of an array of `char`.
+    Bytes(Vec<u8>),
 }
 
 /// What an operation computes.
