@@ -1,0 +1,13 @@
+error[SC0412]: this reaches 9 bytes into an object of 8 bytes
+    ╭─[ a_char_cast_reads_the_allocation_in_bytes.c:10:5 ]
+    │
+  4 │     int *p = malloc(8);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     c[8] = 2;
+    │     ────┬───  
+    │         ╰───── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

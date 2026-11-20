@@ -1687,6 +1687,19 @@ fn an_unsigned_long_long_product_wraps() {
     assert_eq!(ran(text), Ok(Value::Int(1)));
 }
 
+/// A cast between integer types converts as an assignment does (C17
+/// 6.3.1.3): `(char)300` is 44, `(unsigned char)-1` is 255, and `(long)-1`
+/// is -1, each of a local so that nothing is folded first.
+///
+/// Mutation: in `Lowering::cast`, hand the operand on instead of copying it
+/// into a temporary of the type cast to; the first two keep their values
+/// and this answers 4.
+#[test]
+fn a_cast_between_integer_types_converts_the_value() {
+    let text = "int main(void) {\n    int x = 300;\n    int m = -1;\n    int r = 0;\n    if ((char)x == 44) {\n        r = r + 1;\n    }\n    if ((unsigned char)m == 255) {\n        r = r + 2;\n    }\n    if ((long)m == -1) {\n        r = r + 4;\n    }\n    return r;\n}\n";
+    assert_eq!(ran(text), Ok(Value::Int(1 + 2 + 4)));
+}
+
 /// A `switch` compares at its promoted controlling type and converts each
 /// `case` value to it (C17 6.8.4.2 p5): `case -1` on an `unsigned int` is
 /// the largest one and matches 4294967295, and a `long long` of 2 to the 32

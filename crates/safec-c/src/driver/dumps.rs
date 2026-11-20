@@ -546,9 +546,15 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
             Expr::Comma { .. } => {
                 write!(out, " {:?}", ",").expect("writing to a string cannot fail");
             }
+            // The type as this compiler spells it, as a declaration's is.
+            Expr::SizeofType { ty, .. } | Expr::Cast { ty, .. } => {
+                write!(out, " {:?}", spell_type(sources, ast, *ty))
+                    .expect("writing to a string cannot fail");
+            }
             Expr::Conditional { .. }
             | Expr::Call { .. }
             | Expr::Subscript { .. }
+            | Expr::SizeofExpr { .. }
             | Expr::Error { .. } => {}
         }
         out.push('\n');

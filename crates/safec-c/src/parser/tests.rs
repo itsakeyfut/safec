@@ -650,11 +650,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ("_Alignas(4) int x;\n", "`_Alignas`", "6.7.5"),
         ("_Static_assert(1, \"x\");\n", "`_Static_assert`", "6.7.10"),
         (
-            "int main(void) { return sizeof(int); }\n",
-            "`sizeof`",
-            "6.5.3.4",
-        ),
-        (
             "int main(void) { return _Alignof(int); }\n",
             "`_Alignof`",
             "6.5.3.4",
@@ -732,14 +727,14 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "6.4.5",
         ),
         (
-            "int main(void) { return (int)0; }\n",
-            "a cast or a compound literal",
-            "6.5.4 or 6.5.2.5",
+            "int main(void) { return (int){0}; }\n",
+            "a compound literal",
+            "6.5.2.5",
         ),
         (
-            "int main(void) { return (long)0; }\n",
-            "a cast or a compound literal",
-            "6.5.4 or 6.5.2.5",
+            "int main(void) { return sizeof(int){0}; }\n",
+            "a compound literal",
+            "6.5.2.5",
         ),
         (
             "int f(int, ...);\n",
@@ -943,7 +938,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
             &[FileScope, BlockScope, Member, ForInit],
         ),
         ("_Static_assert", "6.7.10", &[FileScope, BlockScope, Member]),
-        ("sizeof", "6.5.3.4", &[Expression]),
         ("_Alignof", "6.5.3.4", &[Expression]),
         ("_Generic", "6.5.1.1", &[Expression]),
     ];

@@ -434,9 +434,16 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
         }
         | Expr::Length { value: _, span: _ }
         | Expr::Identifier { span: _ }
+        | Expr::SizeofType { ty: _, span: _ }
         | Expr::Error { span: _ } => Vec::new(),
         Expr::Unary {
             op: _,
+            operand,
+            span: _,
+        }
+        | Expr::SizeofExpr { operand, span: _ }
+        | Expr::Cast {
+            ty: _,
             operand,
             span: _,
         } => vec![*operand],
@@ -1051,6 +1058,9 @@ impl Checker<'_> {
                         | Expr::Call { .. }
                         | Expr::Subscript { .. }
                         | Expr::Member { .. }
+                        | Expr::SizeofType { .. }
+                        | Expr::SizeofExpr { .. }
+                        | Expr::Cast { .. }
                         | Expr::Comma { .. }
                         | Expr::Error { .. } => true,
                     } =>
@@ -1743,6 +1753,10 @@ impl Checker<'_> {
                 matches!(op, UnOp::Plus | UnOp::Minus | UnOp::BitNot | UnOp::Not) && known(operand)
             }
             Expr::Binary { lhs, rhs, .. } => known(lhs) && known(rhs),
+            // 6.6 p6 allows a cast of an arithmetic operand to an integer
+            // type, and `sizeof` of anything this check sizes.
+            Expr::Cast { operand, .. } => known(operand),
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => true,
             Expr::Conditional {
                 condition,
                 then,
@@ -2228,8 +2242,115 @@ impl Checker<'_> {
                 }
                 self.conditional(ast, then, otherwise, diagnostics)
             }
+            Expr::SizeofType { ty, span } => self.sizeof(ast, id, ty, span, diagnostics),
+            // The operand is typed, as every expression is, and never
+            // evaluated (6.5.3.4 p2): nothing lowers it.
+            Expr::SizeofExpr { operand, span } => {
+                let ty = self.types[operand.index()]?;
+                self.sizeof(ast, id, ty, span, diagnostics)
+            }
+            Expr::Cast { ty, operand, span } => self.cast(ast, ty, operand, span, diagnostics),
             Expr::Error { .. } => None,
         }
+    }
+
+    /// The type of `sizeof` of `ty`, `size_t` (C17 6.5.3.4 p5), with its
+    /// value recorded: the bytes [`Self::bytes_of`] counts, which is what
+    /// `clang` answers on the target (`sizeof_is_what_clang_says_it_is`).
+    ///
+    /// p1 refuses a function and an incomplete type (`SC0306`). A struct has
+    /// no layout here until #614, and an array of a length that is not a
+    /// constant is sized at run time, which nothing here does yet; both are
+    /// `SC0304`.
+    fn sizeof(
+        &mut self,
+        ast: &mut Ast,
+        id: ExprId,
+        ty: TypeId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let incomplete = match ast.ty(ty) {
+            Type::Function { .. } => Some("a function"),
+            Type::Void => Some("`void`, which is incomplete"),
+            Type::Array { length: None, .. } => Some("an array of no length, which is incomplete"),
+            Type::Integer { .. }
+            | Type::Pointer(_)
+            | Type::Array {
+                length: Some(_), ..
+            }
+            | Type::Struct { .. } => None,
+        };
+        if let Some(what) = incomplete {
+            diagnostics.report(
+                Diagnostic::error(format!("`sizeof` cannot be applied to {what}"))
+                    .with_code(OPERANDS)
+                    .with_label(Label::primary(
+                        span,
+                        format!("this is `{}`", self.spelled(ast, ty)),
+                    ))
+                    .with_note("C17 6.5.3.4 p1"),
+            );
+            return None;
+        }
+        let Some(bytes) = self.bytes_of(ast, ty) else {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "this compiler cannot size `{}` yet",
+                    self.spelled(ast, ty)
+                ))
+                .with_code(NOT_YET)
+                .with_label(Label::primary(span, "this `sizeof`"))
+                .with_note(
+                    "a gap in this compiler: a struct has no layout here yet, and an array of a length that is not a constant is sized at run time",
+                ),
+            );
+            return None;
+        };
+        let size = self.integer_type(ast, self.target.size_type());
+        self.values[id.index()] = Some(
+            i128::try_from(bytes)
+                .expect("an object's size is below the limit `report_array` holds"),
+        );
+        Some(size)
+    }
+
+    /// The type of the cast of `operand` to `ty`, which is `ty`: C17 6.5.4
+    /// p2 asks that it be `void`, or a scalar type with a scalar operand.
+    /// An array or a function operand is a pointer by then (6.3.2.1 p3 and
+    /// p4). Not an lvalue (footnote 104); [`Checker::designates`] says so.
+    fn cast(
+        &mut self,
+        ast: &mut Ast,
+        ty: TypeId,
+        operand: ExprId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let to_scalar = match ast.ty(ty) {
+            Type::Void => return Some(ty),
+            Type::Integer { .. } | Type::Pointer(_) => true,
+            Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => false,
+        };
+        let from = self.types[operand.index()]?;
+        let from_scalar = match ast.ty(from) {
+            Type::Integer { .. }
+            | Type::Pointer(_)
+            | Type::Array { .. }
+            | Type::Function { .. } => true,
+            Type::Void | Type::Struct { .. } => false,
+        };
+        if to_scalar && from_scalar {
+            return Some(ty);
+        }
+        let (to, from) = (self.spelled(ast, ty), self.spelled(ast, from));
+        diagnostics.report(
+            Diagnostic::error(format!("cannot cast `{from}` to `{to}`"))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(span, format!("a `{from}` cast to `{to}`")))
+                .with_note("a cast is to `void`, or to a scalar type from one (C17 6.5.4 p2)"),
+        );
+        None
     }
 
     fn unary(
@@ -3268,6 +3389,9 @@ impl Checker<'_> {
             | Expr::Assign { .. }
             | Expr::Comma { .. }
             | Expr::Conditional { .. }
+            | Expr::SizeofType { .. }
+            | Expr::SizeofExpr { .. }
+            | Expr::Cast { .. }
             | Expr::Call { .. } => Designates::Value,
             Expr::Error { span: _ } => Designates::Unknown,
         }
@@ -4389,6 +4513,15 @@ impl Checker<'_> {
             }
             // Counted, and so known.
             Expr::Length { value, .. } => Some(i128::from(value)),
+            // To an integer type, the operand's value converted to it (6.3.1.3);
+            // a pointer has no value here, and `(int *)0` is lowered as the
+            // null it is.
+            Expr::Cast { operand, .. } => {
+                at?;
+                converted(operand)
+            }
+            // Set when it was typed, which a `sizeof` that has a type always is.
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => None,
             Expr::Number { .. }
             | Expr::Character { .. }
             | Expr::String { .. }

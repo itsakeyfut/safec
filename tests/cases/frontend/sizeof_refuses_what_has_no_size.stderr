@@ -1,0 +1,32 @@
+error[SC0306]: `sizeof` cannot be applied to a function
+   ╭─[ sizeof_refuses_what_has_no_size.c:7:12 ]
+   │
+ 7 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+   │            ────┬───  
+   │                ╰───── this is `int (void)`
+───╯
+  = note: C17 6.5.3.4 p1
+error[SC0306]: `sizeof` cannot be applied to `void`, which is incomplete
+   ╭─[ sizeof_refuses_what_has_no_size.c:7:23 ]
+   │
+ 7 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+   │                       ──────┬─────  
+   │                             ╰─────── this is `void`
+───╯
+  = note: C17 6.5.3.4 p1
+error[SC0304]: this compiler cannot size `struct S` yet
+   ╭─[ sizeof_refuses_what_has_no_size.c:7:38 ]
+   │
+ 7 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+   │                                      ────────┬───────  
+   │                                              ╰───────── this `sizeof`
+───╯
+  = note: a gap in this compiler: a struct has no layout here yet, and an array of a length that is not a constant is sized at run time
+error[SC0306]: `sizeof` cannot be applied to an array of no length, which is incomplete
+   ╭─[ sizeof_refuses_what_has_no_size.c:7:57 ]
+   │
+ 7 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+   │                                                         ────┬───  
+   │                                                             ╰───── this is `int[]`
+───╯
+  = note: C17 6.5.3.4 p1

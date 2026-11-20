@@ -1,0 +1,7 @@
+error[SC0201]: a type name declares nothing
+   ╭─[ a_type_name_names_nothing.c:2:17 ]
+   │
+ 2 │     return (int x)y;
+   │                 ┬  
+   │                 ╰── a name here
+───╯

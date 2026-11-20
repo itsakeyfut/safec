@@ -1,0 +1,16 @@
+error[SC0402]: this uses `p` after it was freed
+   ╭─[ a_cast_of_malloc_is_followed_as_its_implicit_conversion.c:9:5 ]
+   │
+ 4 │     int *p = (int *)malloc(4);
+   │                     ────┬────  
+   │                         ╰────── allocated here
+   │ 
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 9 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

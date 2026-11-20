@@ -59,6 +59,27 @@ cases! {
         // met by a program that proves it, one that leaves it unproven, and one
         // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast to or from `void *` is the implicit conversion, so a use
+        // after a free through `(int *)malloc(4)` is proved (ADR-0117).
+        // Mutation: lower every pointer cast as `Rvalue::Reinterpret`; this
+        // is `SC0416` and the use goes unproven.
+        a_cast_of_malloc_is_followed_as_its_implicit_conversion: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A cast between two other pointer types is followed as a conversion
+        // through `void *` is: the free through `p` reaches `c`, and `c` is
+        // read in bytes, so `c[7]` is inside eight and `c[8]` is not. See
+        // ADR-0117. Mutation: lower it as `Rvalue::Reinterpret`; both become
+        // `SC0416`.
+        a_use_after_free_through_a_char_cast_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_char_cast_reads_the_allocation_in_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(int *)0` converts a null pointer constant, which gives a null
+        // pointer (C17 6.3.2.3 p3). Mutation: lower it as
+        // `Rvalue::Reinterpret`; this is `SC0416`, not `SC0403`.
+        a_null_pointer_cast_is_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each conversion between a pointer and an integer is unproven where
+        // it is written, `SC0416`, and what follows it is not believed
+        // (ADR-0117). Mutation: push no finding for `Rvalue::Reinterpret` in
+        // `memory.rs`; both go silent and the read of `*q` with them.
+        a_cast_between_a_pointer_and_an_integer_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local nothing assigned, read by a null test and written
         // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
         // since no path assigns it.
@@ -8256,6 +8277,21 @@ cases! {
         // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
         // the first half in `Parser::specifiers`; `SC0201`.
         a_storage_class_after_the_type_is_read: ["--emit", "ast"],
+        // C17 6.5.3.4 p1 refuses a function and an incomplete type, `SC0306`;
+        // a struct has no layout here yet, `SC0304`. Mutation: drop the
+        // incomplete arm in `Checker::sizeof`; `sizeof(void)` and `sizeof
+        // a` are `SC0304` instead.
+        sizeof_refuses_what_has_no_size: ["--emit", "ast"],
+        // 6.5.4 p2: to `void` or to a scalar from a scalar. Mutation: let a
+        // struct operand through in `Checker::cast`; the first is accepted.
+        a_cast_is_held_to_scalar_types: ["--emit", "ast"],
+        // 6.7.7: a type name is a declaration of nothing. Mutation: accept
+        // the name in `Parser::type_name`; the cast is read.
+        a_type_name_names_nothing: ["--emit", "ast"],
+        // The specifiers of a type name inside a declaration replace none of
+        // the declaration's own: both stay `static`. Mutation: do not restore
+        // the storage class in `Parser::type_name`; neither is.
+        a_type_name_in_a_static_declaration_keeps_its_storage: ["--emit", "ast"],
         // Every list C17 6.7.2 p2 gives an integer type, in the order it
         // gives them, and two out of order: each declaration's type is
         // spelled as `clang` spells it. Mutation: give a set with a `long`
@@ -8459,6 +8495,10 @@ cases! {
         // struct in the type checker again; the lowering is never reached,
         // `main` is not printed, and this fails.
         a_struct_program_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // 6.5.3.4 p2: the operand of `sizeof` is not evaluated, so `f` is
+        // not called and the function is a return of a constant. Mutation:
+        // lower a `sizeof` that has a value by its operand; a call appears.
+        sizeof_does_not_evaluate_its_operand: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a
         // declarator; this loses its `SC0206`.

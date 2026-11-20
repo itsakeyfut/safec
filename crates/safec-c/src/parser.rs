@@ -580,7 +580,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
             "6.7.10",
             &[FileScope, BlockScope, Member],
         ),
-        Keyword::Sizeof => ("`sizeof`", "6.5.3.4", &[Expression]),
         Keyword::Alignof => ("`_Alignof`", "6.5.3.4", &[Expression]),
         Keyword::Generic => ("`_Generic`", "6.5.1.1", &[Expression]),
         _ => return None,
@@ -2956,8 +2955,22 @@ impl Parser<'_> {
         lhs
     }
 
-    /// A prefix operator and its operand, or a postfix expression. C17 6.5.3.
+    /// A prefix operator and its operand, `sizeof`, a cast, or a postfix
+    /// expression. C17 6.5.3 and 6.5.4.
+    ///
+    /// **A cast is read here, as a cast-expression**, so that it binds as
+    /// tightly as a prefix operator: `(char)x + 1` adds to the cast and
+    /// `-(int)x` negates it. 6.5.3 makes the operand of `++`, `--` and
+    /// `sizeof` a unary-expression rather than a cast-expression, which this
+    /// reads more widely: `++(int)x` parses and the type check refuses it,
+    /// since a cast is no lvalue (6.5.4 footnote 104).
     fn unary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        if self.check(TokenKind::Keyword(Keyword::Sizeof)) {
+            return self.sizeof(diagnostics);
+        }
+        if self.check(TokenKind::Punct(Punct::LeftParen)) && self.type_name_follows() {
+            return self.cast(diagnostics);
+        }
         let op = match self.peek().kind {
             TokenKind::Punct(Punct::Plus) => UnOp::Plus,
             TokenKind::Punct(Punct::Minus) => UnOp::Minus,
@@ -2986,9 +2999,112 @@ impl Parser<'_> {
         )
     }
 
-    /// A primary expression with whatever follows it. C17 6.5.2.
+    /// Whether the token after the one here begins a type name: what may
+    /// begin a parameter's specifiers, less `register`, which is a storage
+    /// class and no part of a type name (C17 6.7.7). Asked with a `(` here,
+    /// which this tells apart as a cast's or `sizeof`'s from a parenthesised
+    /// expression's.
+    fn type_name_follows(&self) -> bool {
+        let kind = self.peek_at(1).kind;
+        begins_specifiers(kind)
+            || matches!(kind, TokenKind::Keyword(keyword)
+                if keyword != Keyword::Register
+                    && unread_keyword(keyword, Position::Parameter).is_some())
+    }
+
+    /// A type name, C17 6.7.7: specifiers and qualifiers, then a declarator
+    /// that names nothing. `None` once reported.
     ///
-    /// Casts and `sizeof` are not here yet.
+    /// **The storage class being read is kept**, since the specifiers here
+    /// replace it: `static int a[sizeof(int)];` lost its `static` otherwise,
+    /// as a struct's members did before `specifiers` held it locally. A
+    /// storage class in the type name itself is refused, as a member's is.
+    fn type_name(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+        let start = self.peek().span;
+        let storage = self.storage;
+        let base = self.specifiers(Position::Member, diagnostics);
+        self.storage = storage;
+        let base = base?;
+        let (name, derivations) = self.declarator(false, diagnostics)?;
+        if let Some(name) = name {
+            self.report_at(
+                name,
+                EXPECTED,
+                "a type name declares nothing",
+                "a name here",
+                diagnostics,
+            );
+            return None;
+        }
+        let (ty, _) = self.apply(start, base, derivations, Declares::BlockScope, diagnostics)?;
+        Some(ty)
+    }
+
+    /// The `)` closing a type name, and a refusal of the compound literal a
+    /// `{` after it would begin (C17 6.5.2.5), which is not read yet.
+    fn close_type_name(&mut self, diagnostics: &mut DiagnosticSink) -> Option<()> {
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            self.report_unread(
+                Unread {
+                    what: "a compound literal",
+                    clause: "6.5.2.5",
+                },
+                diagnostics,
+            );
+            return None;
+        }
+        Some(())
+    }
+
+    /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4.
+    fn cast(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let start = self.advance().span;
+        let Some(ty) = self.type_name(diagnostics) else {
+            return self.ast.push_expr(Expr::Error { span: start });
+        };
+        if self.close_type_name(diagnostics).is_none() {
+            return self.ast.push_expr(Expr::Error { span: start });
+        }
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let operand = parser.unary(diagnostics);
+                let span = parser.join(start, parser.previous().span, diagnostics);
+                parser.ast.push_expr(Expr::Cast { ty, operand, span })
+            },
+            |parser, span| parser.ast.push_expr(Expr::Error { span }),
+        )
+    }
+
+    /// `sizeof ( type-name )` or `sizeof unary-expression`, with the
+    /// `sizeof` here. C17 6.5.3.4. A `(` that begins no type name begins the
+    /// operand, so `sizeof (x)` is the size of `x`.
+    fn sizeof(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let start = self.advance().span;
+        if self.check(TokenKind::Punct(Punct::LeftParen)) && self.type_name_follows() {
+            self.advance();
+            let Some(ty) = self.type_name(diagnostics) else {
+                return self.ast.push_expr(Expr::Error { span: start });
+            };
+            if self.close_type_name(diagnostics).is_none() {
+                return self.ast.push_expr(Expr::Error { span: start });
+            }
+            let span = self.join(start, self.previous().span, diagnostics);
+            return self.ast.push_expr(Expr::SizeofType { ty, span });
+        }
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let operand = parser.unary(diagnostics);
+                let span = parser.join(start, parser.previous().span, diagnostics);
+                parser.ast.push_expr(Expr::SizeofExpr { operand, span })
+            },
+            |parser, span| parser.ast.push_expr(Expr::Error { span }),
+        )
+    }
+
+    /// A primary expression with whatever follows it. C17 6.5.2.
     fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         // The token the primary starts at, for the reason `climb` gives.
         let first = self.peek().span;
@@ -3249,27 +3365,9 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Identifier { span });
         }
 
+        // A `(` that begins a type name is a cast's, read by `unary` before
+        // this is reached.
         if self.eat(TokenKind::Punct(Punct::LeftParen)) {
-            // A type name here begins a cast or a compound literal, neither of
-            // which is read yet. What may begin one is what may begin a
-            // parameter's specifiers, less `register`, which is a storage
-            // class and no part of a type name (C17 6.7.7).
-            let kind = self.peek().kind;
-            let type_name = begins_specifiers(kind)
-                || matches!(kind, TokenKind::Keyword(keyword)
-                    if keyword != Keyword::Register
-                        && unread_keyword(keyword, Position::Parameter).is_some());
-            if type_name {
-                self.report_unread(
-                    Unread {
-                        what: "a cast or a compound literal",
-                        clause: "6.5.4 or 6.5.2.5",
-                    },
-                    diagnostics,
-                );
-                return self.ast.push_expr(Expr::Error { span });
-            }
-
             // Parentheses make no node. The grouping is already the shape of
             // the tree, and a node for them is one every later phase would have
             // to see through.
