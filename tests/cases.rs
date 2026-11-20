@@ -3765,6 +3765,15 @@ cases! {
         // write may end every turn without it, so the read after the loop is
         // doubted all the same.
         a_write_a_continue_may_skip_in_a_loop_shown_to_run_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A turn a `continue` ends writes `m[0]` and comes round, so the read
+        // after the `if` may first run with it written: a doubt, as the same
+        // program with an `else` is. Its block dominates one of the loop's
+        // two latches. Mutation: ask that it dominate any latch rather than
+        // every one, in the first-turn walk of `memory.rs`; this is proved.
+        a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same for a pointer local, which `memory::assigned` asks.
+        // Mutation: the same, in its filter of first turns; this is proved.
+        a_pointer_a_turn_ended_by_continue_may_have_assigned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_in_a_do_body_has_happened_after_the_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read as any loop body is: the free and the use in one turn are
         // proved, and the next turn's free is a second one. Mutation: enter
