@@ -379,7 +379,9 @@ fn a_case_after_a_declaration_begins_it() {
 /// this fails.
 #[test]
 fn a_case_belongs_to_the_innermost_switch() {
-    let nested = ran("int main(void) {\n    int r;\n    r = 0;\n    switch (1) {\n    case 1:\n        switch (2) {\n        case 1:\n            r = 10;\n            break;\n        case 2:\n            r = 20;\n            break;\n        }\n        r = r + 1;\n        break;\n    case 2:\n        r = 99;\n    }\n    return r;\n}\n");
+    let nested = ran(
+        "int main(void) {\n    int r;\n    r = 0;\n    switch (1) {\n    case 1:\n        switch (2) {\n        case 1:\n            r = 10;\n            break;\n        case 2:\n            r = 20;\n            break;\n        }\n        r = r + 1;\n        break;\n    case 2:\n        r = 99;\n    }\n    return r;\n}\n",
+    );
     assert_eq!(nested, Ok(Value::Int(21)));
 }
 
