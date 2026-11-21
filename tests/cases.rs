@@ -115,12 +115,18 @@ cases! {
         // static read-only; the write to `h` is. Mutation: mark no function
         // as returning a pointer to `const`; `named` is.
         a_const_object_read_and_a_writable_one_written_are_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A value computed from a pointer to `const`, a comparison, returned,
-        // kept in a local and handed to an integer parameter, writes nothing
-        // and is not reported (#1135). Mutation: drop the pointer test in
-        // `names_read_only`; `returned`, `through_a_local` and the call in
-        // `main` are `SC0417`.
+        // A comparison of a pointer to `const`, returned, kept in a local and
+        // handed to an integer parameter, writes nothing and is not reported
+        // (#1135). Mutation: keep the mark on a comparison in `built_from`;
+        // `returned`, `through_a_local` and the call in `main` are `SC0417`.
         a_value_computed_from_a_pointer_to_const_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An integer holding a pointer to `const`'s bytes is still asked where
+        // it leaves, returned or handed to a call declared without a
+        // prototype, since the other side may read it as a pointer. Found by
+        // the review of #1135, where asking by type silenced both. Mutation:
+        // answer no for a value whose type is no pointer in `names_read_only`;
+        // both go silent.
+        an_integer_holding_the_bytes_of_a_pointer_to_const_is_asked_where_it_leaves: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A write through a cast that dropped `const` to an object defined
         // `const` is `SC0417` at the write (C17 6.7.3 p6, ADR-0120); the
         // cast itself is followed as any pointer cast is (#1122). So is one

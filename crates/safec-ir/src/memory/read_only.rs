@@ -4,7 +4,7 @@
 //! and a call handed a pointer it may write through. See ADR-0120.
 
 use crate::analysis::Conclusion;
-use crate::ir::{Element, FuncId, Function, Operand, Rvalue, Shape, Terminator, Ty};
+use crate::ir::{Element, FuncId, Function, Operand, Rvalue, Shape, Terminator};
 use crate::library::Callee;
 
 use super::allocations::Allocations;
@@ -43,29 +43,10 @@ fn may_land_read_only(landing: &Landing, read_only: &[LocalIdx], known: &Known) 
 /// Whether the pointer `operand` holds may name read-only storage: a static
 /// its value's mark says it may (`Held::read_only`), or a read-only local it
 /// may point at, read as the value is, by name or `depth` dereferences down.
-///
-/// **Only a pointer**: a value computed from one, `p == a`, keeps the
-/// operands' marks in what it holds and writes nothing through. Asked as a
-/// pointer, it reported a correct comparison returned or handed on as a
-/// write (#1135). Mutation: drop the type test;
-/// `a_value_computed_from_a_pointer_to_const_is_not_a_write` reports.
-fn names_read_only(
-    analysis: &Allocations<'_>,
-    function: &Function,
-    operand: &Operand,
-    read_only: &[LocalIdx],
-    known: &Known,
-) -> bool {
+fn names_read_only(operand: &Operand, read_only: &[LocalIdx], known: &Known) -> bool {
     let Operand::Copy(place) = operand else {
         return false;
     };
-    let pointer = analysis
-        .unit
-        .place_ty(function, place)
-        .is_some_and(|ty| matches!(analysis.unit.ty(ty), Ty::Pointer(_)));
-    if !pointer {
-        return false;
-    }
     match place.shape() {
         Shape::Local => {
             let held = &known.points_to[place.local];
@@ -95,7 +76,6 @@ fn names_read_only(
 /// `a_write_to_a_string_literal_is_unproven`'s `returned` goes silent.
 pub(super) fn returned_read_only(
     findings: &mut Vec<Finding>,
-    analysis: &Allocations<'_>,
     function: &Function,
     element: &Element,
     known: &Known,
@@ -113,13 +93,7 @@ pub(super) fn returned_read_only(
     let Rvalue::Use(operand) = &operation.value else {
         return;
     };
-    if names_read_only(
-        analysis,
-        function,
-        operand,
-        &read_only_locals(function),
-        known,
-    ) {
+    if names_read_only(operand, &read_only_locals(function), known) {
         findings.push(Finding {
             function: func,
             kind: Kind::WritesReadOnly,
@@ -203,7 +177,7 @@ pub(super) fn handed_read_only(
         if called.reads_only_through(index) {
             continue;
         }
-        if names_read_only(analysis, function, argument, &read_only, known) {
+        if names_read_only(argument, &read_only, known) {
             let Operand::Copy(place) = argument else {
                 unreachable!("only a place names storage")
             };
