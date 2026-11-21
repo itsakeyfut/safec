@@ -115,11 +115,22 @@ cases! {
         // static read-only; the write to `h` is. Mutation: mark no function
         // as returning a pointer to `const`; `named` is.
         a_const_object_read_and_a_writable_one_written_are_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A write through a cast that dropped `const` may write an object
-        // defined `const` (C17 6.7.3 p6), which nothing here can tell, so
-        // the cast is `SC0416` (ADR-0117). Mutation: lower it as
-        // `Rvalue::Use` in `Lowering::cast`; the program is believed.
-        a_cast_that_drops_const_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write through a cast that dropped `const` to an object defined
+        // `const` is `SC0417` at the write (C17 6.7.3 p6, ADR-0120); the
+        // cast itself is followed as any pointer cast is (#1122). So is one
+        // through a parameter or a call's result declared as a pointer to
+        // `const`, which may name such an object; a read through one is not.
+        // Mutation: leave a cast's result unmarked in `Lowering::cast`;
+        // `through_a_global`, read out of memory as it is cast, is believed.
+        // Mutation: skip the mark after an assignment in
+        // `Allocations::element`; `through_a_const_result` is.
+        a_write_through_a_cast_that_drops_const_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `free((void *)p)` with `p` a `const int *` frees `p`'s allocation
+        // as the check follows it, so a use after it is `SC0402` and a second
+        // free `SC0401` (#1122). Mutation: lower a cast that drops `const` as
+        // `Rvalue::Reinterpret`; both are said about a pointer the check
+        // stopped following, and the use goes unreported.
+        a_free_through_a_cast_that_drops_const_is_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer local nothing assigned, read by a null test and written
         // through on the arm it passes: a proof at each read (C17 6.3.2.1 p2),
         // since no path assigns it.

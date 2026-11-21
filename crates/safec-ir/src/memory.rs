@@ -240,12 +240,11 @@ pub enum Kind {
     /// both false, and believing them would be silent about the path that
     /// enters there. See `Cfg::reducible`.
     EnteredInside,
-    /// A cast this check does not follow, [`Rvalue::Reinterpret`]: between a
-    /// pointer and an integer, `(long)p` or `(int *)n`, since the integer
-    /// carries no allocation, or one that drops `const`, `(int *)&g`, since
-    /// a write through it to an object defined `const` is undefined and this
-    /// check does not know which objects those are. Always `Unknown`, at the
-    /// cast. See ADR-0117.
+    /// A conversion between a pointer and an integer, `(long)p` or `(int
+    /// *)n`, which this check does not follow: the integer carries no
+    /// allocation, so a pointer made from one names nothing this check knows
+    /// and one turned into one may be freed or written through where nothing
+    /// here sees it. Always `Unknown`, at the cast. See ADR-0117.
     Reinterpreted,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,

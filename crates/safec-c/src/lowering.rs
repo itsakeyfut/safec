@@ -1761,6 +1761,9 @@ impl Lowering<'_> {
                 if self.read_only(parameter.ty) {
                     function.mark_read_only(local);
                 }
+                if self.points_at_const(parameter.ty) {
+                    function.mark_points_at_const(local);
+                }
             }
         }
         if hatch {
@@ -2225,10 +2228,14 @@ impl Lowering<'_> {
                     // left alone until something assigns to it.
                     if let Some(name) = name {
                         let read_only = self.read_only(ty);
+                        let points_at_const = self.points_at_const(ty);
                         let ty = self.ty(span, ty, diagnostics)?;
                         let local = builder.function.push_named_local(ty, name);
                         if read_only {
                             builder.function.mark_read_only(local);
+                        }
+                        if points_at_const {
+                            builder.function.mark_points_at_const(local);
                         }
                         self.locals.insert(name, local);
 
@@ -4343,12 +4350,14 @@ impl Lowering<'_> {
     /// - A null pointer constant to a pointer type is the null it is.
     /// - Between a pointer and an integer otherwise, [`Rvalue::Reinterpret`],
     ///   which the memory check reports unproven where it is written.
-    /// - Between two pointer types where what the result points at is not
-    ///   `const` and what the operand points at is, the same: a write
-    ///   through it to an object defined `const` is undefined (C17 6.7.3
-    ///   p6), and nothing here knows which objects those are. Mutation:
-    ///   lower it as `Rvalue::Use`; `a_cast_that_drops_const_is_unproven`
-    ///   goes silent.
+    ///
+    /// A cast between pointer types that drops `const` is a copy as any
+    /// other is: what may not be written is the object, and the memory check
+    /// follows that through every spelling of the pointer (ADR-0120). Made
+    /// a value nothing follows, a free through it was not followed and a use
+    /// after it went unreported (#1122). Mutation: lower it as
+    /// `Rvalue::Reinterpret`; `a_free_through_a_cast_that_drops_const_is_followed`
+    /// fails.
     fn cast(
         &mut self,
         builder: &mut Builder,
@@ -4375,13 +4384,25 @@ impl Lowering<'_> {
             pointer(self.types.of(operand), self.ast),
         );
         let rvalue = match (to, from, &value) {
-            (true, true, _) if self.drops_const(id, operand) => Rvalue::Reinterpret(value),
             (true, false, Operand::Constant(0)) | (true, true, _) | (false, false, _) => {
                 Rvalue::Use(value)
             }
             (true, false, _) | (false, true, _) => Rvalue::Reinterpret(value),
         };
         let into = self.temporary(builder, id, diagnostics)?;
+        // **What a pointer to `const` held, it still may**, `const` dropped
+        // or not: `(int *)p` with `p` a parameter may name an object defined
+        // `const` the caller handed. Found by the review of #1122: the cast
+        // was what asked such a pointer, and followed it asked nothing.
+        // Mutation: leave the result unmarked; `a_write_through_a_cast_that_drops_const_is_unproven`'s
+        // `through_a_global`, cast as it is read out of memory, goes silent.
+        if self
+            .types
+            .of(operand)
+            .is_some_and(|ty| self.points_at_const(ty))
+        {
+            builder.function.mark_points_at_const(into);
+        }
         builder.push(Operation {
             place: Place::local(into),
             value: rvalue,
@@ -4391,18 +4412,6 @@ impl Lowering<'_> {
         Some(())
     }
 
-    /// Whether the cast `id` of `operand`, both pointers, gives a pointer to
-    /// something not `const` from one to something that is.
-    fn drops_const(&self, id: ExprId, operand: ExprId) -> bool {
-        let pointee = |ty: Option<TypeId>| match ty.map(|ty| self.ast.ty(ty)) {
-            Some(Type::Pointer(pointee)) => Some(self.ast.is_const(*pointee)),
-            // An array operand points at its elements once it is read.
-            Some(Type::Array { element, .. }) => Some(self.ast.is_const(*element)),
-            _ => None,
-        };
-        pointee(self.types.of(operand)) == Some(true) && pointee(self.types.of(id)) == Some(false)
-    }
-
     fn temporary(
         &mut self,
         builder: &mut Builder,
@@ -4410,7 +4419,18 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<LocalId> {
         let ty = self.ty_of(id, diagnostics)?;
-        Some(builder.function.push_local(ty))
+        let local = builder.function.push_local(ty);
+        if self.types.of(id).is_some_and(|ty| self.points_at_const(ty)) {
+            builder.function.mark_points_at_const(local);
+        }
+        Some(local)
+    }
+
+    /// Whether `ty` is a pointer to `const` at its pointee's innermost
+    /// element, so a value of it may name an object defined `const`.
+    /// See ADR-0120.
+    fn points_at_const(&self, ty: TypeId) -> bool {
+        matches!(self.ast.ty(ty), Type::Pointer(pointee) if self.read_only(*pointee))
     }
 
     /// A temporary of the type an operation is performed at.

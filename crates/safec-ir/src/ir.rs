@@ -688,11 +688,10 @@ pub enum Rvalue {
     /// to storage no function owns. See ADR-0115.
     Static(StaticId),
     /// The operand's bits as the type the operation is written into, where
-    /// one of the two is an integer and the other a pointer (C17 6.3.2.3 p5
-    /// and p6), or both are pointers and the result drops a `const` from
-    /// what it points at (6.3.2.3 p2). What the result points at is nothing
-    /// an analysis follows from the operand, so the memory check reports
-    /// every one as unproven where it is written. See ADR-0117.
+    /// one of the two is an integer and the other a pointer: C17 6.3.2.3 p5
+    /// and p6, a cast in either direction. What the result points at is
+    /// nothing an analysis can follow from the operand, so the memory check
+    /// reports every one as unproven where it is written. See ADR-0117.
     Reinterpret(Operand),
 }
 
@@ -1280,6 +1279,10 @@ pub struct Function {
     /// Whether what it returns is a pointer to `const`, so that a caller
     /// cannot write through it: [`Parameter::reads_only`] for the result.
     returns_reads_only: bool,
+    /// The locals declared as a pointer to `const`, whatever value they
+    /// hold: such a pointer may name an object defined `const`, so what is
+    /// written through it once the `const` is dropped is asked. See ADR-0120.
+    points_at_const: Vec<LocalId>,
     body: Body,
 }
 
@@ -1330,6 +1333,7 @@ impl Function {
             return_promise: None,
             read_only: Vec::new(),
             returns_reads_only: false,
+            points_at_const: Vec::new(),
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1482,6 +1486,16 @@ impl Function {
     /// argument has no parameter to say so. See ADR-0120.
     pub fn reads_only_through(&self, index: usize) -> bool {
         self.reads_only.get(index).copied().unwrap_or(false)
+    }
+
+    /// Say that `local` is declared as a pointer to `const`. See ADR-0120.
+    pub fn mark_points_at_const(&mut self, local: LocalId) {
+        self.points_at_const.push(local);
+    }
+
+    /// Whether `local` is declared as a pointer to `const`.
+    pub fn points_at_const(&self, local: LocalId) -> bool {
+        self.points_at_const.contains(&local)
     }
 
     /// Say that what this returns is a pointer to `const`. See ADR-0120.
