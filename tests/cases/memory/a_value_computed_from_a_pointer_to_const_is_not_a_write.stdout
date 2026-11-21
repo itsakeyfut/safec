@@ -1,0 +1,152 @@
+Target "x86_64-pc-windows-msvc"
+Static ".str.0" "char[3]" internal bytes 97 98 0
+Static ".str.1" "char[3]" internal bytes 97 98 0
+Function a_value_computed_from_a_pointer_to_const_is_not_a_write.c:1:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "n"
+  Block "bb0" entry
+    Return
+Function a_value_computed_from_a_pointer_to_const_is_not_a_write.c:3:5 "returned"
+  Local "_0" "int" return
+  Local "_1" "char[3]" "a"
+  Local "_2" "char *"
+  Local "_3" "char"
+  Local "_4" "char *" "p"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:5:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:5:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:5:5 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:5:5 generated
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:6:21 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:6:17 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:6:21 generated
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:7:17 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:7:12 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_4"
+        Copy "_6"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:7:12 generated
+    Return
+Function a_value_computed_from_a_pointer_to_const_is_not_a_write.c:9:5 "through_a_local"
+  Local "_0" "int" return
+  Local "_1" "char *" "p"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "int" "r"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:10:21 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:10:21 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:10:17 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:10:21 generated
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:11:13 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:11:9 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:11:13 generated
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:12:12 generated
+    Return
+Function a_value_computed_from_a_pointer_to_const_is_not_a_write.c:14:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char *" "p"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:14:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:15:21 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:15:21 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:15:17 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:15:21 generated
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:16:7 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    ArgumentsEvaluated a_value_computed_from_a_pointer_to_const_is_not_a_write.c:16:5 generated
+    Call a_value_computed_from_a_pointer_to_const_is_not_a_write.c:16:5 written "g" "bb1"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:16:5 generated
+    Call a_value_computed_from_a_pointer_to_const_is_not_a_write.c:17:12 written "returned" "bb2"
+      Destination "_5"
+  Block "bb2"
+    Call a_value_computed_from_a_pointer_to_const_is_not_a_write.c:17:25 written "through_a_local" "bb3"
+      Destination "_6"
+  Block "bb3"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:17:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Operation a_value_computed_from_a_pointer_to_const_is_not_a_write.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_value_computed_from_a_pointer_to_const_is_not_a_write.c:17:12 generated
+    Return

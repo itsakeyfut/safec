@@ -254,6 +254,18 @@ pub(super) fn built_from(
             reached.named_at_read.set(named);
         }
     }
+    // **A comparison names no storage the program may not modify**: its
+    // result is `0` or `1` (C17 6.5.8 p6, 6.5.9 p3), so no write reaches
+    // anything through it. Asked by type at the doors instead, an integer
+    // holding a pointer's bytes handed where a pointer is read went silent
+    // (#1135). Mutation: keep the mark; `a_value_computed_from_a_pointer_to_const_is_not_a_write`
+    // reports.
+    if matches!(
+        op,
+        Some(BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne)
+    ) {
+        reached.read_only = false;
+    }
 
     reached
 }
