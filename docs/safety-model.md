@@ -592,6 +592,14 @@ So a result that is no allocation at all, a string literal, an object with
 static storage duration or a local of another frame the callee was handed, is
 believed to be one, and freeing it is not detected either
 ([#375](https://github.com/itsakeyfut/safec/issues/375)).
+The same belief covers what such a call writes through an address it can
+reach: `get(&q)`, or `set()` once `G = &q` has stored `q`'s address where any
+such code can read it. A pointer it leaves in a local that held no allocation
+is believed, the output-parameter idiom
+([ADR-0044](adr/0044-a-store-through-a-pointer-that-may-hold-what-this-check-cannot-name-exposes-what-it-carries.md));
+one in a local that held an allocation is a pointer this check stopped
+following, and handing it on is `SC0407`
+([#1128](https://github.com/itsakeyfut/safec/issues/1128)).
 Where the callee's body is compiled here, what it returns is asked at its
 `return`
 ([ADR-0068](adr/0068-a-pointer-is-asked-where-it-leaves-by-a-call-a-return-or-a-store-what-the-other-side-will-believe-of-it.md)),
