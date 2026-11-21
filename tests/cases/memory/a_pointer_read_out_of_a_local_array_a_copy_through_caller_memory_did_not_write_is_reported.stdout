@@ -18,7 +18,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_no
   Local "_10" "void *"
   Local "_11" "int *" "q"
   Local "_12" "int"
-  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported.c:3:9 written
       Destination "_3"
@@ -132,11 +131,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_no
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported.c:12:5 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported.c:12:5 generated
     Operation a_pointer_read_out_of_a_local_array_a_copy_through_caller_memory_did_not_write_is_reported.c:13:5 written
       Destination "_0"

@@ -12,7 +12,6 @@ Function a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_b
   Local "_9" "int"
   Local "_10" "int *" "b"
   Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:2:9 written
       Destination "_2"
@@ -94,11 +93,6 @@ Function a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_b
         Deref
       Use
         Constant 1
-    Operation a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:13:13 written
-      Destination "_12"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_load_read_back_through_a_local_s_address_is_believed_as_it_was_read_below_its_first_level.c:13:13 generated
     Goto "bb9"
   Block "bb8"

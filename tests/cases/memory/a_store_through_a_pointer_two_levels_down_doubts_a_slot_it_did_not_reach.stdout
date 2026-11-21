@@ -16,15 +16,12 @@ Function a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reac
   Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int **"
-  Local "_11" "int ***"
-  Local "_12" "int **"
-  Local "_13" "int **" "d"
-  Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int *" "p"
-  Local "_17" "int **"
-  Local "_18" "int"
+  Local "_10" "int ***"
+  Local "_11" "int **" "d"
+  Local "_12" "int"
+  Local "_13" "int *" "p"
+  Local "_14" "int **"
+  Local "_15" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:3:18 generated
     Call a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:3:18 written "malloc" "bb1"
@@ -107,40 +104,30 @@ Function a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reac
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:7:5 written
-      Destination "_10"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:7:5 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:8:5 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:8:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:8:5 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:8:5 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:9:11 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_2"
           Deref
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:9:15 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:10:9 written
-      Destination "_14"
+      Destination "_12"
       Unary "Not"
-        Copy "_13"
+        Copy "_11"
     Branch a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:10:9 written "bb11" "bb12"
-      Copy "_14"
+      Copy "_12"
   Block "bb11"
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:10:9 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:10:13 written
@@ -160,22 +147,16 @@ Function a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reac
       Use
         Copy "_1"
           Deref
-    Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:11:5 written
-      Destination "_15"
-      Use
-        Copy "_2"
-          Deref
-            Deref
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:11:5 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:12:14 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:12:10 written
-      Destination "_16"
+      Destination "_13"
       Use
-        Copy "_17"
+        Copy "_14"
           Deref
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:12:14 generated
     ArgumentsEvaluated a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:13:5 generated
@@ -189,13 +170,13 @@ Function a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reac
   Block "bb15"
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:14:5 generated
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:15:12 written
-      Destination "_18"
+      Destination "_15"
       Binary "Eq"
-        Copy "_16"
+        Copy "_13"
         Constant 0
     Operation a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:15:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_15"
     Sequenced a_store_through_a_pointer_two_levels_down_doubts_a_slot_it_did_not_reach.c:15:12 generated
     Return

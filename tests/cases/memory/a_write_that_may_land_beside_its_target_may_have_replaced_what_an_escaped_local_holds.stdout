@@ -13,15 +13,11 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
   Local "_4" "int *" "r"
   Local "_5" "int **" "tmp"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int *" "s"
-  Local "_9" "int **" "pp"
-  Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int *" "q"
-  Local "_13" "void *"
-  Local "_14" "int *"
-  Local "_15" "int"
+  Local "_7" "int *" "s"
+  Local "_8" "int **" "pp"
+  Local "_9" "int **"
+  Local "_10" "int *" "q"
+  Local "_11" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:4:14 generated
     Call a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:4:14 written "malloc" "bb1"
@@ -51,25 +47,17 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
       Destination "_5"
       Use
         Constant 0
-    Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:7:5 generated
     Branch a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:10:9 written "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:10:9 generated
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:11:14 written
-      Destination "_10"
-      Address
-        Place "_8"
-    Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:11:9 written
       Destination "_9"
-      Use
-        Copy "_10"
+      Address
+        Place "_7"
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:11:9 written
-      Destination "_11"
+      Destination "_8"
       Use
         Copy "_9"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:11:9 generated
@@ -80,24 +68,19 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
   Block "bb4"
     ArgumentsEvaluated a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:13:14 generated
     Call a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:13:14 written "malloc" "bb5"
-      Destination "_13"
+      Destination "_11"
       Constant 8
   Block "bb5"
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:13:10 written
-      Destination "_12"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:13:14 generated
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
-        Copy "_12"
-    Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 written
-      Destination "_14"
-      Use
-        Copy "_9"
-          Deref
+        Copy "_10"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 generated
     ArgumentsEvaluated a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 generated
     Call a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 written "free" "bb6"
@@ -109,11 +92,6 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
         Deref
       Use
         Constant 1
-    Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:16:5 written
-      Destination "_15"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:16:5 generated
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:17:5 written
       Destination "_0"

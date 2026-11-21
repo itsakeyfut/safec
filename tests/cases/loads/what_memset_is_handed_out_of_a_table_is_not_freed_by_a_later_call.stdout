@@ -17,8 +17,7 @@ Function what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:5:5
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "void *"
+  Local "_7" "void *"
   Block "bb0" entry
     Operation what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:5:5 generated
       Destination "_0"
@@ -87,15 +86,10 @@ Function what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:5:5
         Deref
       Use
         Copy "_4"
-    Operation what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:14:5 generated
     ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:15:5 generated
     Call what_memset_is_handed_out_of_a_table_is_not_freed_by_a_later_call.c:15:5 written "memset" "bb9"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
         Deref
       Constant 0

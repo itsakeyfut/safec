@@ -14,8 +14,7 @@ Function a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:5:14 generated
     Call a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:5:14 written "malloc" "bb1"
@@ -84,21 +83,16 @@ Function a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds
         Deref
       Use
         Copy "_7"
-    Operation a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:13:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:13:5 generated
     ArgumentsEvaluated a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:14:12 generated
     Call a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:14:12 written "use2" "bb9"
-      Destination "_9"
+      Destination "_8"
       Copy "_4"
         Deref
   Block "bb9"
     Operation a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:14:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds.c:14:12 generated
     Return

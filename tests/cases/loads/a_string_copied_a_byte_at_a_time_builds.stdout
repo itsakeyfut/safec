@@ -16,29 +16,21 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "char *" "src"
-  Local "_10" "void *"
-  Local "_11" "int"
-  Local "_12" "char *" "dst"
-  Local "_13" "void *"
-  Local "_14" "int"
-  Local "_15" "char"
-  Local "_16" "char *" "a"
-  Local "_17" "char *" "b"
-  Local "_18" "char" "c"
-  Local "_19" "int"
+  Local "_7" "char *" "src"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "char *" "dst"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "char *" "a"
+  Local "_14" "char *" "b"
+  Local "_15" "char" "c"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "char *"
+  Local "_19" "char *"
   Local "_20" "int"
-  Local "_21" "char"
-  Local "_22" "char *"
-  Local "_23" "char *"
-  Local "_24" "char *"
-  Local "_25" "char *"
-  Local "_26" "char"
-  Local "_27" "int"
-  Local "_28" "char"
-  Local "_29" "int" "r"
+  Local "_21" "int" "r"
   Block "bb0" entry
     Operation a_string_copied_a_byte_at_a_time_builds.c:5:5 generated
       Destination "_0"
@@ -107,40 +99,30 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
         Deref
       Use
         Constant 3
-    Operation a_string_copied_a_byte_at_a_time_builds.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:14:5 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:15:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_string_copied_a_byte_at_a_time_builds.c:15:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:15:5 generated
     ArgumentsEvaluated a_string_copied_a_byte_at_a_time_builds.c:16:17 generated
     Call a_string_copied_a_byte_at_a_time_builds.c:16:17 written "malloc" "bb9"
-      Destination "_10"
+      Destination "_8"
       Constant 8
   Block "bb9"
     Operation a_string_copied_a_byte_at_a_time_builds.c:16:11 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:16:17 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:17:9 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
-        Copy "_9"
+        Copy "_7"
         Constant 0
     Branch a_string_copied_a_byte_at_a_time_builds.c:17:9 written "bb10" "bb11"
-      Copy "_11"
+      Copy "_9"
   Block "bb10"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:17:9 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:18:9 written
@@ -155,21 +137,21 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
   Block "bb12"
     ArgumentsEvaluated a_string_copied_a_byte_at_a_time_builds.c:20:17 generated
     Call a_string_copied_a_byte_at_a_time_builds.c:20:17 written "malloc" "bb13"
-      Destination "_13"
+      Destination "_11"
       Constant 8
   Block "bb13"
     Operation a_string_copied_a_byte_at_a_time_builds.c:20:11 written
-      Destination "_12"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:20:17 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:21:9 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
-        Copy "_12"
+        Copy "_10"
         Constant 0
     Branch a_string_copied_a_byte_at_a_time_builds.c:21:9 written "bb14" "bb15"
-      Copy "_14"
+      Copy "_12"
   Block "bb14"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:21:9 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:22:9 written
@@ -183,54 +165,49 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
     Goto "bb16"
   Block "bb16"
     Operation a_string_copied_a_byte_at_a_time_builds.c:24:5 written
-      Destination "_9"
+      Destination "_7"
         Deref
       Use
         Constant 0
-    Operation a_string_copied_a_byte_at_a_time_builds.c:24:5 written
-      Destination "_15"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:24:5 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:25:11 written
-      Destination "_16"
+      Destination "_13"
       Use
-        Copy "_9"
+        Copy "_7"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:25:15 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:26:11 written
-      Destination "_17"
+      Destination "_14"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:26:15 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:27:10 written
-      Destination "_18"
+      Destination "_15"
       Use
-        Copy "_16"
+        Copy "_13"
           Deref
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:27:14 generated
     Goto "bb17"
   Block "bb17"
     Operation a_string_copied_a_byte_at_a_time_builds.c:28:12 written
-      Destination "_19"
+      Destination "_16"
       Binary "Ne"
-        Copy "_18"
+        Copy "_15"
         Constant 0
     Branch a_string_copied_a_byte_at_a_time_builds.c:28:12 written "bb18" "bb19"
-      Copy "_19"
+      Copy "_16"
   Block "bb18"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:28:12 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:29:13 written
-      Destination "_20"
+      Destination "_17"
       Binary "Ne"
-        Copy "_17"
+        Copy "_14"
         Constant 0
     Branch a_string_copied_a_byte_at_a_time_builds.c:29:13 written "bb20" "bb21"
-      Copy "_20"
+      Copy "_17"
   Block "bb19"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:28:12 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:40:9 written
-      Destination "_29"
+      Destination "_21"
       Use
         Copy "_1"
           Deref
@@ -242,15 +219,10 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
   Block "bb20"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:29:13 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:30:13 written
-      Destination "_17"
+      Destination "_14"
         Deref
       Use
-        Copy "_18"
-    Operation a_string_copied_a_byte_at_a_time_builds.c:30:13 written
-      Destination "_21"
-      Use
-        Copy "_17"
-          Deref
+        Copy "_15"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:30:13 generated
     Goto "bb22"
   Block "bb21"
@@ -259,64 +231,48 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
   Block "bb22"
     ArgumentsEvaluated a_string_copied_a_byte_at_a_time_builds.c:32:9 generated
     Call a_string_copied_a_byte_at_a_time_builds.c:32:9 written "emit" "bb23"
-      Copy "_18"
+      Copy "_15"
   Block "bb23"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:32:9 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:33:13 written
-      Destination "_22"
-      Binary "Add"
-        Copy "_16"
-        Constant 1
-    Operation a_string_copied_a_byte_at_a_time_builds.c:33:9 written
-      Destination "_16"
-      Use
-        Copy "_22"
-    Operation a_string_copied_a_byte_at_a_time_builds.c:33:9 written
-      Destination "_23"
-      Use
-        Copy "_16"
-    Sequenced a_string_copied_a_byte_at_a_time_builds.c:33:9 generated
-    Operation a_string_copied_a_byte_at_a_time_builds.c:34:13 written
-      Destination "_24"
-      Binary "Add"
-        Copy "_17"
-        Constant 1
-    Operation a_string_copied_a_byte_at_a_time_builds.c:34:9 written
-      Destination "_17"
-      Use
-        Copy "_24"
-    Operation a_string_copied_a_byte_at_a_time_builds.c:34:9 written
-      Destination "_25"
-      Use
-        Copy "_17"
-    Sequenced a_string_copied_a_byte_at_a_time_builds.c:34:9 generated
-    Operation a_string_copied_a_byte_at_a_time_builds.c:35:9 written
       Destination "_18"
-      Use
-        Constant 0
-    Operation a_string_copied_a_byte_at_a_time_builds.c:35:9 written
-      Destination "_26"
+      Binary "Add"
+        Copy "_13"
+        Constant 1
+    Operation a_string_copied_a_byte_at_a_time_builds.c:33:9 written
+      Destination "_13"
       Use
         Copy "_18"
+    Sequenced a_string_copied_a_byte_at_a_time_builds.c:33:9 generated
+    Operation a_string_copied_a_byte_at_a_time_builds.c:34:13 written
+      Destination "_19"
+      Binary "Add"
+        Copy "_14"
+        Constant 1
+    Operation a_string_copied_a_byte_at_a_time_builds.c:34:9 written
+      Destination "_14"
+      Use
+        Copy "_19"
+    Sequenced a_string_copied_a_byte_at_a_time_builds.c:34:9 generated
+    Operation a_string_copied_a_byte_at_a_time_builds.c:35:9 written
+      Destination "_15"
+      Use
+        Constant 0
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:35:9 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:36:13 written
-      Destination "_27"
+      Destination "_20"
       Binary "Ne"
-        Copy "_16"
+        Copy "_13"
         Constant 0
     Branch a_string_copied_a_byte_at_a_time_builds.c:36:13 written "bb24" "bb25"
-      Copy "_27"
+      Copy "_20"
   Block "bb24"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:36:13 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:37:13 written
-      Destination "_18"
+      Destination "_15"
       Use
-        Copy "_16"
+        Copy "_13"
           Deref
-    Operation a_string_copied_a_byte_at_a_time_builds.c:37:13 written
-      Destination "_28"
-      Use
-        Copy "_18"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:37:13 generated
     Goto "bb26"
   Block "bb25"
@@ -333,17 +289,17 @@ Function a_string_copied_a_byte_at_a_time_builds.c:5:5 "main"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:42:5 generated
     ArgumentsEvaluated a_string_copied_a_byte_at_a_time_builds.c:43:5 generated
     Call a_string_copied_a_byte_at_a_time_builds.c:43:5 written "free" "bb29"
-      Copy "_9"
+      Copy "_7"
   Block "bb29"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:43:5 generated
     ArgumentsEvaluated a_string_copied_a_byte_at_a_time_builds.c:44:5 generated
     Call a_string_copied_a_byte_at_a_time_builds.c:44:5 written "free" "bb30"
-      Copy "_12"
+      Copy "_10"
   Block "bb30"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:44:5 generated
     Operation a_string_copied_a_byte_at_a_time_builds.c:45:5 written
       Destination "_0"
       Use
-        Copy "_29"
+        Copy "_21"
     Sequenced a_string_copied_a_byte_at_a_time_builds.c:45:12 generated
     Return

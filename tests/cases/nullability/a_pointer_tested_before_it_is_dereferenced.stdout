@@ -2,7 +2,6 @@ Target "x86_64-pc-windows-msvc"
 Function a_pointer_tested_before_it_is_dereferenced.c:1:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" parameter "p"
-  Local "_2" "int"
   Block "bb0" entry
     Branch a_pointer_tested_before_it_is_dereferenced.c:2:9 written "bb1" "bb2"
       Copy "_1"
@@ -13,11 +12,6 @@ Function a_pointer_tested_before_it_is_dereferenced.c:1:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_pointer_tested_before_it_is_dereferenced.c:3:9 written
-      Destination "_2"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_tested_before_it_is_dereferenced.c:3:9 generated
     Goto "bb3"
   Block "bb2"

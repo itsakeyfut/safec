@@ -17,10 +17,8 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
   Local "_9" "int ***" "bb"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "int *" "r"
-  Local "_15" "int"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:5:9 written
       Destination "_3"
@@ -129,37 +127,27 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:20:5 written
-      Destination "_12"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:20:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:21:5 written
       Destination "_9"
         Deref
       Use
         Copy "_6"
-    Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:21:5 written
-      Destination "_13"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:21:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:22:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_9"
           Deref
             Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:22:14 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:23:9 written
-      Destination "_15"
+      Destination "_13"
       Binary "Eq"
-        Copy "_14"
+        Copy "_12"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:23:9 written "bb15" "bb16"
-      Copy "_15"
+      Copy "_13"
   Block "bb15"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:23:9 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:24:9 written
@@ -179,7 +167,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:27:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:27:12 generated
     Return

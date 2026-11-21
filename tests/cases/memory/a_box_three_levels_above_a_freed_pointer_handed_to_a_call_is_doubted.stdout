@@ -22,9 +22,6 @@ Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:
   Local "_10" "int *" "x"
   Local "_11" "void *"
   Local "_12" "int"
-  Local "_13" "int *"
-  Local "_14" "int **"
-  Local "_15" "int ***"
   Block "bb0" entry
     Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:4:5 generated
       Destination "_0"
@@ -156,33 +153,18 @@ Function a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:
         Deref
       Use
         Copy "_10"
-    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 written
-      Destination "_13"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 generated
     Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 written
-      Destination "_14"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:15:5 generated
     Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 written
-      Destination "_15"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:16:5 generated
     ArgumentsEvaluated a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:17:5 generated
     Call a_box_three_levels_above_a_freed_pointer_handed_to_a_call_is_doubted.c:17:5 written "use4" "bb18"

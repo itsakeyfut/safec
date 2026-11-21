@@ -8,16 +8,14 @@ Function a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:2:5 "ma
   Local "_3" "int"
   Local "_4" "int **"
   Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int" "i"
+  Local "_6" "int" "i"
+  Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int *" "r"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_11" "int *" "r"
+  Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:2:5 generated
       Destination "_0"
@@ -51,86 +49,77 @@ Function a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:2:5 "ma
         Deref
       Use
         Copy "_5"
-    Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:6:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:6:9 generated
     Goto "bb4"
   Block "bb3"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:5:9 generated
     Goto "bb4"
   Block "bb4"
-    StorageLive a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:10 generated "_7"
+    StorageLive a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:10 generated "_6"
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:14 written
-      Destination "_7"
+      Destination "_6"
       Use
         Constant 0
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:18 generated
     Goto "bb5"
   Block "bb5"
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:21 written
-      Destination "_8"
+      Destination "_7"
       Binary "Lt"
-        Copy "_7"
+        Copy "_6"
         Constant 2
     Branch a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:21 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:21 generated
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:9:13 written
-      Destination "_9"
+      Destination "_8"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:9:9 written
       Destination "_1"
       Use
-        Copy "_9"
-    Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:9:9 written
-      Destination "_10"
-      Use
-        Copy "_1"
+        Copy "_8"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:9:9 generated
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:28 written
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_7"
+        Copy "_6"
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:28 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 1
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:28 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:28 generated
     Goto "bb5"
   Block "bb7"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:8:21 generated
-    StorageDead a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:10:5 generated "_7"
+    StorageDead a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:10:5 generated "_6"
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:11:14 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:11:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:11:14 generated
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:12:12 written
-      Destination "_15"
+      Destination "_13"
       Binary "Eq"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Operation a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:12:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_local_array_doubted_before_a_loop_is_still_doubted_after_it.c:12:12 generated
     Return

@@ -14,15 +14,12 @@ Function a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what
   Local "_3" "char *" "c"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "char"
+  Local "_6" "char *"
   Local "_7" "char *"
-  Local "_8" "char"
-  Local "_9" "char *"
-  Local "_10" "char"
-  Local "_11" "void *" "v"
-  Local "_12" "void *" "vo"
-  Local "_13" "void **"
-  Local "_14" "void *"
+  Local "_8" "void *" "v"
+  Local "_9" "void *" "vo"
+  Local "_10" "void **"
+  Local "_11" "void *"
   Block "bb0" entry
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:3:9 written
       Destination "_2"
@@ -65,63 +62,48 @@ Function a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what
         Deref
       Use
         Constant 0
-    Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:5 generated
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:15 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:15 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
         Constant 0
-    Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:15 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:15 generated
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:25 written
-      Destination "_9"
+      Destination "_7"
       Binary "Add"
         Copy "_3"
         Constant 2
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:25 written
-      Destination "_9"
+      Destination "_7"
         Deref
       Use
         Constant 0
-    Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:25 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:6:25 generated
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:7:11 written
-      Destination "_11"
+      Destination "_8"
       Use
         Copy "_3"
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:7:15 generated
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:8:11 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_1"
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:8:16 generated
     Operation a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:9:16 written
-      Destination "_13"
+      Destination "_10"
       Address
-        Place "_11"
+        Place "_8"
     ArgumentsEvaluated a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:9:5 generated
     Call a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:9:5 written "memcpy" "bb8"
-      Destination "_14"
-      Copy "_12"
-      Copy "_13"
+      Destination "_11"
+      Copy "_9"
+      Copy "_10"
       Constant 8
   Block "bb8"
     Sequenced a_copy_into_caller_memory_through_a_void_pointer_local_is_asked_at_what_the_memory_arrived_as.c:9:5 generated

@@ -19,16 +19,11 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
   Local "_10" "int *" "r"
   Local "_11" "void *"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *"
+  Local "_13" "int" "i"
+  Local "_14" "int *" "q"
+  Local "_15" "int ***"
   Local "_16" "int **"
-  Local "_17" "int" "i"
-  Local "_18" "int"
-  Local "_19" "int *" "q"
-  Local "_20" "int ***"
-  Local "_21" "int **"
-  Local "_22" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 generated
       Destination "_0"
@@ -155,47 +150,27 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:21:5 written
-      Destination "_13"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:21:5 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:22:5 written
       Destination "_10"
         Deref
       Use
         Constant 1
-    Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:22:5 written
-      Destination "_14"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:22:5 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:23:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:23:5 written
-      Destination "_15"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:23:5 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:24:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:24:5 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:24:5 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:25:9 written
-      Destination "_17"
+      Destination "_13"
       Use
         Constant 0
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:25:13 generated
@@ -204,36 +179,31 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
         Deref
       Use
         Constant 2
-    Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:26:5 written
-      Destination "_18"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:26:5 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:27:14 written
-      Destination "_20"
+      Destination "_15"
       Binary "Add"
         Copy "_1"
-        Copy "_17"
+        Copy "_13"
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:27:14 written
-      Destination "_21"
+      Destination "_16"
       Binary "Add"
-        Copy "_20"
+        Copy "_15"
           Deref
-        Copy "_17"
+        Copy "_13"
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:27:10 written
-      Destination "_19"
+      Destination "_14"
       Use
-        Copy "_21"
+        Copy "_16"
           Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:27:14 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 written
-      Destination "_22"
+      Destination "_17"
       Binary "Eq"
-        Copy "_19"
+        Copy "_14"
         Constant 0
     Branch a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 written "bb17" "bb18"
-      Copy "_22"
+      Copy "_17"
   Block "bb17"
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:28:9 generated
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:29:9 written
@@ -249,7 +219,7 @@ Function a_live_load_moved_by_a_subscript_is_read_in_silence.c:4:5 "main"
     Operation a_live_load_moved_by_a_subscript_is_read_in_silence.c:31:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_14"
           Deref
     Sequenced a_live_load_moved_by_a_subscript_is_read_in_silence.c:31:12 generated
     Return

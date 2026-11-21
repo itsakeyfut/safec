@@ -17,20 +17,17 @@ Function a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doub
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int" "i"
-  Local "_11" "int"
-  Local "_12" "int *" "r"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "int" "i"
+  Local "_9" "int"
+  Local "_10" "int *" "r"
+  Local "_11" "int **" "s"
+  Local "_12" "void *"
   Local "_13" "int"
-  Local "_14" "int **" "s"
-  Local "_15" "void *"
+  Local "_14" "void *"
+  Local "_15" "int"
   Local "_16" "int"
-  Local "_17" "void *"
-  Local "_18" "int"
-  Local "_19" "int"
   Block "bb0" entry
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:5:9 written
       Destination "_1"
@@ -74,99 +71,84 @@ Function a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doub
         Deref
       Use
         Copy "_5"
-    Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:8:5 generated
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:9:5 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:9:12 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:9:5 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
-        Copy "_8"
-    Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:9:5 written
-      Destination "_9"
-      Use
         Copy "_7"
-          Deref
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:9:5 generated
-    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:10 generated "_10"
+    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:10 generated "_8"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:14 written
-      Destination "_10"
+      Destination "_8"
       Use
         Constant 0
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:18 generated
     Goto "bb5"
   Block "bb5"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:21 written
-      Destination "_11"
+      Destination "_9"
       Binary "Lt"
-        Copy "_10"
+        Copy "_8"
         Constant 2
     Branch a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:21 written "bb6" "bb7"
-      Copy "_11"
+      Copy "_9"
   Block "bb6"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:21 generated
-    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:11:9 generated "_12"
+    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:11:9 generated "_10"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:11:14 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_2"
           Deref
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:11:18 generated
     Branch a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:13 written "bb8" "bb9"
-      Copy "_12"
+      Copy "_10"
   Block "bb7"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:21 generated
-    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_10"
+    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_8"
     ArgumentsEvaluated a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:18:5 generated
     Call a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:18:5 written "free" "bb17"
       Copy "_2"
   Block "bb8"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:13 generated
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:16 written
-      Destination "_12"
+      Destination "_10"
         Deref
       Use
         Constant 1
-    Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:16 written
-      Destination "_13"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:16 generated
     Goto "bb10"
   Block "bb9"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:12:13 generated
     Goto "bb10"
   Block "bb10"
-    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:9 generated "_14"
+    StorageLive a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:9 generated "_11"
     ArgumentsEvaluated a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:19 generated
     Call a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:19 written "malloc" "bb11"
-      Destination "_15"
+      Destination "_12"
       Constant 16
   Block "bb11"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:15 written
-      Destination "_14"
+      Destination "_11"
       Use
-        Copy "_15"
+        Copy "_12"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:13:19 generated
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:13 written
-      Destination "_16"
+      Destination "_13"
       Unary "Not"
-        Copy "_14"
+        Copy "_11"
     Branch a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:13 written "bb12" "bb13"
-      Copy "_16"
+      Copy "_13"
   Block "bb12"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:13 generated
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 written
@@ -174,9 +156,9 @@ Function a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doub
       Use
         Constant 0
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:24 generated
-    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 generated "_14"
-    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 generated "_12"
+    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 generated "_11"
     StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 generated "_10"
+    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:17 generated "_8"
     Return
   Block "bb13"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:14:13 generated
@@ -184,32 +166,32 @@ Function a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doub
   Block "bb14"
     ArgumentsEvaluated a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:15:9 generated
     Call a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:15:9 written "memcpy" "bb15"
-      Destination "_17"
+      Destination "_14"
       Copy "_2"
-      Copy "_14"
+      Copy "_11"
       Constant 16
   Block "bb15"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:15:9 generated
     ArgumentsEvaluated a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:16:9 generated
     Call a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:16:9 written "free" "bb16"
-      Copy "_14"
+      Copy "_11"
   Block "bb16"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:16:9 generated
-    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_14"
-    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_12"
+    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_11"
+    StorageDead a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:17:5 generated "_10"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:28 written
-      Destination "_18"
+      Destination "_15"
       Use
-        Copy "_10"
+        Copy "_8"
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:28 written
-      Destination "_19"
+      Destination "_16"
       Binary "Add"
-        Copy "_10"
+        Copy "_8"
         Constant 1
     Operation a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:28 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_19"
+        Copy "_16"
     Sequenced a_block_kept_per_slot_a_loop_shown_to_run_makes_unwritten_again_is_doubted_where_read_on_its_next_turn.c:10:28 generated
     Goto "bb5"
   Block "bb17"

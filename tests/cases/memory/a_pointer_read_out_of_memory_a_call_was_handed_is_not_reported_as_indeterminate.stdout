@@ -19,7 +19,6 @@ Function a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indet
   Local "_3" "int"
   Local "_4" "int *" "t"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate.c:7:17 generated
     Call a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate.c:7:17 written "malloc" "bb1"
@@ -75,11 +74,6 @@ Function a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indet
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate.c:14:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_memory_a_call_was_handed_is_not_reported_as_indeterminate.c:14:9 generated
     Goto "bb8"
   Block "bb7"

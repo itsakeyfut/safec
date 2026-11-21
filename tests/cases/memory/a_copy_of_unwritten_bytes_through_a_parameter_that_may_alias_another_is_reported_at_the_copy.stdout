@@ -15,41 +15,35 @@ Function a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is
   Local "_1" "int **" parameter "d"
   Local "_2" "int **" parameter "w"
   Local "_3" "int *" parameter "x"
-  Local "_4" "int *"
-  Local "_5" "int **" "m"
-  Local "_6" "void *"
-  Local "_7" "int"
-  Local "_8" "void *"
-  Local "_9" "int *" "r"
-  Local "_10" "int"
+  Local "_4" "int **" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "int *" "r"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:3:5 written
       Destination "_2"
         Deref
       Use
         Copy "_3"
-    Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:3:5 written
-      Destination "_4"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:3:5 generated
     ArgumentsEvaluated a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:15 generated
     Call a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:15 written "malloc" "bb1"
-      Destination "_6"
+      Destination "_5"
       Constant 8
   Block "bb1"
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:11 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:15 generated
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:30 written
-      Destination "_7"
+      Destination "_6"
       Unary "Not"
-        Copy "_5"
+        Copy "_4"
     Branch a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:30 written "bb2" "bb3"
-      Copy "_7"
+      Copy "_6"
   Block "bb2"
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:30 generated
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:4:34 written
@@ -64,26 +58,26 @@ Function a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is
   Block "bb4"
     ArgumentsEvaluated a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:5:5 generated
     Call a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:5:5 written "memcpy" "bb5"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
-      Copy "_5"
+      Copy "_4"
       Constant 8
   Block "bb5"
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:5:5 generated
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:6:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_2"
           Deref
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:6:14 generated
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:6:25 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Copy "_3"
     Operation a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:6:18 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_copy_of_unwritten_bytes_through_a_parameter_that_may_alias_another_is_reported_at_the_copy.c:6:25 generated
     Return

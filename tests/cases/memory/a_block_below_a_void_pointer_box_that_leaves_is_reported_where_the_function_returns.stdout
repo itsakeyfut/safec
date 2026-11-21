@@ -10,8 +10,6 @@ Function a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_func
   Local "_4" "void **" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void **"
   Block "bb0" entry
     ArgumentsEvaluated a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:3:15 generated
     Call a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:3:15 written "malloc" "bb1"
@@ -51,21 +49,11 @@ Function a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_func
         Deref
       Use
         Copy "_2"
-    Operation a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:6:5 generated
     Operation a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:7:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_below_a_void_pointer_box_that_leaves_is_reported_where_the_function_returns.c:7:5 generated
     Return

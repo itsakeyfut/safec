@@ -8,7 +8,6 @@ Function a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:1
   Local "_5" "int *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
   Block "bb0" entry
     Operation a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:2:10 written
       Destination "_3"
@@ -44,10 +43,6 @@ Function a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:1
       Destination "_3"
       Use
         Copy "_7"
-    Operation a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:3:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
     Sequenced a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:3:5 generated
     Operation a_pointer_assigned_an_element_whose_index_increments_it_is_reported.c:4:5 written
       Destination "_0"

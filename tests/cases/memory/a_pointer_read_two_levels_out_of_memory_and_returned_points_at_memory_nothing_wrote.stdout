@@ -10,10 +10,8 @@ Function a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_n
   Local "_4" "int ***" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int ***"
-  Local "_8" "int **" "b"
-  Local "_9" "void *"
-  Local "_10" "int **"
+  Local "_7" "int **" "b"
+  Local "_8" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:30 generated
     Call a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:30 written "malloc" "bb1"
@@ -76,32 +74,22 @@ Function a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_n
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:104 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:104 generated
     ArgumentsEvaluated a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:125 generated
     Call a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:125 written "malloc" "bb9"
-      Destination "_9"
+      Destination "_8"
       Constant 8
   Block "bb9"
     Operation a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:121 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:125 generated
     Operation a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:136 written
       Destination "_4"
         Deref
       Use
-        Copy "_8"
-    Operation a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:136 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
+        Copy "_7"
     Sequenced a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:136 generated
     Operation a_pointer_read_two_levels_out_of_memory_and_returned_points_at_memory_nothing_wrote.c:2:146 written
       Destination "_0"

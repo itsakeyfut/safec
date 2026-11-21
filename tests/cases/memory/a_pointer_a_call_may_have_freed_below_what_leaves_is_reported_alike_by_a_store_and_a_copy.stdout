@@ -22,9 +22,7 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int **"
-  Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int **"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:14 generated
     Call a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:10:14 written "malloc" "bb1"
@@ -86,22 +84,17 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:15:5 generated
     ArgumentsEvaluated a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:16:5 generated
     Call a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:16:5 written "release" "bb10"
   Block "bb10"
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:16:5 generated
     Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
         Copy "_1"
     Branch a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:9 written "bb11" "bb12"
-      Copy "_10"
+      Copy "_9"
   Block "bb11"
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:17:9 generated
     Return
@@ -114,11 +107,6 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:5 generated
     Return
 Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:20:6 "copied"
@@ -131,10 +119,9 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int **"
-  Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int ***"
-  Local "_12" "void *"
+  Local "_9" "int"
+  Local "_10" "int ***"
+  Local "_11" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:14 generated
     Call a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:14 written "malloc" "bb1"
@@ -196,22 +183,17 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:26:5 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:26:5 generated
     ArgumentsEvaluated a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:27:5 generated
     Call a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:27:5 written "release" "bb10"
   Block "bb10"
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:27:5 generated
     Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:28:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
         Copy "_1"
     Branch a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:28:9 written "bb11" "bb12"
-      Copy "_10"
+      Copy "_9"
   Block "bb11"
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:28:9 generated
     Return
@@ -220,14 +202,14 @@ Function a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_
     Goto "bb13"
   Block "bb13"
     Operation a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:17 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_5"
     ArgumentsEvaluated a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:5 generated
     Call a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:5 written "memcpy" "bb14"
-      Destination "_12"
+      Destination "_11"
       Copy "_1"
-      Copy "_11"
+      Copy "_10"
       Constant 8
   Block "bb14"
     Sequenced a_pointer_a_call_may_have_freed_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:5 generated

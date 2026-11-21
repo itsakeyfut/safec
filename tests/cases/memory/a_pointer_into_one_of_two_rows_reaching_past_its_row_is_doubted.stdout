@@ -5,36 +5,29 @@ Function a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:1:5 "
   Local "_2" "int[3][2]" "a"
   Local "_3" "int (*)[2]"
   Local "_4" "int *"
-  Local "_5" "int"
-  Local "_6" "int (*)[2]"
+  Local "_5" "int (*)[2]"
+  Local "_6" "int *"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int"
-  Local "_10" "int (*)[2]"
+  Local "_8" "int (*)[2]"
+  Local "_9" "int (*)[2]"
+  Local "_10" "int *"
   Local "_11" "int (*)[2]"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int (*)[2]"
+  Local "_12" "int (*)[2]"
+  Local "_13" "int *"
+  Local "_14" "int *"
   Local "_15" "int (*)[2]"
-  Local "_16" "int *"
+  Local "_16" "int (*)[2]"
   Local "_17" "int *"
-  Local "_18" "int"
+  Local "_18" "int (*)[2]"
   Local "_19" "int (*)[2]"
-  Local "_20" "int (*)[2]"
+  Local "_20" "int *"
   Local "_21" "int *"
-  Local "_22" "int"
+  Local "_22" "int (*)[2]" "r"
   Local "_23" "int (*)[2]"
   Local "_24" "int (*)[2]"
-  Local "_25" "int *"
+  Local "_25" "int (*)[2]"
   Local "_26" "int *"
-  Local "_27" "int"
-  Local "_28" "int (*)[2]" "r"
-  Local "_29" "int (*)[2]"
-  Local "_30" "int (*)[2]"
-  Local "_31" "int (*)[2]"
-  Local "_32" "int (*)[2]"
-  Local "_33" "int *"
-  Local "_34" "int *"
+  Local "_27" "int *"
   Block "bb0" entry
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:5 generated
       Destination "_3"
@@ -51,186 +44,152 @@ Function a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:1:5 "
         Deref
       Use
         Constant 0
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:5 generated
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 generated
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 generated
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_6"
+        Copy "_5"
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 1
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
         Constant 1
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 written
-      Destination "_9"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:18 generated
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 generated
-      Destination "_10"
+      Destination "_8"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 written
-      Destination "_11"
+      Destination "_9"
       Binary "Add"
-        Copy "_10"
+        Copy "_8"
         Constant 1
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 generated
-      Destination "_12"
+      Destination "_10"
       Use
-        Copy "_11"
+        Copy "_9"
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 written
-      Destination "_12"
+      Destination "_10"
         Deref
       Use
         Constant 2
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 written
+    Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 generated
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 generated
+      Destination "_11"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_11"
+        Constant 1
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 generated
       Destination "_13"
       Use
         Copy "_12"
-          Deref
-    Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:31 generated
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 generated
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
       Destination "_14"
-      Address
-        Place "_2"
-          Index
-            Constant 0
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
-      Destination "_15"
       Binary "Add"
-        Copy "_14"
-        Constant 1
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 generated
-      Destination "_16"
-      Use
-        Copy "_15"
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
-      Destination "_17"
-      Binary "Add"
-        Copy "_16"
+        Copy "_13"
         Constant 1
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
-      Destination "_17"
+      Destination "_14"
         Deref
       Use
         Constant 3
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 written
-      Destination "_18"
-      Use
-        Copy "_17"
-          Deref
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:44 generated
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 generated
-      Destination "_19"
+      Destination "_15"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 written
-      Destination "_20"
+      Destination "_16"
       Binary "Add"
-        Copy "_19"
+        Copy "_15"
         Constant 2
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 generated
-      Destination "_21"
+      Destination "_17"
       Use
-        Copy "_20"
+        Copy "_16"
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 written
-      Destination "_21"
+      Destination "_17"
         Deref
       Use
         Constant 4
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 written
-      Destination "_22"
-      Use
-        Copy "_21"
-          Deref
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:57 generated
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 generated
+      Destination "_18"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
+      Destination "_19"
+      Binary "Add"
+        Copy "_18"
+        Constant 2
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 generated
+      Destination "_20"
+      Use
+        Copy "_19"
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
+      Destination "_21"
+      Binary "Add"
+        Copy "_20"
+        Constant 1
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
+      Destination "_21"
+        Deref
+      Use
+        Constant 5
+    Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 generated
+    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:4:19 generated
       Destination "_23"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
-      Destination "_24"
-      Binary "Add"
-        Copy "_23"
-        Constant 2
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 generated
-      Destination "_25"
-      Use
-        Copy "_24"
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
-      Destination "_26"
-      Binary "Add"
-        Copy "_25"
-        Constant 1
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
-      Destination "_26"
-        Deref
-      Use
-        Constant 5
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 written
-      Destination "_27"
-      Use
-        Copy "_26"
-          Deref
-    Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:3:70 generated
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:4:19 generated
-      Destination "_29"
-      Address
-        Place "_2"
-          Index
-            Constant 0
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:4:11 written
-      Destination "_28"
+      Destination "_22"
       Use
-        Copy "_29"
+        Copy "_23"
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:4:19 generated
     Branch a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:9 generated
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:16 generated
-      Destination "_30"
+      Destination "_24"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:16 written
-      Destination "_31"
+      Destination "_25"
       Binary "Add"
-        Copy "_30"
+        Copy "_24"
         Constant 1
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:12 written
-      Destination "_28"
+      Destination "_22"
       Use
-        Copy "_31"
-    Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:12 written
-      Destination "_32"
-      Use
-        Copy "_28"
+        Copy "_25"
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:5:12 generated
     Goto "bb3"
   Block "bb2"
@@ -238,18 +197,18 @@ Function a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:1:5 "
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:6:12 generated
-      Destination "_33"
+      Destination "_26"
       Use
-        Copy "_28"
+        Copy "_22"
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:6:12 written
-      Destination "_34"
+      Destination "_27"
       Binary "Add"
-        Copy "_33"
+        Copy "_26"
         Constant 2
     Operation a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:6:5 written
       Destination "_0"
       Use
-        Copy "_34"
+        Copy "_27"
           Deref
     Sequenced a_pointer_into_one_of_two_rows_reaching_past_its_row_is_doubted.c:6:12 generated
     Return

@@ -9,12 +9,9 @@ Function a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_i
   Local "_6" "int"
   Local "_7" "int *[1]" "m"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int *" "q"
-  Local "_12" "int **"
-  Local "_13" "int"
-  Local "_14" "int"
+  Local "_9" "int *" "q"
+  Local "_10" "int **"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:2:9 written
       Destination "_3"
@@ -90,42 +87,32 @@ Function a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_i
         Deref
       Use
         Copy "_8"
-    Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:7:5 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:7:5 generated
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:8:5 written
       Destination "_5"
         Deref
       Use
         Constant 0
-    Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:8:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:8:5 generated
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:9:14 generated
-      Destination "_12"
+      Destination "_10"
       Address
         Place "_7"
           Index
             Constant 0
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:9:10 written
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_12"
+        Copy "_10"
           Deref
     Sequenced a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:9:14 generated
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:10:9 written
-      Destination "_13"
+      Destination "_11"
       Binary "Eq"
-        Copy "_11"
+        Copy "_9"
         Constant 0
     Branch a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:10:9 written "bb10" "bb11"
-      Copy "_13"
+      Copy "_11"
   Block "bb10"
     Sequenced a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:10:9 generated
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:10:19 written
@@ -139,15 +126,10 @@ Function a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_i
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:11:5 written
-      Destination "_11"
+      Destination "_9"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:11:5 written
-      Destination "_14"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:11:5 generated
     Operation a_pointer_read_out_of_memory_before_a_local_array_left_does_not_write_it.c:12:5 written
       Destination "_0"

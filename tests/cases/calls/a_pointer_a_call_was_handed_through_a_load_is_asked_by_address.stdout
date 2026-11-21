@@ -16,10 +16,9 @@ Function a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:5:5 "m
   Local "_4" "int **" "t"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
-  Local "_9" "int **"
-  Local "_10" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int **"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:5:5 generated
       Destination "_0"
@@ -88,35 +87,30 @@ Function a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:5:5 "m
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:14:5 generated
     Operation a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:15:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
           Deref
     Sequenced a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:15:14 generated
     ArgumentsEvaluated a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:16:5 generated
     Call a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:16:5 written "release" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:16:5 generated
     Operation a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:17:17 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:17:12 generated
     Call a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:17:12 written "use2" "bb10"
-      Destination "_10"
-      Copy "_9"
+      Destination "_9"
+      Copy "_8"
   Block "bb10"
     Operation a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:17:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_pointer_a_call_was_handed_through_a_load_is_asked_by_address.c:17:12 generated
     Return

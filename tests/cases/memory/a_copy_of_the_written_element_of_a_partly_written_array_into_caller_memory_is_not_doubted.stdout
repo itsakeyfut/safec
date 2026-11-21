@@ -15,9 +15,8 @@ Function a_copy_of_the_written_element_of_a_partly_written_array_into_caller_mem
   Local "_4" "int *[2]" "a"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int **"
-  Local "_9" "void *"
+  Local "_7" "int **"
+  Local "_8" "void *"
   Block "bb0" entry
     Operation a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:3:9 written
       Destination "_2"
@@ -52,23 +51,18 @@ Function a_copy_of_the_written_element_of_a_partly_written_array_into_caller_mem
         Deref
       Use
         Copy "_6"
-    Operation a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:6:5 generated
     Operation a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:7:17 generated
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_4"
           Index
             Constant 0
     ArgumentsEvaluated a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:7:5 generated
     Call a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:7:5 written "memcpy" "bb4"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
-      Copy "_8"
+      Copy "_7"
       Constant 8
   Block "bb4"
     Sequenced a_copy_of_the_written_element_of_a_partly_written_array_into_caller_memory_is_not_doubted.c:7:5 generated

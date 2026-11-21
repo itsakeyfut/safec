@@ -14,8 +14,7 @@ Function a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_lev
   Local "_2" "void ***" "box"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "void **"
-  Local "_6" "void *" "pb"
+  Local "_5" "void *" "pb"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:5:19 generated
     Call a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:5:19 written "malloc" "bb1"
@@ -46,20 +45,15 @@ Function a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_lev
         Deref
       Use
         Copy "_1"
-    Operation a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:9:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:9:5 generated
     Operation a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:10:11 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
     Sequenced a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:10:16 generated
     ArgumentsEvaluated a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:11:5 generated
     Call a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:11:5 written "use" "bb5"
-      Copy "_6"
+      Copy "_5"
   Block "bb5"
     Sequenced a_parameter_stored_in_memory_and_handed_on_is_asked_below_its_first_level.c:11:5 generated
     Return

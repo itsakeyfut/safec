@@ -10,15 +10,11 @@ Function a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_do
   Local "_4" "int **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "void *" "v"
-  Local "_9" "char *" "c"
-  Local "_10" "char **" "cc"
-  Local "_11" "void *"
-  Local "_12" "int"
-  Local "_13" "char *"
-  Local "_14" "char"
-  Local "_15" "int *"
+  Local "_7" "void *" "v"
+  Local "_8" "char *" "c"
+  Local "_9" "char **" "cc"
+  Local "_10" "void *"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:7:9 written
       Destination "_3"
@@ -71,38 +67,33 @@ Function a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_do
         Deref
       Use
         Copy "_2"
-    Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:10:5 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:11:15 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:11 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:12:15 generated
     ArgumentsEvaluated a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:17 generated
     Call a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:17 written "malloc" "bb8"
-      Destination "_11"
+      Destination "_10"
       Constant 8
   Block "bb8"
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:12 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:13:17 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 written
-      Destination "_12"
+      Destination "_11"
       Unary "Not"
-        Copy "_10"
+        Copy "_9"
     Branch a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_11"
   Block "bb9"
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:9 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:14:14 written
@@ -116,39 +107,23 @@ Function a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_do
     Goto "bb11"
   Block "bb11"
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 written
-      Destination "_10"
+      Destination "_9"
         Deref
       Use
-        Copy "_9"
-    Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
+        Copy "_8"
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:15:5 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:5 written
-      Destination "_10"
+      Destination "_9"
         Deref
           Deref
       Use
         Constant 1
-    Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:5 written
-      Destination "_14"
-      Use
-        Copy "_10"
-          Deref
-            Deref
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:16:5 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-          Deref
-    Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 written
-      Destination "_15"
-      Use
-        Copy "_1"
           Deref
     Sequenced a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:17:5 generated
     Operation a_narrow_store_two_dereferences_down_writes_part_of_a_pointer_as_one_down_does.c:18:5 written

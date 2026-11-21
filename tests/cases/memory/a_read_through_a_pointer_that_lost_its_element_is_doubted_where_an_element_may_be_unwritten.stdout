@@ -8,20 +8,16 @@ Function a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_elem
   Local "_5" "int ***"
   Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int **" "f"
-  Local "_10" "int ***"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int **" "e"
+  Local "_8" "int **" "f"
+  Local "_9" "int ***"
+  Local "_10" "int *"
+  Local "_11" "int **" "e"
+  Local "_12" "int **"
+  Local "_13" "int **"
   Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "int **"
-  Local "_18" "int"
-  Local "_19" "int"
-  Local "_20" "int *" "q"
-  Local "_21" "int"
+  Local "_15" "int"
+  Local "_16" "int *" "q"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:1:5 generated
       Destination "_0"
@@ -54,54 +50,44 @@ Function a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_elem
         Deref
       Use
         Copy "_7"
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:5:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:5:5 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:6:15 generated
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_4"
           Index
             Constant 0
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:6:11 written
-      Destination "_9"
-      Use
-        Copy "_10"
-          Deref
-    Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:6:15 generated
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:10 written
-      Destination "_11"
-      Address
-        Place "_2"
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:5 written
-      Destination "_9"
-        Deref
-      Use
-        Copy "_11"
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:5 written
-      Destination "_12"
+      Destination "_8"
       Use
         Copy "_9"
           Deref
+    Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:6:15 generated
+    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:10 written
+      Destination "_10"
+      Address
+        Place "_2"
+    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_10"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:7:5 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:8:15 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:8:15 written
-      Destination "_15"
+      Destination "_13"
       Binary "Add"
-        Copy "_14"
+        Copy "_12"
         Constant 2
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:8:11 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:8:15 generated
     Goto "bb1"
   Block "bb1"
@@ -110,50 +96,42 @@ Function a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_elem
   Block "bb2"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:9:12 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:10:13 written
-      Destination "_16"
+      Destination "_14"
       Binary "Sub"
-        Copy "_13"
+        Copy "_11"
         Constant 1
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:10:9 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_16"
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:10:9 written
-      Destination "_17"
-      Use
-        Copy "_13"
+        Copy "_14"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:10:9 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:11:13 written
-      Destination "_18"
+      Destination "_15"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:11:9 written
       Destination "_1"
       Use
-        Copy "_18"
-    Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:11:9 written
-      Destination "_19"
-      Use
-        Copy "_1"
+        Copy "_15"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:11:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:9:12 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:13:10 written
-      Destination "_20"
+      Destination "_16"
       Use
-        Copy "_13"
+        Copy "_11"
           Deref
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:13:14 generated
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:14:12 written
-      Destination "_21"
+      Destination "_17"
       Binary "Eq"
-        Copy "_20"
+        Copy "_16"
         Constant 0
     Operation a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:14:5 written
       Destination "_0"
       Use
-        Copy "_21"
+        Copy "_17"
     Sequenced a_read_through_a_pointer_that_lost_its_element_is_doubted_where_an_element_may_be_unwritten.c:14:12 generated
     Return

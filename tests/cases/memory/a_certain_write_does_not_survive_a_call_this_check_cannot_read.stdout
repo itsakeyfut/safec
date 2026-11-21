@@ -16,8 +16,6 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
   Local "_4" "void *"
   Local "_5" "int **" "pp"
   Local "_6" "int **"
-  Local "_7" "int *"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 generated
     Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 written "malloc" "bb1"
@@ -53,11 +51,6 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
         Deref
       Use
         Copy "_3"
-    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 generated
     ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 generated
     Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 written "opaque" "bb3"
@@ -74,11 +67,6 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
         Deref
       Use
         Constant 1
-    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 generated
     Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:12:5 written
       Destination "_0"

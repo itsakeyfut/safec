@@ -36,17 +36,13 @@ Function a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:
   Local "_9" "int *" "q"
   Local "_10" "int" "i"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "void *"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int *" "r"
+  Local "_16" "int *"
   Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "int *" "r"
-  Local "_20" "int *"
-  Local "_21" "int"
-  Local "_22" "int" "v"
+  Local "_18" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:9:17 generated
     Call a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:9:17 written "malloc" "bb1"
@@ -134,37 +130,29 @@ Function a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:
       Destination "_8"
       Use
         Copy "_9"
-    Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:17:9 written
-      Destination "_12"
-      Use
-        Copy "_8"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:17:9 generated
     ArgumentsEvaluated a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:13 generated
     Call a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:13 written "malloc" "bb12"
-      Destination "_13"
+      Destination "_12"
       Constant 4
   Block "bb11"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:16:12 generated
     ArgumentsEvaluated a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:23:14 generated
     Call a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:23:14 written "id" "bb16"
-      Destination "_20"
+      Destination "_16"
       Copy "_8"
   Block "bb12"
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:9 written
       Destination "_9"
       Use
-        Copy "_13"
-    Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:9 written
-      Destination "_14"
-      Use
-        Copy "_9"
+        Copy "_12"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:18:9 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:19:13 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
         Copy "_9"
     Branch a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:19:13 written "bb13" "bb14"
-      Copy "_15"
+      Copy "_13"
   Block "bb13"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:19:13 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:19:17 written
@@ -182,39 +170,30 @@ Function a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:
         Deref
       Use
         Constant 1
-    Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:20:9 written
-      Destination "_16"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:20:9 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:21:13 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_10"
         Constant 1
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:21:9 written
       Destination "_10"
       Use
-        Copy "_17"
-    Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:21:9 written
-      Destination "_18"
-      Use
-        Copy "_10"
+        Copy "_14"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:21:9 generated
     Goto "bb9"
   Block "bb16"
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:23:10 written
-      Destination "_19"
+      Destination "_15"
       Use
-        Copy "_20"
+        Copy "_16"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:23:14 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:25:9 written
-      Destination "_21"
+      Destination "_17"
       Unary "Not"
-        Copy "_19"
+        Copy "_15"
     Branch a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:25:9 written "bb17" "bb18"
-      Copy "_21"
+      Copy "_17"
   Block "bb17"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:25:9 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:25:13 written
@@ -228,14 +207,14 @@ Function a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:
     Goto "bb19"
   Block "bb19"
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:26:9 written
-      Destination "_22"
+      Destination "_18"
       Use
-        Copy "_19"
+        Copy "_15"
           Deref
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:26:13 generated
     Operation a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:27:5 written
       Destination "_0"
       Use
-        Copy "_22"
+        Copy "_18"
     Sequenced a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after.c:27:12 generated
     Return

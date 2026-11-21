@@ -15,7 +15,6 @@ Function a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_s
   Local "_7" "void **"
   Local "_8" "void *"
   Local "_9" "char *" "p"
-  Local "_10" "char"
   Block "bb0" entry
     Operation a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says.c:5:5 generated
       Destination "_0"
@@ -61,11 +60,6 @@ Function a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_s
         Deref
       Use
         Constant 1
-    Operation a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says.c:12:5 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says.c:12:5 generated
     Operation a_void_pointer_copied_out_of_memory_is_believed_as_wide_as_its_record_says.c:13:5 written
       Destination "_0"

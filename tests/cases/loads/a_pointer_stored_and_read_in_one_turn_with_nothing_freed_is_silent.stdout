@@ -16,13 +16,9 @@ Function a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:4:
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int *" "q"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:4:5 generated
       Destination "_0"
@@ -122,59 +118,41 @@ Function a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:4:
         Deref
       Use
         Constant 1
-    Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:16:9 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:16:9 generated
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:17:9 written
       Destination "_1"
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:17:9 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:17:9 generated
-    StorageLive a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:18:9 generated "_12"
+    StorageLive a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:18:9 generated "_10"
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:18:14 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:18:18 generated
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:19:13 written
-      Destination "_13"
+      Destination "_11"
       Binary "Add"
         Copy "_5"
-        Copy "_12"
+        Copy "_10"
           Deref
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:19:9 written
       Destination "_5"
       Use
-        Copy "_13"
-    Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:19:9 written
-      Destination "_14"
-      Use
-        Copy "_5"
+        Copy "_11"
     Sequenced a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:19:9 generated
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:20:13 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:20:9 written
       Destination "_4"
       Use
-        Copy "_15"
-    Operation a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:20:9 written
-      Destination "_16"
-      Use
-        Copy "_4"
+        Copy "_12"
     Sequenced a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:20:9 generated
-    StorageDead a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:21:5 generated "_12"
+    StorageDead a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:21:5 generated "_10"
     StorageDead a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent.c:21:5 generated "_7"
     Goto "bb5"

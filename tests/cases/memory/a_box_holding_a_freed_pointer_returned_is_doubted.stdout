@@ -13,7 +13,6 @@ Function a_box_holding_a_freed_pointer_returned_is_doubted.c:4:7 "make"
   Local "_4" "int *" "x"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_is_doubted.c:5:15 generated
     Call a_box_holding_a_freed_pointer_returned_is_doubted.c:5:15 written "malloc" "bb1"
@@ -88,11 +87,6 @@ Function a_box_holding_a_freed_pointer_returned_is_doubted.c:4:7 "make"
         Deref
       Use
         Copy "_4"
-    Operation a_box_holding_a_freed_pointer_returned_is_doubted.c:15:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_freed_pointer_returned_is_doubted.c:15:5 generated
     Operation a_box_holding_a_freed_pointer_returned_is_doubted.c:16:5 written
       Destination "_0"

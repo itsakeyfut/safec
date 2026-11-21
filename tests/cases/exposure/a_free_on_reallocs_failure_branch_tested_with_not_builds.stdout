@@ -14,11 +14,9 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
-  Local "_5" "int *" "q"
-  Local "_6" "void *"
-  Local "_7" "int"
-  Local "_8" "int"
+  Local "_4" "int *" "q"
+  Local "_5" "void *"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 generated
       Destination "_0"
@@ -58,29 +56,24 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:10:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:10:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 generated
     Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 written "realloc" "bb5"
-      Destination "_6"
+      Destination "_5"
       Copy "_1"
       Constant 8
   Block "bb5"
     Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:10 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:11:14 generated
     Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 written
-      Destination "_7"
+      Destination "_6"
       Unary "Not"
-        Copy "_5"
+        Copy "_4"
     Branch a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 written "bb6" "bb7"
-      Copy "_7"
+      Copy "_6"
   Block "bb6"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:12:9 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 generated
@@ -91,19 +84,14 @@ Function a_free_on_reallocs_failure_branch_tested_with_not_builds.c:5:5 "main"
     Goto "bb8"
   Block "bb8"
     Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:16:5 written
-      Destination "_5"
+      Destination "_4"
         Deref
       Use
         Constant 2
-    Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:16:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:16:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_tested_with_not_builds.c:17:5 generated
     Call a_free_on_reallocs_failure_branch_tested_with_not_builds.c:17:5 written "free" "bb10"
-      Copy "_5"
+      Copy "_4"
   Block "bb9"
     Sequenced a_free_on_reallocs_failure_branch_tested_with_not_builds.c:13:9 generated
     Operation a_free_on_reallocs_failure_branch_tested_with_not_builds.c:14:9 written

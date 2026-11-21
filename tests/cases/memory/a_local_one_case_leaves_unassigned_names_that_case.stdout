@@ -11,9 +11,7 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
   Local "_2" "int *" "p"
   Local "_3" "int"
   Local "_4" "void *"
-  Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:5:13 generated
       Destination "_3"
@@ -23,12 +21,12 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
     Goto "bb1"
   Block "bb1"
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:6:10 generated
-      Destination "_7"
+      Destination "_5"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_local_one_case_leaves_unassigned_names_that_case.c:6:10 written "bb3" "bb7"
-      Copy "_7"
+      Copy "_5"
   Block "bb2"
     ArgumentsEvaluated a_local_one_case_leaves_unassigned_names_that_case.c:14:5 generated
     Call a_local_one_case_leaves_unassigned_names_that_case.c:14:5 written "free" "bb9"
@@ -43,10 +41,6 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_4"
-    Operation a_local_one_case_leaves_unassigned_names_that_case.c:7:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:7:9 generated
     Goto "bb2"
   Block "bb5"
@@ -56,20 +50,16 @@ Function a_local_one_case_leaves_unassigned_names_that_case.c:3:5 "f"
       Destination "_2"
       Use
         Constant 0
-    Operation a_local_one_case_leaves_unassigned_names_that_case.c:12:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_local_one_case_leaves_unassigned_names_that_case.c:12:9 generated
     Goto "bb2"
   Block "bb7"
     Operation a_local_one_case_leaves_unassigned_names_that_case.c:9:10 generated
-      Destination "_7"
+      Destination "_5"
       Binary "Eq"
         Copy "_3"
         Constant 5
     Branch a_local_one_case_leaves_unassigned_names_that_case.c:9:10 written "bb5" "bb8"
-      Copy "_7"
+      Copy "_5"
   Block "bb8"
     Goto "bb6"
   Block "bb9"

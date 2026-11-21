@@ -9,8 +9,7 @@ Function a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by
   Local "_3" "int *" "x"
   Local "_4" "int"
   Local "_5" "int **"
-  Local "_6" "int **"
-  Local "_7" "int"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:4:9 written
       Destination "_4"
@@ -44,11 +43,6 @@ Function a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by
         Deref
       Use
         Copy "_5"
-    Operation a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:5:12 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:5:12 generated
     Goto "bb6"
   Block "bb5"
@@ -61,13 +55,13 @@ Function a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by
   Block "bb7"
     Sequenced a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:6:5 generated
     Operation a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:7:12 written
-      Destination "_7"
+      Destination "_6"
       Binary "Ne"
         Copy "_3"
         Constant 0
     Operation a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:7:5 written
       Destination "_0"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_local_caller_memory_names_on_one_path_only_is_not_believed_written_by_a_call.c:7:12 generated
     Return

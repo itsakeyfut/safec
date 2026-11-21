@@ -14,9 +14,8 @@ Function a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written
   Local "_6" "int **"
   Local "_7" "void *"
   Local "_8" "int **"
-  Local "_9" "int *"
+  Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 written
       Destination "_3"
@@ -77,24 +76,19 @@ Function a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written
         Deref
       Use
         Constant 0
-    Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 written
-      Destination "_9"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:54 generated
     Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_4"
     Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
       Destination "_4"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_copy_out_of_a_local_array_in_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 generated
     Goto "bb4"

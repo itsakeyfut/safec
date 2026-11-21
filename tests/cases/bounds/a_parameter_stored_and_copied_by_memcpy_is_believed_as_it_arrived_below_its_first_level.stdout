@@ -19,15 +19,13 @@ Function a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below
   Local "_5" "void ***" "box"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "void **"
-  Local "_9" "void *"
-  Local "_10" "void *" "pb"
-  Local "_11" "int ***" "pi"
-  Local "_12" "int **" "a"
-  Local "_13" "int"
-  Local "_14" "int *" "b"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_8" "void *"
+  Local "_9" "void *" "pb"
+  Local "_10" "int ***" "pi"
+  Local "_11" "int **" "a"
+  Local "_12" "int"
+  Local "_13" "int *" "b"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:5:19 generated
     Call a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:5:19 written "malloc" "bb1"
@@ -84,15 +82,10 @@ Function a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below
         Deref
       Use
         Copy "_1"
-    Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:9:5 generated
     ArgumentsEvaluated a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:10:5 generated
     Call a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:10:5 written "memcpy" "bb10"
-      Destination "_9"
+      Destination "_8"
       Copy "_5"
       Copy "_2"
       Constant 8
@@ -102,44 +95,44 @@ Function a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below
   Block "bb10"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:10:5 generated
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:11:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:11:16 generated
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:12:12 written
+      Destination "_10"
+      Use
+        Copy "_9"
+    Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:12:17 generated
+    Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:13:11 written
       Destination "_11"
       Use
         Copy "_10"
-    Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:12:17 generated
-    Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:13:11 written
-      Destination "_12"
-      Use
-        Copy "_11"
           Deref
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:13:15 generated
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:14:9 written
-      Destination "_13"
+      Destination "_12"
       Binary "Ne"
-        Copy "_12"
+        Copy "_11"
         Constant 0
     Branch a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:14:9 written "bb11" "bb12"
-      Copy "_13"
+      Copy "_12"
   Block "bb11"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:14:9 generated
-    StorageLive a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:15:9 generated "_14"
+    StorageLive a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:15:9 generated "_13"
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:15:14 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:15:18 generated
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:16:13 written
-      Destination "_15"
+      Destination "_14"
       Binary "Ne"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Branch a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:16:13 written "bb14" "bb15"
-      Copy "_15"
+      Copy "_14"
   Block "bb12"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:14:9 generated
     Goto "bb13"
@@ -150,22 +143,17 @@ Function a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below
   Block "bb14"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:16:13 generated
     Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:17:13 written
-      Destination "_14"
+      Destination "_13"
         Deref
       Use
         Constant 1
-    Operation a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:17:13 written
-      Destination "_16"
-      Use
-        Copy "_14"
-          Deref
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:17:13 generated
     Goto "bb16"
   Block "bb15"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:16:13 generated
     Goto "bb16"
   Block "bb16"
-    StorageDead a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:19:5 generated "_14"
+    StorageDead a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:19:5 generated "_13"
     Goto "bb13"
   Block "bb17"
     Sequenced a_parameter_stored_and_copied_by_memcpy_is_believed_as_it_arrived_below_its_first_level.c:20:5 generated

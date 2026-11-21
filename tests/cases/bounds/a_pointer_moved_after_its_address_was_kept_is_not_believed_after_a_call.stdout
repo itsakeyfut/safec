@@ -17,7 +17,6 @@ Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call
   Local "_3" "int"
   Local "_4" "int **"
   Local "_5" "int *"
-  Local "_6" "int *"
   Block "bb0" entry
     Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:5 generated
       Destination "_0"
@@ -70,10 +69,6 @@ Function a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call
       Destination "_1"
       Use
         Copy "_5"
-    Operation a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 written
-      Destination "_6"
-      Use
-        Copy "_1"
     Sequenced a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:74 generated
     ArgumentsEvaluated a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:85 generated
     Call a_pointer_moved_after_its_address_was_kept_is_not_believed_after_a_call.c:5:85 written "other" "bb6"

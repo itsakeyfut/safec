@@ -15,7 +15,6 @@ Function a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_i
   Local "_4" "void *" "v"
   Local "_5" "void **"
   Local "_6" "int **"
-  Local "_7" "void *"
   Block "bb0" entry
     Operation a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call.c:5:9 written
       Destination "_1"
@@ -53,10 +52,6 @@ Function a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_i
       Destination "_4"
       Use
         Copy "_6"
-    Operation a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call.c:9:5 generated
     ArgumentsEvaluated a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call.c:10:5 generated
     Call a_local_put_below_one_a_callee_kept_through_a_pointer_to_void_pointer_is_asked_after_a_later_call.c:10:5 written "other" "bb2"

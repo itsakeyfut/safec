@@ -12,10 +12,9 @@ Function a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_i
   Local "_6" "int ***"
   Local "_7" "int" "i"
   Local "_8" "int"
-  Local "_9" "int **"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:4:15 written
       Destination "_4"
@@ -57,25 +56,20 @@ Function a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_i
         Deref
       Use
         Constant 0
-    Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:33 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:33 generated
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:28 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_7"
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:28 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:28 written
       Destination "_7"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:6:28 generated
     Goto "bb1"
   Block "bb3"
@@ -87,13 +81,13 @@ Function a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_i
   Block "bb4"
     Sequenced a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:7:5 generated
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:8:12 written
-      Destination "_12"
+      Destination "_11"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Operation a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:8:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_local_a_null_stored_through_a_pointer_to_its_holder_in_a_loop_names_is_not_believed_written_by_a_call.c:8:12 generated
     Return

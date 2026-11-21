@@ -12,10 +12,8 @@ Function a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_
   Local "_6" "int **" "b"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "void *" "vb"
-  Local "_11" "void **" "vv"
-  Local "_12" "void *"
+  Local "_9" "void *" "vb"
+  Local "_10" "void **" "vv"
   Block "bb0" entry
     Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 written
       Destination "_2"
@@ -81,31 +79,21 @@ Function a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_
         Deref
       Use
         Copy "_6"
-    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 generated
     Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:9:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_6"
     Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:9:16 generated
     Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:10:12 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:10:17 generated
     Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Copy "_3"
-    Operation a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_store_into_a_block_that_left_through_a_void_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:11:5 generated
     Return

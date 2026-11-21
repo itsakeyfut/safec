@@ -10,33 +10,25 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
   Local "_1" "int" parameter "c"
   Local "_2" "int[4]" "a"
   Local "_3" "int *"
-  Local "_4" "int"
+  Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int *"
-  Local "_7" "int"
+  Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int **" "b1"
-  Local "_15" "void *"
-  Local "_16" "int"
-  Local "_17" "int **" "b2"
-  Local "_18" "void *"
-  Local "_19" "int"
-  Local "_20" "int *"
-  Local "_21" "int *"
+  Local "_10" "int **" "b1"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int **" "b2"
+  Local "_14" "void *"
+  Local "_15" "int"
+  Local "_16" "int *"
+  Local "_17" "int *"
+  Local "_18" "int **" "box"
+  Local "_19" "int *" "q"
+  Local "_20" "int" "r"
+  Local "_21" "int"
   Local "_22" "int *"
-  Local "_23" "int *"
-  Local "_24" "int **" "box"
-  Local "_25" "int **"
-  Local "_26" "int *" "q"
-  Local "_27" "int" "r"
-  Local "_28" "int"
-  Local "_29" "int *"
-  Local "_30" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:5 generated
       Destination "_3"
@@ -49,95 +41,75 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
         Deref
       Use
         Constant 0
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:5 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:15 generated
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:15 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
-        Copy "_5"
+        Copy "_4"
         Constant 1
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:15 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:15 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:15 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 2
+    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 generated
+    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 generated
       Destination "_8"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 written
+    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 written
       Destination "_9"
       Binary "Add"
         Copy "_8"
-        Constant 2
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 written
+        Constant 3
+    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 written
       Destination "_9"
         Deref
       Use
-        Constant 2
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
-    Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:25 generated
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 generated
-      Destination "_11"
-      Address
-        Place "_2"
-          Index
-            Constant 0
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 written
-      Destination "_12"
-      Binary "Add"
-        Copy "_11"
         Constant 3
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 written
-      Destination "_12"
-        Deref
-      Use
-        Constant 3
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 written
-      Destination "_13"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:5:35 generated
     ArgumentsEvaluated a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:6:16 generated
     Call a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:6:16 written "malloc" "bb1"
-      Destination "_15"
+      Destination "_11"
       Constant 8
   Block "bb1"
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:6:11 written
-      Destination "_14"
+      Destination "_10"
       Use
-        Copy "_15"
+        Copy "_11"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:6:16 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:7:9 written
-      Destination "_16"
+      Destination "_12"
       Binary "Eq"
-        Copy "_14"
+        Copy "_10"
         Constant 0
     Branch a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:7:9 written "bb2" "bb3"
-      Copy "_16"
+      Copy "_12"
   Block "bb2"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:7:9 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:7:18 written
@@ -152,21 +124,21 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
   Block "bb4"
     ArgumentsEvaluated a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:8:16 generated
     Call a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:8:16 written "malloc" "bb5"
-      Destination "_18"
+      Destination "_14"
       Constant 8
   Block "bb5"
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:8:11 written
-      Destination "_17"
+      Destination "_13"
       Use
-        Copy "_18"
+        Copy "_14"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:8:16 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:9:9 written
-      Destination "_19"
+      Destination "_15"
       Binary "Eq"
-        Copy "_17"
+        Copy "_13"
         Constant 0
     Branch a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:9:9 written "bb6" "bb7"
-      Copy "_19"
+      Copy "_15"
   Block "bb6"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:9:9 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:9:18 written
@@ -180,55 +152,41 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
     Goto "bb8"
   Block "bb8"
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:10:11 generated
-      Destination "_20"
+      Destination "_16"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:10:11 written
-      Destination "_21"
+      Destination "_17"
       Binary "Add"
-        Copy "_20"
+        Copy "_16"
         Constant 3
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:10:5 written
-      Destination "_14"
+      Destination "_10"
         Deref
       Use
-        Copy "_21"
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:10:5 written
-      Destination "_22"
-      Use
-        Copy "_14"
-          Deref
+        Copy "_17"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:10:5 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:11:5 written
-      Destination "_17"
+      Destination "_13"
         Deref
       Use
         Constant 0
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:11:5 written
-      Destination "_23"
-      Use
-        Copy "_17"
-          Deref
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:11:5 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:12:11 written
-      Destination "_24"
+      Destination "_18"
       Use
-        Copy "_14"
+        Copy "_10"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:12:17 generated
     Branch a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:13:9 written "bb9" "bb10"
       Copy "_1"
   Block "bb9"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:13:9 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:13:12 written
-      Destination "_24"
+      Destination "_18"
       Use
-        Copy "_17"
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:13:12 written
-      Destination "_25"
-      Use
-        Copy "_24"
+        Copy "_13"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:13:12 generated
     Goto "bb11"
   Block "bb10"
@@ -236,39 +194,35 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
     Goto "bb11"
   Block "bb11"
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:14:10 written
-      Destination "_26"
+      Destination "_19"
       Use
-        Copy "_24"
+        Copy "_18"
           Deref
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:14:14 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:15:9 written
-      Destination "_27"
+      Destination "_20"
       Use
         Constant 0
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:15:13 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:9 written
-      Destination "_28"
+      Destination "_21"
       Binary "Ne"
-        Copy "_26"
+        Copy "_19"
         Constant 0
     Branch a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:9 written "bb12" "bb13"
-      Copy "_28"
+      Copy "_21"
   Block "bb12"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:9 generated
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:21 written
-      Destination "_29"
+      Destination "_22"
       Binary "Add"
-        Copy "_26"
+        Copy "_19"
         Constant 1
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:17 written
-      Destination "_27"
+      Destination "_20"
       Use
-        Copy "_29"
+        Copy "_22"
           Deref
-    Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:17 written
-      Destination "_30"
-      Use
-        Copy "_27"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:16:17 generated
     Goto "bb14"
   Block "bb13"
@@ -278,6 +232,6 @@ Function a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_pa
     Operation a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:17:5 written
       Destination "_0"
       Use
-        Copy "_27"
+        Copy "_20"
     Sequenced a_pointer_read_out_of_one_of_two_blocks_one_holding_a_null_is_proved_past_the_end.c:17:12 generated
     Return

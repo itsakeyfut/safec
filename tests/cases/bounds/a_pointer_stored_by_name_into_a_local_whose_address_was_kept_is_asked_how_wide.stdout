@@ -13,7 +13,6 @@ Function a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_h
   Local "_2" "int **"
   Local "_3" "void *" "v"
   Local "_4" "void *"
-  Local "_5" "int *"
   Block "bb0" entry
     Operation a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:5:10 written
       Destination "_1"
@@ -43,10 +42,6 @@ Function a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_h
       Destination "_1"
       Use
         Copy "_3"
-    Operation a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:8:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
     Sequenced a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:8:5 generated
     ArgumentsEvaluated a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:9:5 generated
     Call a_pointer_stored_by_name_into_a_local_whose_address_was_kept_is_asked_how_wide.c:9:5 written "use" "bb3"

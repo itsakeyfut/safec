@@ -19,7 +19,6 @@ Function an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:5:5 "
   Local "_4" "int *" "p"
   Local "_5" "int **"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:6:14 generated
     Call an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:6:14 written "malloc" "bb1"
@@ -86,11 +85,6 @@ Function an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:5:5 "
         Deref
       Use
         Constant 1
-    Operation an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:12:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:12:5 generated
     Operation an_output_parameter_beside_an_exposed_allocation_is_not_doubted.c:13:5 written
       Destination "_0"

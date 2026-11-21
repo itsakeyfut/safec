@@ -19,13 +19,11 @@ Function a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked
   Local "_7" "int **" "g"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int *" "b"
-  Local "_12" "int **"
-  Local "_13" "int *"
-  Local "_14" "int *" "c"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_10" "int *" "b"
+  Local "_11" "int **"
+  Local "_12" "int *" "c"
+  Local "_13" "int **"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:6:14 generated
     Call a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:6:14 written "malloc" "bb1"
@@ -119,24 +117,19 @@ Function a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked
         Deref
       Use
         Copy "_1"
-    Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:18:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:18:5 generated
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:19:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_1"
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:19:14 generated
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:20:17 written
-      Destination "_12"
+      Destination "_11"
       Address
-        Place "_11"
+        Place "_10"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:20:5 generated
     Call a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:20:5 written "release_ref" "bb13"
-      Copy "_12"
+      Copy "_11"
   Block "bb13"
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:20:5 generated
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:21:5 written
@@ -145,30 +138,25 @@ Function a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked
       Use
         Copy "_4"
           Deref
-    Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:21:5 written
-      Destination "_13"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:21:5 generated
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:22:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_7"
           Deref
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:22:14 generated
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:23:17 written
-      Destination "_15"
+      Destination "_13"
       Address
-        Place "_14"
+        Place "_12"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:23:12 generated
     Call a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:23:12 written "use2" "bb14"
-      Destination "_16"
-      Copy "_15"
+      Destination "_14"
+      Copy "_13"
   Block "bb14"
     Operation a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:23:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address.c:23:12 generated
     Return

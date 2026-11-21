@@ -8,7 +8,6 @@ Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:4:9 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_
         Deref
       Use
         Constant 1
-    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:7:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -66,8 +60,7 @@ Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_
   Local "_4" "void **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void *" "pm"
+  Local "_7" "void *" "pm"
   Block "bb0" entry
     Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:12:5 generated
       Destination "_0"
@@ -136,20 +129,15 @@ Function memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_
         Deref
       Use
         Copy "_1"
-    Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:21:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:21:5 generated
     Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:22:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:22:16 generated
     ArgumentsEvaluated memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 generated
     Call memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 written "use" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:23:5 generated
     Operation memory_holding_a_char_s_address_handed_as_an_int_pointer_to_pointer_is_asked_what_it_holds.c:24:5 written

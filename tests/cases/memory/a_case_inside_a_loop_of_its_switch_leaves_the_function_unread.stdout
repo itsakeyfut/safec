@@ -18,12 +18,6 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int"
   Block "bb0" entry
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:5:10 written
       Destination "_5"
@@ -39,30 +33,26 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_6"
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:5:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:5:5 generated
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:6:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Rem"
         Copy "_3"
         Constant 4
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:6:13 generated
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:6:13 generated
     Goto "bb1"
   Block "bb1"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:7:10 generated
-      Destination "_17"
+      Destination "_11"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 0
     Branch a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:7:10 written "bb3" "bb11"
-      Copy "_17"
+      Copy "_11"
   Block "bb2"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:19:5 written
       Destination "_0"
@@ -79,21 +69,16 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
       Use
         Copy "_2"
           Deref
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:9:13 written
-      Destination "_10"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:9:13 generated
     Goto "bb7"
   Block "bb5"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:17:18 written
-      Destination "_16"
+      Destination "_10"
       Binary "Gt"
         Copy "_4"
         Constant 0
     Branch a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:17:18 written "bb10" "bb6"
-      Copy "_16"
+      Copy "_10"
   Block "bb6"
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:17:18 generated
     Goto "bb2"
@@ -104,11 +89,6 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
       Use
         Copy "_2"
           Deref
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:11:13 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:11:13 generated
     Goto "bb8"
   Block "bb8"
@@ -117,11 +97,6 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
         Deref
       Use
         Copy "_2"
-          Deref
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:13:13 written
-      Destination "_12"
-      Use
-        Copy "_1"
           Deref
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:13:13 generated
     Goto "bb9"
@@ -132,25 +107,16 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
       Use
         Copy "_2"
           Deref
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:15:13 written
-      Destination "_13"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:15:13 generated
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:16:17 written
-      Destination "_14"
+      Destination "_9"
       Binary "Sub"
         Copy "_4"
         Constant 1
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:16:13 written
       Destination "_4"
       Use
-        Copy "_14"
-    Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:16:13 written
-      Destination "_15"
-      Use
-        Copy "_4"
+        Copy "_9"
     Sequenced a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:16:13 generated
     Goto "bb5"
   Block "bb10"
@@ -158,27 +124,27 @@ Function a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:3:5 "f"
     Goto "bb4"
   Block "bb11"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:10:10 generated
-      Destination "_17"
+      Destination "_11"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 3
     Branch a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:10:10 written "bb7" "bb12"
-      Copy "_17"
+      Copy "_11"
   Block "bb12"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:12:10 generated
-      Destination "_17"
+      Destination "_11"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 2
     Branch a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:12:10 written "bb8" "bb13"
-      Copy "_17"
+      Copy "_11"
   Block "bb13"
     Operation a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:14:10 generated
-      Destination "_17"
+      Destination "_11"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 1
     Branch a_case_inside_a_loop_of_its_switch_leaves_the_function_unread.c:14:10 written "bb9" "bb14"
-      Copy "_17"
+      Copy "_11"
   Block "bb14"
     Goto "bb2"

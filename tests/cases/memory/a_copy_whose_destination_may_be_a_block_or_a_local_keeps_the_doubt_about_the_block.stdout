@@ -17,15 +17,13 @@ Function a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_abou
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int *" "loc"
-  Local "_9" "int *"
-  Local "_10" "int **" "p"
-  Local "_11" "int **"
-  Local "_12" "int **"
-  Local "_13" "void *"
-  Local "_14" "int *" "r"
+  Local "_9" "int **" "p"
+  Local "_10" "int **"
+  Local "_11" "void *"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
+  Local "_14" "int"
   Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int"
   Block "bb0" entry
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:3:9 written
       Destination "_4"
@@ -88,11 +86,6 @@ Function a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_abou
       Use
         Copy "_3"
           Deref
-    Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:6:12 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:6:12 generated
     Goto "bb10"
   Block "bb9"
@@ -100,26 +93,22 @@ Function a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_abou
     Goto "bb10"
   Block "bb10"
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:7:15 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_8"
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:7:11 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:7:15 generated
     Branch a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:8:9 written "bb11" "bb12"
       Copy "_2"
   Block "bb11"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:8:9 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:8:12 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
-    Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:8:12 written
-      Destination "_12"
-      Use
-        Copy "_10"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:8:12 generated
     Goto "bb13"
   Block "bb12"
@@ -128,24 +117,24 @@ Function a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_abou
   Block "bb13"
     ArgumentsEvaluated a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:9:5 generated
     Call a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:9:5 written "memcpy" "bb14"
-      Destination "_13"
-      Copy "_10"
+      Destination "_11"
+      Copy "_9"
       Copy "_3"
       Constant 8
   Block "bb14"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:9:5 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_5"
           Deref
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:14 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:22 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
-        Copy "_14"
+        Copy "_12"
     Branch a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:22 written "bb15" "bb16"
-      Copy "_15"
+      Copy "_13"
   Block "bb15"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:22 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:10:26 written
@@ -162,28 +151,28 @@ Function a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_abou
       Copy "_8"
   Block "bb18"
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:12 written
-      Destination "_17"
+      Destination "_15"
       Binary "Add"
-        Copy "_14"
+        Copy "_12"
           Deref
-        Copy "_16"
+        Copy "_14"
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:5 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_15"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:12 generated
     Return
   Block "bb19"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:18 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:18 written
-      Destination "_16"
+      Destination "_14"
       Use
         Constant 1
     Goto "bb18"
   Block "bb20"
     Sequenced a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:18 generated
     Operation a_copy_whose_destination_may_be_a_block_or_a_local_keeps_the_doubt_about_the_block.c:11:18 written
-      Destination "_16"
+      Destination "_14"
       Use
         Constant 0
     Goto "bb18"

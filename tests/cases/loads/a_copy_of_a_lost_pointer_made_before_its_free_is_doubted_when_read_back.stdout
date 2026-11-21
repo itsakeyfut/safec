@@ -14,18 +14,13 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
   Local "_5" "int *" "q"
   Local "_6" "int" "i"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "int"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *" "w"
+  Local "_12" "int *" "r"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *" "w"
-  Local "_16" "int *"
-  Local "_17" "int *" "r"
-  Local "_18" "int"
-  Local "_19" "int" "v"
+  Local "_14" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:4:17 generated
     Call a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:4:17 written "malloc" "bb1"
@@ -85,19 +80,15 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
       Destination "_4"
       Use
         Copy "_5"
-    Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:10:9 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:10:9 generated
     ArgumentsEvaluated a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:13 generated
     Call a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:13 written "malloc" "bb8"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb7"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:9:12 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:16:10 written
-      Destination "_15"
+      Destination "_11"
       Use
         Copy "_4"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:16:14 generated
@@ -108,18 +99,14 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:9 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:9 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:11:9 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:12:13 written
-      Destination "_11"
+      Destination "_9"
       Unary "Not"
         Copy "_5"
     Branch a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:12:13 written "bb9" "bb10"
-      Copy "_11"
+      Copy "_9"
   Block "bb9"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:12:13 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:12:17 written
@@ -137,25 +124,16 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
         Deref
       Use
         Constant 1
-    Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:13:9 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:13:9 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:14:13 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:14:9 written
       Destination "_6"
       Use
-        Copy "_13"
-    Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:14:9 written
-      Destination "_14"
-      Use
-        Copy "_6"
+        Copy "_10"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:14:9 generated
     Goto "bb5"
   Block "bb12"
@@ -164,25 +142,20 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
       Destination "_1"
         Deref
       Use
-        Copy "_15"
-    Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:18:5 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
+        Copy "_11"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:18:5 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:19:10 written
-      Destination "_17"
+      Destination "_12"
       Use
         Copy "_1"
           Deref
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:19:14 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:20:9 written
-      Destination "_18"
+      Destination "_13"
       Unary "Not"
-        Copy "_17"
+        Copy "_12"
     Branch a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:20:9 written "bb13" "bb14"
-      Copy "_18"
+      Copy "_13"
   Block "bb13"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:20:9 generated
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:20:13 written
@@ -196,9 +169,9 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
     Goto "bb15"
   Block "bb15"
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:21:9 written
-      Destination "_19"
+      Destination "_14"
       Use
-        Copy "_17"
+        Copy "_12"
           Deref
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:21:13 generated
     ArgumentsEvaluated a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:22:5 generated
@@ -214,6 +187,6 @@ Function a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back
     Operation a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:24:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_14"
     Sequenced a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back.c:24:12 generated
     Return

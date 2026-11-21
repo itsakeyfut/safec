@@ -15,9 +15,8 @@ Function a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:7 "f"
   Local "_5" "int" "i"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int *"
+  Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:39 generated
     Call a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:39 written "malloc" "bb1"
@@ -74,25 +73,20 @@ Function a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:7 "f"
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:97 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:97 generated
     Operation a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:92 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_5"
     Operation a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:92 written
-      Destination "_10"
+      Destination "_9"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:92 written
       Destination "_5"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_heap_block_filled_in_a_loop_and_returned_is_doubted.c:3:92 generated
     Goto "bb5"
   Block "bb7"

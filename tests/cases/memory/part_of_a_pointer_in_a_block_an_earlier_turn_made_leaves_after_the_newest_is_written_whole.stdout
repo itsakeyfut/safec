@@ -13,20 +13,13 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newe
   Local "_7" "int" "i"
   Local "_8" "int"
   Local "_9" "void *"
-  Local "_10" "void **"
-  Local "_11" "int"
-  Local "_12" "void *"
-  Local "_13" "void *" "v"
-  Local "_14" "int *" "ip"
+  Local "_10" "int"
+  Local "_11" "void *" "v"
+  Local "_12" "int *" "ip"
+  Local "_13" "void **"
+  Local "_14" "int"
   Local "_15" "int"
-  Local "_16" "void **"
-  Local "_17" "void *"
-  Local "_18" "void **"
-  Local "_19" "int"
-  Local "_20" "int"
-  Local "_21" "int"
-  Local "_22" "void *"
-  Local "_23" "void **"
+  Local "_16" "int"
   Block "bb0" entry
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:3:9 written
       Destination "_4"
@@ -76,27 +69,23 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newe
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:6:21 generated
     StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:15:5 generated "_7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:16:9 written
-      Destination "_21"
+      Destination "_16"
       Unary "Not"
         Copy "_5"
     Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:16:9 written "bb14" "bb15"
-      Copy "_21"
+      Copy "_16"
   Block "bb7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:7:9 written
       Destination "_5"
       Use
         Copy "_9"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:7:9 written
-      Destination "_10"
-      Use
-        Copy "_5"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:7:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:8:13 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
         Copy "_5"
     Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:8:13 written "bb8" "bb9"
-      Copy "_11"
+      Copy "_10"
   Block "bb8"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:8:13 generated
     Goto "bb11"
@@ -109,75 +98,56 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newe
         Deref
       Use
         Copy "_3"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:9:9 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:9:9 generated
-    StorageLive part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:10:9 generated "_13"
+    StorageLive part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:10:9 generated "_11"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:10:15 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_5"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:10:19 generated
-    StorageLive part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:11:9 generated "_14"
+    StorageLive part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:11:9 generated "_12"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:11:14 written
-      Destination "_14"
+      Destination "_12"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:11:19 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:12:9 written
-      Destination "_14"
+      Destination "_12"
         Deref
       Use
         Constant 1
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:12:9 written
-      Destination "_15"
-      Use
-        Copy "_14"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:12:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:13:9 written
-      Destination "_16"
+      Destination "_13"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:13:9 written
-      Destination "_16"
+      Destination "_13"
         Deref
       Use
         Copy "_6"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:13:9 written
-      Destination "_17"
-      Use
-        Copy "_16"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:13:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:14:9 written
       Destination "_6"
       Use
         Copy "_5"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:14:9 written
-      Destination "_18"
-      Use
-        Copy "_6"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:14:9 generated
-    StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:15:5 generated "_14"
-    StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:15:5 generated "_13"
+    StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:15:5 generated "_12"
+    StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:15:5 generated "_11"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:6:28 written
-      Destination "_19"
+      Destination "_14"
       Use
         Copy "_7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:6:28 written
-      Destination "_20"
+      Destination "_15"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:6:28 written
       Destination "_7"
       Use
-        Copy "_20"
+        Copy "_15"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:6:28 generated
     Goto "bb4"
   Block "bb11"
@@ -200,22 +170,12 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newe
         Deref
       Use
         Copy "_3"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:17:5 written
-      Destination "_22"
-      Use
-        Copy "_5"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:17:5 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:18:5 written
       Destination "_1"
         Deref
       Use
         Copy "_5"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:18:5 written
-      Destination "_23"
-      Use
-        Copy "_1"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole.c:18:5 generated
     Return
   Block "bb17"

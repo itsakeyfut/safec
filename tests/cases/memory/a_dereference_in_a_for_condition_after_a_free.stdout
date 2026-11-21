@@ -10,7 +10,6 @@ Function a_dereference_in_a_for_condition_after_a_free.c:3:5 "f"
   Local "_1" "int" parameter "i"
   Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_dereference_in_a_for_condition_after_a_free.c:4:14 generated
     Call a_dereference_in_a_for_condition_after_a_free.c:4:14 written "malloc" "bb1"
@@ -31,10 +30,6 @@ Function a_dereference_in_a_for_condition_after_a_free.c:3:5 "f"
       Destination "_1"
       Use
         Constant 0
-    Operation a_dereference_in_a_for_condition_after_a_free.c:6:10 written
-      Destination "_4"
-      Use
-        Copy "_1"
     Sequenced a_dereference_in_a_for_condition_after_a_free.c:6:10 generated
     Goto "bb3"
   Block "bb3"

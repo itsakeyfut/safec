@@ -17,14 +17,10 @@ Function a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_abou
   Local "_11" "void *"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "int **" "v"
-  Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "int *" "r"
-  Local "_21" "int"
+  Local "_14" "int **" "v"
+  Local "_15" "int"
+  Local "_16" "int *" "r"
+  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:3:16 generated
     Call a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:3:16 written "malloc" "bb1"
@@ -133,11 +129,6 @@ Function a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_abou
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:7:5 written
-      Destination "_14"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:7:5 generated
     Branch a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:8:9 written "bb16" "bb17"
       Copy "_3"
@@ -148,11 +139,6 @@ Function a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_abou
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:8:12 written
-      Destination "_15"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:8:12 generated
     Goto "bb18"
   Block "bb17"
@@ -162,26 +148,21 @@ Function a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_abou
         Deref
       Use
         Copy "_7"
-    Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:8:26 written
-      Destination "_16"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:8:26 generated
     Goto "bb18"
   Block "bb18"
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:9:11 written
-      Destination "_17"
+      Destination "_14"
       Use
         Copy "_10"
           Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:9:15 generated
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:10:9 written
-      Destination "_18"
+      Destination "_15"
       Unary "Not"
-        Copy "_17"
+        Copy "_14"
     Branch a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:10:9 written "bb19" "bb20"
-      Copy "_18"
+      Copy "_15"
   Block "bb19"
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:10:9 generated
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:10:13 written
@@ -195,30 +176,25 @@ Function a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_abou
     Goto "bb21"
   Block "bb21"
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:11:5 written
-      Destination "_17"
+      Destination "_14"
         Deref
       Use
         Copy "_2"
-    Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:11:5 written
-      Destination "_19"
-      Use
-        Copy "_17"
-          Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:11:5 generated
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:12:10 written
-      Destination "_20"
+      Destination "_16"
       Use
         Copy "_4"
           Deref
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:12:14 generated
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:13:12 written
-      Destination "_21"
+      Destination "_17"
       Binary "Ne"
-        Copy "_20"
+        Copy "_16"
         Constant 0
     Operation a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:13:5 written
       Destination "_0"
       Use
-        Copy "_21"
+        Copy "_17"
     Sequenced a_store_through_a_loaded_pointer_naming_two_blocks_keeps_the_doubt_about_one_a_caller_holds.c:13:12 generated
     Return

@@ -17,15 +17,12 @@ Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int ***" "q"
-  Local "_13" "int ***"
-  Local "_14" "int ***"
-  Local "_15" "int *"
-  Local "_16" "int *"
-  Local "_17" "int *" "r"
-  Local "_18" "int **"
-  Local "_19" "int"
+  Local "_11" "int ***" "q"
+  Local "_12" "int ***"
+  Local "_13" "int *"
+  Local "_14" "int *" "r"
+  Local "_15" "int **"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:3:5 generated
       Destination "_0"
@@ -92,14 +89,9 @@ Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_
         Deref
       Use
         Copy "_10"
-    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:5 written
-      Destination "_11"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:11:5 generated
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:12:12 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_7"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:12:16 generated
@@ -108,15 +100,11 @@ Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_
   Block "bb5"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:13:9 generated
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:13 written
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_4"
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 written
-      Destination "_12"
-      Use
-        Copy "_13"
-    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 written
-      Destination "_14"
+      Destination "_11"
       Use
         Copy "_12"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:14:9 generated
@@ -126,32 +114,26 @@ Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_
     Goto "bb7"
   Block "bb7"
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:11 written
-      Destination "_15"
+      Destination "_13"
       Address
         Place "_2"
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 written
-      Destination "_12"
+      Destination "_11"
         Deref
           Deref
       Use
-        Copy "_15"
-    Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 written
-      Destination "_16"
-      Use
-        Copy "_12"
-          Deref
-            Deref
+        Copy "_13"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:16:5 generated
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:14 generated
-      Destination "_18"
+      Destination "_15"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:10 written
-      Destination "_17"
+      Destination "_14"
       Use
-        Copy "_18"
+        Copy "_15"
           Deref
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:17:14 generated
     ArgumentsEvaluated a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:18:5 generated
@@ -160,13 +142,13 @@ Function a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_
   Block "bb8"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:18:5 generated
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:12 written
-      Destination "_19"
+      Destination "_16"
       Binary "Eq"
-        Copy "_17"
+        Copy "_14"
         Constant 0
     Operation a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_16"
     Sequenced a_local_array_written_through_a_pointer_that_may_be_read_out_of_memory_is_not_proved_unwritten.c:19:12 generated
     Return

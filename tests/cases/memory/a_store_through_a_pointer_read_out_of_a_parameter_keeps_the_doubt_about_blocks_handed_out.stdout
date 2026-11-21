@@ -17,13 +17,10 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int **" "v"
+  Local "_14" "int **" "v"
+  Local "_15" "int"
+  Local "_16" "int *" "r"
   Local "_17" "int"
-  Local "_18" "int *"
-  Local "_19" "int *" "r"
-  Local "_20" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:3:16 generated
     Call a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:3:16 written "malloc" "bb1"
@@ -140,35 +137,25 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about
         Deref
       Use
         Copy "_5"
-    Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:8:5 written
-      Destination "_14"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:8:5 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:9:5 written
       Destination "_2"
         Deref
       Use
         Copy "_8"
-    Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:9:5 written
-      Destination "_15"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:9:5 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:10:11 written
-      Destination "_16"
+      Destination "_14"
       Use
         Copy "_3"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:10:15 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:11:9 written
-      Destination "_17"
+      Destination "_15"
       Unary "Not"
-        Copy "_16"
+        Copy "_14"
     Branch a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:11:9 written "bb18" "bb19"
-      Copy "_17"
+      Copy "_15"
   Block "bb18"
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:11:9 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:11:13 written
@@ -182,30 +169,25 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about
     Goto "bb20"
   Block "bb20"
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:12:5 written
-      Destination "_16"
+      Destination "_14"
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:12:5 written
-      Destination "_18"
-      Use
-        Copy "_16"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:12:5 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:13:10 written
-      Destination "_19"
+      Destination "_16"
       Use
         Copy "_5"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:13:14 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:14:12 written
-      Destination "_20"
+      Destination "_17"
       Binary "Ne"
-        Copy "_19"
+        Copy "_16"
         Constant 0
     Operation a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:14:5 written
       Destination "_0"
       Use
-        Copy "_20"
+        Copy "_17"
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_keeps_the_doubt_about_blocks_handed_out.c:14:12 generated
     Return

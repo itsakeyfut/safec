@@ -34,7 +34,6 @@ Function a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_r
   Local "_14" "void *"
   Local "_15" "void *"
   Local "_16" "void **" "q"
-  Local "_17" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported.c:7:9 written
       Destination "_2"
@@ -157,11 +156,6 @@ Function a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_r
         Deref
       Use
         Copy "_16"
-    Operation a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported.c:19:5 written
-      Destination "_17"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported.c:19:5 generated
     ArgumentsEvaluated a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported.c:20:5 generated
     Call a_partial_pointer_in_a_block_copied_whole_into_another_that_leaves_is_reported.c:20:5 written "use" "bb17"

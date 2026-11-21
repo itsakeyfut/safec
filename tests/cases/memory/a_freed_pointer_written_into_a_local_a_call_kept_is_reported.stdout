@@ -17,7 +17,6 @@ Function a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:21 "ma
   Local "_3" "int *" "x"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
   Block "bb0" entry
     Operation a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:21 generated
       Destination "_0"
@@ -75,10 +74,6 @@ Function a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:21 "ma
       Destination "_1"
       Use
         Copy "_3"
-    Operation a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:117 written
-      Destination "_6"
-      Use
-        Copy "_1"
     Sequenced a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:117 generated
     ArgumentsEvaluated a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:127 generated
     Call a_freed_pointer_written_into_a_local_a_call_kept_is_reported.c:4:127 written "use" "bb7"

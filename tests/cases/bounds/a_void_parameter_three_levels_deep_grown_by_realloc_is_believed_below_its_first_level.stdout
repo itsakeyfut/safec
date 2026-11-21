@@ -18,7 +18,6 @@ Function a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_i
   Local "_8" "int"
   Local "_9" "int *" "b"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:4:11 written
       Destination "_2"
@@ -98,11 +97,6 @@ Function a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_i
         Deref
       Use
         Constant 1
-    Operation a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:14:13 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_void_parameter_three_levels_deep_grown_by_realloc_is_believed_below_its_first_level.c:14:13 generated
     Goto "bb10"
   Block "bb9"

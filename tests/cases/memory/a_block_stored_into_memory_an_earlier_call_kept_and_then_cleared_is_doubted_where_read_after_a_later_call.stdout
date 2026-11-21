@@ -15,8 +15,6 @@ Function a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_dou
   Local "_4" "int ***" "hb"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:5:15 generated
     Call a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:5:15 written "malloc" "bb1"
@@ -84,22 +82,12 @@ Function a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_dou
         Deref
       Use
         Copy "_1"
-    Operation a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:10:5 generated
     Operation a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:11:5 written
       Destination "_4"
         Deref
       Use
         Constant 0
-    Operation a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:11:5 generated
     ArgumentsEvaluated a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:12:5 generated
     Call a_block_stored_into_memory_an_earlier_call_kept_and_then_cleared_is_doubted_where_read_after_a_later_call.c:12:5 written "tick" "bb10"

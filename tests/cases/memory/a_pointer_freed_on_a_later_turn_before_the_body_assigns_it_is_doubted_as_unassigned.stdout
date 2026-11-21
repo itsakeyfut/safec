@@ -15,9 +15,8 @@ Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_a
   Local "_3" "int"
   Local "_4" "int"
   Local "_5" "int *"
-  Local "_6" "int *"
+  Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     StorageLive a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:10 generated "_2"
     Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:14 written
@@ -73,23 +72,19 @@ Function a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_a
       Destination "_1"
       Use
         Copy "_5"
-    Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:55 written
-      Destination "_6"
-      Use
-        Copy "_1"
     Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:55 generated
     Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_2"
     Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 written
       Destination "_2"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_pointer_freed_on_a_later_turn_before_the_body_assigns_it_is_doubted_as_unassigned.c:5:28 generated
     Goto "bb1"

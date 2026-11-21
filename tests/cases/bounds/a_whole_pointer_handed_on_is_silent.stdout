@@ -47,7 +47,6 @@ Function a_whole_pointer_handed_on_is_silent.c:11:6 "stored"
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_whole_pointer_handed_on_is_silent.c:12:14 generated
     Call a_whole_pointer_handed_on_is_silent.c:12:14 written "malloc" "bb1"
@@ -73,11 +72,6 @@ Function a_whole_pointer_handed_on_is_silent.c:11:6 "stored"
         Deref
       Use
         Copy "_2"
-    Operation a_whole_pointer_handed_on_is_silent.c:14:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_whole_pointer_handed_on_is_silent.c:14:9 generated
     Goto "bb4"
   Block "bb3"

@@ -16,7 +16,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_r
   Local "_8" "void *"
   Local "_9" "int *" "q"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported.c:3:5 generated
       Destination "_0"
@@ -89,11 +88,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_r
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported.c:13:5 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported.c:13:5 generated
     Operation a_pointer_read_out_of_a_local_array_a_copy_elsewhere_did_not_write_is_reported.c:14:5 written
       Destination "_0"

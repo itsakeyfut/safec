@@ -17,10 +17,8 @@ Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int *"
-  Local "_13" "int"
+  Local "_10" "int *"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:4:9 written
       Destination "_3"
@@ -81,30 +79,20 @@ Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_
       Use
         Copy "_1"
           Deref
-    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:7:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:7:5 generated
     Branch a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:9 written "bb8" "bb9"
       Copy "_2"
   Block "bb8"
     Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:9 generated
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:21 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_4"
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 written
       Destination "_6"
         Deref
       Use
-        Copy "_10"
-    Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 written
-      Destination "_11"
-      Use
-        Copy "_6"
-          Deref
+        Copy "_9"
     Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:8:14 generated
     Goto "bb10"
   Block "bb9"
@@ -112,23 +100,23 @@ Function a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_
     Goto "bb10"
   Block "bb10"
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:15 written
-      Destination "_12"
+      Destination "_10"
       Address
         Place "_3"
     ArgumentsEvaluated a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 generated
     Call a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 written "fill" "bb11"
       Copy "_6"
-      Copy "_12"
+      Copy "_10"
   Block "bb11"
     Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:9:5 generated
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:12 written
-      Destination "_13"
+      Destination "_11"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Operation a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_local_a_block_names_beside_a_callers_pointer_is_not_believed_written_by_a_call.c:10:12 generated
     Return

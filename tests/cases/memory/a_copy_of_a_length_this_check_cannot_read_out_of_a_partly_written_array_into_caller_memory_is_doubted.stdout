@@ -15,9 +15,8 @@ Function a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array
   Local "_4" "int"
   Local "_5" "int *[2]" "a"
   Local "_6" "int **"
-  Local "_7" "int *"
-  Local "_8" "int **"
-  Local "_9" "void *"
+  Local "_7" "int **"
+  Local "_8" "void *"
   Block "bb0" entry
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:3:9 written
       Destination "_4"
@@ -43,23 +42,18 @@ Function a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array
         Deref
       Use
         Copy "_2"
-    Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:5:5 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:5:5 generated
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:17 generated
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_5"
           Index
             Constant 0
     ArgumentsEvaluated a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 generated
     Call a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 written "memcpy" "bb4"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
-      Copy "_8"
+      Copy "_7"
       Copy "_3"
   Block "bb4"
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_partly_written_array_into_caller_memory_is_doubted.c:6:5 generated

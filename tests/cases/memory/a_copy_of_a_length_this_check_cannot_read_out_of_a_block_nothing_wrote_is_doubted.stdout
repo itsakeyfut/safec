@@ -17,10 +17,9 @@ Function a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_
   Local "_6" "int **" "n"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "void *"
-  Local "_11" "int *" "r"
-  Local "_12" "int"
+  Local "_9" "void *"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:3:15 generated
     Call a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:3:15 written "malloc" "bb1"
@@ -83,32 +82,27 @@ Function a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_
         Deref
       Use
         Copy "_1"
-    Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:5:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:5:5 generated
     ArgumentsEvaluated a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:6:5 generated
     Call a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:6:5 written "memcpy" "bb9"
-      Destination "_10"
+      Destination "_9"
       Copy "_6"
       Copy "_3"
       Copy "_2"
   Block "bb9"
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:6:5 generated
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
           Deref
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:14 generated
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:22 written
-      Destination "_12"
+      Destination "_11"
       Unary "Not"
-        Copy "_11"
+        Copy "_10"
     Branch a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:22 written "bb10" "bb11"
-      Copy "_12"
+      Copy "_11"
   Block "bb10"
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:22 generated
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:7:26 written
@@ -124,7 +118,7 @@ Function a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_
     Operation a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:8:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_copy_of_a_length_this_check_cannot_read_out_of_a_block_nothing_wrote_is_doubted.c:8:12 generated
     Return

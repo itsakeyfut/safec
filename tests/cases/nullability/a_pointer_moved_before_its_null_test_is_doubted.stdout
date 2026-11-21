@@ -10,9 +10,7 @@ Function a_pointer_moved_before_its_null_test_is_doubted.c:2:6 "f"
   Local "_4" "void *"
   Local "_5" "int **" "p"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int"
-  Local "_9" "int *"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_moved_before_its_null_test_is_doubted.c:2:60 generated
     Call a_pointer_moved_before_its_null_test_is_doubted.c:2:60 written "malloc" "bb1"
@@ -39,18 +37,13 @@ Function a_pointer_moved_before_its_null_test_is_doubted.c:2:6 "f"
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_moved_before_its_null_test_is_doubted.c:2:88 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_moved_before_its_null_test_is_doubted.c:2:88 generated
     Operation a_pointer_moved_before_its_null_test_is_doubted.c:2:102 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
         Copy "_3"
     Branch a_pointer_moved_before_its_null_test_is_doubted.c:2:102 written "bb2" "bb3"
-      Copy "_8"
+      Copy "_7"
   Block "bb2"
     Sequenced a_pointer_moved_before_its_null_test_is_doubted.c:2:102 generated
     Return
@@ -63,10 +56,5 @@ Function a_pointer_moved_before_its_null_test_is_doubted.c:2:6 "f"
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_moved_before_its_null_test_is_doubted.c:2:114 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_moved_before_its_null_test_is_doubted.c:2:114 generated
     Return

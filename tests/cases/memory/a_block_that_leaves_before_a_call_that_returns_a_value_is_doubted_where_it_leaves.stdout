@@ -9,8 +9,7 @@ Function a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where
   Local "_1" "int ***" parameter _Nonnull "out"
   Local "_2" "int **" "b"
   Local "_3" "void *"
-  Local "_4" "int **"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:4:15 generated
     Call a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:4:15 written "malloc" "bb1"
@@ -27,15 +26,10 @@ Function a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where
         Deref
       Use
         Copy "_2"
-    Operation a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:5:5 generated
     ArgumentsEvaluated a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:6:5 generated
     Call a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:6:5 written "tick" "bb2"
-      Destination "_5"
+      Destination "_4"
   Block "bb2"
     Sequenced a_block_that_leaves_before_a_call_that_returns_a_value_is_doubted_where_it_leaves.c:6:5 generated
     Return

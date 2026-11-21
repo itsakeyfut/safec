@@ -13,10 +13,9 @@ Function a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_poin
   Local "_3" "int *" parameter "ip"
   Local "_4" "int" "i"
   Local "_5" "void *" "d"
-  Local "_6" "void *"
-  Local "_7" "void *" "s"
-  Local "_8" "int *"
-  Local "_9" "void *"
+  Local "_6" "void *" "s"
+  Local "_7" "int *"
+  Local "_8" "void *"
   Block "bb0" entry
     Operation a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:3:9 written
       Destination "_4"
@@ -36,10 +35,6 @@ Function a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_poin
       Destination "_5"
       Use
         Copy "_2"
-    Operation a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:5:12 written
-      Destination "_6"
-      Use
-        Copy "_5"
     Sequenced a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:5:12 generated
     Goto "bb3"
   Block "bb2"
@@ -47,19 +42,19 @@ Function a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_poin
     Goto "bb3"
   Block "bb3"
     Operation a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:6:15 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_4"
     Operation a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:6:11 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:6:15 generated
     ArgumentsEvaluated a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:7:5 generated
     Call a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:7:5 written "memcpy" "bb4"
-      Destination "_9"
+      Destination "_8"
       Copy "_5"
-      Copy "_7"
+      Copy "_6"
       Constant 4
   Block "bb4"
     Sequenced a_copy_into_a_void_pointer_that_may_have_arrived_as_a_void_pointer_pointer_is_asked.c:7:5 generated

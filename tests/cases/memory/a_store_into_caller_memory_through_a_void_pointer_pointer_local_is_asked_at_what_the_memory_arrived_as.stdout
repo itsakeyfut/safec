@@ -11,7 +11,6 @@ Function a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_aske
   Local "_5" "int"
   Local "_6" "void *" "t"
   Local "_7" "void **" "vo"
-  Local "_8" "void *"
   Block "bb0" entry
     Operation a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as.c:3:9 written
       Destination "_2"
@@ -64,10 +63,5 @@ Function a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_aske
         Deref
       Use
         Copy "_3"
-    Operation a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as.c:8:5 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_store_into_caller_memory_through_a_void_pointer_pointer_local_is_asked_at_what_the_memory_arrived_as.c:8:5 generated
     Return

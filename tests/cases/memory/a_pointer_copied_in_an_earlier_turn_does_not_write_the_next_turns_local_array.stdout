@@ -15,17 +15,14 @@ Function a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local
   Local "_7" "int"
   Local "_8" "int *[1]" "m"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int *" "q"
-  Local "_12" "int **"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "int ***"
-  Local "_18" "void *"
-  Local "_19" "int"
-  Local "_20" "int"
+  Local "_10" "int *" "q"
+  Local "_11" "int **"
+  Local "_12" "int"
+  Local "_13" "int **"
+  Local "_14" "int ***"
+  Local "_15" "void *"
+  Local "_16" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:3:9 written
       Destination "_4"
@@ -92,38 +89,33 @@ Function a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local
         Deref
       Use
         Constant 0
-    Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:8:13 written
-      Destination "_10"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:8:13 generated
-    StorageLive a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:9:13 generated "_11"
+    StorageLive a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:9:13 generated "_10"
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:9:22 generated
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_8"
           Index
             Constant 0
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:9:18 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:9:22 generated
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:17 written
-      Destination "_13"
+      Destination "_12"
       Binary "Eq"
-        Copy "_11"
+        Copy "_10"
         Constant 0
     Branch a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:17 written "bb10" "bb11"
-      Copy "_13"
+      Copy "_12"
   Block "bb8"
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:7:13 generated
     Goto "bb9"
   Block "bb9"
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:13:14 generated
-      Destination "_15"
+      Destination "_13"
       Address
         Place "_8"
           Index
@@ -132,21 +124,16 @@ Function a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local
       Destination "_1"
         Deref
       Use
-        Copy "_15"
-    Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:13:9 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
+        Copy "_13"
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:13:9 generated
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:14:16 written
-      Destination "_17"
+      Destination "_14"
       Address
         Place "_5"
     ArgumentsEvaluated a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:14:9 generated
     Call a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:14:9 written "memcpy" "bb13"
-      Destination "_18"
-      Copy "_17"
+      Destination "_15"
+      Copy "_14"
       Copy "_2"
       Constant 8
   Block "bb10"
@@ -156,7 +143,7 @@ Function a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local
       Use
         Constant 1
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:34 generated
-    StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:27 generated "_11"
+    StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:27 generated "_10"
     StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:27 generated "_8"
     StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:10:27 generated "_6"
     Return
@@ -165,33 +152,28 @@ Function a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:11:13 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Constant 1
-    Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:11:13 written
-      Destination "_14"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:11:13 generated
-    StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:12:9 generated "_11"
+    StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:12:9 generated "_10"
     Goto "bb9"
   Block "bb13"
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:14:9 generated
     StorageDead a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:15:5 generated "_8"
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:5:28 written
-      Destination "_19"
+      Destination "_16"
       Use
         Copy "_6"
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:5:28 written
-      Destination "_20"
+      Destination "_17"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:5:28 written
       Destination "_6"
       Use
-        Copy "_20"
+        Copy "_17"
     Sequenced a_pointer_copied_in_an_earlier_turn_does_not_write_the_next_turns_local_array.c:5:28 generated
     Goto "bb4"

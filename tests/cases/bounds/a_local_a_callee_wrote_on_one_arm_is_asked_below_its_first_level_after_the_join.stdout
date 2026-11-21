@@ -11,8 +11,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_
   Local "_5" "void **" "m"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "void *"
-  Local "_9" "void **"
   Block "bb0" entry
     Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:3:9 written
       Destination "_2"
@@ -62,11 +60,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_
         Deref
       Use
         Copy "_3"
-    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:9:9 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:9:9 generated
     Goto "bb8"
   Block "bb7"
@@ -78,11 +71,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_
         Deref
       Use
         Copy "_5"
-    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:11:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:11:5 generated
     Return
 Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:13:6 "use"
@@ -93,7 +81,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_
   Local "_4" "int"
   Local "_5" "int *" "r"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:14:9 written
       Destination "_2"
@@ -152,11 +139,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_
         Deref
       Use
         Constant 1
-    Operation a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:19:17 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_a_callee_wrote_on_one_arm_is_asked_below_its_first_level_after_the_join.c:19:17 generated
     Goto "bb9"
   Block "bb8"

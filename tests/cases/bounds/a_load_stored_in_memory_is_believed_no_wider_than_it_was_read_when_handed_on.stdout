@@ -8,7 +8,6 @@ Function a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_hand
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:4:9 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_hand
         Deref
       Use
         Constant 1
-    Operation a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:7:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -66,8 +60,7 @@ Function a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_hand
   Local "_4" "void **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void *" "pm"
+  Local "_7" "void *" "pm"
   Block "bb0" entry
     Operation a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:13:9 written
       Destination "_2"
@@ -118,20 +111,15 @@ Function a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_hand
         Deref
       Use
         Copy "_3"
-    Operation a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:21:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:21:5 generated
     Operation a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:22:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:22:16 generated
     ArgumentsEvaluated a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:23:5 generated
     Call a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:23:5 written "use" "bb8"
-      Copy "_8"
+      Copy "_7"
   Block "bb8"
     Sequenced a_load_stored_in_memory_is_believed_no_wider_than_it_was_read_when_handed_on.c:23:5 generated
     Return

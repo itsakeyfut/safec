@@ -12,14 +12,11 @@ Function a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_i
   Local "_6" "int **" "b"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "void *" "vb"
-  Local "_11" "void **" "vv"
-  Local "_12" "void ***" "pv"
-  Local "_13" "void *"
-  Local "_14" "int"
-  Local "_15" "void **"
-  Local "_16" "void *"
+  Local "_9" "void *" "vb"
+  Local "_10" "void **" "vv"
+  Local "_11" "void ***" "pv"
+  Local "_12" "void *"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:3:9 written
       Destination "_2"
@@ -85,38 +82,33 @@ Function a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_i
         Deref
       Use
         Copy "_6"
-    Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:6:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:6:5 generated
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_6"
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:16 generated
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:26 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:31 generated
     ArgumentsEvaluated a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:18 generated
     Call a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:18 written "malloc" "bb12"
-      Destination "_13"
+      Destination "_12"
       Constant 8
   Block "bb12"
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:13 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:18 generated
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:33 written
-      Destination "_14"
+      Destination "_13"
       Unary "Not"
-        Copy "_12"
+        Copy "_11"
     Branch a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:33 written "bb13" "bb14"
-      Copy "_14"
+      Copy "_13"
   Block "bb13"
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:33 generated
     Return
@@ -125,27 +117,16 @@ Function a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_i
     Goto "bb15"
   Block "bb15"
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 written
-      Destination "_12"
+      Destination "_11"
         Deref
       Use
-        Copy "_11"
-    Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 written
-      Destination "_15"
-      Use
-        Copy "_12"
-          Deref
+        Copy "_10"
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 generated
     Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:10:5 written
-      Destination "_12"
+      Destination "_11"
         Deref
           Deref
       Use
         Copy "_3"
-    Operation a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:10:5 written
-      Destination "_16"
-      Use
-        Copy "_12"
-          Deref
-            Deref
     Sequenced a_store_two_dereferences_down_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:10:5 generated
     Return

@@ -10,7 +10,6 @@ Function a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c
   Local "_4" "int *" "q"
   Local "_5" "int *"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c:3:5 generated
       Destination "_0"
@@ -79,11 +78,6 @@ Function a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c
         Deref
       Use
         Constant 1
-    Operation a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c:12:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c:12:5 generated
     Operation a_write_through_a_pointer_moved_past_its_allocation_after_a_null_test.c:13:5 written
       Destination "_0"

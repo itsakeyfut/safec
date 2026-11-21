@@ -16,13 +16,10 @@ Function a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on
   Local "_6" "int **" "grown"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "int *" "p"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int"
+  Local "_9" "int *" "p"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:4:9 written
       Destination "_2"
@@ -86,54 +83,41 @@ Function a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on
       Destination "_3"
       Use
         Copy "_6"
-    Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:10:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:10:9 generated
-    StorageLive a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:11:9 generated "_10"
+    StorageLive a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:11:9 generated "_9"
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:11:14 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:11:18 generated
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:12:18 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_2"
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:12:9 written
       Destination "_3"
         Deref
       Use
-        Copy "_11"
-    Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:12:9 written
-      Destination "_12"
-      Use
-        Copy "_3"
-          Deref
+        Copy "_10"
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:12:9 generated
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:13:13 written
-      Destination "_13"
+      Destination "_11"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:13:9 written
       Destination "_4"
       Use
-        Copy "_13"
-    Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:13:9 written
-      Destination "_14"
-      Use
-        Copy "_4"
+        Copy "_11"
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:13:9 generated
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:13 written
-      Destination "_15"
+      Destination "_12"
       Binary "Eq"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Branch a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:13 written "bb9" "bb10"
-      Copy "_15"
+      Copy "_12"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:9:23 generated
     Operation a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:9:34 written
@@ -150,14 +134,14 @@ Function a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on
       Use
         Constant 2
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:28 generated
-    StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:21 generated "_10"
+    StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:21 generated "_9"
     StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:21 generated "_6"
     Return
   Block "bb10"
     Sequenced a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:14:13 generated
     Goto "bb11"
   Block "bb11"
-    StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:15:5 generated "_10"
+    StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:15:5 generated "_9"
     StorageDead a_pointer_read_out_of_a_buffer_grown_from_null_in_a_loop_is_reported_on_its_first_turn.c:15:5 generated "_6"
     Goto "bb1"
   Block "bb12"

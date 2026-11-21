@@ -13,7 +13,6 @@ Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:6 "h"
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:24 written
       Destination "_2"
@@ -54,11 +53,6 @@ Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:6 "h"
         Deref
       Use
         Constant 1
-    Operation a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:83 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:3:83 generated
     Return
 Function a_pointer_copied_into_memory_by_memcpy_is_asked_as_a_store.c:4:5 "main"

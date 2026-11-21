@@ -20,8 +20,6 @@ Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_alread
   Local "_7" "int *" "y"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:14 generated
     Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:5:14 written "malloc" "bb1"
@@ -87,22 +85,12 @@ Function an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_alread
         Deref
       Use
         Copy "_4"
-    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:16:5 written
-      Destination "_10"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:16:5 generated
     Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 written
       Destination "_2"
         Deref
       Use
         Copy "_4"
-    Operation an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 written
-      Destination "_11"
-      Use
-        Copy "_2"
-          Deref
     Sequenced an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:17:5 generated
     ArgumentsEvaluated an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 generated
     Call an_allocation_stored_out_is_doubted_at_a_call_beside_an_argument_already_reported.c:18:5 written "rel2" "bb13"

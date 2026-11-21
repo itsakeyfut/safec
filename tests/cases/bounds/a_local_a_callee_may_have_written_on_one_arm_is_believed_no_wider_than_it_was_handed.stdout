@@ -4,7 +4,6 @@ Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_
   Local "_1" "void **" parameter "slot"
   Local "_2" "char *" parameter "c"
   Local "_3" "int"
-  Local "_4" "void *"
   Block "bb0" entry
     Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:2:9 written
       Destination "_3"
@@ -20,11 +19,6 @@ Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_
         Deref
       Use
         Copy "_2"
-    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:3:9 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:3:9 generated
     Goto "bb3"
   Block "bb2"
@@ -43,7 +37,6 @@ Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_
   Local "_7" "char *"
   Local "_8" "int *" "q"
   Local "_9" "int"
-  Local "_10" "int"
   Block "bb0" entry
     Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:7:5 generated
       Destination "_0"
@@ -107,11 +100,6 @@ Function a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_
         Deref
       Use
         Constant 1
-    Operation a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:17:9 written
-      Destination "_10"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_local_a_callee_may_have_written_on_one_arm_is_believed_no_wider_than_it_was_handed.c:17:9 generated
     Goto "bb7"
   Block "bb6"

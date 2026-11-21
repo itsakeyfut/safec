@@ -15,12 +15,9 @@ Function a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int *" "q"
-  Local "_7" "void *"
-  Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int"
+  Local "_5" "int *" "q"
+  Local "_6" "void *"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:5:14 generated
     Call a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:5:14 written "malloc" "bb1"
@@ -55,14 +52,9 @@ Function a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted
         Deref
       Use
         Constant 1
-    Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:7:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:7:5 generated
     Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:8:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Constant 0
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:8:14 generated
@@ -72,35 +64,27 @@ Function a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:9:9 generated
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:13 generated
     Call a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:13 written "realloc" "bb8"
-      Destination "_7"
+      Destination "_6"
       Copy "_2"
       Constant 8
   Block "bb6"
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:9:9 generated
     Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:12:9 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
-    Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:12:9 written
-      Destination "_9"
-      Use
-        Copy "_6"
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:12:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:14:9 written
-      Destination "_10"
+      Destination "_7"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:14:9 written "bb9" "bb10"
-      Copy "_10"
+      Copy "_7"
   Block "bb8"
     Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:9 written
-      Destination "_6"
-      Use
-        Copy "_7"
-    Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:9 written
-      Destination "_8"
+      Destination "_5"
       Use
         Copy "_6"
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:10:9 generated
@@ -119,7 +103,7 @@ Function a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted
   Block "bb11"
     ArgumentsEvaluated a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:15:5 generated
     Call a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:15:5 written "free" "bb12"
-      Copy "_6"
+      Copy "_5"
   Block "bb12"
     Sequenced a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:15:5 generated
     Operation a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted.c:16:5 written

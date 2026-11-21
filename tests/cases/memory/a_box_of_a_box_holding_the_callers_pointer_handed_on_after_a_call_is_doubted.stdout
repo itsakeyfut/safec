@@ -16,8 +16,6 @@ Function a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_do
   Local "_5" "int **" "b"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:5:16 generated
     Call a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:5:16 written "malloc" "bb1"
@@ -82,22 +80,12 @@ Function a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_do
         Deref
       Use
         Copy "_1"
-    Operation a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:9:5 generated
     Operation a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:10:5 written
       Destination "_2"
         Deref
       Use
         Copy "_5"
-    Operation a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:10:5 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:10:5 generated
     ArgumentsEvaluated a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:11:5 generated
     Call a_box_of_a_box_holding_the_callers_pointer_handed_on_after_a_call_is_doubted.c:11:5 written "log_it" "bb9"

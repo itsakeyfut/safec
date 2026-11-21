@@ -10,7 +10,6 @@ Function a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c
   Local "_4" "int *" "v"
   Local "_5" "int **" "pi"
   Local "_6" "int **"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c:3:5 generated
       Destination "_0"
@@ -65,12 +64,6 @@ Function a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c
           Deref
       Use
         Constant 1
-    Operation a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
-            Deref
     Sequenced a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c:10:5 generated
     Operation a_whole_pointer_read_through_its_local_s_address_says_nothing_of_size.c:11:5 written
       Destination "_0"

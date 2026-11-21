@@ -18,24 +18,21 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
   Local "_4" "int ***" "keep"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int *" "z"
-  Local "_9" "int" "k"
-  Local "_10" "int"
-  Local "_11" "int **" "b"
-  Local "_12" "void *"
+  Local "_7" "int *" "z"
+  Local "_8" "int" "k"
+  Local "_9" "int"
+  Local "_10" "int **" "b"
+  Local "_11" "void *"
+  Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int **"
-  Local "_17" "int **"
-  Local "_18" "void *"
-  Local "_19" "int **" "o"
+  Local "_14" "int **"
+  Local "_15" "void *"
+  Local "_16" "int **" "o"
+  Local "_17" "int"
+  Local "_18" "int *" "r"
+  Local "_19" "int"
   Local "_20" "int"
-  Local "_21" "int *" "r"
-  Local "_22" "int"
-  Local "_23" "int"
-  Local "_24" "int"
+  Local "_21" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:9:14 generated
     Call a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:9:14 written "malloc" "bb1"
@@ -98,42 +95,37 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
         Deref
       Use
         Constant 0
-    Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:13:5 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:14:14 generated
-    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:10 generated "_9"
+    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:10 generated "_8"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:14 written
-      Destination "_9"
+      Destination "_8"
       Use
         Constant 0
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:18 generated
     Goto "bb9"
   Block "bb9"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:21 written
-      Destination "_10"
+      Destination "_9"
       Binary "Lt"
-        Copy "_9"
+        Copy "_8"
         Constant 2
     Branch a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:21 written "bb10" "bb11"
-      Copy "_10"
+      Copy "_9"
   Block "bb10"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:21 generated
-    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:9 generated "_11"
+    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:9 generated "_10"
     ArgumentsEvaluated a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:19 generated
     Call a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:19 written "malloc" "bb12"
-      Destination "_12"
+      Destination "_11"
       Constant 8
   Block "bb11"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:21 generated
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:30:5 generated "_9"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:30:5 generated "_8"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:31:5 written
       Destination "_0"
       Use
@@ -142,16 +134,16 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
     Return
   Block "bb12"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:15 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:16:19 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:13 written
-      Destination "_13"
+      Destination "_12"
       Unary "Not"
-        Copy "_11"
+        Copy "_10"
     Branch a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:13 written "bb13" "bb14"
-      Copy "_13"
+      Copy "_12"
   Block "bb13"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:13 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:17 written
@@ -159,72 +151,62 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
       Use
         Constant 0
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:24 generated
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:17 generated "_11"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:17 generated "_9"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:17 generated "_10"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:17 generated "_8"
     Return
   Block "bb14"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:17:13 generated
     Goto "bb15"
   Block "bb15"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:18:13 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 0
     Branch a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:18:13 written "bb16" "bb17"
-      Copy "_14"
+      Copy "_13"
   Block "bb16"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:18:13 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:19:13 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Copy "_1"
-    Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:19:13 written
-      Destination "_15"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:19:13 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:20:13 written
       Destination "_4"
         Deref
       Use
-        Copy "_11"
-    Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:20:13 written
-      Destination "_16"
-      Use
-        Copy "_4"
-          Deref
+        Copy "_10"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:20:13 generated
     Goto "bb18"
   Block "bb17"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:18:13 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:22:23 written
-      Destination "_17"
+      Destination "_14"
       Address
-        Place "_8"
+        Place "_7"
     ArgumentsEvaluated a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:22:13 generated
     Call a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:22:13 written "memcpy" "bb19"
-      Destination "_18"
-      Copy "_11"
-      Copy "_17"
+      Destination "_15"
+      Copy "_10"
+      Copy "_14"
       Constant 8
   Block "bb18"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:30:5 generated "_11"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:30:5 generated "_10"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:28 written
-      Destination "_23"
+      Destination "_20"
       Use
-        Copy "_9"
+        Copy "_8"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:28 written
-      Destination "_24"
+      Destination "_21"
       Binary "Add"
-        Copy "_9"
+        Copy "_8"
         Constant 1
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:28 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_24"
+        Copy "_21"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:15:28 generated
     Goto "bb9"
   Block "bb19"
@@ -234,19 +216,19 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
       Copy "_1"
   Block "bb20"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:23:13 generated
-    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:24:13 generated "_19"
+    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:24:13 generated "_16"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:24:19 written
-      Destination "_19"
+      Destination "_16"
       Use
         Copy "_4"
           Deref
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:24:23 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:17 written
-      Destination "_20"
+      Destination "_17"
       Unary "Not"
-        Copy "_19"
+        Copy "_16"
     Branch a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:17 written "bb21" "bb22"
-      Copy "_20"
+      Copy "_17"
   Block "bb21"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:17 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 written
@@ -254,27 +236,27 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
       Use
         Constant 0
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:28 generated
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_19"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_11"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_9"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_16"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_10"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:21 generated "_8"
     Return
   Block "bb22"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:25:17 generated
     Goto "bb23"
   Block "bb23"
-    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:26:13 generated "_21"
+    StorageLive a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:26:13 generated "_18"
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:26:18 written
-      Destination "_21"
+      Destination "_18"
       Use
-        Copy "_19"
+        Copy "_16"
           Deref
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:26:22 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:17 written
-      Destination "_22"
+      Destination "_19"
       Unary "Not"
-        Copy "_21"
+        Copy "_18"
     Branch a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:17 written "bb24" "bb25"
-      Copy "_22"
+      Copy "_19"
   Block "bb24"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:17 generated
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 written
@@ -282,10 +264,10 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
       Use
         Constant 0
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:28 generated
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_21"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_19"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_11"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_9"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_18"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_16"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_10"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:21 generated "_8"
     Return
   Block "bb25"
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:27:17 generated
@@ -294,11 +276,11 @@ Function a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_he
     Operation a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 written
       Destination "_0"
       Use
-        Copy "_21"
+        Copy "_18"
           Deref
     Sequenced a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:20 generated
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_21"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_19"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_11"
-    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_9"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_18"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_16"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_10"
+    StorageDead a_copy_into_a_block_made_in_a_loop_keeps_what_an_earlier_turns_block_held.c:28:13 generated "_8"
     Return

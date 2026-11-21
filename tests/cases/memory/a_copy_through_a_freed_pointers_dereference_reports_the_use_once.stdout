@@ -18,8 +18,7 @@ Function a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:10:6
   Local "_4" "int" "x"
   Local "_5" "int *"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "void *"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:11:15 generated
     Call a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:11:15 written "malloc" "bb1"
@@ -58,11 +57,6 @@ Function a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:10:6
         Deref
       Use
         Copy "_5"
-    Operation a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:14:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:14:5 generated
     ArgumentsEvaluated a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:15:5 generated
     Call a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:15:5 written "free" "bb5"
@@ -70,15 +64,15 @@ Function a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:10:6
   Block "bb5"
     Sequenced a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:15:5 generated
     Operation a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:16:16 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_4"
     ArgumentsEvaluated a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:16:5 generated
     Call a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:16:5 written "memcpy" "bb6"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
         Deref
-      Copy "_7"
+      Copy "_6"
       Constant 4
   Block "bb6"
     Sequenced a_copy_through_a_freed_pointers_dereference_reports_the_use_once.c:16:5 generated

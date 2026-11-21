@@ -23,7 +23,6 @@ Function a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_i
   Local "_7" "void ***" "box"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:6:9 written
       Destination "_1"
@@ -93,11 +92,6 @@ Function a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_i
         Deref
       Use
         Copy "_2"
-    Operation a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:12:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:12:5 generated
     ArgumentsEvaluated a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:13:5 generated
     Call a_partial_pointer_copied_into_a_block_handed_on_through_a_dereference_is_reported.c:13:5 written "g" "bb10"

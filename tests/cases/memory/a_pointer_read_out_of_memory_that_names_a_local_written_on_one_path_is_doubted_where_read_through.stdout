@@ -4,15 +4,14 @@ Function a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_
   Local "_1" "int" parameter "k"
   Local "_2" "int *" parameter "x"
   Local "_3" "int *" "loc"
-  Local "_4" "int *"
-  Local "_5" "int **" "p"
-  Local "_6" "int **"
-  Local "_7" "int ***" "pp"
-  Local "_8" "int ***"
-  Local "_9" "int **" "u"
-  Local "_10" "int"
-  Local "_11" "int *" "r"
-  Local "_12" "int"
+  Local "_4" "int **" "p"
+  Local "_5" "int **"
+  Local "_6" "int ***" "pp"
+  Local "_7" "int ***"
+  Local "_8" "int **" "u"
+  Local "_9" "int"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
   Block "bb0" entry
     Branch a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:3:9 written "bb1" "bb2"
       Copy "_1"
@@ -22,10 +21,6 @@ Function a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:3:12 written
-      Destination "_4"
-      Use
-        Copy "_3"
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:3:12 generated
     Goto "bb3"
   Block "bb2"
@@ -33,35 +28,35 @@ Function a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:4:15 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_3"
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:4:11 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:4:15 generated
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:5:17 written
-      Destination "_8"
-      Address
-        Place "_5"
-    Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:5:12 written
       Destination "_7"
-      Use
-        Copy "_8"
-    Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:5:17 generated
-    Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:6:11 written
-      Destination "_9"
+      Address
+        Place "_4"
+    Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:5:12 written
+      Destination "_6"
       Use
         Copy "_7"
+    Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:5:17 generated
+    Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:6:11 written
+      Destination "_8"
+      Use
+        Copy "_6"
           Deref
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:6:15 generated
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:7:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
-        Copy "_9"
+        Copy "_8"
     Branch a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:7:9 written "bb4" "bb5"
-      Copy "_10"
+      Copy "_9"
   Block "bb4"
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:7:9 generated
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:7:13 written
@@ -75,19 +70,19 @@ Function a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_
     Goto "bb6"
   Block "bb6"
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:8:10 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_9"
+        Copy "_8"
           Deref
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:8:14 generated
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:9:12 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
-        Copy "_11"
+        Copy "_10"
         Copy "_2"
     Operation a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:9:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_pointer_read_out_of_memory_that_names_a_local_written_on_one_path_is_doubted_where_read_through.c:9:12 generated
     Return

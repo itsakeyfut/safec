@@ -3,7 +3,6 @@ Function a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is
   Local "_0" "void" return
   Local "_1" "int ***" parameter "pp"
   Local "_2" "int *" parameter "v"
-  Local "_3" "int *"
   Block "bb0" entry
     Operation a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:1:32 written
       Destination "_1"
@@ -11,12 +10,6 @@ Function a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is
           Deref
       Use
         Copy "_2"
-    Operation a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:1:32 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
-            Deref
     Sequenced a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:1:32 generated
     Return
 Function a_local_array_written_by_a_call_through_a_moved_pointer_a_level_down_is_doubted.c:2:5 "main"

@@ -7,7 +7,6 @@ Function an_allocation_s_size_is_what_its_parameter_receives.c:2:5 "main"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
   Block "bb0" entry
     Operation an_allocation_s_size_is_what_its_parameter_receives.c:2:5 generated
       Destination "_0"
@@ -47,11 +46,6 @@ Function an_allocation_s_size_is_what_its_parameter_receives.c:2:5 "main"
         Deref
       Use
         Constant 5
-    Operation an_allocation_s_size_is_what_its_parameter_receives.c:2:66 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_s_size_is_what_its_parameter_receives.c:2:66 generated
     Operation an_allocation_s_size_is_what_its_parameter_receives.c:2:74 written
       Destination "_0"

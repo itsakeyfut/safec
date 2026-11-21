@@ -13,7 +13,6 @@ Function a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:
   Local "_4" "int"
   Local "_5" "int *" "q"
   Local "_6" "int *"
-  Local "_7" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:3:14 generated
     Call a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:3:14 written "malloc" "bb1"
@@ -56,10 +55,6 @@ Function a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:
       Destination "_5"
       Use
         Copy "_6"
-    Operation a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:6:12 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced a_pointer_at_its_start_or_one_element_past_it_is_doubted_where_freed.c:6:12 generated
     Goto "bb7"
   Block "bb6"

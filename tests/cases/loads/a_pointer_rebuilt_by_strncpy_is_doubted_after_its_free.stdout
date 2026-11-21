@@ -26,15 +26,14 @@ Function a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:5:5 "main"
   Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "void *" "va"
-  Local "_13" "void *" "vb"
-  Local "_14" "char *" "ca"
-  Local "_15" "char *" "cb"
-  Local "_16" "char *"
-  Local "_17" "int *" "q"
-  Local "_18" "int"
-  Local "_19" "int" "r"
+  Local "_11" "void *" "va"
+  Local "_12" "void *" "vb"
+  Local "_13" "char *" "ca"
+  Local "_14" "char *" "cb"
+  Local "_15" "char *"
+  Local "_16" "int *" "q"
+  Local "_17" "int"
+  Local "_18" "int" "r"
   Block "bb0" entry
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:5:5 generated
       Destination "_0"
@@ -133,37 +132,32 @@ Function a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:5:5 "main"
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:10:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:10:5 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:11:11 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:11:16 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:11:25 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_6"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:11:30 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:11 written
+      Destination "_13"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:16 generated
+    Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:26 written
       Destination "_14"
       Use
         Copy "_12"
-    Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:16 generated
-    Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:26 written
-      Destination "_15"
-      Use
-        Copy "_13"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:12:31 generated
     ArgumentsEvaluated a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:13:5 generated
     Call a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:13:5 written "strncpy" "bb12"
-      Destination "_16"
-      Copy "_15"
+      Destination "_15"
       Copy "_14"
+      Copy "_13"
       Constant 8
   Block "bb12"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:13:5 generated
@@ -173,17 +167,17 @@ Function a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:5:5 "main"
   Block "bb13"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:14:5 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:15:10 written
-      Destination "_17"
+      Destination "_16"
       Use
         Copy "_6"
           Deref
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:15:14 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:16:9 written
-      Destination "_18"
+      Destination "_17"
       Unary "Not"
-        Copy "_17"
+        Copy "_16"
     Branch a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:16:9 written "bb14" "bb15"
-      Copy "_18"
+      Copy "_17"
   Block "bb14"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:16:9 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:16:13 written
@@ -197,14 +191,14 @@ Function a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:5:5 "main"
     Goto "bb16"
   Block "bb16"
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:17:9 written
-      Destination "_19"
+      Destination "_18"
       Use
-        Copy "_17"
+        Copy "_16"
           Deref
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:17:13 generated
     Operation a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:18:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_18"
     Sequenced a_pointer_rebuilt_by_strncpy_is_doubted_after_its_free.c:18:12 generated
     Return

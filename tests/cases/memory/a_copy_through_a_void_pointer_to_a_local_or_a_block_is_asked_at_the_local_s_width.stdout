@@ -20,12 +20,10 @@ Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_loc
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "void *" "s"
-  Local "_12" "int **"
+  Local "_10" "void *" "s"
+  Local "_11" "int **"
+  Local "_12" "void *" "d"
   Local "_13" "void *"
-  Local "_14" "void *" "d"
-  Local "_15" "void *"
   Block "bb0" entry
     Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:3:9 written
       Destination "_3"
@@ -73,33 +71,24 @@ Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_loc
         Deref
       Use
         Copy "_9"
-    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:5 written
-      Destination "_10"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:6:5 generated
     Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:15 written
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_4"
     Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:7:15 generated
     Branch a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:9 written "bb5" "bb6"
       Copy "_2"
   Block "bb5"
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:9 generated
     Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
-    Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 written
-      Destination "_13"
-      Use
-        Copy "_11"
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:8:12 generated
     Goto "bb7"
   Block "bb6"
@@ -107,15 +96,15 @@ Function a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_loc
     Goto "bb7"
   Block "bb7"
     Operation a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:9:11 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_1"
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:9:15 generated
     ArgumentsEvaluated a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 generated
     Call a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 written "memcpy" "bb8"
-      Destination "_15"
-      Copy "_14"
-      Copy "_11"
+      Destination "_13"
+      Copy "_12"
+      Copy "_10"
       Constant 4
   Block "bb8"
     Sequenced a_copy_through_a_void_pointer_to_a_local_or_a_block_is_asked_at_the_local_s_width.c:10:5 generated

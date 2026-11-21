@@ -15,12 +15,10 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int *" "a"
-  Local "_7" "void *"
-  Local "_8" "int *"
-  Local "_9" "int"
-  Local "_10" "int" "r"
+  Local "_5" "int *" "a"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:5:14 generated
     Call a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:5:14 written "malloc" "bb1"
@@ -55,14 +53,9 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
         Deref
       Use
         Constant 1
-    Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:7:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:7:5 generated
     Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:8:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:8:14 generated
@@ -72,7 +65,7 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:9 generated
     ArgumentsEvaluated a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:16 generated
     Call a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:16 written "realloc" "bb8"
-      Destination "_7"
+      Destination "_6"
       Copy "_2"
       Constant 8
   Block "bb6"
@@ -80,20 +73,16 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
     Goto "bb7"
   Block "bb7"
     Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:10:9 written
-      Destination "_9"
+      Destination "_7"
       Unary "Not"
         Copy "_2"
     Branch a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:10:9 written "bb9" "bb10"
-      Copy "_9"
+      Copy "_7"
   Block "bb8"
     Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:12 written
       Destination "_2"
       Use
-        Copy "_7"
-    Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:12 written
-      Destination "_8"
-      Use
-        Copy "_2"
+        Copy "_6"
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:9:12 generated
     Goto "bb7"
   Block "bb9"
@@ -109,9 +98,9 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
     Goto "bb11"
   Block "bb11"
     Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:11:9 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_6"
+        Copy "_5"
           Deref
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:11:13 generated
     ArgumentsEvaluated a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:12:5 generated
@@ -122,6 +111,6 @@ Function a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_d
     Operation a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:13:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:13:12 generated
     Return

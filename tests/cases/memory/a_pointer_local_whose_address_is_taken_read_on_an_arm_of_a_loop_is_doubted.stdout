@@ -10,11 +10,9 @@ Function a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doub
   Local "_7" "int" "i"
   Local "_8" "int"
   Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:1:5 generated
       Destination "_0"
@@ -62,14 +60,14 @@ Function a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doub
     Sequenced a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:6:21 generated
     StorageDead a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:11:5 generated "_7"
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:12:12 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
         Copy "_6"
         Constant 0
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:12:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:12:12 generated
     Return
   Block "bb4"
@@ -78,10 +76,6 @@ Function a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doub
       Destination "_6"
       Use
         Copy "_2"
-    Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:8:13 written
-      Destination "_9"
-      Use
-        Copy "_6"
     Sequenced a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:8:13 generated
     Goto "bb6"
   Block "bb5"
@@ -89,32 +83,27 @@ Function a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doub
     Goto "bb6"
   Block "bb6"
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:10:15 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_5"
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:10:9 written
       Destination "_3"
         Deref
       Use
-        Copy "_10"
-    Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:10:9 written
-      Destination "_11"
-      Use
-        Copy "_3"
-          Deref
+        Copy "_9"
     Sequenced a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:10:9 generated
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:6:28 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_7"
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:6:28 written
-      Destination "_13"
+      Destination "_11"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:6:28 written
       Destination "_7"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_pointer_local_whose_address_is_taken_read_on_an_arm_of_a_loop_is_doubted.c:6:28 generated
     Goto "bb1"

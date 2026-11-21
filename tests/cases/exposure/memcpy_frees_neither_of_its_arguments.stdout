@@ -18,8 +18,7 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "void *"
+  Local "_7" "void *"
   Block "bb0" entry
     Operation memcpy_frees_neither_of_its_arguments.c:5:5 generated
       Destination "_0"
@@ -88,15 +87,10 @@ Function memcpy_frees_neither_of_its_arguments.c:5:5 "main"
         Deref
       Use
         Constant 1
-    Operation memcpy_frees_neither_of_its_arguments.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced memcpy_frees_neither_of_its_arguments.c:14:5 generated
     ArgumentsEvaluated memcpy_frees_neither_of_its_arguments.c:15:5 generated
     Call memcpy_frees_neither_of_its_arguments.c:15:5 written "memcpy" "bb9"
-      Destination "_8"
+      Destination "_7"
       Copy "_3"
       Copy "_1"
       Constant 4

@@ -10,28 +10,21 @@ Function a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_
   Local "_1" "int" parameter "c"
   Local "_2" "int[4]" "a"
   Local "_3" "int *"
-  Local "_4" "int"
+  Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int *"
-  Local "_7" "int"
+  Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int **" "box"
-  Local "_15" "void *"
-  Local "_16" "int"
-  Local "_17" "int *"
+  Local "_10" "int **" "box"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int *"
+  Local "_14" "int *"
+  Local "_15" "int *" "q"
+  Local "_16" "int" "r"
+  Local "_17" "int"
   Local "_18" "int *"
-  Local "_19" "int *"
-  Local "_20" "int *"
-  Local "_21" "int *" "q"
-  Local "_22" "int" "r"
-  Local "_23" "int"
-  Local "_24" "int *"
-  Local "_25" "int"
   Block "bb0" entry
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:5 generated
       Destination "_3"
@@ -44,95 +37,75 @@ Function a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_
         Deref
       Use
         Constant 0
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:5 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:15 generated
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:15 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
-        Copy "_5"
+        Copy "_4"
         Constant 1
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:15 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:15 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:15 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 2
+    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 generated
+    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 generated
       Destination "_8"
       Address
         Place "_2"
           Index
             Constant 0
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 written
+    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 written
       Destination "_9"
       Binary "Add"
         Copy "_8"
-        Constant 2
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 written
+        Constant 3
+    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 written
       Destination "_9"
         Deref
       Use
-        Constant 2
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
-    Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:25 generated
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 generated
-      Destination "_11"
-      Address
-        Place "_2"
-          Index
-            Constant 0
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 written
-      Destination "_12"
-      Binary "Add"
-        Copy "_11"
         Constant 3
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 written
-      Destination "_12"
-        Deref
-      Use
-        Constant 3
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 written
-      Destination "_13"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:5:35 generated
     ArgumentsEvaluated a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:6:17 generated
     Call a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:6:17 written "malloc" "bb1"
-      Destination "_15"
+      Destination "_11"
       Constant 8
   Block "bb1"
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:6:11 written
-      Destination "_14"
+      Destination "_10"
       Use
-        Copy "_15"
+        Copy "_11"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:6:17 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:7:9 written
-      Destination "_16"
+      Destination "_12"
       Binary "Eq"
-        Copy "_14"
+        Copy "_10"
         Constant 0
     Branch a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:7:9 written "bb2" "bb3"
-      Copy "_16"
+      Copy "_12"
   Block "bb2"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:7:9 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:7:19 written
@@ -146,41 +119,31 @@ Function a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_
     Goto "bb4"
   Block "bb4"
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:8:12 generated
-      Destination "_17"
+      Destination "_13"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:8:12 written
-      Destination "_18"
+      Destination "_14"
       Binary "Add"
-        Copy "_17"
+        Copy "_13"
         Constant 3
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:8:5 written
-      Destination "_14"
+      Destination "_10"
         Deref
       Use
-        Copy "_18"
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:8:5 written
-      Destination "_19"
-      Use
         Copy "_14"
-          Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:8:5 generated
     Branch a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:9:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:9:9 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:9:12 written
-      Destination "_14"
+      Destination "_10"
         Deref
       Use
         Constant 0
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:9:12 written
-      Destination "_20"
-      Use
-        Copy "_14"
-          Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:9:12 generated
     Goto "bb7"
   Block "bb6"
@@ -188,39 +151,35 @@ Function a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:10:10 written
-      Destination "_21"
+      Destination "_15"
       Use
-        Copy "_14"
+        Copy "_10"
           Deref
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:10:14 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:11:9 written
-      Destination "_22"
+      Destination "_16"
       Use
         Constant 0
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:11:13 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:9 written
-      Destination "_23"
+      Destination "_17"
       Binary "Ne"
-        Copy "_21"
+        Copy "_15"
         Constant 0
     Branch a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:9 written "bb8" "bb9"
-      Copy "_23"
+      Copy "_17"
   Block "bb8"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:9 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:21 written
-      Destination "_24"
+      Destination "_18"
       Binary "Add"
-        Copy "_21"
+        Copy "_15"
         Constant 1
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:17 written
-      Destination "_22"
+      Destination "_16"
       Use
-        Copy "_24"
+        Copy "_18"
           Deref
-    Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:17 written
-      Destination "_25"
-      Use
-        Copy "_22"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:12:17 generated
     Goto "bb10"
   Block "bb9"
@@ -229,12 +188,12 @@ Function a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_
   Block "bb10"
     ArgumentsEvaluated a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:13:5 generated
     Call a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:13:5 written "free" "bb11"
-      Copy "_14"
+      Copy "_10"
   Block "bb11"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:13:5 generated
     Operation a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:14:5 written
       Destination "_0"
       Use
-        Copy "_22"
+        Copy "_16"
     Sequenced a_pointer_stored_on_one_arm_and_a_null_on_the_other_read_back_past_the_end_is_proved_outside.c:14:12 generated
     Return

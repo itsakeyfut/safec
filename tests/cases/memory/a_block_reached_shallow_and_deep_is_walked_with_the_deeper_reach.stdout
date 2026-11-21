@@ -10,16 +10,12 @@ Function a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:2:7 
   Local "_4" "int **" "d"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int ****" "p"
-  Local "_9" "void *"
-  Local "_10" "int"
-  Local "_11" "void *" "vp"
-  Local "_12" "void **" "pv"
-  Local "_13" "void *"
-  Local "_14" "void *" "x"
-  Local "_15" "void *"
-  Local "_16" "void *"
+  Local "_7" "int ****" "p"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "void *" "vp"
+  Local "_11" "void **" "pv"
+  Local "_12" "void *" "x"
   Block "bb0" entry
     ArgumentsEvaluated a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:3:15 generated
     Call a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:3:15 written "malloc" "bb1"
@@ -64,28 +60,23 @@ Function a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:2:7 
         Deref
       Use
         Copy "_2"
-    Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:6:5 generated
     ArgumentsEvaluated a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:7:17 generated
     Call a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:7:17 written "malloc" "bb6"
-      Destination "_9"
+      Destination "_8"
       Constant 8
   Block "bb6"
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:7:13 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:7:17 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:8:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
-        Copy "_8"
+        Copy "_7"
     Branch a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:8:9 written "bb7" "bb8"
-      Copy "_10"
+      Copy "_9"
   Block "bb7"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:8:9 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:8:13 written
@@ -99,56 +90,43 @@ Function a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:2:7 
     Goto "bb9"
   Block "bb9"
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:9:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:9:16 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:10:12 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:10:17 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:11:5 written
-      Destination "_12"
+      Destination "_11"
         Deref
       Use
         Copy "_4"
-    Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:11:5 written
-      Destination "_13"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:11:5 generated
     Branch a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:9 written "bb10" "bb11"
       Copy "_1"
   Block "bb10"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:9 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:12 written
-      Destination "_14"
+      Destination "_12"
       Use
-        Copy "_8"
-    Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:12 written
-      Destination "_15"
-      Use
-        Copy "_14"
+        Copy "_7"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:12 generated
     Goto "bb12"
   Block "bb11"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:9 generated
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:24 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_4"
-    Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:24 written
-      Destination "_16"
-      Use
-        Copy "_14"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:13:24 generated
     Goto "bb12"
   Block "bb12"
     Operation a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:14:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_block_reached_shallow_and_deep_is_walked_with_the_deeper_reach.c:14:12 generated
     Return

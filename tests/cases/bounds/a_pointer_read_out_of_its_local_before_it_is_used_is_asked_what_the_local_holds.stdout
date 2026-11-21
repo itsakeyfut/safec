@@ -11,9 +11,7 @@ Function a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_loc
   Local "_5" "int **" "pi"
   Local "_6" "int **"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int *" "q"
-  Local "_10" "int"
+  Local "_8" "int *" "q"
   Block "bb0" entry
     Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:3:5 generated
       Destination "_0"
@@ -71,27 +69,18 @@ Function a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_loc
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:10:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:10:5 generated
     Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:11:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_5"
           Deref
     Sequenced a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:11:14 generated
     Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:12:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:12:5 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:12:5 generated
     Operation a_pointer_read_out_of_its_local_before_it_is_used_is_asked_what_the_local_holds.c:13:5 written
       Destination "_0"

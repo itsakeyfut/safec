@@ -6,8 +6,7 @@ Function a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:3:5 "f"
   Local "_1" "int **" parameter "pp"
   Local "_2" "int *" "q"
   Local "_3" "int"
-  Local "_4" "int *"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:5:9 written
       Destination "_3"
@@ -33,18 +32,14 @@ Function a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:3:5 "f"
       Use
         Copy "_1"
           Deref
-    Operation a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:8:5 generated
     Operation a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:9:9 written
-      Destination "_5"
+      Destination "_4"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:9:9 written "bb4" "bb5"
-      Copy "_5"
+      Copy "_4"
   Block "bb4"
     Sequenced a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:9:9 generated
     Operation a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:10:9 written

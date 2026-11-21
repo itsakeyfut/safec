@@ -16,7 +16,6 @@ Function a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:5:5 "ma
   Local "_4" "int *" "x"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
   Block "bb0" entry
     Operation a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:5:5 generated
       Destination "_0"
@@ -95,11 +94,6 @@ Function a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:5:5 "ma
         Deref
       Use
         Copy "_4"
-    Operation a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:16:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:16:5 generated
     Operation a_freed_pointer_stored_in_memory_handed_to_a_call_is_reported.c:17:5 written
       Destination "_0"

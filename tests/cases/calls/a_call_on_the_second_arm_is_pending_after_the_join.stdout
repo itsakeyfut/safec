@@ -19,59 +19,47 @@ Function a_call_on_the_second_arm_is_pending_after_the_join.c:6:5 "f"
   Local "_3" "int" "r"
   Local "_4" "int *" "a"
   Local "_5" "int *" "holder"
-  Local "_6" "int *"
-  Local "_7" "int **"
-  Local "_8" "void *"
-  Local "_9" "int *"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
+  Local "_13" "int *"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int *"
-  Local "_17" "int"
-  Local "_18" "int"
   Block "bb0" entry
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:11:5 written
       Destination "_5"
       Use
         Constant 0
-    Operation a_call_on_the_second_arm_is_pending_after_the_join.c:11:5 written
-      Destination "_6"
-      Use
-        Copy "_5"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:11:5 generated
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:12:11 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_5"
     ArgumentsEvaluated a_call_on_the_second_arm_is_pending_after_the_join.c:12:5 generated
     Call a_call_on_the_second_arm_is_pending_after_the_join.c:12:5 written "stash" "bb1"
-      Copy "_7"
+      Copy "_6"
   Block "bb1"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:12:5 generated
     ArgumentsEvaluated a_call_on_the_second_arm_is_pending_after_the_join.c:13:9 generated
     Call a_call_on_the_second_arm_is_pending_after_the_join.c:13:9 written "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb2"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:13:5 written
       Destination "_4"
       Use
-        Copy "_8"
-    Operation a_call_on_the_second_arm_is_pending_after_the_join.c:13:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
+        Copy "_7"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:13:5 generated
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:14:9 written
-      Destination "_10"
+      Destination "_8"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_call_on_the_second_arm_is_pending_after_the_join.c:14:9 written "bb3" "bb4"
-      Copy "_10"
+      Copy "_8"
   Block "bb3"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:14:9 generated
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:15:9 written
@@ -89,11 +77,6 @@ Function a_call_on_the_second_arm_is_pending_after_the_join.c:6:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_call_on_the_second_arm_is_pending_after_the_join.c:17:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:17:5 generated
     Branch a_call_on_the_second_arm_is_pending_after_the_join.c:18:10 written "bb7" "bb8"
       Copy "_1"
@@ -104,35 +87,31 @@ Function a_call_on_the_second_arm_is_pending_after_the_join.c:6:5 "f"
         Copy "_4"
           Deref
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:36 written
-      Destination "_14"
+      Destination "_11"
       Use
         Copy "_2"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:9 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
-        Copy "_12"
-        Copy "_14"
+        Copy "_9"
+        Copy "_11"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:49 written
       Destination "_5"
       Use
         Copy "_4"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:49 written
-      Destination "_16"
+      Destination "_13"
       Use
         Copy "_5"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:9 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
-        Copy "_15"
+        Copy "_12"
         Constant 0
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:5 written
       Destination "_3"
       Use
-        Copy "_17"
-    Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:5 written
-      Destination "_18"
-      Use
-        Copy "_3"
+        Copy "_14"
     Sequenced a_call_on_the_second_arm_is_pending_after_the_join.c:18:5 generated
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:19:5 written
       Destination "_0"
@@ -142,16 +121,16 @@ Function a_call_on_the_second_arm_is_pending_after_the_join.c:6:5 "f"
     Return
   Block "bb7"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:10 written
-      Destination "_12"
+      Destination "_9"
       Use
         Constant 0
     Goto "bb6"
   Block "bb8"
     Call a_call_on_the_second_arm_is_pending_after_the_join.c:18:18 written "release_all" "bb9"
-      Destination "_13"
+      Destination "_10"
   Block "bb9"
     Operation a_call_on_the_second_arm_is_pending_after_the_join.c:18:10 written
-      Destination "_12"
+      Destination "_9"
       Use
-        Copy "_13"
+        Copy "_10"
     Goto "bb6"

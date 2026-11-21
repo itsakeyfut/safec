@@ -16,7 +16,6 @@ Function a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_i
   Local "_7" "int"
   Local "_8" "int ***" "t"
   Local "_9" "int ***"
-  Local "_10" "int *"
   Block "bb0" entry
     Operation a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:3:5 generated
       Destination "_0"
@@ -95,12 +94,6 @@ Function a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_i
           Deref
       Use
         Copy "_1"
-    Operation a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:5 written
-      Destination "_10"
-      Use
-        Copy "_8"
-          Deref
-            Deref
     Sequenced a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:8:5 generated
     ArgumentsEvaluated a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 generated
     Call a_pointer_stored_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 written "free" "bb8"

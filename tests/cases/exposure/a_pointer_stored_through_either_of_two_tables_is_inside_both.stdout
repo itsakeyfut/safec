@@ -23,8 +23,6 @@ Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 "mai
   Local "_9" "int"
   Local "_10" "int **" "t"
   Local "_11" "int"
-  Local "_12" "int **"
-  Local "_13" "int *"
   Block "bb0" entry
     Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 generated
       Destination "_0"
@@ -134,10 +132,6 @@ Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 "mai
       Destination "_10"
       Use
         Copy "_4"
-    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:21:9 written
-      Destination "_12"
-      Use
-        Copy "_10"
     Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:21:9 generated
     Goto "bb16"
   Block "bb15"
@@ -149,11 +143,6 @@ Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 "mai
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:23:5 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:23:5 generated
     ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:24:5 generated
     Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:24:5 written "drop_inner" "bb17"

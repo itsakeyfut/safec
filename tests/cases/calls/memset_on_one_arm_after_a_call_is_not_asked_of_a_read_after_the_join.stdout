@@ -17,17 +17,14 @@ Function memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:
   Local "_4" "int **" "hp"
   Local "_5" "int *" "a"
   Local "_6" "void *"
-  Local "_7" "int *"
+  Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
+  Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "void *"
+  Local "_12" "int"
   Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:10:9 generated
     Call memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:10:9 written "malloc" "bb1"
@@ -38,18 +35,14 @@ Function memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:
       Destination "_5"
       Use
         Copy "_6"
-    Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:10:5 generated
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:11:9 written "bb2" "bb3"
-      Copy "_8"
+      Copy "_7"
   Block "bb2"
     Sequenced memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:11:9 generated
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:12:9 written
@@ -67,45 +60,36 @@ Function memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:
         Deref
       Use
         Constant 1
-    Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:14:5 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:14:5 generated
     Call memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:9 written "release_all" "bb5"
-      Destination "_10"
+      Destination "_8"
   Block "bb5"
     Branch memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:26 written "bb7" "bb8"
       Copy "_1"
   Block "bb6"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:9 written
-      Destination "_14"
+      Destination "_12"
       Binary "Add"
-        Copy "_10"
-        Copy "_11"
+        Copy "_8"
+        Copy "_9"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:61 written
       Destination "_2"
       Use
         Copy "_5"
           Deref
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:61 written
-      Destination "_15"
+      Destination "_13"
       Use
         Copy "_2"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:9 written
-      Destination "_16"
+      Destination "_14"
       Binary "Add"
-        Copy "_14"
-        Copy "_15"
+        Copy "_12"
+        Copy "_13"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:5 written
       Destination "_3"
       Use
-        Copy "_16"
-    Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:5 written
-      Destination "_17"
-      Use
-        Copy "_3"
+        Copy "_14"
     Sequenced memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:5 generated
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:16:5 written
       Destination "_0"
@@ -115,24 +99,24 @@ Function memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:
     Return
   Block "bb7"
     Call memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:31 written "memset" "bb9"
-      Destination "_12"
+      Destination "_10"
       Copy "_5"
       Constant 0
       Constant 4
   Block "bb8"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:26 written
-      Destination "_11"
+      Destination "_9"
       Use
         Constant 0
     Goto "bb6"
   Block "bb9"
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:31 written
-      Destination "_13"
+      Destination "_11"
       Binary "Ne"
-        Copy "_12"
+        Copy "_10"
         Constant 0
     Operation memset_on_one_arm_after_a_call_is_not_asked_of_a_read_after_the_join.c:15:26 written
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_13"
+        Copy "_11"
     Goto "bb6"

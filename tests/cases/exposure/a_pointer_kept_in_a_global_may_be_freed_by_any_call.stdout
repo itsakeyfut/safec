@@ -24,11 +24,8 @@ Function a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:7:5 "main"
   Local "_0" "int" return
   Local "_1" "int *" "p"
   Local "_2" "void *"
-  Local "_3" "int *"
-  Local "_4" "int"
-  Local "_5" "int **"
-  Local "_6" "int *"
-  Local "_7" "int"
+  Local "_3" "int"
+  Local "_4" "int **"
   Block "bb0" entry
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:7:5 generated
       Destination "_0"
@@ -43,18 +40,14 @@ Function a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:7:5 "main"
       Destination "_1"
       Use
         Copy "_2"
-    Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:9:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
     Sequenced a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:9:5 generated
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:10:9 written
-      Destination "_4"
+      Destination "_3"
       Binary "Eq"
         Copy "_1"
         Constant 0
     Branch a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:10:9 written "bb2" "bb3"
-      Copy "_4"
+      Copy "_3"
   Block "bb2"
     Sequenced a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:10:9 generated
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:11:9 written
@@ -68,18 +61,13 @@ Function a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:7:5 "main"
     Goto "bb4"
   Block "bb4"
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:13:5 generated
-      Destination "_5"
+      Destination "_4"
       Static "kept"
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:13:5 written
-      Destination "_5"
+      Destination "_4"
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:13:5 written
-      Destination "_6"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:13:5 generated
     ArgumentsEvaluated a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:14:5 generated
     Call a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:14:5 written "drop" "bb5"
@@ -90,11 +78,6 @@ Function a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:7:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:15:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:15:5 generated
     Operation a_pointer_kept_in_a_global_may_be_freed_by_any_call.c:16:5 written
       Destination "_0"

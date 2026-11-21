@@ -15,9 +15,8 @@ Function a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_dou
   Local "_7" "int **"
   Local "_8" "void *"
   Local "_9" "int **"
-  Local "_10" "int *"
+  Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:4:9 written
       Destination "_4"
@@ -84,25 +83,20 @@ Function a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_dou
         Deref
       Use
         Constant 0
-    Operation a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:61 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:61 generated
     Operation a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_5"
     Operation a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
-      Destination "_12"
+      Destination "_11"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 written
       Destination "_5"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_copy_out_on_an_arm_of_a_loop_shown_to_run_before_it_is_written_is_doubted.c:5:28 generated
     Goto "bb4"
   Block "bb10"

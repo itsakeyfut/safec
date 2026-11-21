@@ -24,18 +24,14 @@ Function a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.
   Local "_6" "int *" "q"
   Local "_7" "int" "i"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "void *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int *" "t"
+  Local "_13" "int *" "r"
+  Local "_14" "int *"
   Local "_15" "int"
-  Local "_16" "int *" "t"
-  Local "_17" "int *" "r"
-  Local "_18" "int *"
-  Local "_19" "int"
-  Local "_20" "int" "v"
+  Local "_16" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:7:17 generated
     Call a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:7:17 written "malloc" "bb1"
@@ -95,42 +91,34 @@ Function a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.
       Destination "_5"
       Use
         Copy "_6"
-    Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:21 written
-      Destination "_9"
-      Use
-        Copy "_5"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:21 generated
     ArgumentsEvaluated a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:32 generated
     Call a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:32 written "malloc" "bb8"
-      Destination "_10"
+      Destination "_9"
       Constant 4
   Block "bb7"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:12 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:10 written
-      Destination "_16"
+      Destination "_12"
       Use
         Copy "_5"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:14 generated
     ArgumentsEvaluated a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:26 generated
     Call a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:26 written "id" "bb12"
-      Destination "_18"
-      Copy "_16"
+      Destination "_14"
+      Copy "_12"
   Block "bb8"
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:28 written
       Destination "_6"
       Use
-        Copy "_10"
-    Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:28 written
-      Destination "_11"
-      Use
-        Copy "_6"
+        Copy "_9"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:28 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 written
-      Destination "_12"
+      Destination "_10"
       Unary "Not"
         Copy "_6"
     Branch a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_10"
   Block "bb9"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:47 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:51 written
@@ -148,32 +136,23 @@ Function a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.
         Deref
       Use
         Constant 1
-    Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:61 written
-      Destination "_13"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:61 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:73 written
-      Destination "_14"
+      Destination "_11"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:69 written
       Destination "_7"
       Use
-        Copy "_14"
-    Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:69 written
-      Destination "_15"
-      Use
-        Copy "_7"
+        Copy "_11"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:12:69 generated
     Goto "bb5"
   Block "bb12"
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:22 written
-      Destination "_17"
+      Destination "_13"
       Use
-        Copy "_18"
+        Copy "_14"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:13:26 generated
     ArgumentsEvaluated a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 generated
     Call a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 written "free" "bb13"
@@ -181,11 +160,11 @@ Function a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.
   Block "bb13"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:14:5 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 written
-      Destination "_19"
+      Destination "_15"
       Unary "Not"
-        Copy "_17"
+        Copy "_13"
     Branch a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 written "bb14" "bb15"
-      Copy "_19"
+      Copy "_15"
   Block "bb14"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:15:9 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:15:13 written
@@ -199,14 +178,14 @@ Function a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.
     Goto "bb16"
   Block "bb16"
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:16:9 written
-      Destination "_20"
+      Destination "_16"
       Use
-        Copy "_17"
+        Copy "_13"
           Deref
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:16:13 generated
     Operation a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:17:5 written
       Destination "_0"
       Use
-        Copy "_20"
+        Copy "_16"
     Sequenced a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free.c:17:12 generated
     Return

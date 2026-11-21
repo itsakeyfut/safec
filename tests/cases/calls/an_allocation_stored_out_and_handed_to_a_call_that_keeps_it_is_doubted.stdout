@@ -13,7 +13,6 @@ Function an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.
   Local "_3" "int *" "n"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:4:14 generated
     Call an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:4:14 written "malloc" "bb1"
@@ -44,11 +43,6 @@ Function an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.
         Deref
       Use
         Copy "_3"
-    Operation an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:8:5 generated
     ArgumentsEvaluated an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:9:5 generated
     Call an_allocation_stored_out_and_handed_to_a_call_that_keeps_it_is_doubted.c:9:5 written "append" "bb5"

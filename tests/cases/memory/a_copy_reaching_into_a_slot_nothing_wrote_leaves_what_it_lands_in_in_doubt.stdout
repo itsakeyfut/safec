@@ -13,16 +13,15 @@ Function a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_do
   Local "_2" "int **" "b"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
-  Local "_6" "char[12]" "c"
-  Local "_7" "char *"
-  Local "_8" "void *"
-  Local "_9" "int *" "r"
-  Local "_10" "int **"
+  Local "_5" "char[12]" "c"
+  Local "_6" "char *"
+  Local "_7" "void *"
+  Local "_8" "int *" "r"
+  Local "_9" "int **"
+  Local "_10" "char *"
   Local "_11" "char *"
-  Local "_12" "char *"
-  Local "_13" "void *"
-  Local "_14" "int"
+  Local "_12" "void *"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:8:15 generated
     Call a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:8:15 written "malloc" "bb1"
@@ -57,57 +56,52 @@ Function a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_do
         Deref
       Use
         Copy "_1"
-    Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:10:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:10:5 generated
     Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:12:12 generated
-      Destination "_7"
+      Destination "_6"
       Address
-        Place "_6"
+        Place "_5"
           Index
             Constant 0
     ArgumentsEvaluated a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:12:5 generated
     Call a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:12:5 written "memcpy" "bb5"
-      Destination "_8"
-      Copy "_7"
+      Destination "_7"
+      Copy "_6"
       Copy "_2"
       Constant 12
   Block "bb5"
     Sequenced a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:12:5 generated
     Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:20 written
+      Destination "_9"
+      Address
+        Place "_8"
+    Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:24 generated
       Destination "_10"
       Address
-        Place "_9"
-    Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:24 generated
-      Destination "_11"
-      Address
-        Place "_6"
+        Place "_5"
           Index
             Constant 0
     Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:24 written
-      Destination "_12"
+      Destination "_11"
       Binary "Add"
-        Copy "_11"
+        Copy "_10"
         Constant 4
     ArgumentsEvaluated a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:13 generated
     Call a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:13 written "memcpy" "bb6"
-      Destination "_13"
-      Copy "_10"
-      Copy "_12"
+      Destination "_12"
+      Copy "_9"
+      Copy "_11"
       Constant 8
   Block "bb6"
     Sequenced a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:13 generated
     Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:42 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Copy "_1"
     Operation a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:35 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_13"
     Sequenced a_copy_reaching_into_a_slot_nothing_wrote_leaves_what_it_lands_in_in_doubt.c:13:42 generated
     Return

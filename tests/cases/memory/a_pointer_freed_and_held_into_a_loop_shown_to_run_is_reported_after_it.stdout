@@ -10,16 +10,13 @@ Function a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
-  Local "_5" "int *" "a"
-  Local "_6" "int *" "c"
-  Local "_7" "int *" "b"
-  Local "_8" "int" "j"
+  Local "_4" "int *" "a"
+  Local "_5" "int *" "c"
+  Local "_6" "int *" "b"
+  Local "_7" "int" "j"
+  Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:4:14 generated
     Call a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:4:14 written "malloc" "bb1"
@@ -54,11 +51,6 @@ Function a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.
         Deref
       Use
         Constant 1
-    Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:6:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:6:5 generated
     ArgumentsEvaluated a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:7:5 generated
     Call a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:7:5 written "free" "bb5"
@@ -66,81 +58,73 @@ Function a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.
   Block "bb5"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:7:5 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:8:10 written
-      Destination "_5"
+      Destination "_4"
       Use
         Copy "_1"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:8:14 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:9:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_1"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:9:14 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:10:10 written
-      Destination "_7"
+      Destination "_6"
       Use
         Constant 0
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:10:14 generated
-    StorageLive a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:10 generated "_8"
+    StorageLive a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:10 generated "_7"
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:14 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:18 generated
     Goto "bb6"
   Block "bb6"
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:21 written
-      Destination "_9"
+      Destination "_8"
       Binary "Lt"
-        Copy "_8"
+        Copy "_7"
         Constant 2
     Branch a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:21 written "bb7" "bb8"
-      Copy "_9"
+      Copy "_8"
   Block "bb7"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:21 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:35 written
-      Destination "_6"
-      Use
-        Copy "_7"
-    Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:35 written
-      Destination "_10"
+      Destination "_5"
       Use
         Copy "_6"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:35 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:42 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_5"
-    Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:42 written
-      Destination "_11"
-      Use
-        Copy "_7"
+        Copy "_4"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:42 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:28 written
-      Destination "_12"
+      Destination "_9"
       Use
-        Copy "_8"
+        Copy "_7"
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:28 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
-        Copy "_8"
+        Copy "_7"
         Constant 1
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:28 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_13"
+        Copy "_10"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:28 generated
     Goto "bb6"
   Block "bb8"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:21 generated
-    StorageDead a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:49 generated "_8"
+    StorageDead a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:11:49 generated "_7"
     Branch a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:12:9 written "bb9" "bb10"
-      Copy "_6"
+      Copy "_5"
   Block "bb9"
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:12:9 generated
     Operation a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:12:12 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
           Deref
     Sequenced a_pointer_freed_and_held_into_a_loop_shown_to_run_is_reported_after_it.c:12:19 generated
     Return

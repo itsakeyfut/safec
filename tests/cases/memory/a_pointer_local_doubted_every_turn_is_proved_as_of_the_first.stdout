@@ -10,13 +10,11 @@ Function a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:1:5 "mai
   Local "_7" "int *" "r"
   Local "_8" "int" "i"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int *"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
   Block "bb0" entry
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:1:5 generated
       Destination "_0"
@@ -62,46 +60,38 @@ Function a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:1:5 "mai
       Destination "_7"
       Use
         Copy "_4"
-    Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:7:9 written
-      Destination "_10"
-      Use
-        Copy "_7"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:7:9 generated
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:8:13 written
-      Destination "_11"
+      Destination "_10"
       Binary "Gt"
         Copy "_1"
         Constant 1
     Branch a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:8:13 written "bb4" "bb5"
-      Copy "_11"
+      Copy "_10"
   Block "bb3"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:6:21 generated
     StorageDead a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:11:5 generated "_8"
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:12:12 written
-      Destination "_16"
+      Destination "_14"
       Binary "Eq"
         Copy "_7"
         Constant 0
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:12:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:12:12 generated
     Return
   Block "bb4"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:8:13 generated
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:9:17 written
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_3"
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:9:13 written
       Destination "_4"
       Use
-        Copy "_12"
-    Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:9:13 written
-      Destination "_13"
-      Use
-        Copy "_4"
+        Copy "_11"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:9:13 generated
     Goto "bb6"
   Block "bb5"
@@ -109,17 +99,17 @@ Function a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:1:5 "mai
     Goto "bb6"
   Block "bb6"
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:6:28 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_8"
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:6:28 written
-      Destination "_15"
+      Destination "_13"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:6:28 written
       Destination "_8"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_pointer_local_doubted_every_turn_is_proved_as_of_the_first.c:6:28 generated
     Goto "bb1"

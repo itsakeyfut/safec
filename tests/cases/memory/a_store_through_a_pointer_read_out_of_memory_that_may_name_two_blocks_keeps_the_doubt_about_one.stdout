@@ -15,13 +15,10 @@ Function a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_k
   Local "_9" "int ***" "t"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int **"
-  Local "_13" "int **"
-  Local "_14" "int **" "v"
+  Local "_12" "int **" "v"
+  Local "_13" "int"
+  Local "_14" "int *" "r"
   Local "_15" "int"
-  Local "_16" "int *"
-  Local "_17" "int *" "r"
-  Local "_18" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:3:16 generated
     Call a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:3:16 written "malloc" "bb1"
@@ -116,11 +113,6 @@ Function a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_k
         Deref
       Use
         Copy "_3"
-    Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:6:12 written
-      Destination "_12"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:6:12 generated
     Goto "bb15"
   Block "bb14"
@@ -130,26 +122,21 @@ Function a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_k
         Deref
       Use
         Copy "_6"
-    Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:6:26 written
-      Destination "_13"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:6:26 generated
     Goto "bb15"
   Block "bb15"
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:7:11 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_9"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:7:15 generated
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:8:9 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
-        Copy "_14"
+        Copy "_12"
     Branch a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:8:9 written "bb16" "bb17"
-      Copy "_15"
+      Copy "_13"
   Block "bb16"
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:8:9 generated
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:8:13 written
@@ -163,30 +150,25 @@ Function a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_k
     Goto "bb18"
   Block "bb18"
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:9:5 written
-      Destination "_14"
+      Destination "_12"
         Deref
       Use
         Copy "_1"
-    Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:9:5 written
-      Destination "_16"
-      Use
-        Copy "_14"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:9:5 generated
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:10:10 written
-      Destination "_17"
+      Destination "_14"
       Use
         Copy "_3"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:10:14 generated
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:11:12 written
-      Destination "_18"
+      Destination "_15"
       Binary "Ne"
-        Copy "_17"
+        Copy "_14"
         Constant 0
     Operation a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:11:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_15"
     Sequenced a_store_through_a_pointer_read_out_of_memory_that_may_name_two_blocks_keeps_the_doubt_about_one.c:11:12 generated
     Return

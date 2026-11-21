@@ -10,23 +10,20 @@ Function a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.
   Local "_2" "int *[2]" "arr"
   Local "_3" "int **"
   Local "_4" "int *"
-  Local "_5" "int *"
+  Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int *[2]" "src"
+  Local "_7" "int *"
+  Local "_8" "int *[2]" "src"
+  Local "_9" "int **"
+  Local "_10" "void *" "v"
   Local "_11" "int **"
-  Local "_12" "int *"
-  Local "_13" "void *" "v"
-  Local "_14" "int **"
-  Local "_15" "void *" "s"
+  Local "_12" "void *" "s"
+  Local "_13" "int **"
+  Local "_14" "char *"
+  Local "_15" "int *" "p"
   Local "_16" "int **"
-  Local "_17" "char *"
-  Local "_18" "int *" "p"
-  Local "_19" "int **"
-  Local "_20" "int **"
-  Local "_21" "int"
+  Local "_17" "int **"
+  Local "_18" "int"
   Block "bb0" entry
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:4:5 generated
       Destination "_0"
@@ -52,110 +49,95 @@ Function a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.
         Deref
       Use
         Copy "_4"
-    Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:7:5 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:7:5 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:5 generated
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:5 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
-        Copy "_6"
+        Copy "_5"
         Constant 1
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:14 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:5 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
-        Copy "_8"
-    Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:5 written
-      Destination "_9"
-      Use
         Copy "_7"
-          Deref
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:8:5 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:10:5 generated
-      Destination "_11"
+      Destination "_9"
       Address
-        Place "_10"
+        Place "_8"
           Index
             Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:10:5 written
-      Destination "_11"
+      Destination "_9"
         Deref
       Use
         Constant 0
-    Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:10:5 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:10:5 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:11:15 generated
-      Destination "_14"
+      Destination "_11"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:11:11 written
-      Destination "_13"
+      Destination "_10"
       Use
-        Copy "_14"
+        Copy "_11"
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:11:15 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:12:15 generated
-      Destination "_16"
+      Destination "_13"
       Address
-        Place "_10"
+        Place "_8"
           Index
             Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:12:11 written
-      Destination "_15"
+      Destination "_12"
       Use
-        Copy "_16"
+        Copy "_13"
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:12:15 generated
     ArgumentsEvaluated a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:13:5 generated
     Call a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:13:5 written "strncpy" "bb1"
-      Destination "_17"
-      Copy "_13"
-      Copy "_15"
+      Destination "_14"
+      Copy "_10"
+      Copy "_12"
       Constant 16
   Block "bb1"
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:13:5 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:14:14 generated
-      Destination "_19"
+      Destination "_16"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:14:14 written
-      Destination "_20"
+      Destination "_17"
       Binary "Add"
-        Copy "_19"
+        Copy "_16"
         Constant 1
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:14:10 written
-      Destination "_18"
+      Destination "_15"
       Use
-        Copy "_20"
+        Copy "_17"
           Deref
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:14:14 generated
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:15:12 written
-      Destination "_21"
+      Destination "_18"
       Binary "Eq"
-        Copy "_18"
+        Copy "_15"
         Constant 0
     Operation a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:15:5 written
       Destination "_0"
       Use
-        Copy "_21"
+        Copy "_18"
     Sequenced a_string_copy_into_an_array_of_pointers_names_no_copy_where_it_is_read.c:15:12 generated
     Return

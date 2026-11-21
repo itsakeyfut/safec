@@ -21,8 +21,6 @@ Function a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_par
   Local "_12" "int ***" "bb"
   Local "_13" "void *"
   Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int **"
   Block "bb0" entry
     Operation a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:4:9 written
       Destination "_3"
@@ -169,22 +167,12 @@ Function a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_par
         Deref
       Use
         Copy "_5"
-    Operation a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:14:5 written
-      Destination "_15"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:14:5 generated
     Operation a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:15:5 written
       Destination "_12"
         Deref
       Use
         Copy "_9"
-    Operation a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:15:5 written
-      Destination "_16"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:15:5 generated
     ArgumentsEvaluated a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:16:5 generated
     Call a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter.c:16:5 written "free" "bb21"

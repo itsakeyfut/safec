@@ -38,7 +38,6 @@ Function a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_lea
   Local "_18" "void *"
   Local "_19" "void *"
   Local "_20" "void **" "q"
-  Local "_21" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported.c:7:9 written
       Destination "_2"
@@ -207,11 +206,6 @@ Function a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_lea
         Deref
       Use
         Copy "_20"
-    Operation a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported.c:23:5 written
-      Destination "_21"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported.c:23:5 generated
     ArgumentsEvaluated a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported.c:24:5 generated
     Call a_partial_pointer_copied_through_two_whole_copies_into_a_block_that_leaves_is_reported.c:24:5 written "use" "bb25"

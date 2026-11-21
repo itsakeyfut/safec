@@ -15,9 +15,8 @@ Function a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:4:
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
-  Local "_9" "int" "v"
+  Local "_7" "int *" "q"
+  Local "_8" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:5:15 generated
     Call a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:5:15 written "malloc" "bb1"
@@ -82,14 +81,9 @@ Function a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:4:
         Deref
       Use
         Copy "_3"
-    Operation a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:13:5 generated
     Operation a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
@@ -99,9 +93,9 @@ Function a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:4:
   Block "bb9"
     Sequenced a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:15:5 generated
     Operation a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:16:9 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_8"
+        Copy "_7"
           Deref
     Sequenced a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:16:13 generated
     ArgumentsEvaluated a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:17:5 generated
@@ -117,6 +111,6 @@ Function a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:4:
     Operation a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:19:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over.c:19:12 generated
     Return

@@ -19,7 +19,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewh
   Local "_11" "void *"
   Local "_12" "int *" "q"
   Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported.c:2:5 generated
       Destination "_0"
@@ -107,11 +106,6 @@ Function a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewh
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported.c:12:5 written
-      Destination "_14"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported.c:12:5 generated
     Operation a_pointer_read_out_of_a_local_array_a_copy_through_a_dereference_elsewhere_did_not_write_is_reported.c:13:5 written
       Destination "_0"

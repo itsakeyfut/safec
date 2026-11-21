@@ -9,7 +9,6 @@ Function a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_s
   Local "_3" "void *" "v"
   Local "_4" "void *"
   Local "_5" "int **" "b"
-  Local "_6" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported.c:3:15 generated
     Call a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported.c:3:15 written "malloc" "bb1"
@@ -42,10 +41,5 @@ Function a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_s
         Deref
       Use
         Copy "_3"
-    Operation a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported.c:7:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_held_as_pointers_on_one_arm_and_stored_through_a_void_pointer_slot_is_reported.c:7:5 generated
     Return

@@ -16,7 +16,6 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
   Local "_3" "int"
   Local "_4" "int" "a"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 generated
       Destination "_0"
@@ -67,11 +66,6 @@ Function what_calloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
         Deref
       Use
         Copy "_4"
-    Operation what_calloc_returns_is_an_allocation_nobody_else_has.c:11:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced what_calloc_returns_is_an_allocation_nobody_else_has.c:11:5 generated
     ArgumentsEvaluated what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated
     Call what_calloc_returns_is_an_allocation_nobody_else_has.c:12:5 written "free" "bb6"

@@ -10,61 +10,44 @@ Function a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:2:5 "
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int **"
-  Local "_12" "int *"
-  Local "_13" "int *"
-  Local "_14" "int **"
-  Local "_15" "int *"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int **"
   Block "bb0" entry
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:7:5 written
       Destination "_2"
       Use
         Constant 1
-    Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:7:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:7:5 generated
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:8:5 written
       Destination "_4"
       Use
         Constant 0
-    Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:8:5 generated
     Goto "bb1"
   Block "bb1"
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:9:12 written
-      Destination "_7"
+      Destination "_5"
       Binary "Lt"
         Copy "_4"
         Constant 3
     Branch a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:9:12 written "bb2" "bb3"
-      Copy "_7"
+      Copy "_5"
   Block "bb2"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:9:12 generated
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:10:13 written
-      Destination "_8"
+      Destination "_6"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:10:9 written
       Destination "_4"
       Use
-        Copy "_8"
-    Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:10:9 written
-      Destination "_9"
-      Use
-        Copy "_4"
+        Copy "_6"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:10:9 generated
     ArgumentsEvaluated a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:11:13 generated
     Call a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:11:13 written "g" "bb4"
-      Destination "_10"
+      Destination "_7"
   Block "bb3"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:9:12 generated
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:17:5 written
@@ -75,29 +58,24 @@ Function a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:2:5 "
     Return
   Block "bb4"
     Branch a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:11:13 written "bb5" "bb6"
-      Copy "_10"
+      Copy "_7"
   Block "bb5"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:11:13 generated
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:12:13 generated
-      Destination "_11"
+      Destination "_8"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:12:20 written
-      Destination "_12"
+      Destination "_9"
       Address
         Place "_2"
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:12:13 written
-      Destination "_11"
+      Destination "_8"
         Deref
       Use
-        Copy "_12"
-    Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:12:13 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
+        Copy "_9"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:12:13 generated
     Goto "bb1"
   Block "bb6"
@@ -105,7 +83,7 @@ Function a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:2:5 "
     Goto "bb7"
   Block "bb7"
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:15:13 generated
-      Destination "_14"
+      Destination "_10"
       Address
         Place "_1"
           Index
@@ -113,11 +91,7 @@ Function a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:2:5 "
     Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:15:9 written
       Destination "_3"
       Use
-        Copy "_14"
+        Copy "_10"
           Deref
-    Operation a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:15:9 written
-      Destination "_15"
-      Use
-        Copy "_3"
     Sequenced a_read_a_turn_ended_by_continue_may_have_written_for_is_doubted.c:15:9 generated
     Goto "bb1"

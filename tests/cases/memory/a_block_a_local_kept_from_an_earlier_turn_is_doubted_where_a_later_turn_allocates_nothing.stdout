@@ -11,11 +11,9 @@ Function a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn
   Local "_5" "int"
   Local "_6" "int **" "p"
   Local "_7" "void *"
-  Local "_8" "int **"
+  Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int **"
-  Local "_11" "int"
-  Local "_12" "int"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:3:11 written
       Destination "_3"
@@ -67,20 +65,16 @@ Function a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn
     Goto "bb6"
   Block "bb6"
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:7:13 written
-      Destination "_9"
+      Destination "_8"
       Unary "Not"
         Copy "_6"
     Branch a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:7:13 written "bb8" "bb9"
-      Copy "_9"
+      Copy "_8"
   Block "bb7"
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:6:16 written
       Destination "_6"
       Use
         Copy "_7"
-    Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:6:16 written
-      Destination "_8"
-      Use
-        Copy "_6"
     Sequenced a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:6:16 generated
     Goto "bb6"
   Block "bb8"
@@ -101,24 +95,20 @@ Function a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn
       Destination "_3"
       Use
         Copy "_6"
-    Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:8:9 written
-      Destination "_10"
-      Use
-        Copy "_3"
     Sequenced a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:8:9 generated
     StorageDead a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:9:5 generated "_6"
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:4:28 written
-      Destination "_11"
+      Destination "_9"
       Use
         Copy "_4"
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:4:28 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:4:28 written
       Destination "_4"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_block_a_local_kept_from_an_earlier_turn_is_doubted_where_a_later_turn_allocates_nothing.c:4:28 generated
     Goto "bb1"

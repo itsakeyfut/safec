@@ -20,7 +20,6 @@ Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_i
   Local "_1" "int" parameter "c"
   Local "_2" "int *" parameter "q"
   Local "_3" "int *" "p"
-  Local "_4" "int *"
   Block "bb0" entry
     Branch a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:10:9 written "bb1" "bb2"
       Copy "_1"
@@ -30,10 +29,6 @@ Function a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_i
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:11:9 written
-      Destination "_4"
-      Use
-        Copy "_3"
     Sequenced a_pointer_assigned_on_one_arm_is_doubted_where_the_other_arm_leads_to_its_read.c:11:9 generated
     Goto "bb3"
   Block "bb2"

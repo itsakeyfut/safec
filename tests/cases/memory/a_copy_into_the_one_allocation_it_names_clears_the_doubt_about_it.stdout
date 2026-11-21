@@ -15,11 +15,10 @@ Function a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:2:5
   Local "_4" "int **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int **" "p"
-  Local "_9" "void *"
-  Local "_10" "int *" "r"
-  Local "_11" "int"
+  Local "_7" "int **" "p"
+  Local "_8" "void *"
+  Local "_9" "int *" "r"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:3:9 written
       Destination "_3"
@@ -77,11 +76,6 @@ Function a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:2:5
       Use
         Copy "_2"
           Deref
-    Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:5:12 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:5:12 generated
     Goto "bb10"
   Block "bb9"
@@ -89,30 +83,30 @@ Function a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:2:5
     Goto "bb10"
   Block "bb10"
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:6:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:6:15 generated
     ArgumentsEvaluated a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:7:5 generated
     Call a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:7:5 written "memcpy" "bb11"
-      Destination "_9"
-      Copy "_8"
+      Destination "_8"
+      Copy "_7"
       Copy "_2"
       Constant 8
   Block "bb11"
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:7:5 generated
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:8:10 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_4"
           Deref
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:8:14 generated
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:9:9 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
-        Copy "_10"
+        Copy "_9"
     Branch a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:9:9 written "bb12" "bb13"
-      Copy "_11"
+      Copy "_10"
   Block "bb12"
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:9:9 generated
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:9:13 written
@@ -128,7 +122,7 @@ Function a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:2:5
     Operation a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:10:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced a_copy_into_the_one_allocation_it_names_clears_the_doubt_about_it.c:10:12 generated
     Return

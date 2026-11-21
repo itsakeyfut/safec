@@ -24,7 +24,6 @@ Function a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:7:5 "f"
   Local "_3" "int"
   Local "_4" "int *" "t"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:8:17 generated
     Call a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:8:17 written "aligned_alloc" "bb1"
@@ -76,11 +75,6 @@ Function a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:7:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:14:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_memory_aligned_alloc_made_is_reported.c:14:9 generated
     Goto "bb7"
   Block "bb6"

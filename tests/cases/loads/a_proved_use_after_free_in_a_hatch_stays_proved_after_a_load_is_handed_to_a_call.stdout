@@ -16,9 +16,7 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *" "q"
+  Local "_7" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 generated
     Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 written "malloc" "bb1"
@@ -83,22 +81,12 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
         Deref
       Use
         Constant 1
-    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:15:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:15:5 generated
     Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 generated
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
     Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 written "free" "bb9"
@@ -106,14 +94,14 @@ Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_
   Block "bb9"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
     Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:18:10 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:18:14 generated
     ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
     Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 written "g" "bb10"
-      Copy "_9"
+      Copy "_7"
   Block "bb10"
     Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
     Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:20:5 written

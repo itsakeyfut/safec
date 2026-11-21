@@ -14,11 +14,9 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int *"
+  Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:4:5 generated
       Destination "_0"
@@ -87,22 +85,12 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
         Deref
       Use
         Copy "_4"
-    Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:14:5 generated
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:15:5 written
       Destination "_4"
         Deref
       Use
         Constant 1
-    Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:15:5 generated
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:13 written
       Destination "_1"
@@ -110,22 +98,22 @@ Function a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reach
         Copy "_4"
           Deref
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:13 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_1"
     Call a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:26 written "release" "bb9"
-      Destination "_11"
+      Destination "_9"
       Copy "_2"
         Deref
   Block "bb9"
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:12 generated
     Return

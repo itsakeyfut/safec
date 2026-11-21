@@ -26,8 +26,6 @@ Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_
   Local "_13" "int **"
   Local "_14" "int ***"
   Local "_15" "int ***"
-  Local "_16" "int *"
-  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:12 generated
     Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:3:12 written "malloc" "bb1"
@@ -165,22 +163,12 @@ Function a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_
         Deref
       Use
         Copy "_7"
-    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:8:3 written
-      Destination "_16"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:8:3 generated
     Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 written
       Destination "_7"
         Deref
       Use
         Constant 1
-    Operation a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 written
-      Destination "_17"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:9:3 generated
     ArgumentsEvaluated a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 generated
     Call a_write_through_one_of_two_chains_of_addresses_handed_to_a_call_is_not_doubted.c:10:3 written "free" "bb17"

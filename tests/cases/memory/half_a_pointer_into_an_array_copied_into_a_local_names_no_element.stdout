@@ -16,11 +16,10 @@ Function half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:2:5
   Local "_8" "int ***"
   Local "_9" "void *"
   Local "_10" "int *"
-  Local "_11" "int *"
-  Local "_12" "int *" "r"
+  Local "_11" "int *" "r"
+  Local "_12" "int **"
   Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_14" "int"
   Block "bb0" entry
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:2:5 generated
       Destination "_0"
@@ -77,37 +76,32 @@ Function half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:2:5
         Deref
       Use
         Copy "_10"
-    Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:8:5 written
-      Destination "_11"
-      Use
-        Copy "_6"
-          Deref
     Sequenced half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:8:5 generated
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:9:14 generated
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_2"
           Index
             Constant 0
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:9:14 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
-        Copy "_13"
+        Copy "_12"
         Constant 1
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:9:10 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
     Sequenced half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:9:14 generated
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:10:12 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
-        Copy "_12"
+        Copy "_11"
         Constant 0
     Operation half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:10:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced half_a_pointer_into_an_array_copied_into_a_local_names_no_element.c:10:12 generated
     Return

@@ -1120,13 +1120,14 @@ fn a_pointer_is_read_and_written_through_a_deref() {
     };
     let pointee = Place::new(p, vec![Projection::Deref]);
     let blocks: Vec<_> = f.blocks().collect();
-    let [written, held, returned] = assigns(blocks[0])[..] else {
+    // **And no read of `*p` after the store**: the statement discards the
+    // assignment's value, so nothing reads it back (#1137).
+    let [written, returned] = assigns(blocks[0])[..] else {
         panic!("{:?}", blocks[0].elements);
     };
 
     assert_eq!(written.place, pointee);
     assert_eq!(written.value, Rvalue::Use(Operand::Constant(1)));
-    assert_eq!(held.value, Rvalue::Use(Operand::Copy(pointee.clone())));
     assert_eq!(returned.place, Place::local(f.return_place()));
     // Reading through the pointer reads what it points at, which is the
     // assertion a lowering that dropped the projection would fail.
@@ -1393,19 +1394,20 @@ fn a_for_loop_asks_before_each_turn_and_steps_after_each_body() {
     // asks and branches; the body runs, steps, and comes back.
     assert_eq!(edges(f), vec![vec![1], vec![2, 3], vec![1], vec![]]);
 
-    // The body holds its own statement and the step after it, and each
-    // assignment carries the copy that 6.5.16 p3 fixes its value with.
+    // The body holds its own statement and the step after it, the step
+    // last. Each is a full expression whose value is discarded, so neither
+    // reads its value back (#1137).
     let blocks: Vec<_> = f.blocks().collect();
-    let stepped = assigns(blocks[2])
-        .last()
-        .copied()
-        .expect("the step is written after the body");
-    assert!(matches!(stepped.value, Rvalue::Use(Operand::Copy(_))));
+    let body = assigns(blocks[2]);
+    let [_, _, sum, stepped] = body[..] else {
+        panic!("{body:?}");
+    };
+    assert_eq!(stepped.value, Rvalue::Use(Operand::Copy(sum.place.clone())));
     assert_eq!(
-        assigns(blocks[2])[3].value,
+        sum.value,
         Rvalue::Binary {
             op: BinOp::Add,
-            lhs: Operand::Copy(assigns(blocks[2])[4].place.clone()),
+            lhs: Operand::Copy(stepped.place.clone()),
             rhs: Operand::Constant(1),
         }
     );

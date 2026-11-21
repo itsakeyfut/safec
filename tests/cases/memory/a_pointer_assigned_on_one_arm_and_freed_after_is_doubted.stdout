@@ -10,7 +10,6 @@ Function a_pointer_assigned_on_one_arm_and_freed_after_is_doubted.c:4:5 "f"
   Local "_1" "int" parameter "c"
   Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int *"
   Block "bb0" entry
     Branch a_pointer_assigned_on_one_arm_and_freed_after_is_doubted.c:6:9 written "bb1" "bb2"
       Copy "_1"
@@ -32,10 +31,6 @@ Function a_pointer_assigned_on_one_arm_and_freed_after_is_doubted.c:4:5 "f"
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_pointer_assigned_on_one_arm_and_freed_after_is_doubted.c:7:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_pointer_assigned_on_one_arm_and_freed_after_is_doubted.c:7:9 generated
     Goto "bb3"
   Block "bb5"

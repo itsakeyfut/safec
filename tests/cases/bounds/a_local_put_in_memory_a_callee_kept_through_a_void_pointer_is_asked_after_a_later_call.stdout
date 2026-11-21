@@ -19,8 +19,6 @@ Function a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_aft
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int **"
   Block "bb0" entry
     Operation a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:6:9 written
       Destination "_1"
@@ -65,11 +63,6 @@ Function a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_aft
         Deref
       Use
         Constant 0
-    Operation a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:12:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:12:5 generated
     ArgumentsEvaluated a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:13:5 generated
     Call a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:13:5 written "keep" "bb5"
@@ -77,19 +70,14 @@ Function a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_aft
   Block "bb5"
     Sequenced a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:13:5 generated
     Operation a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_2"
     Operation a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:5 written
       Destination "_4"
         Deref
       Use
-        Copy "_8"
-    Operation a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
+        Copy "_7"
     Sequenced a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:14:5 generated
     ArgumentsEvaluated a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:15:5 generated
     Call a_local_put_in_memory_a_callee_kept_through_a_void_pointer_is_asked_after_a_later_call.c:15:5 written "other" "bb6"

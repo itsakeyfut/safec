@@ -8,8 +8,6 @@ Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported
   Local "_2" "int *" "x"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:41 generated
     Call a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:41 written "malloc" "bb1"
@@ -40,22 +38,12 @@ Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported
         Deref
       Use
         Constant 1
-    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:76 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:76 generated
     Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 written
       Destination "_1"
         Deref
       Use
         Copy "_2"
-    Operation a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:2:84 generated
     Return
 Function a_live_allocation_a_callee_stores_through_its_parameter_is_not_reported.c:3:5 "main"

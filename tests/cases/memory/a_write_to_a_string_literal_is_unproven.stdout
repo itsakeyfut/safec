@@ -16,7 +16,6 @@ Function a_write_to_a_string_literal_is_unproven.c:3:6 "stored"
   Local "_1" "char *" "s"
   Local "_2" "char (*)[3]"
   Local "_3" "char *"
-  Local "_4" "char"
   Block "bb0" entry
     Operation a_write_to_a_string_literal_is_unproven.c:4:15 generated
       Destination "_2"
@@ -35,11 +34,6 @@ Function a_write_to_a_string_literal_is_unproven.c:3:6 "stored"
         Deref
       Use
         Constant 120
-    Operation a_write_to_a_string_literal_is_unproven.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_write_to_a_string_literal_is_unproven.c:5:5 generated
     Return
 Function a_write_to_a_string_literal_is_unproven.c:7:6 "filled"

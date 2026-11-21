@@ -10,7 +10,6 @@ Function a_freed_pointer_written_through_its_own_address.c:4:5 "main"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_freed_pointer_written_through_its_own_address.c:4:5 generated
       Destination "_0"
@@ -55,11 +54,6 @@ Function a_freed_pointer_written_through_its_own_address.c:4:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_freed_pointer_written_through_its_own_address.c:10:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_written_through_its_own_address.c:10:5 generated
     Operation a_freed_pointer_written_through_its_own_address.c:11:5 written
       Destination "_0"

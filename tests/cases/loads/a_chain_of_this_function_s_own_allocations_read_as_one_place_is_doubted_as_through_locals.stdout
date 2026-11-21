@@ -25,10 +25,8 @@ Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted
   Local "_13" "int ***" "c"
   Local "_14" "void *"
   Local "_15" "int"
-  Local "_16" "int **"
-  Local "_17" "int *"
-  Local "_18" "int *" "q"
-  Local "_19" "int"
+  Local "_16" "int *" "q"
+  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:14 generated
     Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:14 written "malloc" "bb1"
@@ -180,22 +178,12 @@ Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted
         Deref
       Use
         Copy "_10"
-    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:16:5 written
-      Destination "_16"
-      Use
-        Copy "_13"
-          Deref
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:16:5 generated
     Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 written
       Destination "_10"
         Deref
       Use
         Copy "_7"
-    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 written
-      Destination "_17"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 generated
     ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 generated
     Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 written "free" "bb22"
@@ -203,18 +191,18 @@ Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted
   Block "bb22"
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 generated
     Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:19:10 written
-      Destination "_18"
+      Destination "_16"
       Use
         Copy "_13"
           Deref
             Deref
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:19:14 generated
     Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 written
-      Destination "_19"
+      Destination "_17"
       Unary "Not"
-        Copy "_18"
+        Copy "_16"
     Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 written "bb23" "bb24"
-      Copy "_19"
+      Copy "_17"
   Block "bb23"
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 generated
     Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:13 written
@@ -230,7 +218,7 @@ Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted
     Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:21:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_16"
           Deref
     Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:21:12 generated
     Return

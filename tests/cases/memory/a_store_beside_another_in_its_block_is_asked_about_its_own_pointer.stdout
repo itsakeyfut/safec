@@ -15,10 +15,6 @@ Function a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:2:
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:15 generated
     Call a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:3:15 written "malloc" "bb1"
@@ -84,33 +80,18 @@ Function a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:2:
         Deref
       Use
         Copy "_3"
-    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:8:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:8:5 generated
     Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 written
       Destination "_1"
         Deref
       Use
         Copy "_5"
-    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 written
-      Destination "_13"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:5 generated
     Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 written
       Destination "_2"
         Deref
       Use
         Copy "_7"
-    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 written
-      Destination "_14"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:9:14 generated
     Branch a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:9 written "bb12" "bb13"
       Copy "_4"
@@ -130,11 +111,6 @@ Function a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:2:
         Deref
       Use
         Copy "_3"
-    Operation a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:21 written
-      Destination "_15"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_store_beside_another_in_its_block_is_asked_about_its_own_pointer.c:10:21 generated
     Goto "bb17"
   Block "bb16"

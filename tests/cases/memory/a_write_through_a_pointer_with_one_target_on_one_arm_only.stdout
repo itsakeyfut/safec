@@ -17,9 +17,6 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
   Local "_6" "int **" "pp"
   Local "_7" "int **"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_with_one_target_on_one_arm_only.c:5:14 generated
     Call a_write_through_a_pointer_with_one_target_on_one_arm_only.c:5:14 written "malloc" "bb1"
@@ -62,10 +59,6 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
       Destination "_6"
       Use
         Copy "_8"
-    Operation a_write_through_a_pointer_with_one_target_on_one_arm_only.c:8:14 written
-      Destination "_9"
-      Use
-        Copy "_6"
     Sequenced a_write_through_a_pointer_with_one_target_on_one_arm_only.c:8:14 generated
     Goto "bb6"
   Block "bb5"
@@ -77,11 +70,6 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
         Deref
       Use
         Copy "_4"
-    Operation a_write_through_a_pointer_with_one_target_on_one_arm_only.c:9:5 written
-      Destination "_10"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_write_through_a_pointer_with_one_target_on_one_arm_only.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_with_one_target_on_one_arm_only.c:10:5 generated
     Call a_write_through_a_pointer_with_one_target_on_one_arm_only.c:10:5 written "free" "bb7"
@@ -93,11 +81,6 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_write_through_a_pointer_with_one_target_on_one_arm_only.c:11:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_through_a_pointer_with_one_target_on_one_arm_only.c:11:5 generated
     Operation a_write_through_a_pointer_with_one_target_on_one_arm_only.c:12:5 written
       Destination "_0"

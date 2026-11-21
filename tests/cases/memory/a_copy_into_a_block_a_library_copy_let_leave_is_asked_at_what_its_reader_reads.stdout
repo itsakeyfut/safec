@@ -27,13 +27,11 @@ Function a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reade
   Local "_9" "int ***" "hb"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "void *"
-  Local "_15" "void *" "vb"
-  Local "_16" "void **" "vv"
-  Local "_17" "char **"
-  Local "_18" "void *"
+  Local "_12" "void *"
+  Local "_13" "void *" "vb"
+  Local "_14" "void **" "vv"
+  Local "_15" "char **"
+  Local "_16" "void *"
   Block "bb0" entry
     Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:3:9 written
       Destination "_2"
@@ -123,26 +121,16 @@ Function a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reade
         Deref
       Use
         Constant 0
-    Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:7:5 written
-      Destination "_12"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:7:5 generated
     Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:8:5 written
       Destination "_9"
         Deref
       Use
         Copy "_6"
-    Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:8:5 written
-      Destination "_13"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:8:5 generated
     ArgumentsEvaluated a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:9:5 generated
     Call a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:9:5 written "memcpy" "bb16"
-      Destination "_14"
+      Destination "_12"
       Copy "_1"
       Copy "_9"
       Constant 8
@@ -154,24 +142,24 @@ Function a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reade
   Block "bb17"
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:10:5 generated
     Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:11:11 written
-      Destination "_15"
+      Destination "_13"
       Use
         Copy "_6"
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:11:16 generated
     Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:11:26 written
-      Destination "_16"
+      Destination "_14"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:11:31 generated
     Operation a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:12:16 written
-      Destination "_17"
+      Destination "_15"
       Address
         Place "_3"
     ArgumentsEvaluated a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:12:5 generated
     Call a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:12:5 written "memcpy" "bb18"
-      Destination "_18"
-      Copy "_16"
-      Copy "_17"
+      Destination "_16"
+      Copy "_14"
+      Copy "_15"
       Constant 8
   Block "bb18"
     Sequenced a_copy_into_a_block_a_library_copy_let_leave_is_asked_at_what_its_reader_reads.c:12:5 generated

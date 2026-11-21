@@ -21,11 +21,10 @@ Function a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocato
   Local "_4" "void **" "q"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void **"
-  Local "_8" "void *" "d"
-  Local "_9" "void *" "s"
-  Local "_10" "int *"
-  Local "_11" "void *"
+  Local "_7" "void *" "d"
+  Local "_8" "void *" "s"
+  Local "_9" "int *"
+  Local "_10" "void *"
   Block "bb0" entry
     Operation a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:26 written
       Destination "_2"
@@ -73,31 +72,26 @@ Function a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocato
         Deref
       Use
         Copy "_4"
-    Operation a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:89 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:89 generated
     Operation a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:104 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:108 generated
     Operation a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:121 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_2"
     Operation a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:117 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:121 generated
     ArgumentsEvaluated a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:125 generated
     Call a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:125 written "memcpy" "bb8"
-      Destination "_11"
+      Destination "_10"
+      Copy "_7"
       Copy "_8"
-      Copy "_9"
       Constant 4
   Block "bb8"
     Sequenced a_copy_into_a_void_pointer_made_from_a_void_pointer_pointer_an_allocator_returned_is_asked.c:2:125 generated

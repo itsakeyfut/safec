@@ -8,14 +8,9 @@ Function a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported
   Local "_2" "int **" "b"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int **"
-  Local "_6" "int *" "x"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
+  Local "_5" "int *" "x"
+  Local "_6" "void *"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:4:15 generated
     Call a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:4:15 written "malloc" "bb1"
@@ -41,11 +36,6 @@ Function a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported
         Deref
       Use
         Constant 0
-    Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:6:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:6:9 generated
     Return
   Block "bb3"
@@ -54,21 +44,21 @@ Function a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported
   Block "bb4"
     ArgumentsEvaluated a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:9:14 generated
     Call a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:9:14 written "malloc" "bb5"
-      Destination "_7"
+      Destination "_6"
       Constant 4
   Block "bb5"
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:9:10 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:9:14 generated
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:10:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Branch a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:10:9 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:10:9 generated
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:11:9 written
@@ -76,11 +66,6 @@ Function a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported
         Deref
       Use
         Constant 0
-    Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:11:9 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:11:9 generated
     Return
   Block "bb7"
@@ -88,36 +73,21 @@ Function a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported
     Goto "bb8"
   Block "bb8"
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:14:5 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:14:5 written
-      Destination "_10"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:14:5 generated
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:15:5 written
       Destination "_2"
         Deref
       Use
-        Copy "_6"
-    Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:15:5 written
-      Destination "_11"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_5"
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:15:5 generated
     Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:16:5 written
       Destination "_1"
         Deref
       Use
         Copy "_2"
-    Operation a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:16:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_live_pointer_stored_through_a_parameter_is_not_reported.c:16:5 generated
     Return

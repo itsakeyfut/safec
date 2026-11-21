@@ -11,12 +11,10 @@ Function a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_
   Local "_3" "int **" "h"
   Local "_4" "int ***" "p"
   Local "_5" "int ***"
-  Local "_6" "int ***"
-  Local "_7" "int **"
+  Local "_6" "int **"
+  Local "_7" "int *" "q"
   Local "_8" "int **"
-  Local "_9" "int *" "q"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:5:11 written
       Destination "_3"
@@ -40,10 +38,6 @@ Function a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_
       Destination "_4"
       Use
         Copy "_5"
-    Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:7:12 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:7:12 generated
     Goto "bb3"
   Block "bb2"
@@ -56,7 +50,7 @@ Function a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_
   Block "bb4"
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:8:5 generated
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:9:9 generated
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
           Index
@@ -64,36 +58,32 @@ Function a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:9:5 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:9:5 generated
     ArgumentsEvaluated a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:10:5 generated
     Call a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:10:5 written "tick" "bb5"
   Block "bb5"
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:10:5 generated
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:11:14 generated
-      Destination "_10"
+      Destination "_8"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:11:10 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_10"
+        Copy "_8"
           Deref
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:11:14 generated
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:12:12 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
-        Copy "_9"
+        Copy "_7"
         Constant 0
     Operation a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:12:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_local_a_holder_assigned_after_an_earlier_call_may_have_kept_it_names_is_not_believed_written_by_a_later_call.c:12:12 generated
     Return

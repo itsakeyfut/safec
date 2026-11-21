@@ -17,10 +17,9 @@ Function an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_
   Local "_6" "int *" "m"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "int **" "u"
-  Local "_11" "int *" "q"
-  Local "_12" "int"
+  Local "_9" "int **" "u"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:5:16 generated
     Call an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:5:16 written "get" "bb1"
@@ -106,11 +105,6 @@ Function an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_
         Deref
       Use
         Copy "_6"
-    Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:11:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:11:5 generated
     ArgumentsEvaluated an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:12:5 generated
     Call an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:12:5 written "free" "bb12"
@@ -118,23 +112,23 @@ Function an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_
   Block "bb12"
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:12:5 generated
     Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:13:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_1"
           Deref
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:13:15 generated
     Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:14:10 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:14:14 generated
     Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:15:9 written
-      Destination "_12"
+      Destination "_11"
       Unary "Not"
-        Copy "_11"
+        Copy "_10"
     Branch an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:15:9 written "bb13" "bb14"
-      Copy "_12"
+      Copy "_11"
   Block "bb13"
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:15:9 generated
     Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:15:13 written
@@ -150,7 +144,7 @@ Function an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_
     Operation an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:16:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back.c:16:12 generated
     Return

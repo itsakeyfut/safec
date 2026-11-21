@@ -18,7 +18,6 @@ Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_poi
   Local "_5" "int"
   Local "_6" "void *"
   Local "_7" "void **" "q"
-  Local "_8" "void **"
   Block "bb0" entry
     Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer.c:2:26 written
       Destination "_2"
@@ -74,11 +73,6 @@ Function a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_poi
         Deref
       Use
         Copy "_7"
-    Operation a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer.c:2:109 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer.c:2:109 generated
     ArgumentsEvaluated a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer.c:2:118 generated
     Call a_memset_of_a_whole_table_of_pointers_that_leaves_is_reported_as_no_pointer.c:2:118 written "use" "bb9"

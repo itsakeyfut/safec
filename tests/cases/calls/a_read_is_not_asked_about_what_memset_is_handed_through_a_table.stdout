@@ -19,15 +19,12 @@ Function a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:5:5 "
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "int"
+  Local "_9" "int"
+  Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "void *"
+  Local "_12" "int"
   Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int"
   Block "bb0" entry
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:5:5 generated
       Destination "_0"
@@ -96,22 +93,12 @@ Function a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:5:5 "
         Deref
       Use
         Copy "_5"
-    Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:16:5 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:16:5 generated
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:17:5 written
       Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:17:5 generated
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:10 written
       Destination "_1"
@@ -119,41 +106,37 @@ Function a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:5:5 "
         Copy "_5"
           Deref
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:10 written
-      Destination "_11"
+      Destination "_9"
       Use
         Copy "_1"
     Call a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:23 written "memset" "bb9"
-      Destination "_12"
+      Destination "_10"
       Copy "_3"
       Constant 0
       Constant 8
   Block "bb9"
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:23 written
-      Destination "_13"
+      Destination "_11"
       Binary "Ne"
-        Copy "_12"
+        Copy "_10"
         Constant 0
+    Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:9 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_9"
+        Copy "_11"
+    Call a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:49 written "release_all" "bb10"
+      Destination "_13"
+  Block "bb10"
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:9 written
       Destination "_14"
       Binary "Add"
-        Copy "_11"
+        Copy "_12"
         Copy "_13"
-    Call a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:49 written "release_all" "bb10"
-      Destination "_15"
-  Block "bb10"
-    Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:9 written
-      Destination "_16"
-      Binary "Add"
-        Copy "_14"
-        Copy "_15"
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:5 written
       Destination "_2"
       Use
-        Copy "_16"
-    Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:5 written
-      Destination "_17"
-      Use
-        Copy "_2"
+        Copy "_14"
     Sequenced a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:18:5 generated
     Operation a_read_is_not_asked_about_what_memset_is_handed_through_a_table.c:19:5 written
       Destination "_0"

@@ -19,7 +19,6 @@ Function a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:5:5
   Local "_6" "int **"
   Local "_7" "int *" "p"
   Local "_8" "void *"
-  Local "_9" "int *"
   Block "bb0" entry
     Operation a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:6:10 written
       Destination "_1"
@@ -65,11 +64,6 @@ Function a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:5:5
         Deref
       Use
         Copy "_7"
-    Operation a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:10:5 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:10:5 generated
     ArgumentsEvaluated a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 generated
     Call a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:11:5 written "free" "bb3"

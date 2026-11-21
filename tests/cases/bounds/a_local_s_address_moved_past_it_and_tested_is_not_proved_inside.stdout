@@ -7,7 +7,6 @@ Function a_local_s_address_moved_past_it_and_tested_is_not_proved_inside.c:1:5 "
   Local "_4" "int *" "q"
   Local "_5" "int *"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_local_s_address_moved_past_it_and_tested_is_not_proved_inside.c:1:5 generated
       Destination "_0"
@@ -51,11 +50,6 @@ Function a_local_s_address_moved_past_it_and_tested_is_not_proved_inside.c:1:5 "
         Deref
       Use
         Constant 1
-    Operation a_local_s_address_moved_past_it_and_tested_is_not_proved_inside.c:6:9 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_s_address_moved_past_it_and_tested_is_not_proved_inside.c:6:9 generated
     Goto "bb3"
   Block "bb2"

@@ -23,11 +23,10 @@ Function a_pointer_to_an_array_of_the_same_length_builds.c:5:5 "main"
   Local "_4" "int[2][4]" "m"
   Local "_5" "int (*)[4]"
   Local "_6" "int *"
-  Local "_7" "int"
-  Local "_8" "int (*)[4]"
-  Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int"
+  Local "_7" "int (*)[4]"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_pointer_to_an_array_of_the_same_length_builds.c:5:5 generated
       Destination "_0"
@@ -57,35 +56,30 @@ Function a_pointer_to_an_array_of_the_same_length_builds.c:5:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_pointer_to_an_array_of_the_same_length_builds.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:9:5 generated
     Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:14 generated
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_4"
           Index
             Constant 0
     Call a_pointer_to_an_array_of_the_same_length_builds.c:10:12 written "f" "bb1"
-      Destination "_9"
-      Copy "_8"
+      Destination "_8"
+      Copy "_7"
   Block "bb1"
     Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:20 generated
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_2"
     Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
+        Copy "_8"
         Copy "_9"
-        Copy "_10"
           Deref
     Operation a_pointer_to_an_array_of_the_same_length_builds.c:10:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_pointer_to_an_array_of_the_same_length_builds.c:10:12 generated
     Return

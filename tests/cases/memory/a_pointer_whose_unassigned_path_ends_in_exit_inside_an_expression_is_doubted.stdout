@@ -9,12 +9,10 @@ Function a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_do
   Local "_3" "int *" "p"
   Local "_4" "int" "ok"
   Local "_5" "int"
-  Local "_6" "int *"
+  Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:6:9 written
       Destination "_5"
@@ -29,10 +27,6 @@ Function a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_do
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:7:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:7:9 generated
     Goto "bb3"
   Block "bb2"
@@ -40,38 +34,34 @@ Function a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_do
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:10 written
-      Destination "_7"
+      Destination "_6"
       Binary "Gt"
         Copy "_1"
         Constant 0
     Branch a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:10 written "bb5" "bb6"
-      Copy "_7"
+      Copy "_6"
   Block "bb4"
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:5 written
       Destination "_4"
       Use
-        Copy "_8"
-    Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
+        Copy "_7"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:5 generated
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:12 written
-      Destination "_10"
+      Destination "_8"
       Binary "Ne"
         Copy "_3"
         Constant 0
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:12 written
-      Destination "_11"
+      Destination "_9"
       Binary "Ne"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Branch a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:12 written "bb9" "bb8"
-      Copy "_11"
+      Copy "_9"
   Block "bb5"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:10 generated
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 1
     Goto "bb4"
@@ -83,7 +73,7 @@ Function a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_do
   Block "bb7"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:23 generated
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:9:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Goto "bb4"
@@ -91,13 +81,13 @@ Function a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_do
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:12 generated
     Return
   Block "bb9"
     Sequenced a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:12 generated
     Operation a_pointer_whose_unassigned_path_ends_in_exit_inside_an_expression_is_doubted.c:10:22 written
-      Destination "_11"
+      Destination "_9"
       Binary "Ne"
         Copy "_4"
         Constant 0

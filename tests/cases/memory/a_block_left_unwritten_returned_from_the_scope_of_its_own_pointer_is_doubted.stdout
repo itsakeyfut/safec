@@ -10,7 +10,6 @@ Function a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_do
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int *"
   Block "bb0" entry
     Branch a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted.c:3:9 written "bb1" "bb2"
       Copy "_1"
@@ -70,11 +69,6 @@ Function a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_do
         Deref
       Use
         Copy "_2"
-    Operation a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted.c:6:21 written
-      Destination "_7"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_block_left_unwritten_returned_from_the_scope_of_its_own_pointer_is_doubted.c:6:21 generated
     Goto "bb10"
   Block "bb9"

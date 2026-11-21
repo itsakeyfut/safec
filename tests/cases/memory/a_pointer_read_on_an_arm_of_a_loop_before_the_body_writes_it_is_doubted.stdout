@@ -8,13 +8,11 @@ Function a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted
   Local "_5" "int" "i"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int *"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:1:5 generated
       Destination "_0"
@@ -53,14 +51,14 @@ Function a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted
     Sequenced a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:5:21 generated
     StorageDead a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:10:5 generated "_5"
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:11:12 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:11:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:11:12 generated
     Return
   Block "bb4"
@@ -76,10 +74,6 @@ Function a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted
       Use
         Copy "_7"
           Deref
-    Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:7:13 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -87,38 +81,33 @@ Function a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted
     Goto "bb6"
   Block "bb6"
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:9:9 generated
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:9:16 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_3"
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:9:9 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
-        Copy "_10"
-    Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:9:9 written
-      Destination "_11"
-      Use
         Copy "_9"
-          Deref
     Sequenced a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:9:9 generated
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:5:28 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_5"
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:5:28 written
-      Destination "_13"
+      Destination "_11"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:5:28 written
       Destination "_5"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_pointer_read_on_an_arm_of_a_loop_before_the_body_writes_it_is_doubted.c:5:28 generated
     Goto "bb1"

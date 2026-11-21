@@ -6,7 +6,6 @@ Function a_call_s_result_is_believed_whole.c:3:5 "main"
   Local "_1" "int *" "p"
   Local "_2" "int *"
   Local "_3" "int"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_call_s_result_is_believed_whole.c:3:5 generated
       Destination "_0"
@@ -45,11 +44,6 @@ Function a_call_s_result_is_believed_whole.c:3:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_call_s_result_is_believed_whole.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_call_s_result_is_believed_whole.c:8:5 generated
     Operation a_call_s_result_is_believed_whole.c:9:5 written
       Destination "_0"

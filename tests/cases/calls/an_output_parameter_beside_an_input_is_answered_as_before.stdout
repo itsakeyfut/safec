@@ -10,8 +10,6 @@ Function an_output_parameter_beside_an_input_is_answered_as_before.c:2:5 "make"
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_output_parameter_beside_an_input_is_answered_as_before.c:3:14 generated
     Call an_output_parameter_beside_an_input_is_answered_as_before.c:3:14 written "malloc" "bb1"
@@ -46,29 +44,19 @@ Function an_output_parameter_beside_an_input_is_answered_as_before.c:2:5 "make"
         Deref
       Use
         Constant 1
-    Operation an_output_parameter_beside_an_input_is_answered_as_before.c:5:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced an_output_parameter_beside_an_input_is_answered_as_before.c:5:5 generated
     Operation an_output_parameter_beside_an_input_is_answered_as_before.c:6:5 written
       Destination "_1"
         Deref
       Use
         Copy "_3"
-    Operation an_output_parameter_beside_an_input_is_answered_as_before.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_output_parameter_beside_an_input_is_answered_as_before.c:6:5 generated
     Operation an_output_parameter_beside_an_input_is_answered_as_before.c:7:9 written
-      Destination "_8"
+      Destination "_6"
       Unary "Not"
         Copy "_2"
     Branch an_output_parameter_beside_an_input_is_answered_as_before.c:7:9 written "bb5" "bb6"
-      Copy "_8"
+      Copy "_6"
   Block "bb5"
     Sequenced an_output_parameter_beside_an_input_is_answered_as_before.c:7:9 generated
     Operation an_output_parameter_beside_an_input_is_answered_as_before.c:7:14 written

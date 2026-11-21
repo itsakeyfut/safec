@@ -31,11 +31,10 @@ Function a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_int
   Local "_13" "void *" "s"
   Local "_14" "int"
   Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int *"
-  Local "_18" "void *"
+  Local "_16" "int *"
+  Local "_17" "void *"
+  Local "_18" "int"
   Local "_19" "int"
-  Local "_20" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:6:9 written
       Destination "_2"
@@ -148,20 +147,16 @@ Function a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_int
       Destination "_2"
       Use
         Copy "_15"
-    Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:15:9 written
-      Destination "_16"
-      Use
-        Copy "_2"
     Sequenced a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:15:9 generated
     Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:16:19 written
-      Destination "_17"
+      Destination "_16"
       Address
         Place "_3"
     ArgumentsEvaluated a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:16:9 generated
     Call a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:16:9 written "memcpy" "bb9"
-      Destination "_18"
+      Destination "_17"
       Copy "_7"
-      Copy "_17"
+      Copy "_16"
       Constant 4
   Block "bb9"
     Sequenced a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:16:9 generated
@@ -174,17 +169,17 @@ Function a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_int
     StorageDead a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:18:5 generated "_12"
     StorageDead a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:18:5 generated "_7"
     Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:9:28 written
-      Destination "_19"
+      Destination "_18"
       Use
         Copy "_5"
     Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:9:28 written
-      Destination "_20"
+      Destination "_19"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:9:28 written
       Destination "_5"
       Use
-        Copy "_20"
+        Copy "_19"
     Sequenced a_pointer_read_out_of_a_block_each_turn_makes_before_a_partial_copy_into_it_is_not_reported.c:9:28 generated
     Goto "bb1"

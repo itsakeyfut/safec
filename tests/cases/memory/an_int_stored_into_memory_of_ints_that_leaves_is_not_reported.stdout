@@ -16,8 +16,6 @@ Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:6 "g"
   Local "_3" "int *" "m"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int"
-  Local "_7" "int *"
   Block "bb0" entry
     Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:24 written
       Destination "_2"
@@ -60,22 +58,12 @@ Function an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:6 "g"
         Deref
       Use
         Constant 1
-    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:74 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:74 generated
     Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 written
       Destination "_1"
         Deref
       Use
         Copy "_3"
-    Operation an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:82 generated
     ArgumentsEvaluated an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:91 generated
     Call an_int_stored_into_memory_of_ints_that_leaves_is_not_reported.c:2:91 written "use" "bb8"

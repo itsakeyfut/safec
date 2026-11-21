@@ -14,8 +14,7 @@ Function a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:3:5 
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int *" "t"
+  Local "_8" "int *" "t"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:4:14 generated
     Call a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:4:14 written "malloc" "bb1"
@@ -82,21 +81,16 @@ Function a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:3:5 
         Deref
       Use
         Copy "_7"
-    Operation a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:11:5 generated
     Operation a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:12:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_4"
           Deref
     Sequenced a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:12:14 generated
     ArgumentsEvaluated a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:13:5 generated
     Call a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:13:5 written "free" "bb10"
-      Copy "_9"
+      Copy "_8"
   Block "bb9"
     Sequenced a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:8:9 generated
     Operation a_free_of_a_pointer_stored_off_its_start_and_read_back_is_proved.c:9:9 written

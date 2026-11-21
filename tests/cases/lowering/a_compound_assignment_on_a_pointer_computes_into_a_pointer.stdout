@@ -7,7 +7,6 @@ Function a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:5 "main"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int *"
-  Local "_4" "int *"
   Block "bb0" entry
     Operation a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:5 generated
       Destination "_0"
@@ -32,10 +31,6 @@ Function a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:5 "main"
       Destination "_1"
       Use
         Copy "_3"
-    Operation a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:38 written
-      Destination "_4"
-      Use
-        Copy "_1"
     Sequenced a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:38 generated
     Operation a_compound_assignment_on_a_pointer_computes_into_a_pointer.c:3:46 written
       Destination "_0"

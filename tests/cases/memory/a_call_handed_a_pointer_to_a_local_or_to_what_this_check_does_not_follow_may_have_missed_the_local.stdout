@@ -16,9 +16,8 @@ Function a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follo
   Local "_6" "int ***"
   Local "_7" "int"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int"
+  Local "_9" "int *"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:8:5 generated
       Destination "_0"
@@ -55,10 +54,6 @@ Function a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follo
       Destination "_5"
       Use
         Copy "_8"
-    Operation a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:14:9 written
-      Destination "_9"
-      Use
-        Copy "_5"
     Sequenced a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:14:9 generated
     Goto "bb4"
   Block "bb3"
@@ -66,22 +61,22 @@ Function a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follo
     Goto "bb4"
   Block "bb4"
     Operation a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:16:13 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_3"
     ArgumentsEvaluated a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:16:5 generated
     Call a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:16:5 written "fill" "bb5"
       Copy "_5"
-      Copy "_10"
+      Copy "_9"
   Block "bb5"
     Sequenced a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:16:5 generated
     Operation a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:17:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:17:9 written "bb6" "bb7"
-      Copy "_11"
+      Copy "_10"
   Block "bb6"
     Sequenced a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:17:9 generated
     Operation a_call_handed_a_pointer_to_a_local_or_to_what_this_check_does_not_follow_may_have_missed_the_local.c:17:17 written

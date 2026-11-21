@@ -7,9 +7,7 @@ Function a_belief_two_paths_meet_with_is_the_narrower.c:1:5 "f"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int *" "q"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_belief_two_paths_meet_with_is_the_narrower.c:2:9 written
       Destination "_4"
@@ -64,10 +62,6 @@ Function a_belief_two_paths_meet_with_is_the_narrower.c:1:5 "f"
       Use
         Copy "_2"
           Deref
-    Operation a_belief_two_paths_meet_with_is_the_narrower.c:10:9 written
-      Destination "_7"
-      Use
-        Copy "_6"
     Sequenced a_belief_two_paths_meet_with_is_the_narrower.c:10:9 generated
     Goto "bb9"
   Block "bb8"
@@ -75,12 +69,12 @@ Function a_belief_two_paths_meet_with_is_the_narrower.c:1:5 "f"
     Goto "bb9"
   Block "bb9"
     Operation a_belief_two_paths_meet_with_is_the_narrower.c:12:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_6"
         Constant 0
     Branch a_belief_two_paths_meet_with_is_the_narrower.c:12:9 written "bb10" "bb11"
-      Copy "_8"
+      Copy "_7"
   Block "bb10"
     Sequenced a_belief_two_paths_meet_with_is_the_narrower.c:12:9 generated
     Operation a_belief_two_paths_meet_with_is_the_narrower.c:13:9 written
@@ -98,11 +92,6 @@ Function a_belief_two_paths_meet_with_is_the_narrower.c:1:5 "f"
         Deref
       Use
         Constant 5
-    Operation a_belief_two_paths_meet_with_is_the_narrower.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_belief_two_paths_meet_with_is_the_narrower.c:15:5 generated
     Operation a_belief_two_paths_meet_with_is_the_narrower.c:16:5 written
       Destination "_0"

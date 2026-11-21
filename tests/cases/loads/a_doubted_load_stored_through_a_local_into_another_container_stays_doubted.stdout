@@ -20,14 +20,10 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
   Local "_11" "void *"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *" "x"
-  Local "_16" "int *"
-  Local "_17" "int *" "q"
-  Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "int"
-  Local "_21" "int"
+  Local "_14" "int *" "x"
+  Local "_15" "int *" "q"
+  Local "_16" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:4:5 generated
       Destination "_0"
@@ -156,24 +152,19 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
         Deref
       Use
         Constant 1
-    Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:20:9 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:20:9 generated
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
         Copy "_8"
         Constant 1
     Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 written "bb16" "bb17"
-      Copy "_14"
+      Copy "_13"
   Block "bb16"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 generated
-    StorageLive a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:22:13 generated "_15"
+    StorageLive a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:22:13 generated "_14"
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:22:18 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_1"
           Deref
@@ -182,27 +173,22 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Destination "_5"
         Deref
       Use
-        Copy "_15"
-    Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:23:13 written
-      Destination "_16"
-      Use
-        Copy "_5"
-          Deref
+        Copy "_14"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:23:13 generated
-    StorageLive a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:24:13 generated "_17"
+    StorageLive a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:24:13 generated "_15"
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:24:18 written
-      Destination "_17"
+      Destination "_15"
       Use
         Copy "_5"
           Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:24:22 generated
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 written
-      Destination "_18"
+      Destination "_16"
       Binary "Eq"
-        Copy "_17"
+        Copy "_15"
         Constant 0
     Branch a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 written "bb19" "bb20"
-      Copy "_18"
+      Copy "_16"
   Block "bb17"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:21:13 generated
     Goto "bb18"
@@ -212,11 +198,6 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
         Deref
       Use
         Copy "_10"
-    Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:30:9 written
-      Destination "_19"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:30:9 generated
     ArgumentsEvaluated a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 generated
     Call a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 written "free" "bb22"
@@ -228,8 +209,8 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Use
         Constant 0
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:24 generated
-    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_17"
     StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_15"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_14"
     StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_10"
     Return
   Block "bb20"
@@ -239,28 +220,24 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_15"
           Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:20 generated
-    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_17"
     StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_15"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_14"
     StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_10"
     Return
   Block "bb22"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 generated
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:32:13 written
-      Destination "_20"
+      Destination "_17"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:32:9 written
       Destination "_8"
       Use
-        Copy "_20"
-    Operation a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:32:9 written
-      Destination "_21"
-      Use
-        Copy "_8"
+        Copy "_17"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:32:9 generated
     StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:33:5 generated "_10"
     Goto "bb9"

@@ -17,8 +17,7 @@ Function a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by
   Local "_5" "int *" "b"
   Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:6:14 generated
     Call a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:6:14 written "malloc" "bb1"
@@ -63,11 +62,6 @@ Function a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by
         Deref
       Use
         Copy "_6"
-    Operation a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:11:5 generated
     ArgumentsEvaluated a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:12:5 generated
     Call a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:12:5 written "release_deep" "bb5"
@@ -75,17 +69,17 @@ Function a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by
   Block "bb5"
     Sequenced a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:12:5 generated
     Operation a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:13:17 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_2"
     ArgumentsEvaluated a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:13:12 generated
     Call a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:13:12 written "use2" "bb6"
-      Destination "_9"
-      Copy "_8"
+      Destination "_8"
+      Copy "_7"
   Block "bb6"
     Operation a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:13:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address.c:13:12 generated
     Return

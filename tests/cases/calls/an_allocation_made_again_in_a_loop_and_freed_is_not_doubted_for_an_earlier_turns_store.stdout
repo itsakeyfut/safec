@@ -14,9 +14,8 @@ Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earl
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int *"
+  Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
   Block "bb0" entry
     StorageLive an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:10 generated "_2"
     Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:14 written
@@ -80,11 +79,6 @@ Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earl
         Deref
       Use
         Copy "_4"
-    Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:10:13 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:10:13 generated
     Goto "bb10"
   Block "bb9"
@@ -95,18 +89,18 @@ Function an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earl
   Block "bb10"
     StorageDead an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:14:5 generated "_4"
     Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_2"
     Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
-      Destination "_10"
+      Destination "_9"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 written
       Destination "_2"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced an_allocation_made_again_in_a_loop_and_freed_is_not_doubted_for_an_earlier_turns_store.c:4:28 generated
     Goto "bb1"
   Block "bb11"

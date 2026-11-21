@@ -12,8 +12,7 @@ Function a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "char *"
-  Local "_6" "char *"
-  Local "_7" "void *" "pv"
+  Local "_6" "void *" "pv"
   Block "bb0" entry
     Operation a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:3:5 generated
       Destination "_0"
@@ -57,20 +56,15 @@ Function a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_
         Deref
       Use
         Copy "_5"
-    Operation a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:7:5 written
-      Destination "_6"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:7:5 generated
     Operation a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:8:11 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_2"
     Sequenced a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:8:16 generated
     ArgumentsEvaluated a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:9:5 generated
     Call a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:9:5 written "use" "bb5"
-      Copy "_7"
+      Copy "_6"
   Block "bb5"
     Sequenced a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:9:5 generated
     Operation a_block_holding_a_char_s_address_handed_as_an_array_of_one_int_pointer_is_asked.c:10:5 written

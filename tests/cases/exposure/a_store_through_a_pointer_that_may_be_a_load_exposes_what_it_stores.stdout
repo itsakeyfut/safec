@@ -13,16 +13,10 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
   Local "_5" "int *" "a"
   Local "_6" "int"
   Local "_7" "void *"
-  Local "_8" "int **"
-  Local "_9" "int"
-  Local "_10" "void *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int"
-  Local "_17" "int *"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 written
       Destination "_6"
@@ -52,18 +46,14 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Destination "_3"
       Use
         Copy "_7"
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:11:5 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 written "bb5" "bb6"
-      Copy "_9"
+      Copy "_8"
   Block "bb5"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:12:9 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:13:9 written
@@ -78,25 +68,21 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
   Block "bb7"
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 generated
     Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:9 written "malloc" "bb8"
-      Destination "_10"
+      Destination "_9"
       Constant 4
   Block "bb8"
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:5 written
       Destination "_5"
       Use
-        Copy "_10"
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:5 written
-      Destination "_11"
-      Use
-        Copy "_5"
+        Copy "_9"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:15:5 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_10"
   Block "bb9"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:16:9 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:17:9 written
@@ -114,11 +100,6 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
         Deref
       Use
         Constant 1
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:19:5 written
-      Destination "_13"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:19:5 generated
     Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:20:9 written "bb12" "bb13"
       Copy "_1"
@@ -128,10 +109,6 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:21:9 written
-      Destination "_14"
-      Use
-        Copy "_4"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:21:9 generated
     Goto "bb14"
   Block "bb13"
@@ -141,20 +118,16 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
       Use
         Copy "_2"
           Deref
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:23:9 written
-      Destination "_15"
-      Use
-        Copy "_4"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:23:9 generated
     Goto "bb14"
   Block "bb14"
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 written
-      Destination "_16"
+      Destination "_11"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 written "bb15" "bb16"
-      Copy "_16"
+      Copy "_11"
   Block "bb15"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:25:9 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:26:9 written
@@ -172,11 +145,6 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
         Deref
       Use
         Copy "_5"
-    Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:28:5 written
-      Destination "_17"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:28:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 generated
     Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 written "release_all" "bb18"

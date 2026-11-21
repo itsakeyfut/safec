@@ -5,8 +5,6 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
   Local "_2" "int"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation edges_of_a_branch_and_a_loop.c:2:9 written
       Destination "_2"
@@ -26,10 +24,6 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
       Destination "_1"
       Use
         Copy "_3"
-    Operation edges_of_a_branch_and_a_loop.c:3:9 written
-      Destination "_4"
-      Use
-        Copy "_1"
     Sequenced edges_of_a_branch_and_a_loop.c:3:9 generated
     Goto "bb3"
   Block "bb2"
@@ -43,18 +37,14 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
   Block "bb5"
     Sequenced edges_of_a_branch_and_a_loop.c:6:12 generated
     Operation edges_of_a_branch_and_a_loop.c:7:13 written
-      Destination "_5"
+      Destination "_4"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation edges_of_a_branch_and_a_loop.c:7:9 written
       Destination "_1"
       Use
-        Copy "_5"
-    Operation edges_of_a_branch_and_a_loop.c:7:9 written
-      Destination "_6"
-      Use
-        Copy "_1"
+        Copy "_4"
     Sequenced edges_of_a_branch_and_a_loop.c:7:9 generated
     Goto "bb4"
   Block "bb6"

@@ -11,10 +11,9 @@ Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_
   Local "_5" "int"
   Local "_6" "int **" "p"
   Local "_7" "void *"
-  Local "_8" "int **"
+  Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:3:11 written
       Destination "_3"
@@ -66,10 +65,6 @@ Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_
       Destination "_3"
       Use
         Copy "_6"
-    Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:16 written
-      Destination "_8"
-      Use
-        Copy "_3"
     Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:6:16 generated
     Goto "bb7"
   Block "bb6"
@@ -77,11 +72,11 @@ Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_
     Goto "bb7"
   Block "bb7"
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 written
-      Destination "_9"
+      Destination "_8"
       Unary "Not"
         Copy "_6"
     Branch a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 written "bb8" "bb9"
-      Copy "_9"
+      Copy "_8"
   Block "bb8"
     Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:13 generated
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:7:17 written
@@ -98,17 +93,17 @@ Function a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_
   Block "bb10"
     StorageDead a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:8:5 generated "_6"
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_4"
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 written
       Destination "_4"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_block_a_local_kept_on_an_earlier_turn_is_nothing_wrote_where_a_later_allocation_fails.c:4:28 generated
     Goto "bb1"

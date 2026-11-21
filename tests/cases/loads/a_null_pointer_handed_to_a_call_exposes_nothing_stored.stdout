@@ -13,8 +13,7 @@ Function a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:4:5 "main"
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "z"
+  Local "_7" "int *" "z"
   Block "bb0" entry
     Operation a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:4:5 generated
       Destination "_0"
@@ -83,20 +82,15 @@ Function a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:4:5 "main"
         Deref
       Use
         Copy "_4"
-    Operation a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:13:5 generated
     Operation a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:14:14 generated
     ArgumentsEvaluated a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:15:5 generated
     Call a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:15:5 written "log_ptr" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:15:5 generated
     Operation a_null_pointer_handed_to_a_call_exposes_nothing_stored.c:16:5 written

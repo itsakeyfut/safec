@@ -15,18 +15,13 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
   Local "_5" "int *" "b"
   Local "_6" "int"
   Local "_7" "void *"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int *"
+  Local "_12" "void *"
+  Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "void *"
-  Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "int"
   Block "bb0" entry
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:9:9 written
       Destination "_6"
@@ -56,32 +51,24 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:12:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:12:5 generated
     ArgumentsEvaluated a_read_is_not_asked_at_realloc_of_another_allocation.c:13:9 generated
     Call a_read_is_not_asked_at_realloc_of_another_allocation.c:13:9 written "malloc" "bb5"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb5"
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:13:5 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:13:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:13:5 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:14:9 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_read_is_not_asked_at_realloc_of_another_allocation.c:14:9 written "bb6" "bb7"
-      Copy "_11"
+      Copy "_9"
   Block "bb6"
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:14:9 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:15:9 written
@@ -95,12 +82,12 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
     Goto "bb8"
   Block "bb8"
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:17:9 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch a_read_is_not_asked_at_realloc_of_another_allocation.c:17:9 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_10"
   Block "bb9"
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:17:9 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:18:9 written
@@ -118,22 +105,12 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
         Deref
       Use
         Copy "_4"
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:20:5 written
-      Destination "_13"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:20:5 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:21:5 written
       Destination "_4"
         Deref
       Use
         Constant 1
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:21:5 written
-      Destination "_14"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:21:5 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:10 written
       Destination "_2"
@@ -141,32 +118,28 @@ Function a_read_is_not_asked_at_realloc_of_another_allocation.c:4:5 "f"
         Copy "_4"
           Deref
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:10 written
-      Destination "_15"
+      Destination "_11"
       Use
         Copy "_2"
     Call a_read_is_not_asked_at_realloc_of_another_allocation.c:22:23 written "realloc" "bb12"
-      Destination "_16"
+      Destination "_12"
       Copy "_5"
       Constant 8
   Block "bb12"
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:23 written
-      Destination "_17"
+      Destination "_13"
       Binary "Ne"
-        Copy "_16"
+        Copy "_12"
         Constant 0
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:9 written
-      Destination "_18"
+      Destination "_14"
       Binary "Add"
-        Copy "_15"
-        Copy "_17"
+        Copy "_11"
+        Copy "_13"
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:5 written
       Destination "_3"
       Use
-        Copy "_18"
-    Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:22:5 written
-      Destination "_19"
-      Use
-        Copy "_3"
+        Copy "_14"
     Sequenced a_read_is_not_asked_at_realloc_of_another_allocation.c:22:5 generated
     Operation a_read_is_not_asked_at_realloc_of_another_allocation.c:23:5 written
       Destination "_0"

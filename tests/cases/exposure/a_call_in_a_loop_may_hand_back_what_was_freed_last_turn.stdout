@@ -16,7 +16,6 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
   Local "_5" "int"
   Local "_6" "int" "r"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 generated
       Destination "_0"
@@ -97,10 +96,6 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
       Destination "_1"
       Use
         Copy "_7"
-    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:9 written
-      Destination "_8"
-      Use
-        Copy "_1"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:9 generated
     StorageDead a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:15:5 generated "_6"
     StorageDead a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:15:5 generated "_3"

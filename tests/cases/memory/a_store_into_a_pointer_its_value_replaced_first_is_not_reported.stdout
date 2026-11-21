@@ -14,7 +14,6 @@ Function a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:3:5 "
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:4:14 generated
     Call a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:4:14 written "malloc" "bb1"
@@ -85,10 +84,6 @@ Function a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:3:5 "
     Sequenced a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:8:10 generated
     Operation a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:8:5 written
       Destination "_1"
-      Use
-        Copy "_1"
-    Operation a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:8:5 written
-      Destination "_8"
       Use
         Copy "_1"
     Sequenced a_store_into_a_pointer_its_value_replaced_first_is_not_reported.c:8:5 generated

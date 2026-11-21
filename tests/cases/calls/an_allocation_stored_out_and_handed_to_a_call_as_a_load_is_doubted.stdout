@@ -17,8 +17,6 @@ Function an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:4:
   Local "_5" "int **" "b"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:5:14 generated
     Call an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:5:14 written "malloc" "bb1"
@@ -75,22 +73,12 @@ Function an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:4:
         Deref
       Use
         Copy "_2"
-    Operation an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:14:5 generated
     Operation an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:15:5 written
       Destination "_1"
         Deref
       Use
         Copy "_2"
-    Operation an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:15:5 generated
     ArgumentsEvaluated an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:16:5 generated
     Call an_allocation_stored_out_and_handed_to_a_call_as_a_load_is_doubted.c:16:5 written "release" "bb10"

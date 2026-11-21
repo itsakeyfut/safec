@@ -22,10 +22,7 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Local "_8" "int ***" "b"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
-  Local "_13" "int"
-  Local "_14" "int ***"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:9:14 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:9:14 written "malloc" "bb1"
@@ -119,22 +116,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_2"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:5 written
-      Destination "_11"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:5 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:15 written
       Destination "_8"
         Deref
       Use
         Copy "_5"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:15 written
-      Destination "_12"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:15 generated
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:25 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:25 written "free" "bb13"
@@ -142,12 +129,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Block "bb13"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:12:25 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 written
-      Destination "_13"
+      Destination "_11"
       Binary "Eq"
         Copy "_1"
         Constant 0
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 written "bb14" "bb15"
-      Copy "_13"
+      Copy "_11"
   Block "bb14"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:9 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:13:19 written
@@ -165,11 +152,6 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_8"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 written
-      Destination "_14"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:14:5 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:15:5 written
       Destination "_0"
@@ -189,11 +171,9 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Local "_8" "int ***" "b"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
-  Local "_13" "int"
-  Local "_14" "int ****"
-  Local "_15" "void *"
+  Local "_11" "int"
+  Local "_12" "int ****"
+  Local "_13" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:14 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:18:14 written "malloc" "bb1"
@@ -287,22 +267,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_2"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 written
-      Destination "_11"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:5 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:15 written
       Destination "_8"
         Deref
       Use
         Copy "_5"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:15 written
-      Destination "_12"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:15 generated
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:25 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:25 written "free" "bb13"
@@ -310,12 +280,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Block "bb13"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:21:25 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:22:9 written
-      Destination "_13"
+      Destination "_11"
       Binary "Eq"
         Copy "_1"
         Constant 0
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:22:9 written "bb14" "bb15"
-      Copy "_13"
+      Copy "_11"
   Block "bb14"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:22:9 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:22:19 written
@@ -329,14 +299,14 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
     Goto "bb16"
   Block "bb16"
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:23:17 written
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_8"
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:23:5 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:23:5 written "memcpy" "bb17"
-      Destination "_15"
+      Destination "_13"
       Copy "_1"
-      Copy "_14"
+      Copy "_12"
       Constant 8
   Block "bb17"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:23:5 generated
@@ -356,9 +326,7 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Local "_6" "int **" "b"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int **"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:27:14 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:27:14 written "malloc" "bb1"
@@ -423,11 +391,6 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_3"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:5 generated
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:17 written "bb9" "bb10"
       Copy "_2"
@@ -441,12 +404,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
     Goto "bb11"
   Block "bb11"
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:30:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_1"
         Constant 0
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:30:9 written "bb13" "bb14"
-      Copy "_10"
+      Copy "_9"
   Block "bb12"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:29:20 generated
     Goto "bb11"
@@ -467,11 +430,6 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_6"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:31:5 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:31:5 generated
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:32:5 written
       Destination "_0"
@@ -489,10 +447,9 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
   Local "_6" "int **" "b"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "int"
-  Local "_11" "int ***"
-  Local "_12" "void *"
+  Local "_9" "int"
+  Local "_10" "int ***"
+  Local "_11" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:35:14 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:35:14 written "malloc" "bb1"
@@ -557,11 +514,6 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
         Deref
       Use
         Copy "_3"
-    Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:37:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:37:5 generated
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:37:17 written "bb9" "bb10"
       Copy "_2"
@@ -575,12 +527,12 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
     Goto "bb11"
   Block "bb11"
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:38:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_1"
         Constant 0
     Branch a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:38:9 written "bb13" "bb14"
-      Copy "_10"
+      Copy "_9"
   Block "bb12"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:37:20 generated
     Goto "bb11"
@@ -597,14 +549,14 @@ Function a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_co
     Goto "bb15"
   Block "bb15"
     Operation a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:39:17 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_6"
     ArgumentsEvaluated a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:39:5 generated
     Call a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:39:5 written "memcpy" "bb16"
-      Destination "_12"
+      Destination "_11"
       Copy "_1"
-      Copy "_11"
+      Copy "_10"
       Constant 8
   Block "bb16"
     Sequenced a_freed_pointer_below_what_leaves_is_reported_alike_by_a_store_and_a_copy.c:39:5 generated

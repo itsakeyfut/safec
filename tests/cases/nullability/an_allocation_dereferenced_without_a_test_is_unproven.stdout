@@ -6,7 +6,6 @@ Function an_allocation_dereferenced_without_a_test_is_unproven.c:2:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" "p"
   Local "_2" "void *"
-  Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_dereferenced_without_a_test_is_unproven.c:3:14 generated
     Call an_allocation_dereferenced_without_a_test_is_unproven.c:3:14 written "malloc" "bb1"
@@ -23,11 +22,6 @@ Function an_allocation_dereferenced_without_a_test_is_unproven.c:2:5 "f"
         Deref
       Use
         Constant 42
-    Operation an_allocation_dereferenced_without_a_test_is_unproven.c:4:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_dereferenced_without_a_test_is_unproven.c:4:5 generated
     Operation an_allocation_dereferenced_without_a_test_is_unproven.c:5:5 written
       Destination "_0"

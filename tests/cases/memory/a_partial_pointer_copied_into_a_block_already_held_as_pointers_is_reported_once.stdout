@@ -17,9 +17,8 @@ Function a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_repor
   Local "_4" "void **" "q"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void **"
-  Local "_8" "int *"
-  Local "_9" "void *"
+  Local "_7" "int *"
+  Local "_8" "void *"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:5:9 written
       Destination "_2"
@@ -67,21 +66,16 @@ Function a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_repor
         Deref
       Use
         Copy "_4"
-    Operation a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:9:5 generated
     Operation a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:10:15 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_2"
     ArgumentsEvaluated a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:10:5 generated
     Call a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:10:5 written "memcpy" "bb8"
-      Destination "_9"
+      Destination "_8"
       Copy "_4"
-      Copy "_8"
+      Copy "_7"
       Constant 4
   Block "bb8"
     Sequenced a_partial_pointer_copied_into_a_block_already_held_as_pointers_is_reported_once.c:10:5 generated

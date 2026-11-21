@@ -8,7 +8,6 @@ Function a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked
   Local "_3" "int"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:5:9 written
       Destination "_3"
@@ -37,10 +36,6 @@ Function a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked
       Destination "_2"
       Use
         Copy "_4"
-    Operation a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:8:5 generated
     Operation a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked.c:9:5 written
       Destination "_0"

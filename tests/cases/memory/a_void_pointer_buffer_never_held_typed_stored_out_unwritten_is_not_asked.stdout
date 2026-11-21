@@ -8,7 +8,6 @@ Function a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_aske
   Local "_2" "int" parameter "n"
   Local "_3" "void *" "p"
   Local "_4" "void *"
-  Local "_5" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:15 generated
     Call a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:3:15 written "malloc" "bb1"
@@ -25,10 +24,5 @@ Function a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_aske
         Deref
       Use
         Copy "_3"
-    Operation a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:4:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_void_pointer_buffer_never_held_typed_stored_out_unwritten_is_not_asked.c:4:5 generated
     Return

@@ -19,12 +19,8 @@ Function a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is
   Local "_10" "int *" "p"
   Local "_11" "void *"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int *"
-  Local "_15" "int **"
-  Local "_16" "int ***"
-  Local "_17" "int *" "q"
-  Local "_18" "int"
+  Local "_13" "int *" "q"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:4:5 generated
       Destination "_0"
@@ -151,44 +147,24 @@ Function a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is
         Deref
       Use
         Constant 1
-    Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:21:5 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:21:5 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:22:5 written
       Destination "_7"
         Deref
       Use
         Copy "_10"
-    Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:22:5 written
-      Destination "_14"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:22:5 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:23:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:23:5 written
-      Destination "_15"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:23:5 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:24:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:24:5 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:24:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:25:5 generated
     Call a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:25:5 written "free" "bb17"
@@ -196,7 +172,7 @@ Function a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is
   Block "bb17"
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:25:5 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:26:10 written
-      Destination "_17"
+      Destination "_13"
       Use
         Copy "_1"
           Deref
@@ -204,12 +180,12 @@ Function a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is
               Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:26:14 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:27:9 written
-      Destination "_18"
+      Destination "_14"
       Binary "Eq"
-        Copy "_17"
+        Copy "_13"
         Constant 0
     Branch a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:27:9 written "bb18" "bb19"
-      Copy "_18"
+      Copy "_14"
   Block "bb18"
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:27:9 generated
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:28:9 written
@@ -225,7 +201,7 @@ Function a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is
     Operation a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:30:5 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_13"
           Deref
     Sequenced a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported.c:30:12 generated
     Return

@@ -9,9 +9,6 @@ Function an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_ou
   Local "_3" "int" parameter "c"
   Local "_4" "int **" "p"
   Local "_5" "void *"
-  Local "_6" "int **"
-  Local "_7" "int *"
-  Local "_8" "int **"
   Block "bb0" entry
     Operation an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:3:11 written
       Destination "_4"
@@ -37,10 +34,6 @@ Function an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_ou
       Destination "_4"
       Use
         Copy "_5"
-    Operation an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:4:12 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:4:12 generated
     Goto "bb3"
   Block "bb5"
@@ -50,11 +43,6 @@ Function an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_ou
         Deref
       Use
         Copy "_2"
-    Operation an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:5:12 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:5:12 generated
     Goto "bb7"
   Block "bb6"
@@ -66,10 +54,5 @@ Function an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_ou
         Deref
       Use
         Copy "_4"
-    Operation an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:6:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_allocation_made_on_one_arm_written_under_its_null_test_and_stored_out_is_not_doubted.c:6:5 generated
     Return

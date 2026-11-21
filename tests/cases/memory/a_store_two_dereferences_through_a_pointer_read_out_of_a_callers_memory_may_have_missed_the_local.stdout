@@ -12,16 +12,13 @@ Function a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory
   Local "_4" "int"
   Local "_5" "int *[1]" "m"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int **" "t"
-  Local "_9" "int"
-  Local "_10" "int ***" "tt"
-  Local "_11" "int ***"
-  Local "_12" "int *"
-  Local "_13" "int *" "q"
-  Local "_14" "int **"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_7" "int **" "t"
+  Local "_8" "int"
+  Local "_9" "int ***" "tt"
+  Local "_10" "int ***"
+  Local "_11" "int *" "q"
+  Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:3:9 written
       Destination "_3"
@@ -72,25 +69,20 @@ Function a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory
         Deref
       Use
         Copy "_6"
-    Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:6:5 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:7:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:7:15 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:8:9 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
-        Copy "_8"
+        Copy "_7"
         Constant 0
     Branch a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:8:9 written "bb7" "bb8"
-      Copy "_9"
+      Copy "_8"
   Block "bb7"
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:8:9 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:8:19 written
@@ -104,46 +96,40 @@ Function a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory
     Goto "bb9"
   Block "bb9"
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:9:17 written
-      Destination "_11"
-      Address
-        Place "_8"
-    Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:9:12 written
       Destination "_10"
+      Address
+        Place "_7"
+    Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:9:12 written
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:9:17 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:10:5 written
-      Destination "_10"
+      Destination "_9"
         Deref
           Deref
       Use
         Constant 0
-    Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:10:5 written
-      Destination "_12"
-      Use
-        Copy "_10"
-          Deref
-            Deref
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:10:5 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:11:14 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_5"
           Index
             Constant 0
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:11:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:11:14 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:12:9 written
-      Destination "_15"
+      Destination "_13"
       Binary "Eq"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Branch a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:12:9 written "bb10" "bb11"
-      Copy "_15"
+      Copy "_13"
   Block "bb10"
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:12:9 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:12:19 written
@@ -157,15 +143,10 @@ Function a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory
     Goto "bb12"
   Block "bb12"
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:13:5 written
-      Destination "_13"
+      Destination "_11"
         Deref
       Use
         Constant 1
-    Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:13:5 written
-      Destination "_16"
-      Use
-        Copy "_13"
-          Deref
     Sequenced a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:13:5 generated
     Operation a_store_two_dereferences_through_a_pointer_read_out_of_a_callers_memory_may_have_missed_the_local.c:14:5 written
       Destination "_0"

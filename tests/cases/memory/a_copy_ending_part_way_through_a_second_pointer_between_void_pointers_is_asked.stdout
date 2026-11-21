@@ -13,11 +13,10 @@ Function a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_i
   Local "_3" "int *[2]" "arr"
   Local "_4" "int **"
   Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "void *" "d"
-  Local "_8" "void *" "s"
-  Local "_9" "int **"
-  Local "_10" "void *"
+  Local "_6" "void *" "d"
+  Local "_7" "void *" "s"
+  Local "_8" "int **"
+  Local "_9" "void *"
   Block "bb0" entry
     Operation a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:3:9 written
       Destination "_2"
@@ -39,33 +38,28 @@ Function a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_i
         Deref
       Use
         Copy "_5"
-    Operation a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:4:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:4:5 generated
     Operation a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:5:11 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_1"
     Sequenced a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:5:15 generated
     Operation a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:5:30 generated
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:5:26 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:5:30 generated
     ArgumentsEvaluated a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:6:5 generated
     Call a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:6:5 written "memcpy" "bb1"
-      Destination "_10"
+      Destination "_9"
+      Copy "_6"
       Copy "_7"
-      Copy "_8"
       Constant 12
   Block "bb1"
     Sequenced a_copy_ending_part_way_through_a_second_pointer_between_void_pointers_is_asked.c:6:5 generated

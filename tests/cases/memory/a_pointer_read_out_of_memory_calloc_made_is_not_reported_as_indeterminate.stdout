@@ -16,7 +16,6 @@ Function a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indetermina
   Local "_3" "int"
   Local "_4" "int *" "t"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate.c:6:17 generated
     Call a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate.c:6:17 written "calloc" "bb1"
@@ -68,11 +67,6 @@ Function a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indetermina
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate.c:12:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_memory_calloc_made_is_not_reported_as_indeterminate.c:12:9 generated
     Goto "bb7"
   Block "bb6"

@@ -10,14 +10,13 @@ Function a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at
   Local "_7" "char *"
   Local "_8" "int **" "p"
   Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int *" "written"
+  Local "_10" "int *" "written"
+  Local "_11" "int **"
   Local "_12" "int **"
-  Local "_13" "int **"
-  Local "_14" "int *" "unwritten"
+  Local "_13" "int *" "unwritten"
+  Local "_14" "int **"
   Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "int"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:1:5 generated
       Destination "_0"
@@ -68,54 +67,49 @@ Function a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at
         Deref
       Use
         Copy "_9"
-    Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:8:5 written
-      Destination "_10"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:8:5 generated
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:9:20 generated
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:9:20 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
-        Copy "_12"
+        Copy "_11"
         Constant 1
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:9:10 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_12"
           Deref
     Sequenced a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:9:20 generated
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:10:22 generated
-      Destination "_15"
+      Destination "_14"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:10:22 written
-      Destination "_16"
+      Destination "_15"
       Binary "Add"
-        Copy "_15"
+        Copy "_14"
         Constant 8
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:10:10 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_15"
           Deref
     Sequenced a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:10:22 generated
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:11:12 written
-      Destination "_17"
+      Destination "_16"
       Binary "Eq"
-        Copy "_11"
-        Copy "_14"
+        Copy "_10"
+        Copy "_13"
     Operation a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:11:5 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_16"
     Sequenced a_local_array_written_through_a_byte_pointer_is_not_proved_unwritten_at_the_element_written.c:11:12 generated
     Return

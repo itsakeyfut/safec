@@ -14,8 +14,7 @@ Function a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:
   Local "_7" "int **"
   Local "_8" "int"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int *"
+  Local "_10" "int *"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:8:5 generated
       Destination "_0"
@@ -52,10 +51,6 @@ Function a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:
       Destination "_6"
       Use
         Copy "_9"
-    Operation a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:14:9 written
-      Destination "_10"
-      Use
-        Copy "_6"
     Sequenced a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:14:9 generated
     Goto "bb3"
   Block "bb2"
@@ -63,13 +58,13 @@ Function a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:16:13 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_3"
     ArgumentsEvaluated a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:16:5 generated
     Call a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:16:5 written "fill" "bb4"
       Copy "_6"
-      Copy "_11"
+      Copy "_10"
   Block "bb4"
     Sequenced a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:16:5 generated
     Operation a_call_handed_a_pointer_to_either_of_two_locals_may_have_missed_each.c:17:5 written

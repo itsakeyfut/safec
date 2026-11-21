@@ -26,11 +26,8 @@ Function a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_re
   Local "_5" "int ***" "pp"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int **"
-  Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int *" "t"
-  Local "_12" "int"
+  Local "_8" "int *"
+  Local "_9" "int *" "t"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:8:9 written
       Destination "_1"
@@ -97,14 +94,9 @@ Function a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_re
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:18:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:18:5 generated
     Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:19:12 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_1"
     Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:19:5 written
@@ -112,30 +104,19 @@ Function a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_re
         Deref
           Deref
       Use
-        Copy "_9"
-    Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:19:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
-          Deref
-            Deref
+        Copy "_8"
     Sequenced a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:19:5 generated
     Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:20:10 written
-      Destination "_11"
+      Destination "_9"
       Use
         Copy "_2"
           Deref
     Sequenced a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:20:14 generated
     Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:21:5 written
-      Destination "_11"
+      Destination "_9"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:21:5 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:21:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:22:5 generated
     Call a_pointer_read_out_of_memory_written_through_two_dereferences_is_not_reported.c:22:5 written "free" "bb10"

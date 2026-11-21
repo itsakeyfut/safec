@@ -18,11 +18,10 @@ Function a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_repor
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "void **" "p"
-  Local "_7" "void *"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "void *" "s"
-  Local "_11" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "void *" "s"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:5:9 written
       Destination "_1"
@@ -72,26 +71,21 @@ Function a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_repor
         Deref
       Use
         Copy "_2"
-    Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:10:5 generated
     Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:11:15 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     ArgumentsEvaluated a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:11:5 generated
     Call a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:11:5 written "memcpy" "bb5"
-      Destination "_9"
+      Destination "_8"
       Copy "_3"
-      Copy "_8"
+      Copy "_7"
       Constant 4
   Block "bb5"
     Sequenced a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:11:5 generated
     Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:12:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_6"
           Deref
@@ -102,13 +96,13 @@ Function a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_repor
   Block "bb6"
     Sequenced a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:13:5 generated
     Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:14:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Ne"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Operation a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:14:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_partial_pointer_copied_into_a_block_after_a_store_through_it_is_reported_where_read.c:14:12 generated
     Return

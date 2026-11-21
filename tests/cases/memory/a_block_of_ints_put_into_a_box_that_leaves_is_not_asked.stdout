@@ -10,8 +10,6 @@ Function a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:2:6 "stored"
   Local "_4" "int **" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:3:14 generated
     Call a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:3:14 written "malloc" "bb1"
@@ -51,21 +49,11 @@ Function a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:2:6 "stored"
         Deref
       Use
         Copy "_2"
-    Operation a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:6:5 generated
     Operation a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:7:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_of_ints_put_into_a_box_that_leaves_is_not_asked.c:7:5 generated
     Return

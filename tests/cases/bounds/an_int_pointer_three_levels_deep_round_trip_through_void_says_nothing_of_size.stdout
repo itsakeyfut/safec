@@ -9,7 +9,6 @@ Function an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_o
   Local "_6" "int"
   Local "_7" "int *" "b"
   Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:2:11 written
       Destination "_2"
@@ -78,11 +77,6 @@ Function an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_o
         Deref
       Use
         Constant 1
-    Operation an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:9:17 written
-      Destination "_9"
-      Use
-        Copy "_7"
-          Deref
     Sequenced an_int_pointer_three_levels_deep_round_trip_through_void_says_nothing_of_size.c:9:17 generated
     Goto "bb9"
   Block "bb8"

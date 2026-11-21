@@ -16,10 +16,9 @@ Function a_copy_out_of_a_written_block_is_not_reported_where_read.c:2:5 "f"
   Local "_5" "int **" "n"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *" "r"
-  Local "_11" "int"
+  Local "_8" "void *"
+  Local "_9" "int *" "r"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_out_of_a_written_block_is_not_reported_where_read.c:3:15 generated
     Call a_copy_out_of_a_written_block_is_not_reported_where_read.c:3:15 written "malloc" "bb1"
@@ -82,32 +81,27 @@ Function a_copy_out_of_a_written_block_is_not_reported_where_read.c:2:5 "f"
         Deref
       Use
         Copy "_1"
-    Operation a_copy_out_of_a_written_block_is_not_reported_where_read.c:5:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_copy_out_of_a_written_block_is_not_reported_where_read.c:5:5 generated
     ArgumentsEvaluated a_copy_out_of_a_written_block_is_not_reported_where_read.c:6:5 generated
     Call a_copy_out_of_a_written_block_is_not_reported_where_read.c:6:5 written "memcpy" "bb9"
-      Destination "_9"
+      Destination "_8"
       Copy "_5"
       Copy "_2"
       Constant 8
   Block "bb9"
     Sequenced a_copy_out_of_a_written_block_is_not_reported_where_read.c:6:5 generated
     Operation a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:10 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
           Deref
     Sequenced a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:14 generated
     Operation a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:22 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
-        Copy "_10"
+        Copy "_9"
     Branch a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:22 written "bb10" "bb11"
-      Copy "_11"
+      Copy "_10"
   Block "bb10"
     Sequenced a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:22 generated
     Operation a_copy_out_of_a_written_block_is_not_reported_where_read.c:7:26 written
@@ -123,7 +117,7 @@ Function a_copy_out_of_a_written_block_is_not_reported_where_read.c:2:5 "f"
     Operation a_copy_out_of_a_written_block_is_not_reported_where_read.c:8:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced a_copy_out_of_a_written_block_is_not_reported_where_read.c:8:12 generated
     Return

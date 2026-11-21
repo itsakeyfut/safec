@@ -14,9 +14,8 @@ Function a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_
   Local "_3" "int"
   Local "_4" "int *[2]" "a"
   Local "_5" "int **"
-  Local "_6" "int *"
-  Local "_7" "int **"
-  Local "_8" "void *"
+  Local "_6" "int **"
+  Local "_7" "void *"
   Block "bb0" entry
     Operation a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:3:9 written
       Destination "_3"
@@ -42,23 +41,18 @@ Function a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_
         Deref
       Use
         Copy "_2"
-    Operation a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:5:5 written
-      Destination "_6"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:5:5 generated
     Operation a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:17 generated
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_4"
           Index
             Constant 0
     ArgumentsEvaluated a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 generated
     Call a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 written "memcpy" "bb4"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
-      Copy "_7"
+      Copy "_6"
       Constant 12
   Block "bb4"
     Sequenced a_copy_ending_part_way_through_an_unwritten_element_into_caller_memory_is_doubted.c:6:5 generated

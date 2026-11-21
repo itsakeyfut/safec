@@ -14,12 +14,9 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
   Local "_8" "int **" "o"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **" "p"
-  Local "_13" "int **"
-  Local "_14" "int *"
-  Local "_15" "int *" "r"
-  Local "_16" "int"
+  Local "_11" "int **" "p"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:3:9 written
       Destination "_4"
@@ -105,11 +102,6 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
       Use
         Copy "_3"
           Deref
-    Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:12 written
-      Destination "_11"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:8:12 generated
     Goto "bb14"
   Block "bb13"
@@ -117,7 +109,7 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
     Goto "bb14"
   Block "bb14"
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:9:11 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_8"
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:9:15 generated
@@ -126,13 +118,9 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
   Block "bb15"
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:9 generated
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:12 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_5"
-    Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:12 written
-      Destination "_13"
-      Use
-        Copy "_12"
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:10:12 generated
     Goto "bb17"
   Block "bb16"
@@ -140,29 +128,24 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
     Goto "bb17"
   Block "bb17"
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:5 written
-      Destination "_12"
+      Destination "_11"
         Deref
       Use
         Copy "_3"
           Deref
-    Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:5 written
-      Destination "_14"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:11:5 generated
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:12:10 written
-      Destination "_15"
+      Destination "_12"
       Use
         Copy "_5"
           Deref
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:12:14 generated
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:13:9 written
-      Destination "_16"
+      Destination "_13"
       Unary "Not"
-        Copy "_15"
+        Copy "_12"
     Branch a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:13:9 written "bb18" "bb19"
-      Copy "_16"
+      Copy "_13"
   Block "bb18"
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:13:9 generated
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:13:13 written
@@ -178,7 +161,7 @@ Function a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_abou
     Operation a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:14:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_12"
           Deref
     Sequenced a_store_that_may_land_in_either_of_two_allocations_keeps_the_doubt_about_one.c:14:12 generated
     Return

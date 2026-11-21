@@ -8,7 +8,6 @@ Function a_block_written_before_it_is_returned_is_not_doubted.c:2:7 "f"
   Local "_2" "int **" "b"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_written_before_it_is_returned_is_not_doubted.c:3:15 generated
     Call a_block_written_before_it_is_returned_is_not_doubted.c:3:15 written "malloc" "bb1"
@@ -43,11 +42,6 @@ Function a_block_written_before_it_is_returned_is_not_doubted.c:2:7 "f"
         Deref
       Use
         Copy "_1"
-    Operation a_block_written_before_it_is_returned_is_not_doubted.c:5:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_written_before_it_is_returned_is_not_doubted.c:5:5 generated
     Operation a_block_written_before_it_is_returned_is_not_doubted.c:6:5 written
       Destination "_0"

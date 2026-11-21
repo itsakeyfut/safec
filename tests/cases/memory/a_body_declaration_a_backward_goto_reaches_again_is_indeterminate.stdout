@@ -9,7 +9,6 @@ Function a_body_declaration_a_backward_goto_reaches_again_is_indeterminate.c:3:5
   Local "_0" "int" return
   Local "_1" "int *" "p"
   Local "_2" "void *"
-  Local "_3" "int *"
   Block "bb0" entry
     Operation a_body_declaration_a_backward_goto_reaches_again_is_indeterminate.c:3:5 generated
       Destination "_0"
@@ -41,9 +40,5 @@ Function a_body_declaration_a_backward_goto_reaches_again_is_indeterminate.c:3:5
       Destination "_1"
       Use
         Copy "_2"
-    Operation a_body_declaration_a_backward_goto_reaches_again_is_indeterminate.c:11:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
     Sequenced a_body_declaration_a_backward_goto_reaches_again_is_indeterminate.c:11:5 generated
     Goto "bb3"

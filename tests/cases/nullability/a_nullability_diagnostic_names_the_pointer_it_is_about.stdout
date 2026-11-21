@@ -33,7 +33,6 @@ Function a_nullability_diagnostic_names_the_pointer_it_is_about.c:9:5 "written_t
   Local "_0" "int" return
   Local "_1" "int *" parameter "q"
   Local "_2" "int *" "p"
-  Local "_3" "int"
   Block "bb0" entry
     Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:10:10 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function a_nullability_diagnostic_names_the_pointer_it_is_about.c:9:5 "written_t
         Deref
       Use
         Copy "_2"
-          Deref
-    Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:11:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
           Deref
     Sequenced a_nullability_diagnostic_names_the_pointer_it_is_about.c:11:5 generated
     Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:12:5 written
@@ -92,7 +86,6 @@ Function a_nullability_diagnostic_names_the_pointer_it_is_about.c:17:5 "first_le
 Function a_nullability_diagnostic_names_the_pointer_it_is_about.c:20:5 "written_back"
   Local "_0" "int" return
   Local "_1" "int **" parameter "pp"
-  Local "_2" "int"
   Block "bb0" entry
     Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:21:5 written
       Destination "_1"
@@ -100,12 +93,6 @@ Function a_nullability_diagnostic_names_the_pointer_it_is_about.c:20:5 "written_
           Deref
       Use
         Constant 1
-    Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:21:5 written
-      Destination "_2"
-      Use
-        Copy "_1"
-          Deref
-            Deref
     Sequenced a_nullability_diagnostic_names_the_pointer_it_is_about.c:21:5 generated
     Operation a_nullability_diagnostic_names_the_pointer_it_is_about.c:22:5 written
       Destination "_0"

@@ -19,7 +19,6 @@ Function a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memor
   Local "_8" "void *"
   Local "_9" "int *" "r"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:4:5 generated
       Destination "_0"
@@ -110,11 +109,6 @@ Function a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memor
         Deref
       Use
         Constant 1
-    Operation a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:16:5 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:16:5 generated
     Operation a_pointer_copied_into_a_local_through_a_pointer_read_out_of_fresh_memory_keeps_its_doubt.c:17:5 written
       Destination "_0"

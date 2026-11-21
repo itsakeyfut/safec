@@ -14,18 +14,15 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
   Local "_1" "int *" "r"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
-  Local "_5" "int ***" "t3"
-  Local "_6" "void *"
-  Local "_7" "int"
-  Local "_8" "int *" "slot"
-  Local "_9" "int **" "t2"
-  Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int ***" "t4"
-  Local "_13" "void *"
-  Local "_14" "int"
-  Local "_15" "int *"
+  Local "_4" "int ***" "t3"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "slot"
+  Local "_8" "int **" "t2"
+  Local "_9" "int **"
+  Local "_10" "int ***" "t4"
+  Local "_11" "void *"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:5 generated
       Destination "_0"
@@ -65,29 +62,24 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
         Deref
       Use
         Constant 1
-    Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:10:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:10:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 generated
     Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 written "malloc" "bb5"
-      Destination "_6"
+      Destination "_5"
       Constant 8
   Block "bb5"
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:12 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:11:17 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 written
-      Destination "_7"
+      Destination "_6"
       Binary "Eq"
-        Copy "_5"
+        Copy "_4"
         Constant 0
     Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 written "bb6" "bb7"
-      Copy "_7"
+      Copy "_6"
   Block "bb6"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:12:9 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:13:9 written
@@ -101,48 +93,43 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
     Goto "bb8"
   Block "bb8"
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:15:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:15:17 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:16:16 written
-      Destination "_10"
-      Address
-        Place "_8"
-    Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:16:11 written
       Destination "_9"
-      Use
-        Copy "_10"
-    Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:16:16 generated
-    Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:17:5 written
-      Destination "_5"
-        Deref
+      Address
+        Place "_7"
+    Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:16:11 written
+      Destination "_8"
       Use
         Copy "_9"
+    Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:16:16 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:17:5 written
-      Destination "_11"
+      Destination "_4"
+        Deref
       Use
-        Copy "_5"
-          Deref
+        Copy "_8"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:17:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 generated
     Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 written "realloc" "bb9"
-      Destination "_13"
-      Copy "_5"
+      Destination "_11"
+      Copy "_4"
       Constant 16
   Block "bb9"
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:12 written
-      Destination "_12"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:18:17 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
-        Copy "_12"
+        Copy "_10"
         Constant 0
     Branch a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 written "bb10" "bb11"
-      Copy "_14"
+      Copy "_12"
   Block "bb10"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:19:9 generated
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:20:9 written
@@ -156,17 +143,11 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
     Goto "bb12"
   Block "bb12"
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 written
-      Destination "_12"
+      Destination "_10"
         Deref
           Deref
       Use
         Copy "_1"
-    Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 written
-      Destination "_15"
-      Use
-        Copy "_12"
-          Deref
-            Deref
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 generated
     Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 written "free" "bb13"
@@ -176,7 +157,7 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:24:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
           Deref
             Deref
               Deref

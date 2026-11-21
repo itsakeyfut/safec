@@ -23,8 +23,6 @@ Function a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:5:5 "f"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int *" "r"
-  Local "_11" "int *"
-  Local "_12" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:6:14 generated
     Call a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:6:14 written "malloc" "bb1"
@@ -109,10 +107,6 @@ Function a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:5:5 "f"
       Destination "_10"
       Use
         Copy "_7"
-    Operation a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:15:14 written
-      Destination "_11"
-      Use
-        Copy "_10"
     Sequenced a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:15:14 generated
     Goto "bb14"
   Block "bb13"
@@ -121,10 +115,6 @@ Function a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:5:5 "f"
       Destination "_10"
       Use
         Copy "_5"
-    Operation a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:15:30 written
-      Destination "_12"
-      Use
-        Copy "_10"
     Sequenced a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:15:30 generated
     Goto "bb14"
   Block "bb14"

@@ -17,9 +17,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_cal
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int"
-  Local "_10" "int" "r"
+  Local "_8" "int" "r"
   Block "bb0" entry
     Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:6:9 written
       Destination "_3"
@@ -63,11 +61,6 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_cal
         Deref
       Use
         Constant 1
-    Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:9:5 generated
     Branch a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:10:9 written "bb6" "bb7"
       Copy "_1"
@@ -81,21 +74,17 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_cal
     Goto "bb8"
   Block "bb8"
     Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:11:9 written
-      Destination "_9"
+      Destination "_7"
       Unary "Not"
         Copy "_4"
     Branch a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:11:9 written "bb10" "bb11"
-      Copy "_9"
+      Copy "_7"
   Block "bb9"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:10:14 generated
     Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:10:23 written
       Destination "_4"
       Use
         Constant 0
-    Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:10:23 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:10:23 generated
     Goto "bb8"
   Block "bb10"
@@ -111,7 +100,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_cal
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:12:9 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_4"
           Deref
@@ -124,6 +113,6 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_cal
     Operation a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:14:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote.c:14:12 generated
     Return

@@ -8,13 +8,10 @@ Function a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_bef
   Local "_5" "int *[1]" "m"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:2:9 written
       Destination "_1"
@@ -53,14 +50,14 @@ Function a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_bef
   Block "bb3"
     Sequenced a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:5:12 generated
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:13:12 written
-      Destination "_14"
+      Destination "_11"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:13:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_11"
     Sequenced a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:13:12 generated
     Return
   Block "bb4"
@@ -76,10 +73,6 @@ Function a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_bef
       Use
         Copy "_7"
           Deref
-    Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:8:13 written
-      Destination "_8"
-      Use
-        Copy "_2"
     Sequenced a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:8:13 generated
     Goto "bb6"
   Block "bb5"
@@ -87,39 +80,30 @@ Function a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_bef
     Goto "bb6"
   Block "bb6"
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:10:9 generated
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_5"
           Index
             Constant 0
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:10:16 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_1"
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:10:9 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
-        Copy "_10"
-    Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:10:9 written
-      Destination "_11"
-      Use
         Copy "_9"
-          Deref
     Sequenced a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:10:9 generated
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:11:13 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:11:9 written
       Destination "_3"
       Use
-        Copy "_12"
-    Operation a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:11:9 written
-      Destination "_13"
-      Use
-        Copy "_3"
+        Copy "_10"
     Sequenced a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:11:9 generated
     StorageDead a_local_array_made_again_each_turn_of_a_loop_is_reported_where_read_before_this_turn_wrote_it.c:12:5 generated "_5"
     Goto "bb1"

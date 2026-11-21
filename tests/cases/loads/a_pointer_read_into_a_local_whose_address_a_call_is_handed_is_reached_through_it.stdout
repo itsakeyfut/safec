@@ -13,9 +13,8 @@ Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_t
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
-  Local "_9" "int **"
+  Local "_7" "int *" "q"
+  Local "_8" "int **"
   Block "bb0" entry
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:4:5 generated
       Destination "_0"
@@ -84,25 +83,20 @@ Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_t
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:13:5 generated
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:14:14 generated
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:10 written
-      Destination "_9"
+      Destination "_8"
       Address
-        Place "_8"
+        Place "_7"
     ArgumentsEvaluated a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 generated
     Call a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 written "keep" "bb9"
-      Copy "_9"
+      Copy "_8"
   Block "bb9"
     Sequenced a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 generated
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:16:5 written

@@ -8,7 +8,6 @@ Function a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_say
   Local "_5" "void **"
   Local "_6" "void *" "w"
   Local "_7" "char *" "p"
-  Local "_8" "char"
   Block "bb0" entry
     Operation a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says.c:1:5 generated
       Destination "_0"
@@ -48,11 +47,6 @@ Function a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_say
         Deref
       Use
         Constant 1
-    Operation a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says.c:7:5 generated
     Operation a_void_pointer_read_out_of_memory_is_believed_as_wide_as_its_record_says.c:8:5 written
       Destination "_0"

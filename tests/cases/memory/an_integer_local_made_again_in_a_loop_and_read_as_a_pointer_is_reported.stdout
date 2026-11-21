@@ -11,8 +11,6 @@ Function an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported
   Local "_8" "int *" "q"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:2:9 written
       Destination "_1"
@@ -68,24 +66,16 @@ Function an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported
       Destination "_2"
       Use
         Copy "_9"
-    Operation an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:9:9 written
-      Destination "_10"
-      Use
-        Copy "_2"
     Sequenced an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:9:9 generated
     Operation an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:10:13 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:10:9 written
       Destination "_1"
       Use
-        Copy "_11"
-    Operation an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:10:9 written
-      Destination "_12"
-      Use
-        Copy "_1"
+        Copy "_10"
     Sequenced an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:10:9 generated
     StorageDead an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:11:5 generated "_8"
     StorageDead an_integer_local_made_again_in_a_loop_and_read_as_a_pointer_is_reported.c:11:5 generated "_7"

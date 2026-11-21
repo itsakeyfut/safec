@@ -335,6 +335,7 @@ pub fn lower(
         static_levels: HashMap::new(),
         pending: HashMap::new(),
         top_level: false,
+        discarding: None,
         root: None,
     };
 
@@ -465,6 +466,12 @@ struct Lowering<'a> {
     /// True at the root of a full expression, and kept only through the
     /// operands C sequences. See ADR-0022, and [`sequences`] for the list.
     top_level: bool,
+    /// The root of the full expression [`Lowering::effect`] is lowering,
+    /// whose value is discarded. An assignment there reads nothing back:
+    /// C17 6.5.16 p3 gives the expression a value and asks no read of the
+    /// left operand, and the read-back of `*p = 1` read `p` after the store
+    /// may have written it (#1137).
+    discarding: Option<ExprId>,
     /// The full expression being lowered, which is the expression
     /// [`Lowering::value`] was last asked for, and `None` while a parameter's
     /// length is, which is not one.
@@ -3001,7 +3008,10 @@ impl Lowering<'_> {
         root: ExprId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
-        if let Some(value) = self.walk(builder, root, true, diagnostics)? {
+        self.discarding = Some(root);
+        let walked = self.walk(builder, root, true, diagnostics);
+        self.discarding = None;
+        if let Some(value) = walked? {
             builder.discarded(value, self.ast.expr(root).span());
         }
         Some(())
@@ -3895,6 +3905,15 @@ impl Lowering<'_> {
                     origin: Origin::Written(span),
                 });
 
+                // **Nothing read back where the value is discarded**, an
+                // assignment that is a whole expression statement or a `for`
+                // clause: no value is pushed, which `effect` reads as `void`.
+                // See `Lowering::discarding`. Mutation: read it back anyway;
+                // `a_write_through_a_pointer_that_may_name_itself_is_asked_only_where_it_is_read_again`'s
+                // `after_an_out_parameter` reports `SC0413`.
+                if self.discarding == Some(id) {
+                    return Some(());
+                }
                 // 6.5.16 p3: the value is what the left operand holds after
                 // the assignment, and that is fixed here rather than read back
                 // later. `(b = 1) + g(&b)` is the case: 6.5.2.2 p10 makes the

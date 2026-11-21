@@ -13,12 +13,10 @@ Function a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_hol
   Local "_4" "int **"
   Local "_5" "int ***" "hh"
   Local "_6" "int ***"
-  Local "_7" "int **"
-  Local "_8" "int ***" "b"
-  Local "_9" "void *"
+  Local "_7" "int ***" "b"
+  Local "_8" "void *"
+  Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int **"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:5:15 written
       Destination "_4"
@@ -47,11 +45,6 @@ Function a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_hol
         Deref
       Use
         Constant 0
-    Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:7:12 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:7:12 generated
     Goto "bb3"
   Block "bb2"
@@ -60,20 +53,20 @@ Function a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_hol
   Block "bb3"
     ArgumentsEvaluated a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:8:16 generated
     Call a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:8:16 written "malloc" "bb4"
-      Destination "_9"
+      Destination "_8"
       Constant 8
   Block "bb4"
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:8:12 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:8:16 generated
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:9:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
-        Copy "_8"
+        Copy "_7"
     Branch a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:9:9 written "bb5" "bb6"
-      Copy "_10"
+      Copy "_9"
   Block "bb5"
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:9:9 generated
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:9:13 written
@@ -87,29 +80,24 @@ Function a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_hol
     Goto "bb7"
   Block "bb7"
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:10:5 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
         Copy "_3"
-    Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:10:5 written
-      Destination "_11"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:10:5 generated
     ArgumentsEvaluated a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:11:5 generated
     Call a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:11:5 written "fillb" "bb8"
-      Copy "_8"
+      Copy "_7"
   Block "bb8"
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:11:5 generated
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:12:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Operation a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:12:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_local_a_block_holds_beside_a_null_stored_through_a_pointer_to_its_holder_is_not_believed_written_by_a_call.c:12:12 generated
     Return

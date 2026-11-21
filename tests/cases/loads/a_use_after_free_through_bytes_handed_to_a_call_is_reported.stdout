@@ -15,16 +15,13 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "void *" "vs"
-  Local "_9" "char *" "s"
-  Local "_10" "int" "i"
+  Local "_7" "void *" "vs"
+  Local "_8" "char *" "s"
+  Local "_9" "int" "i"
+  Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "char *"
-  Local "_14" "char *"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_12" "char *"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 generated
       Destination "_0"
@@ -93,45 +90,40 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
         Deref
       Use
         Copy "_4"
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:14:5 generated
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:15:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:15:16 generated
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:16:11 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:16:15 generated
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:17:9 written
-      Destination "_10"
+      Destination "_9"
       Use
         Constant 0
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:17:13 generated
     Goto "bb9"
   Block "bb9"
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Lt"
-        Copy "_10"
+        Copy "_9"
         Constant 8
     Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 written "bb10" "bb11"
-      Copy "_11"
+      Copy "_10"
   Block "bb10"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 generated
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 written
-      Destination "_12"
+      Destination "_11"
       Binary "Ne"
-        Copy "_9"
+        Copy "_8"
         Constant 0
     Branch a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 written "bb12" "bb13"
-      Copy "_12"
+      Copy "_11"
   Block "bb11"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:18:12 generated
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:25:5 generated
@@ -140,39 +132,31 @@ Function a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:5:5 "main
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 generated
     ArgumentsEvaluated a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:20:13 generated
     Call a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:20:13 written "stash" "bb15"
-      Copy "_9"
+      Copy "_8"
         Deref
   Block "bb13"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:19:13 generated
     Goto "bb14"
   Block "bb14"
     Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:13 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_8"
+        Constant 1
+    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:9 written
+      Destination "_8"
+      Use
+        Copy "_12"
+    Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:9 generated
+    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:13 written
       Destination "_13"
       Binary "Add"
         Copy "_9"
         Constant 1
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:9 written
+    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:9 written
       Destination "_9"
       Use
         Copy "_13"
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:9 written
-      Destination "_14"
-      Use
-        Copy "_9"
-    Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:22:9 generated
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:13 written
-      Destination "_15"
-      Binary "Add"
-        Copy "_10"
-        Constant 1
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:9 written
-      Destination "_10"
-      Use
-        Copy "_15"
-    Operation a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:9 written
-      Destination "_16"
-      Use
-        Copy "_10"
     Sequenced a_use_after_free_through_bytes_handed_to_a_call_is_reported.c:23:9 generated
     Goto "bb9"
   Block "bb15"

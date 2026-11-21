@@ -13,10 +13,8 @@ Function a_pointer_written_into_a_local_through_its_address_and_read_back_after_
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *" "q"
-  Local "_10" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:4:5 generated
       Destination "_0"
@@ -70,22 +68,12 @@ Function a_pointer_written_into_a_local_through_its_address_and_read_back_after_
         Deref
       Use
         Constant 1
-    Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:11:5 generated
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:12:5 written
       Destination "_2"
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:12:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:12:5 generated
     ArgumentsEvaluated a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:13:5 generated
     Call a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:13:5 written "free" "bb5"
@@ -93,18 +81,18 @@ Function a_pointer_written_into_a_local_through_its_address_and_read_back_after_
   Block "bb5"
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:13:5 generated
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:14:10 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_2"
           Deref
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:14:14 generated
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:15:9 written
-      Destination "_10"
+      Destination "_8"
       Binary "Eq"
-        Copy "_9"
+        Copy "_7"
         Constant 0
     Branch a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:15:9 written "bb6" "bb7"
-      Copy "_10"
+      Copy "_8"
   Block "bb6"
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:15:9 generated
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:16:9 written
@@ -120,7 +108,7 @@ Function a_pointer_written_into_a_local_through_its_address_and_read_back_after_
     Operation a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:18:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_7"
           Deref
     Sequenced a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven.c:18:12 generated
     Return

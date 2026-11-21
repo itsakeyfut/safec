@@ -15,9 +15,8 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_dou
   Local "_6" "int"
   Local "_7" "int **" "p"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *" "t"
-  Local "_11" "int"
+  Local "_9" "int *" "t"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:3:10 written
       Destination "_3"
@@ -70,10 +69,6 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_dou
       Destination "_7"
       Use
         Copy "_8"
-    Operation a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:7:14 written
-      Destination "_9"
-      Use
-        Copy "_7"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:7:14 generated
     Goto "bb7"
   Block "bb6"
@@ -81,7 +76,7 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_dou
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:8:10 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_7"
           Deref
@@ -92,12 +87,12 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_dou
   Block "bb8"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:9:5 generated
     Operation a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:10:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Branch a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:10:9 written "bb9" "bb10"
-      Copy "_11"
+      Copy "_10"
   Block "bb9"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:10:9 generated
     Operation a_pointer_that_may_name_a_block_nothing_wrote_or_a_written_local_is_doubted_where_read_through.c:10:17 written

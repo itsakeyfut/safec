@@ -29,21 +29,15 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
   Local "_5" "int *" "q"
   Local "_6" "int" "i"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "int"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int **" "b2"
+  Local "_12" "void *"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int **" "b2"
-  Local "_17" "void *"
-  Local "_18" "int"
-  Local "_19" "int **"
-  Local "_20" "int *" "r"
-  Local "_21" "int"
-  Local "_22" "int" "v"
+  Local "_14" "int *" "r"
+  Local "_15" "int"
+  Local "_16" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:8:17 generated
     Call a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:8:17 written "malloc" "bb1"
@@ -103,14 +97,10 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
       Destination "_4"
       Use
         Copy "_5"
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:14:9 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:14:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:15:13 generated
     Call a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:15:13 written "malloc" "bb8"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb7"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:13:12 generated
@@ -119,33 +109,24 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
         Deref
       Use
         Copy "_4"
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:20:5 written
-      Destination "_15"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:20:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:21:16 generated
     Call a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:21:16 written "realloc" "bb12"
-      Destination "_17"
+      Destination "_12"
       Copy "_1"
       Constant 16
   Block "bb8"
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:15:9 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:15:9 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:15:9 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:16:13 written
-      Destination "_11"
+      Destination "_9"
       Unary "Not"
         Copy "_5"
     Branch a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:16:13 written "bb9" "bb10"
-      Copy "_11"
+      Copy "_9"
   Block "bb9"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:16:13 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:16:17 written
@@ -163,39 +144,30 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
         Deref
       Use
         Constant 1
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:17:9 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:17:9 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:18:13 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:18:9 written
       Destination "_6"
       Use
-        Copy "_13"
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:18:9 written
-      Destination "_14"
-      Use
-        Copy "_6"
+        Copy "_10"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:18:9 generated
     Goto "bb5"
   Block "bb12"
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:21:11 written
-      Destination "_16"
+      Destination "_11"
       Use
-        Copy "_17"
+        Copy "_12"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:21:16 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:22:9 written
-      Destination "_18"
+      Destination "_13"
       Unary "Not"
-        Copy "_16"
+        Copy "_11"
     Branch a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:22:9 written "bb13" "bb14"
-      Copy "_18"
+      Copy "_13"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:22:9 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:22:14 written
@@ -211,11 +183,7 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:23:5 written
       Destination "_1"
       Use
-        Copy "_16"
-    Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:23:5 written
-      Destination "_19"
-      Use
-        Copy "_1"
+        Copy "_11"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:23:5 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:24:5 generated
     Call a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:24:5 written "free" "bb16"
@@ -223,17 +191,17 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
   Block "bb16"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:24:5 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:25:10 written
-      Destination "_20"
+      Destination "_14"
       Use
         Copy "_1"
           Deref
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:25:14 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:26:9 written
-      Destination "_21"
+      Destination "_15"
       Unary "Not"
-        Copy "_20"
+        Copy "_14"
     Branch a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:26:9 written "bb17" "bb18"
-      Copy "_21"
+      Copy "_15"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:26:9 generated
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:26:13 written
@@ -247,9 +215,9 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
     Goto "bb19"
   Block "bb19"
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:27:9 written
-      Destination "_22"
+      Destination "_16"
       Use
-        Copy "_20"
+        Copy "_14"
           Deref
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:27:13 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:28:5 generated
@@ -265,6 +233,6 @@ Function a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:7:5 "f
     Operation a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:30:5 written
       Destination "_0"
       Use
-        Copy "_22"
+        Copy "_16"
     Sequenced a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted.c:30:12 generated
     Return

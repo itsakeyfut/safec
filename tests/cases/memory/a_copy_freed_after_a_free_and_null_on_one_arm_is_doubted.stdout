@@ -11,7 +11,6 @@ Function a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:4:5 "main"
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int *" "q"
-  Local "_5" "int *"
   Block "bb0" entry
     Operation a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:4:5 generated
       Destination "_0"
@@ -52,10 +51,6 @@ Function a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:4:5 "main"
       Destination "_2"
       Use
         Constant 0
-    Operation a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:9:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted.c:9:9 generated
     Goto "bb4"
   Block "bb6"

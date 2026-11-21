@@ -17,11 +17,9 @@ Function a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_wh
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int **"
-  Local "_6" "int **"
-  Local "_7" "int ***" "c"
-  Local "_8" "void *" "pc"
-  Local "_9" "int ****"
-  Local "_10" "int *"
+  Local "_6" "int ***" "c"
+  Local "_7" "void *" "pc"
+  Local "_8" "int ****"
   Block "bb0" entry
     Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:6:10 written
       Destination "_1"
@@ -61,39 +59,30 @@ Function a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_wh
         Deref
       Use
         Copy "_5"
-    Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:11:5 written
-      Destination "_6"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:11:5 generated
     Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:12:12 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_2"
     Sequenced a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:12:16 generated
     Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:13:16 written
-      Destination "_9"
-      Address
-        Place "_7"
-    Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:13:11 written
       Destination "_8"
+      Address
+        Place "_6"
+    Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:13:11 written
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:13:16 generated
     ArgumentsEvaluated a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:14:5 generated
     Call a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:14:5 written "stash" "bb5"
-      Copy "_8"
+      Copy "_7"
   Block "bb5"
     Sequenced a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:14:5 generated
     Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:15:5 written
       Destination "_1"
       Use
         Constant 0
-    Operation a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:15:5 written
-      Destination "_10"
-      Use
-        Copy "_1"
     Sequenced a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:15:5 generated
     ArgumentsEvaluated a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:16:5 generated
     Call a_local_memory_below_one_a_callee_was_handed_as_bytes_holds_is_asked_when_handed_on.c:16:5 written "later" "bb6"

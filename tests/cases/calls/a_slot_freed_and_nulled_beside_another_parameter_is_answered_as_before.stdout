@@ -7,11 +7,9 @@ Function a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.
   Local "_1" "int **" parameter "slot"
   Local "_2" "int **" parameter "other"
   Local "_3" "int"
-  Local "_4" "int *"
-  Local "_5" "int"
-  Local "_6" "int *" "o"
-  Local "_7" "int"
-  Local "_8" "int"
+  Local "_4" "int"
+  Local "_5" "int *" "o"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:3:9 written
       Destination "_3"
@@ -37,18 +35,13 @@ Function a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.
         Deref
       Use
         Constant 0
-    Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:5:5 generated
     Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:6:9 written
-      Destination "_5"
+      Destination "_4"
       Unary "Not"
         Copy "_2"
     Branch a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:6:9 written "bb5" "bb6"
-      Copy "_5"
+      Copy "_4"
   Block "bb5"
     Sequenced a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:6:9 generated
     Return
@@ -57,17 +50,17 @@ Function a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.
     Goto "bb7"
   Block "bb7"
     Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:7:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
           Deref
     Sequenced a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:7:14 generated
     Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:8:9 written
-      Destination "_7"
+      Destination "_6"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:8:9 written "bb8" "bb9"
-      Copy "_7"
+      Copy "_6"
   Block "bb8"
     Sequenced a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:8:9 generated
     Return
@@ -76,14 +69,9 @@ Function a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.
     Goto "bb10"
   Block "bb10"
     Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:9:5 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
         Constant 1
-    Operation a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:9:5 generated
     Return

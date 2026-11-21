@@ -15,7 +15,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:3:6 "set2"
   Local "_0" "void" return
   Local "_1" "int **" parameter "pp"
   Local "_2" "int *" "p"
-  Local "_3" "int"
   Block "bb0" entry
     Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:4:9 written "bb1" "bb2"
       Copy "_1"
@@ -42,11 +41,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:3:6 "set2"
         Deref
       Use
         Constant 2
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:7:13 written
-      Destination "_3"
-      Use
-        Copy "_2"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -90,7 +84,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:15:7 "retu
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:16:15 generated
     Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:16:15 written "malloc" "bb1"
@@ -118,11 +111,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:15:7 "retu
         Deref
       Use
         Copy "_4"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:18:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:18:9 generated
     Goto "bb4"
   Block "bb3"
@@ -140,7 +128,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:22:6 "out_
   Local "_1" "int **" parameter "out"
   Local "_2" "int *"
   Local "_3" "int *"
-  Local "_4" "int *"
   Block "bb0" entry
     Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:23:9 written "bb1" "bb2"
       Copy "_1"
@@ -158,11 +145,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:22:6 "out_
         Deref
       Use
         Copy "_3"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:24:9 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:24:9 generated
     Goto "bb3"
   Block "bb2"
@@ -175,7 +157,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:28:6 "into
   Local "_1" "char **"
   Local "_2" "char (*)[3]"
   Local "_3" "char *"
-  Local "_4" "char *"
   Block "bb0" entry
     Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:29:5 generated
       Destination "_1"
@@ -192,11 +173,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:28:6 "into
         Deref
       Use
         Copy "_3"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:29:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:29:5 generated
     Return
 Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:31:6 "cast_after_arrival"
@@ -205,7 +181,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:31:6 "cast
   Local "_2" "int **" "q"
   Local "_3" "int **"
   Local "_4" "int *" "p"
-  Local "_5" "int"
   Block "bb0" entry
     Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:32:9 written "bb1" "bb2"
       Copy "_1"
@@ -242,11 +217,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:31:6 "cast
         Deref
       Use
         Constant 2
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:36:13 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:36:13 generated
     Goto "bb6"
   Block "bb5"
@@ -263,7 +233,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:40:6 "thre
   Local "_3" "char ***"
   Local "_4" "char **" "r"
   Local "_5" "char *" "s"
-  Local "_6" "char"
   Block "bb0" entry
     Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:41:9 written "bb1" "bb2"
       Copy "_1"
@@ -318,11 +287,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:40:6 "thre
         Deref
       Use
         Constant 120
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:47:17 written
-      Destination "_6"
-      Use
-        Copy "_5"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:47:17 generated
     Goto "bb9"
   Block "bb8"
@@ -407,7 +371,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:68:6 "a_wr
   Local "_1" "char **"
   Local "_2" "char (*)[3]"
   Local "_3" "char *"
-  Local "_4" "char *"
   Block "bb0" entry
     Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:69:5 generated
       Destination "_1"
@@ -424,11 +387,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:68:6 "a_wr
         Deref
       Use
         Copy "_3"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:69:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:69:5 generated
     Return
 Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:71:13 "result" declared
@@ -439,7 +397,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:72:6 "cast
   Local "_2" "int **"
   Local "_3" "int **"
   Local "_4" "int *" "p"
-  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:73:23 generated
     Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:73:23 written "result" "bb1"
@@ -479,11 +436,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:72:6 "cast
         Deref
       Use
         Constant 2
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:77:13 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:77:13 generated
     Goto "bb7"
   Block "bb6"
@@ -497,7 +449,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:82:6 "into
   Local "_1" "char **"
   Local "_2" "char (*)[3]"
   Local "_3" "char *"
-  Local "_4" "char *"
   Block "bb0" entry
     Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:83:5 generated
       Destination "_1"
@@ -514,11 +465,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:82:6 "into
         Deref
       Use
         Copy "_3"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:83:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:83:5 generated
     Return
 Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:85:6 "unp" declared
@@ -558,7 +504,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:90:7 "retu
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:91:15 generated
     Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:91:15 written "malloc" "bb1"
@@ -586,11 +531,6 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:90:7 "retu
         Deref
       Use
         Copy "_4"
-    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:93:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:93:9 generated
     Goto "bb4"
   Block "bb3"

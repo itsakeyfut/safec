@@ -11,13 +11,11 @@ Function a_local_shown_narrower_is_said_so_when_reached_directly_first.c:4:5 "ma
   Local "_2" "void *" "v"
   Local "_3" "void *"
   Local "_4" "void *"
-  Local "_5" "void *"
-  Local "_6" "void *" "w"
-  Local "_7" "void **"
-  Local "_8" "void *" "pv"
+  Local "_5" "void *" "w"
+  Local "_6" "void **"
+  Local "_7" "void *" "pv"
+  Local "_8" "void **"
   Local "_9" "void **"
-  Local "_10" "void **"
-  Local "_11" "void *"
   Block "bb0" entry
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:4:5 generated
       Destination "_0"
@@ -46,22 +44,22 @@ Function a_local_shown_narrower_is_said_so_when_reached_directly_first.c:4:5 "ma
     Goto "bb4"
   Block "bb4"
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:9:15 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:9:11 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:9:15 generated
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:10:16 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_2"
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:10:11 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:10:16 generated
     Branch a_local_shown_narrower_is_said_so_when_reached_directly_first.c:11:9 written "bb6" "bb7"
       Copy "_1"
@@ -70,26 +68,18 @@ Function a_local_shown_narrower_is_said_so_when_reached_directly_first.c:4:5 "ma
       Destination "_2"
       Use
         Copy "_4"
-    Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:7:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:7:9 generated
     Goto "bb4"
   Block "bb6"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:11:9 generated
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:12:14 written
-      Destination "_10"
+      Destination "_9"
       Address
-        Place "_6"
+        Place "_5"
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:12:9 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_10"
-    Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:12:9 written
-      Destination "_11"
-      Use
-        Copy "_8"
+        Copy "_9"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:12:9 generated
     Goto "bb8"
   Block "bb7"
@@ -98,7 +88,7 @@ Function a_local_shown_narrower_is_said_so_when_reached_directly_first.c:4:5 "ma
   Block "bb8"
     ArgumentsEvaluated a_local_shown_narrower_is_said_so_when_reached_directly_first.c:14:5 generated
     Call a_local_shown_narrower_is_said_so_when_reached_directly_first.c:14:5 written "use" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced a_local_shown_narrower_is_said_so_when_reached_directly_first.c:14:5 generated
     Operation a_local_shown_narrower_is_said_so_when_reached_directly_first.c:15:5 written

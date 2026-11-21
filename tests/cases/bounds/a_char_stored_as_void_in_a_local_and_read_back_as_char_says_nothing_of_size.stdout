@@ -8,7 +8,6 @@ Function a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_
   Local "_5" "void **"
   Local "_6" "char **" "pc"
   Local "_7" "char *" "p"
-  Local "_8" "char"
   Block "bb0" entry
     Operation a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size.c:1:5 generated
       Destination "_0"
@@ -48,11 +47,6 @@ Function a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_
         Deref
       Use
         Constant 1
-    Operation a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size.c:7:5 generated
     Operation a_char_stored_as_void_in_a_local_and_read_back_as_char_says_nothing_of_size.c:8:5 written
       Destination "_0"

@@ -16,11 +16,8 @@ Function a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:2:6 "g"
   Local "_10" "int **" "t"
   Local "_11" "int" "i"
   Local "_12" "int"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int *"
-  Local "_16" "int"
-  Local "_17" "int"
+  Local "_13" "int"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:3:15 generated
     Call a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:3:15 written "malloc" "bb1"
@@ -92,20 +89,11 @@ Function a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:2:6 "g"
         Deref
       Use
         Copy "_5"
-    Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:35 written
-      Destination "_13"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:35 generated
     Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:45 written
       Destination "_5"
       Use
         Constant 0
-    Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:45 written
-      Destination "_14"
-      Use
-        Copy "_5"
     Sequenced a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:45 generated
     Branch a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:56 written "bb10" "bb11"
       Copy "_3"
@@ -120,11 +108,6 @@ Function a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:2:6 "g"
         Deref
       Use
         Copy "_2"
-    Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:59 written
-      Destination "_15"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:59 generated
     Goto "bb12"
   Block "bb11"
@@ -132,17 +115,17 @@ Function a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:2:6 "g"
     Goto "bb12"
   Block "bb12"
     Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:28 written
-      Destination "_16"
+      Destination "_13"
       Use
         Copy "_11"
     Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:28 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_11"
         Constant 1
     Operation a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:28 written
       Destination "_11"
       Use
-        Copy "_17"
+        Copy "_14"
     Sequenced a_block_stored_out_in_a_loop_left_through_its_head_is_doubted.c:6:28 generated
     Goto "bb7"

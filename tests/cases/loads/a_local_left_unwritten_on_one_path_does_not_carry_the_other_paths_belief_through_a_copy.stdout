@@ -13,15 +13,14 @@ Function a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belie
   Local "_2" "int **" parameter "pp"
   Local "_3" "int"
   Local "_4" "int *" "t"
-  Local "_5" "int *"
-  Local "_6" "void *" "m"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "void *"
-  Local "_11" "int **" "ib"
-  Local "_12" "int *" "r"
-  Local "_13" "int"
+  Local "_5" "void *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int **" "ib"
+  Local "_11" "int *" "r"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:4:9 written
       Destination "_3"
@@ -50,10 +49,6 @@ Function a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belie
       Use
         Copy "_2"
           Deref
-    Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:6:12 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:6:12 generated
     Goto "bb6"
   Block "bb5"
@@ -62,20 +57,20 @@ Function a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belie
   Block "bb6"
     ArgumentsEvaluated a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:7:15 generated
     Call a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:7:15 written "malloc" "bb7"
-      Destination "_7"
+      Destination "_6"
       Constant 8
   Block "bb7"
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:7:11 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:7:15 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:8:9 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:8:9 written "bb8" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb8"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:8:9 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:8:13 written
@@ -89,34 +84,34 @@ Function a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belie
     Goto "bb10"
   Block "bb10"
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:15 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_4"
     ArgumentsEvaluated a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:5 generated
     Call a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:5 written "memcpy" "bb11"
-      Destination "_10"
-      Copy "_6"
-      Copy "_9"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
       Constant 8
   Block "bb11"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:9:5 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:10:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:10:16 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:11:10 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:11:14 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:12:9 written
-      Destination "_13"
+      Destination "_12"
       Unary "Not"
-        Copy "_12"
+        Copy "_11"
     Branch a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:12:9 written "bb12" "bb13"
-      Copy "_13"
+      Copy "_12"
   Block "bb12"
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:12:9 generated
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:12:13 written
@@ -132,7 +127,7 @@ Function a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belie
     Operation a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:13:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_local_left_unwritten_on_one_path_does_not_carry_the_other_paths_belief_through_a_copy.c:13:12 generated
     Return

@@ -16,8 +16,6 @@ Function a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted
   Local "_7" "int *" "x"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:29 generated
     Call a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:29 written "malloc" "bb1"
@@ -131,22 +129,12 @@ Function a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted
         Deref
       Use
         Copy "_7"
-    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:191 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:191 generated
     Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:199 generated
     Operation a_box_holding_a_freed_pointer_returned_through_a_dereference_is_doubted.c:4:207 written
       Destination "_0"

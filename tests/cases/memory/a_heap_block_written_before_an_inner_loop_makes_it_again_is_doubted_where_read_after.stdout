@@ -11,17 +11,14 @@ Function a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_whe
   Local "_2" "int **" "b"
   Local "_3" "int" "j"
   Local "_4" "int"
-  Local "_5" "int *"
-  Local "_6" "int" "i"
-  Local "_7" "int"
-  Local "_8" "void *"
-  Local "_9" "int **"
+  Local "_5" "int" "i"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int *" "y"
-  Local "_15" "int *"
+  Local "_12" "int *" "y"
   Block "bb0" entry
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:4:9 written
       Destination "_2"
@@ -51,7 +48,7 @@ Function a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_whe
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:5:19 generated
     StorageDead a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:11:3 generated "_3"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:12:8 written
-      Destination "_14"
+      Destination "_12"
       Use
         Constant 0
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:12:12 generated
@@ -64,32 +61,27 @@ Function a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_whe
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:6:12 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:6:12 generated
     Goto "bb6"
   Block "bb5"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:6:9 generated
     Goto "bb6"
   Block "bb6"
-    StorageLive a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:10 generated "_6"
+    StorageLive a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:10 generated "_5"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:14 written
-      Destination "_6"
+      Destination "_5"
       Use
         Constant 0
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:18 generated
     Goto "bb7"
   Block "bb7"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:21 written
-      Destination "_7"
+      Destination "_6"
       Binary "Lt"
-        Copy "_6"
+        Copy "_5"
         Constant 2
     Branch a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:21 written "bb8" "bb9"
-      Copy "_7"
+      Copy "_6"
   Block "bb8"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:21 generated
     ArgumentsEvaluated a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:8:7 generated
@@ -97,64 +89,56 @@ Function a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_whe
       Copy "_2"
   Block "bb9"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:21 generated
-    StorageDead a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:10:5 generated "_6"
+    StorageDead a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:10:5 generated "_5"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:5:26 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_3"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:5:26 written
-      Destination "_13"
+      Destination "_11"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:5:26 written
       Destination "_3"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:5:26 generated
     Goto "bb1"
   Block "bb10"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:8:7 generated
     ArgumentsEvaluated a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:9:11 generated
     Call a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:9:11 written "malloc" "bb11"
-      Destination "_8"
+      Destination "_7"
       Constant 16
   Block "bb11"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:9:7 written
       Destination "_2"
       Use
-        Copy "_8"
-    Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:9:7 written
-      Destination "_9"
-      Use
-        Copy "_2"
+        Copy "_7"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:9:7 generated
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:28 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_6"
+        Copy "_5"
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:28 written
-      Destination "_11"
+      Destination "_9"
       Binary "Add"
-        Copy "_6"
+        Copy "_5"
         Constant 1
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:28 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:7:28 generated
     Goto "bb7"
   Block "bb12"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:13:7 generated
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:13:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_2"
           Deref
-    Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:13:10 written
-      Destination "_15"
-      Use
-        Copy "_14"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:13:10 generated
     Goto "bb14"
   Block "bb13"
@@ -169,6 +153,6 @@ Function a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_whe
     Operation a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:15:3 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_heap_block_written_before_an_inner_loop_makes_it_again_is_doubted_where_read_after.c:15:10 generated
     Return

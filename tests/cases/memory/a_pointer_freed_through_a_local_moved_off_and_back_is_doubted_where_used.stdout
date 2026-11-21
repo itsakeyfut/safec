@@ -15,10 +15,6 @@ Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_use
   Local "_6" "int **"
   Local "_7" "int **"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int *"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:3:5 generated
       Destination "_0"
@@ -62,35 +58,22 @@ Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_use
       Destination "_5"
       Use
         Copy "_7"
-    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
     Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:7:5 generated
     Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:10 written
-      Destination "_9"
+      Destination "_8"
       Binary "Sub"
         Copy "_5"
         Constant 1
     Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:8:5 generated
     Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 written
       Destination "_5"
         Deref
       Use
         Copy "_3"
-    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 written
-      Destination "_11"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:9:5 generated
     ArgumentsEvaluated a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:10:5 generated
     Call a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:10:5 written "free" "bb3"
@@ -102,11 +85,6 @@ Function a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_use
         Deref
       Use
         Constant 1
-    Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:11:5 written
-      Destination "_12"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:11:5 generated
     Operation a_pointer_freed_through_a_local_moved_off_and_back_is_doubted_where_used.c:12:5 written
       Destination "_0"

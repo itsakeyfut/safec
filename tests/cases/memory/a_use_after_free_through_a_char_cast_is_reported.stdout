@@ -12,7 +12,6 @@ Function a_use_after_free_through_a_char_cast_is_reported.c:3:5 "main"
   Local "_3" "int"
   Local "_4" "char *" "c"
   Local "_5" "char *"
-  Local "_6" "char"
   Block "bb0" entry
     Operation a_use_after_free_through_a_char_cast_is_reported.c:3:5 generated
       Destination "_0"
@@ -65,11 +64,6 @@ Function a_use_after_free_through_a_char_cast_is_reported.c:3:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_use_after_free_through_a_char_cast_is_reported.c:10:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_use_after_free_through_a_char_cast_is_reported.c:10:5 generated
     Operation a_use_after_free_through_a_char_cast_is_reported.c:11:5 written
       Destination "_0"

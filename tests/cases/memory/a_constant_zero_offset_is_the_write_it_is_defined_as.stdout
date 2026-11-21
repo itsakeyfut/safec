@@ -13,8 +13,6 @@ Function a_constant_zero_offset_is_the_write_it_is_defined_as.c:3:5 "f"
   Local "_4" "void *"
   Local "_5" "int **" "pp"
   Local "_6" "int **"
-  Local "_7" "int *"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_constant_zero_offset_is_the_write_it_is_defined_as.c:4:14 generated
     Call a_constant_zero_offset_is_the_write_it_is_defined_as.c:4:14 written "malloc" "bb1"
@@ -50,11 +48,6 @@ Function a_constant_zero_offset_is_the_write_it_is_defined_as.c:3:5 "f"
         Deref
       Use
         Copy "_3"
-    Operation a_constant_zero_offset_is_the_write_it_is_defined_as.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_constant_zero_offset_is_the_write_it_is_defined_as.c:7:5 generated
     ArgumentsEvaluated a_constant_zero_offset_is_the_write_it_is_defined_as.c:8:5 generated
     Call a_constant_zero_offset_is_the_write_it_is_defined_as.c:8:5 written "free" "bb3"
@@ -66,11 +59,6 @@ Function a_constant_zero_offset_is_the_write_it_is_defined_as.c:3:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_constant_zero_offset_is_the_write_it_is_defined_as.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_constant_zero_offset_is_the_write_it_is_defined_as.c:9:5 generated
     Operation a_constant_zero_offset_is_the_write_it_is_defined_as.c:10:5 written
       Destination "_0"

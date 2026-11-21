@@ -21,11 +21,9 @@ Function the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_w
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *" "r"
-  Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int *" "s"
-  Local "_11" "void *"
-  Local "_12" "int"
+  Local "_8" "int *" "s"
+  Local "_9" "void *"
+  Local "_10" "int"
   Block "bb0" entry
     Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:6:17 written
       Destination "_3"
@@ -72,10 +70,6 @@ Function the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_w
       Destination "_7"
       Use
         Copy "_2"
-    Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:9:14 written
-      Destination "_8"
-      Use
-        Copy "_7"
     Sequenced the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:9:14 generated
     Goto "bb8"
   Block "bb7"
@@ -84,30 +78,26 @@ Function the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_w
       Destination "_7"
       Use
         Copy "_4"
-    Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:9:30 written
-      Destination "_9"
-      Use
-        Copy "_7"
     Sequenced the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:9:30 generated
     Goto "bb8"
   Block "bb8"
     ArgumentsEvaluated the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:10:14 generated
     Call the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:10:14 written "realloc" "bb9"
-      Destination "_11"
+      Destination "_9"
       Copy "_7"
       Constant 8
   Block "bb9"
     Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:10:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:10:14 generated
     Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:9 written
-      Destination "_12"
+      Destination "_10"
       Unary "Not"
-        Copy "_10"
+        Copy "_8"
     Branch the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:9 written "bb10" "bb11"
-      Copy "_12"
+      Copy "_10"
   Block "bb10"
     Sequenced the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:9 generated
     ArgumentsEvaluated the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:15 generated
@@ -119,7 +109,7 @@ Function the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_w
   Block "bb12"
     ArgumentsEvaluated the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:12:5 generated
     Call the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:12:5 written "free" "bb14"
-      Copy "_10"
+      Copy "_8"
   Block "bb13"
     Sequenced the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:15 generated
     Operation the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with.c:11:24 written

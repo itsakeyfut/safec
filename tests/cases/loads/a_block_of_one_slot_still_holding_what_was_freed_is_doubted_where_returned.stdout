@@ -12,7 +12,6 @@ Function a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_retur
   Local "_3" "int"
   Local "_4" "int *" "x"
   Local "_5" "void *"
-  Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:5:15 generated
     Call a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:5:15 written "malloc" "bb1"
@@ -58,11 +57,6 @@ Function a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_retur
         Deref
       Use
         Copy "_4"
-    Operation a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:8:5 generated
     ArgumentsEvaluated a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:9:5 generated
     Call a_block_of_one_slot_still_holding_what_was_freed_is_doubted_where_returned.c:9:5 written "free" "bb6"

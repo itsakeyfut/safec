@@ -17,9 +17,8 @@ Function a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_in
   Local "_6" "int **" "m"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "int **" "q"
-  Local "_11" "void *"
+  Local "_9" "int **" "q"
+  Local "_10" "void *"
   Block "bb0" entry
     Operation a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:3:9 written
       Destination "_2"
@@ -85,23 +84,18 @@ Function a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_in
         Deref
       Use
         Copy "_6"
-    Operation a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:8:5 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:8:5 generated
     Operation a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:9:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
           Deref
     Sequenced a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:9:15 generated
     ArgumentsEvaluated a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:10:5 generated
     Call a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:10:5 written "memcpy" "bb12"
-      Destination "_11"
+      Destination "_10"
       Copy "_1"
-      Copy "_10"
+      Copy "_9"
       Constant 8
   Block "bb12"
     Sequenced a_copy_of_a_block_nothing_wrote_through_a_pointer_read_out_of_memory_into_caller_memory_is_doubted.c:10:5 generated

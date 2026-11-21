@@ -16,7 +16,6 @@ Function a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_h
   Local "_2" "void *"
   Local "_3" "int *" "r"
   Local "_4" "int **"
-  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds.c:6:14 generated
     Call a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds.c:6:14 written "malloc" "bb1"
@@ -56,11 +55,6 @@ Function a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_h
         Deref
       Use
         Constant 1
-    Operation a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds.c:11:5 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds.c:11:5 generated
     Operation a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds.c:12:5 written
       Destination "_0"

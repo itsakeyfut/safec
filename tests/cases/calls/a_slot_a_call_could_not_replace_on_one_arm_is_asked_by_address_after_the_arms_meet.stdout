@@ -17,12 +17,11 @@ Function a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_th
   Local "_5" "int **" "h"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *" "b"
-  Local "_10" "int **"
-  Local "_11" "int *" "c"
-  Local "_12" "int **"
-  Local "_13" "int"
+  Local "_8" "int *" "b"
+  Local "_9" "int **"
+  Local "_10" "int *" "c"
+  Local "_11" "int **"
+  Local "_12" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:6:14 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:6:14 written "malloc" "bb1"
@@ -87,55 +86,50 @@ Function a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_th
         Deref
       Use
         Copy "_2"
-    Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:14:5 generated
     Branch a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:15:9 written "bb9" "bb10"
       Copy "_1"
   Block "bb9"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:15:9 generated
-    StorageLive a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:16:9 generated "_9"
+    StorageLive a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:16:9 generated "_8"
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:16:14 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_2"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:16:18 generated
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:21 written
-      Destination "_10"
+      Destination "_9"
       Address
-        Place "_9"
+        Place "_8"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 written "release_ref" "bb12"
-      Copy "_10"
+      Copy "_9"
   Block "bb10"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:15:9 generated
     Goto "bb11"
   Block "bb11"
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:19:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_5"
           Deref
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:19:14 generated
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:17 written
-      Destination "_12"
+      Destination "_11"
       Address
-        Place "_11"
+        Place "_10"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 written "use2" "bb13"
-      Destination "_13"
-      Copy "_12"
+      Destination "_12"
+      Copy "_11"
   Block "bb12"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 generated
-    StorageDead a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:18:5 generated "_9"
+    StorageDead a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:18:5 generated "_8"
     Goto "bb11"
   Block "bb13"
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 generated
     Return

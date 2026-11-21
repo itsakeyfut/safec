@@ -17,11 +17,9 @@ Function a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubt
   Local "_6" "int **" "n"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "void *"
-  Local "_12" "int *" "r"
-  Local "_13" "int"
+  Local "_9" "void *"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:3:15 generated
     Call a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:3:15 written "malloc" "bb1"
@@ -84,11 +82,6 @@ Function a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubt
         Deref
       Use
         Copy "_2"
-    Operation a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:5:5 written
-      Destination "_9"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:5:5 generated
     Branch a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:6:9 written "bb9" "bb10"
       Copy "_1"
@@ -99,11 +92,6 @@ Function a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubt
         Deref
       Use
         Copy "_2"
-    Operation a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:6:12 written
-      Destination "_10"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:6:12 generated
     Goto "bb11"
   Block "bb10"
@@ -112,26 +100,26 @@ Function a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubt
   Block "bb11"
     ArgumentsEvaluated a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:7:5 generated
     Call a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:7:5 written "memcpy" "bb12"
-      Destination "_11"
+      Destination "_9"
       Copy "_6"
       Copy "_3"
       Constant 8
   Block "bb12"
     Sequenced a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:7:5 generated
     Operation a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:8:10 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_6"
           Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:8:14 generated
     Operation a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:9:12 written
-      Destination "_13"
+      Destination "_11"
       Binary "Eq"
-        Copy "_12"
+        Copy "_10"
         Copy "_2"
     Operation a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:9:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_copy_out_of_a_block_written_on_one_path_into_a_written_block_is_doubted_where_read.c:9:12 generated
     Return

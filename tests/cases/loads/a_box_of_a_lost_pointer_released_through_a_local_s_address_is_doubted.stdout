@@ -36,20 +36,14 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
   Local "_9" "int *" "q"
   Local "_10" "int" "i"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "void *"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int **" "b"
+  Local "_16" "int ***"
+  Local "_17" "int *" "r"
   Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "int *"
-  Local "_21" "int **" "b"
-  Local "_22" "int ***"
-  Local "_23" "int *" "r"
-  Local "_24" "int"
-  Local "_25" "int" "v"
+  Local "_19" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:9:17 generated
     Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:9:17 written "malloc" "bb1"
@@ -137,14 +131,10 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
       Destination "_8"
       Use
         Copy "_9"
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:17:9 written
-      Destination "_12"
-      Use
-        Copy "_8"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:17:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 generated
     Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:13 written "malloc" "bb12"
-      Destination "_13"
+      Destination "_12"
       Constant 4
   Block "bb11"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:16:12 generated
@@ -153,51 +143,37 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
         Deref
       Use
         Copy "_8"
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:23:5 written
-      Destination "_19"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:23:5 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:24:5 written
       Destination "_5"
         Deref
       Use
         Copy "_8"
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:24:5 written
-      Destination "_20"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:24:5 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:25:11 written
-      Destination "_21"
+      Destination "_15"
       Use
         Copy "_5"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:25:15 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:17 written
-      Destination "_22"
+      Destination "_16"
       Address
-        Place "_21"
+        Place "_15"
     ArgumentsEvaluated a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 generated
     Call a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 written "release_ppp" "bb16"
-      Copy "_22"
+      Copy "_16"
   Block "bb12"
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:9 written
       Destination "_9"
       Use
-        Copy "_13"
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:9 written
-      Destination "_14"
-      Use
-        Copy "_9"
+        Copy "_12"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:18:9 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
         Copy "_9"
     Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 written "bb13" "bb14"
-      Copy "_15"
+      Copy "_13"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:13 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:19:17 written
@@ -215,41 +191,32 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
         Deref
       Use
         Constant 1
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:20:9 written
-      Destination "_16"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:20:9 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:21:13 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_10"
         Constant 1
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:21:9 written
       Destination "_10"
       Use
-        Copy "_17"
-    Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:21:9 written
-      Destination "_18"
-      Use
-        Copy "_10"
+        Copy "_14"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:21:9 generated
     Goto "bb9"
   Block "bb16"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:26:5 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:27:10 written
-      Destination "_23"
+      Destination "_17"
       Use
         Copy "_2"
           Deref
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:27:14 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 written
-      Destination "_24"
+      Destination "_18"
       Unary "Not"
-        Copy "_23"
+        Copy "_17"
     Branch a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 written "bb17" "bb18"
-      Copy "_24"
+      Copy "_18"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:9 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:28:13 written
@@ -263,14 +230,14 @@ Function a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c
     Goto "bb19"
   Block "bb19"
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:29:9 written
-      Destination "_25"
+      Destination "_19"
       Use
-        Copy "_23"
+        Copy "_17"
           Deref
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:29:13 generated
     Operation a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:30:5 written
       Destination "_0"
       Use
-        Copy "_25"
+        Copy "_19"
     Sequenced a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted.c:30:12 generated
     Return

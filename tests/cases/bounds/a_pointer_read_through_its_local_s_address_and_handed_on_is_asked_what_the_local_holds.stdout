@@ -2,7 +2,6 @@ Target "x86_64-pc-windows-msvc"
 Function a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_the_local_holds.c:1:6 "put"
   Local "_0" "void" return
   Local "_1" "int *" parameter "t"
-  Local "_2" "int"
   Block "bb0" entry
     Branch a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_the_local_holds.c:2:9 written "bb1" "bb2"
       Copy "_1"
@@ -13,11 +12,6 @@ Function a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_the_local_holds.c:3:9 written
-      Destination "_2"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_through_its_local_s_address_and_handed_on_is_asked_what_the_local_holds.c:3:9 generated
     Goto "bb3"
   Block "bb2"

@@ -38,7 +38,6 @@ Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_o
   Local "_22" "int"
   Local "_23" "int"
   Local "_24" "void **" "q"
-  Local "_25" "void **"
   Block "bb0" entry
     Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:6:9 written
       Destination "_3"
@@ -145,11 +144,6 @@ Function a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_o
         Deref
       Use
         Copy "_24"
-    Operation a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:19:5 written
-      Destination "_25"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:19:5 generated
     ArgumentsEvaluated a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:20:5 generated
     Call a_local_array_a_partial_copy_wrote_on_an_earlier_turn_is_not_reported_on_the_next.c:20:5 written "use" "bb15"

@@ -22,9 +22,7 @@ Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c
   Local "_3" "int *" parameter "r"
   Local "_4" "int *" "p"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int"
-  Local "_8" "int *"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 written
       Destination "_5"
@@ -39,21 +37,17 @@ Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c
       Destination "_4"
       Use
         Copy "_2"
-    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:11:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:11:9 generated
     Goto "bb3"
   Block "bb2"
     Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:10:9 generated
     Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 written
-      Destination "_7"
+      Destination "_6"
       Binary "Lt"
         Copy "_1"
         Constant 0
     Branch a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:12:16 written "bb4" "bb5"
-      Copy "_7"
+      Copy "_6"
   Block "bb3"
     ArgumentsEvaluated a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:15:5 generated
     Call a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:15:5 written "use" "bb7"
@@ -64,10 +58,6 @@ Function a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:13:9 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_pointer_assigned_on_both_arms_of_a_test_that_cannot_fail_is_doubted.c:13:9 generated
     Goto "bb6"
   Block "bb5"

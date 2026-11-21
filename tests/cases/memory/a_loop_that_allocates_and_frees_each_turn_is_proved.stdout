@@ -10,9 +10,7 @@ Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:3:5 "f"
   Local "_1" "int" parameter "c"
   Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int *"
-  Local "_5" "int"
-  Local "_6" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
@@ -37,10 +35,6 @@ Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:9 generated
     ArgumentsEvaluated a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 generated
     Call a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 written "free" "bb5"
@@ -48,17 +42,13 @@ Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:3:5 "f"
   Block "bb5"
     Sequenced a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 generated
     Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:13 written
-      Destination "_5"
+      Destination "_4"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:9 written
       Destination "_1"
       Use
-        Copy "_5"
-    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:9 written
-      Destination "_6"
-      Use
-        Copy "_1"
+        Copy "_4"
     Sequenced a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:9 generated
     Goto "bb1"

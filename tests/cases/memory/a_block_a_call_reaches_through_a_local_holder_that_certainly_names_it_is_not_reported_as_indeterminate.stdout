@@ -94,9 +94,8 @@ Function a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_i
   Local "_3" "int"
   Local "_4" "int **" "h"
   Local "_5" "int ***"
-  Local "_6" "int **"
-  Local "_7" "int" "r"
-  Local "_8" "int"
+  Local "_6" "int" "r"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:18:15 generated
     Call a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:18:15 written "malloc" "bb1"
@@ -144,25 +143,21 @@ Function a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_i
       Destination "_4"
       Use
         Copy "_1"
-    Operation a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:22:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:22:5 generated
     ArgumentsEvaluated a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:23:5 generated
     Call a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:23:5 written "tick" "bb6"
   Block "bb6"
     Sequenced a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:23:5 generated
     Operation a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:24:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Ne"
         Copy "_1"
           Deref
         Constant 0
     Operation a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:24:9 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:24:13 generated
     ArgumentsEvaluated a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:25:5 generated
     Call a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:25:5 written "free" "bb7"
@@ -172,6 +167,6 @@ Function a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_i
     Operation a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:26:5 written
       Destination "_0"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_block_a_call_reaches_through_a_local_holder_that_certainly_names_it_is_not_reported_as_indeterminate.c:26:12 generated
     Return

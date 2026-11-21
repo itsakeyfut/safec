@@ -16,14 +16,10 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
+  Local "_10" "int **" "q2"
+  Local "_11" "int"
+  Local "_12" "int *" "q"
   Local "_13" "int"
-  Local "_14" "int **" "q2"
-  Local "_15" "int"
-  Local "_16" "int *" "q"
-  Local "_17" "int"
   Block "bb0" entry
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5 generated
       Destination "_0"
@@ -121,58 +117,38 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
         Deref
       Use
         Constant 1
-    Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:17:5 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:18:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:18:5 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:19:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:19:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:19:5 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:20:5 written
       Destination "_7"
         Deref
       Use
         Constant 2
-    Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:20:5 written
-      Destination "_13"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:20:5 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:21:11 written
-      Destination "_14"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:21:16 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 written
-      Destination "_15"
+      Destination "_11"
       Binary "Eq"
-        Copy "_14"
+        Copy "_10"
         Constant 0
     Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 written "bb13" "bb14"
-      Copy "_15"
+      Copy "_11"
   Block "bb13"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:22:9 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:23:9 written
@@ -186,18 +162,18 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
     Goto "bb15"
   Block "bb15"
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:25:10 written
-      Destination "_16"
+      Destination "_12"
       Use
-        Copy "_14"
+        Copy "_10"
           Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:25:14 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 written
-      Destination "_17"
+      Destination "_13"
       Binary "Eq"
-        Copy "_16"
+        Copy "_12"
         Constant 0
     Branch a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 written "bb16" "bb17"
-      Copy "_17"
+      Copy "_13"
   Block "bb16"
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:26:9 generated
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:27:9 written
@@ -213,7 +189,7 @@ Function a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:4:5
     Operation a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:29:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_12"
           Deref
     Sequenced a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence.c:29:12 generated
     Return

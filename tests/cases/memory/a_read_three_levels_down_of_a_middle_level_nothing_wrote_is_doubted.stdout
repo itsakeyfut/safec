@@ -10,9 +10,8 @@ Function a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:2
   Local "_4" "int ***" "n"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int ***"
-  Local "_8" "int *" "r"
-  Local "_9" "int"
+  Local "_7" "int *" "r"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:3:17 generated
     Call a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:3:17 written "malloc" "bb1"
@@ -75,14 +74,9 @@ Function a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:2
         Deref
       Use
         Copy "_4"
-    Operation a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:5:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:5:5 generated
     Operation a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:6:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
@@ -90,13 +84,13 @@ Function a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:2
               Deref
     Sequenced a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:6:14 generated
     Operation a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:7:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Ne"
-        Copy "_8"
+        Copy "_7"
         Constant 0
     Operation a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:7:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_read_three_levels_down_of_a_middle_level_nothing_wrote_is_doubted.c:7:12 generated
     Return

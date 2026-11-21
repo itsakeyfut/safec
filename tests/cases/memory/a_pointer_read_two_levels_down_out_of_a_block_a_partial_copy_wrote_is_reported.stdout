@@ -25,9 +25,8 @@ Function a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_r
   Local "_11" "int *"
   Local "_12" "void *"
   Local "_13" "void ***" "b"
-  Local "_14" "void **"
-  Local "_15" "void *" "s"
-  Local "_16" "int"
+  Local "_14" "void *" "s"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:5:9 written
       Destination "_1"
@@ -134,14 +133,9 @@ Function a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_r
         Deref
       Use
         Copy "_3"
-    Operation a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:14:5 written
-      Destination "_14"
-      Use
-        Copy "_13"
-          Deref
     Sequenced a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:14:5 generated
     Operation a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:15:11 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_13"
           Deref
@@ -158,13 +152,13 @@ Function a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_r
   Block "bb13"
     Sequenced a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:17:5 generated
     Operation a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:18:12 written
-      Destination "_16"
+      Destination "_15"
       Binary "Ne"
-        Copy "_15"
+        Copy "_14"
         Constant 0
     Operation a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:18:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
     Sequenced a_pointer_read_two_levels_down_out_of_a_block_a_partial_copy_wrote_is_reported.c:18:12 generated
     Return

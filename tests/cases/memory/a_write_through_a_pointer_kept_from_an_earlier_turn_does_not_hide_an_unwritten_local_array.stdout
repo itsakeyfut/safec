@@ -13,16 +13,12 @@ Function a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_un
   Local "_10" "int *[1]" "x"
   Local "_11" "int *[1]" "m"
   Local "_12" "int **"
-  Local "_13" "int **"
-  Local "_14" "int *"
-  Local "_15" "int *" "q"
+  Local "_13" "int *" "q"
+  Local "_14" "int **"
+  Local "_15" "int"
   Local "_16" "int **"
   Local "_17" "int"
   Local "_18" "int"
-  Local "_19" "int **"
-  Local "_20" "int **"
-  Local "_21" "int"
-  Local "_22" "int"
   Block "bb0" entry
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:2:9 written
       Destination "_4"
@@ -84,43 +80,33 @@ Function a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_un
         Deref
       Use
         Copy "_12"
-    Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:8:9 written
-      Destination "_13"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:8:9 generated
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:9:9 written
       Destination "_6"
         Deref
       Use
         Constant 0
-    Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:9:9 written
-      Destination "_14"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:9:9 generated
-    StorageLive a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:10:9 generated "_15"
+    StorageLive a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:10:9 generated "_13"
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:10:18 generated
-      Destination "_16"
+      Destination "_14"
       Address
         Place "_11"
           Index
             Constant 0
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:10:14 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_14"
           Deref
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:10:18 generated
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:13 written
-      Destination "_17"
+      Destination "_15"
       Binary "Ne"
-        Copy "_15"
+        Copy "_13"
         Constant 0
     Branch a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:13 written "bb7" "bb8"
-      Copy "_17"
+      Copy "_15"
   Block "bb6"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:5:21 generated
     StorageDead a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:13:5 generated "_8"
@@ -133,15 +119,10 @@ Function a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_un
   Block "bb7"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:13 generated
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:23 written
-      Destination "_15"
+      Destination "_13"
         Deref
       Use
         Constant 1
-    Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:23 written
-      Destination "_18"
-      Use
-        Copy "_15"
-          Deref
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:11:23 generated
     Goto "bb9"
   Block "bb8"
@@ -153,7 +134,7 @@ Function a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_un
   Block "bb10"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:13 generated
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:22 generated
-      Destination "_19"
+      Destination "_16"
       Address
         Place "_10"
           Index
@@ -161,32 +142,28 @@ Function a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_un
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:18 written
       Destination "_6"
       Use
-        Copy "_19"
-    Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:18 written
-      Destination "_20"
-      Use
-        Copy "_6"
+        Copy "_16"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:18 generated
     Goto "bb12"
   Block "bb11"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:12:13 generated
     Goto "bb12"
   Block "bb12"
-    StorageDead a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:13:5 generated "_15"
+    StorageDead a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:13:5 generated "_13"
     StorageDead a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:13:5 generated "_11"
     StorageDead a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:13:5 generated "_10"
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:5:28 written
-      Destination "_21"
+      Destination "_17"
       Use
         Copy "_8"
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:5:28 written
-      Destination "_22"
+      Destination "_18"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:5:28 written
       Destination "_8"
       Use
-        Copy "_22"
+        Copy "_18"
     Sequenced a_write_through_a_pointer_kept_from_an_earlier_turn_does_not_hide_an_unwritten_local_array.c:5:28 generated
     Goto "bb4"

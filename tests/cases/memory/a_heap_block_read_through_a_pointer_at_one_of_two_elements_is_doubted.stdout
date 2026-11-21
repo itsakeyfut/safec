@@ -9,11 +9,9 @@ Function a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c
   Local "_3" "int **" "b"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int **" "p"
-  Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *" "r"
+  Local "_6" "int **" "p"
+  Local "_7" "int **"
+  Local "_8" "int *" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:45 generated
     Call a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:45 written "malloc" "bb1"
@@ -48,14 +46,9 @@ Function a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:75 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:75 generated
     Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:91 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_3"
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:95 generated
@@ -64,16 +57,12 @@ Function a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c
   Block "bb5"
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:102 generated
     Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:109 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:105 written
-      Destination "_7"
-      Use
-        Copy "_8"
-    Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:105 written
-      Destination "_9"
+      Destination "_6"
       Use
         Copy "_7"
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:105 generated
@@ -83,14 +72,14 @@ Function a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c
     Goto "bb7"
   Block "bb7"
     Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:121 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_7"
+        Copy "_6"
           Deref
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:125 generated
     Operation a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:131 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_heap_block_read_through_a_pointer_at_one_of_two_elements_is_doubted.c:2:138 generated
     Return

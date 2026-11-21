@@ -6,7 +6,6 @@ Function a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:2:5 "
   Local "_0" "int" return
   Local "_1" "int *" parameter "q"
   Local "_2" "int *" "p"
-  Local "_3" "int *"
   Block "bb0" entry
     Operation a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:3:10 written
       Destination "_2"
@@ -22,10 +21,6 @@ Function a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:2:5 "
       Destination "_2"
       Use
         Copy "_1"
-    Operation a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:5:5 written
-      Destination "_3"
-      Use
-        Copy "_2"
     Sequenced a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:5:5 generated
     ArgumentsEvaluated a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:6:5 generated
     Call a_pointer_that_stopped_being_null_before_the_free_is_not_exempt.c:6:5 written "free" "bb2"

@@ -14,16 +14,9 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
   Local "_4" "int **" "t"
   Local "_5" "int *" "a"
   Local "_6" "void *"
-  Local "_7" "int **"
-  Local "_8" "int"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int *"
+  Local "_7" "int"
+  Local "_8" "void *"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:9 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:9 written "malloc" "bb1"
@@ -34,18 +27,14 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
       Destination "_2"
       Use
         Copy "_6"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_2"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:10:5 generated
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:11:9 written "bb2" "bb3"
-      Copy "_8"
+      Copy "_7"
   Block "bb2"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:11:9 generated
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:12:9 written
@@ -60,25 +49,21 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
   Block "bb4"
     ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:9 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:9 written "malloc" "bb5"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb5"
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:5 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:14:5 generated
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:15:9 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:15:9 written "bb6" "bb7"
-      Copy "_11"
+      Copy "_9"
   Block "bb6"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:15:9 generated
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:16:9 written
@@ -96,20 +81,11 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
         Deref
       Use
         Constant 1
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:18:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:18:5 generated
     Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:19:5 written
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:19:5 written
-      Destination "_13"
-      Use
-        Copy "_3"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:19:5 generated
     ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:20:5 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:20:5 written "log_line" "bb9"
@@ -123,10 +99,6 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
       Destination "_4"
       Use
         Copy "_2"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:22:9 written
-      Destination "_14"
-      Use
-        Copy "_4"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:22:9 generated
     Goto "bb12"
   Block "bb11"
@@ -135,10 +107,6 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:24:9 written
-      Destination "_15"
-      Use
-        Copy "_4"
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:24:9 generated
     Goto "bb12"
   Block "bb12"
@@ -147,11 +115,6 @@ Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5
         Deref
       Use
         Copy "_5"
-    Operation a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:26:5 written
-      Destination "_16"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:26:5 generated
     ArgumentsEvaluated a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:27:5 generated
     Call a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:27:5 written "release_all" "bb13"
