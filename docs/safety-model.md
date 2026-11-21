@@ -352,8 +352,9 @@ the pointer is asked; a pointer declared to point at `const`, a parameter or a
 call's result among them, is taken to name such storage, since it may. See
 [ADR-0120](adr/0120-a-write-that-may-reach-storage-the-program-may-not-modify-is-unproven.md).
 And at every level below what leaves: a pointer that may name such storage,
-handed, returned or stored where it leaves at a level the reader's type points
-at no `const`, is `SC0417` there, since the reader may write through it; and
+handed, returned, stored or copied where it leaves at a level the reader's
+type points at no `const`, or past the levels a `void *` or `char *` reader's
+type has, is `SC0417` there, since the reader may write through it; and
 memory that arrives as a pointer to `const` at some level is taken to hold such
 pointers there, whatever it is cast to. A literal stored where it leaves and
 never written, `char *G; G = "ab";`, is doubted for it. See

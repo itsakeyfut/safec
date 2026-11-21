@@ -78,3 +78,26 @@ void cast_after_a_result(void) {
         }
     }
 }
+const char *CG;
+void into_a_const_static(void) {
+    CG = "ab";
+}
+void unp();
+void handed_unprototyped(void) {
+    const char *p = "ab";
+    unp(&p);
+}
+void *returned_as_void(void) {
+    int **b = malloc(sizeof(int *));
+    if (b) {
+        *b = (int *)&k;
+    }
+    return b;
+}
+void *memcpy(void *d, const void *s, unsigned long long n);
+void copied_out(char **out) {
+    char *c = "ab";
+    if (out) {
+        memcpy(out, &c, sizeof c);
+    }
+}

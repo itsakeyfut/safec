@@ -131,7 +131,12 @@ cases! {
         // `stored_read_only`, `out_parameter` and `into_a_static`; leave a
         // parameter's memory unmarked at entry, `cast_after_arrival`; a
         // call's result's, `cast_after_a_result`; skip the mark on a pointer
-        // read through one, `three_levels_arrived`.
+        // read through one, `three_levels_arrived`; stop at the reader's own
+        // depth, `returned_as_void`; skip `copied_read_only`, `copied_out`.
+        // And the two the review found reported wrongly stay silent:
+        // `into_a_const_static` where `reach_static` marks nothing, and
+        // `handed_unprototyped` where an unprototyped argument is asked as
+        // writable at every level.
         read_only_storage_below_what_leaves_or_arrives_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer holding a pointer to `const`'s bytes is still asked where
         // it leaves, returned or handed to a call declared without a

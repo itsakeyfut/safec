@@ -332,6 +332,7 @@ pub fn lower(
         block_statics: HashMap::new(),
         internal: HashSet::new(),
         strings: HashMap::new(),
+        static_levels: HashMap::new(),
         pending: HashMap::new(),
         top_level: false,
         root: None,
@@ -440,6 +441,10 @@ struct Lowering<'a> {
     /// many times the expression is evaluated (C17 6.4.5 p6 gives it static
     /// storage duration). See [`Lowering::string`].
     strings: HashMap<ExprId, StaticId>,
+    /// Per static, the levels at which a value stored in it points at
+    /// `const`, so that the temporary [`Lowering::reach_static`] reaches it
+    /// through carries them. A string literal holds no pointer and has none.
+    static_levels: HashMap<StaticId, u32>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -759,6 +764,9 @@ struct FileObject {
     /// Whether the program may not modify it, read off its first declaration.
     /// See [`Lowering::read_only`].
     read_only: bool,
+    /// The levels at which a value stored in it points at `const`, read off
+    /// its first declaration. See [`Lowering::const_levels`].
+    const_levels: u32,
     /// Whether a declaration defines it, tentatively or not.
     defined: bool,
     init: StaticInit,
@@ -855,6 +863,7 @@ impl Lowering<'_> {
                 init: object.init,
                 read_only: object.read_only,
             });
+            self.static_levels.insert(id, object.const_levels);
             self.file_statics.insert(object.name, id);
             for span in object.declared {
                 self.statics.insert(span, id);
@@ -916,6 +925,7 @@ impl Lowering<'_> {
                         name: spelled.to_owned(),
                         ty,
                         read_only: self.read_only(declaration.ty),
+                        const_levels: self.const_levels(declaration.ty),
                         internal: storage == Some(Storage::Static),
                         defined: false,
                         init: StaticInit::Zero,
@@ -1049,6 +1059,15 @@ impl Lowering<'_> {
         let ty = self.unit.static_object(object).ty;
         let pointer = self.unit.push_type(Ty::Pointer(ty));
         let address = builder.function.push_local(pointer);
+        // **As a pointer to it would be declared**: `const` at its first
+        // level where the static is, and below where what it holds is, so a
+        // store of a literal into `const char *G` is no write the static's
+        // readers may make. Found by the review of #1134. See ADR-0121.
+        // Mutation: mark nothing; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+        // `into_a_const_static` is reported.
+        let levels = self.static_levels.get(&object).copied().unwrap_or(0) << 1
+            | u32::from(self.unit.static_object(object).read_only);
+        builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
             place: Place::local(address),
             value: Rvalue::Static(object),
@@ -1094,13 +1113,16 @@ impl Lowering<'_> {
                     n => format!("{base}.{n}"),
                 };
                 *count += 1;
-                self.unit.push_static(Static {
+                let id = self.unit.push_static(Static {
                     name: unique,
                     ty,
                     linkage: Linkage::Internal,
                     init,
                     read_only: self.read_only(declaration.ty),
-                })
+                });
+                self.static_levels
+                    .insert(id, self.const_levels(declaration.ty));
+                id
             }
             Storage::Extern => {
                 let id = match self.file_statics.get(&spelled) {
@@ -1113,6 +1135,8 @@ impl Lowering<'_> {
                             init: StaticInit::Zero,
                             read_only: self.read_only(declaration.ty),
                         });
+                        self.static_levels
+                            .insert(id, self.const_levels(declaration.ty));
                         self.file_statics.insert(spelled.clone(), id);
                         id
                     }

@@ -1155,6 +1155,14 @@ fn findings_within(
                 &known,
                 func,
             );
+            read_only::copied_read_only(
+                &mut findings,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
+                func,
+            );
             asked_unwritten_in_terminator(
                 &ask,
                 &mut findings,
