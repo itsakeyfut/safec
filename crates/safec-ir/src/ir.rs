@@ -1279,10 +1279,13 @@ pub struct Function {
     /// Whether what it returns is a pointer to `const`, so that a caller
     /// cannot write through it: [`Parameter::reads_only`] for the result.
     returns_reads_only: bool,
-    /// The locals declared as a pointer to `const`, whatever value they
-    /// hold: such a pointer may name an object defined `const`, so what is
-    /// written through it once the `const` is dropped is asked. See ADR-0120.
-    points_at_const: Vec<LocalId>,
+    /// Per local, the levels at which its declared type points at `const`:
+    /// bit `k` set where what `k` dereferences of it read points at an
+    /// object defined `const` (bit `0`, a pointer to `const`). Such a level
+    /// may name read-only storage whatever value it holds, and one that is
+    /// not is a level a write through it is believed to be allowed at. See
+    /// ADR-0120 and ADR-0121.
+    const_levels: Vec<(LocalId, u32)>,
     body: Body,
 }
 
@@ -1333,7 +1336,7 @@ impl Function {
             return_promise: None,
             read_only: Vec::new(),
             returns_reads_only: false,
-            points_at_const: Vec::new(),
+            const_levels: Vec::new(),
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1488,14 +1491,35 @@ impl Function {
         self.reads_only.get(index).copied().unwrap_or(false)
     }
 
-    /// Say that `local` is declared as a pointer to `const`. See ADR-0120.
-    pub fn mark_points_at_const(&mut self, local: LocalId) {
-        self.points_at_const.push(local);
+    /// Add `levels` to the levels at which `local` points at `const`. See
+    /// [`Self::const_levels`].
+    pub fn mark_const_levels(&mut self, local: LocalId, levels: u32) {
+        if levels == 0 {
+            return;
+        }
+        match self
+            .const_levels
+            .iter_mut()
+            .find(|(each, _)| *each == local)
+        {
+            Some((_, marked)) => *marked |= levels,
+            None => self.const_levels.push((local, levels)),
+        }
     }
 
-    /// Whether `local` is declared as a pointer to `const`.
+    /// The levels at which `local` points at `const`: bit `k` where what `k`
+    /// dereferences of it read points at an object defined `const`. See
+    /// ADR-0121.
+    pub fn const_levels(&self, local: LocalId) -> u32 {
+        self.const_levels
+            .iter()
+            .find(|(each, _)| *each == local)
+            .map_or(0, |(_, levels)| *levels)
+    }
+
+    /// Whether `local` is declared as a pointer to `const`. See ADR-0120.
     pub fn points_at_const(&self, local: LocalId) -> bool {
-        self.points_at_const.contains(&local)
+        self.const_levels(local) & 1 != 0
     }
 
     /// Say that what this returns is a pointer to `const`. See ADR-0120.
