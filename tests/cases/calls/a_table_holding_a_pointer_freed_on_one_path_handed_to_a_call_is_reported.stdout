@@ -17,8 +17,7 @@ Function a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reporte
   Local "_5" "int *" "a"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:5:5 generated
       Destination "_0"
@@ -87,11 +86,6 @@ Function a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reporte
         Deref
       Use
         Copy "_5"
-    Operation a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:14:5 generated
     Branch a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:15:9 written "bb9" "bb10"
       Copy "_1"
@@ -106,7 +100,7 @@ Function a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reporte
   Block "bb11"
     ArgumentsEvaluated a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:18:12 generated
     Call a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:18:12 written "use2" "bb13"
-      Destination "_9"
+      Destination "_8"
       Copy "_2"
   Block "bb12"
     Sequenced a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:16:9 generated
@@ -115,6 +109,6 @@ Function a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reporte
     Operation a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:18:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported.c:18:12 generated
     Return

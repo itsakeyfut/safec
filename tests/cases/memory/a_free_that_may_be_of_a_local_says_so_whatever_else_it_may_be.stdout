@@ -16,7 +16,6 @@ Function a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:4:5 "f"
   Local "_5" "int"
   Local "_6" "int *" "r"
   Local "_7" "int *"
-  Local "_8" "int *"
   Block "bb0" entry
     Operation a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:5:9 written
       Destination "_2"
@@ -69,10 +68,6 @@ Function a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:4:5 "f"
       Use
         Copy "_3"
           Deref
-    Operation a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:12:9 written
-      Destination "_8"
-      Use
-        Copy "_6"
     Sequenced a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:12:9 generated
     Goto "bb7"
   Block "bb6"

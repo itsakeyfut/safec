@@ -10,31 +10,26 @@ Function a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:3
   Local "_1" "int[2][2]" "m"
   Local "_2" "int (*)[2]"
   Local "_3" "int *"
-  Local "_4" "int"
-  Local "_5" "int (*)[2]"
+  Local "_4" "int (*)[2]"
+  Local "_5" "int *"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int (*)[2]"
+  Local "_7" "int (*)[2]"
+  Local "_8" "int (*)[2]"
+  Local "_9" "int *"
   Local "_10" "int (*)[2]"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int (*)[2]"
-  Local "_14" "int (*)[2]"
-  Local "_15" "int *"
-  Local "_16" "int *"
-  Local "_17" "int"
-  Local "_18" "int **" "box"
-  Local "_19" "void *"
-  Local "_20" "int"
-  Local "_21" "int *" "p"
-  Local "_22" "int (*)[2]"
+  Local "_11" "int (*)[2]"
+  Local "_12" "int *"
+  Local "_13" "int *"
+  Local "_14" "int **" "box"
+  Local "_15" "void *"
+  Local "_16" "int"
+  Local "_17" "int *" "p"
+  Local "_18" "int (*)[2]"
+  Local "_19" "int *"
+  Local "_20" "int *"
+  Local "_21" "int *" "q"
+  Local "_22" "int" "r"
   Local "_23" "int *"
-  Local "_24" "int *"
-  Local "_25" "int *"
-  Local "_26" "int *" "q"
-  Local "_27" "int" "r"
-  Local "_28" "int *"
   Block "bb0" entry
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:5 generated
       Destination "_2"
@@ -51,112 +46,92 @@ Function a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:3
         Deref
       Use
         Constant 0
-    Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:5 written
-      Destination "_4"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:5 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 generated
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 generated
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_5"
+        Copy "_4"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
-        Copy "_6"
+        Copy "_5"
         Constant 1
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
         Constant 1
-    Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:18 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 generated
-      Destination "_9"
+      Destination "_7"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 written
-      Destination "_10"
+      Destination "_8"
       Binary "Add"
-        Copy "_9"
+        Copy "_7"
         Constant 1
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 generated
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_10"
+        Copy "_8"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 written
-      Destination "_11"
+      Destination "_9"
         Deref
       Use
         Constant 2
-    Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:31 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 generated
-      Destination "_13"
+      Destination "_10"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 written
-      Destination "_14"
+      Destination "_11"
       Binary "Add"
-        Copy "_13"
+        Copy "_10"
         Constant 1
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 generated
-      Destination "_15"
+      Destination "_12"
       Use
-        Copy "_14"
+        Copy "_11"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 written
-      Destination "_16"
+      Destination "_13"
       Binary "Add"
-        Copy "_15"
+        Copy "_12"
         Constant 1
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 written
-      Destination "_16"
+      Destination "_13"
         Deref
       Use
         Constant 3
-    Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 written
-      Destination "_17"
-      Use
-        Copy "_16"
-          Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:5:44 generated
     ArgumentsEvaluated a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:6:17 generated
     Call a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:6:17 written "malloc" "bb1"
-      Destination "_19"
+      Destination "_15"
       Constant 8
   Block "bb1"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:6:11 written
-      Destination "_18"
+      Destination "_14"
       Use
-        Copy "_19"
+        Copy "_15"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:6:17 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:7:9 written
-      Destination "_20"
+      Destination "_16"
       Binary "Eq"
-        Copy "_18"
+        Copy "_14"
         Constant 0
     Branch a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:7:9 written "bb2" "bb3"
-      Copy "_20"
+      Copy "_16"
   Block "bb2"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:7:9 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:7:19 written
@@ -170,61 +145,56 @@ Function a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:3
     Goto "bb4"
   Block "bb4"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:8:14 generated
-      Destination "_22"
+      Destination "_18"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:8:14 generated
-      Destination "_23"
+      Destination "_19"
       Use
-        Copy "_22"
+        Copy "_18"
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:8:10 written
-      Destination "_21"
+      Destination "_17"
       Use
-        Copy "_23"
+        Copy "_19"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:8:14 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:9:12 written
-      Destination "_24"
+      Destination "_20"
       Binary "Add"
-        Copy "_21"
+        Copy "_17"
         Constant 1
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:9:5 written
-      Destination "_18"
+      Destination "_14"
         Deref
       Use
-        Copy "_24"
-    Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:9:5 written
-      Destination "_25"
-      Use
-        Copy "_18"
-          Deref
+        Copy "_20"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:9:5 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:10:10 written
-      Destination "_26"
+      Destination "_21"
       Use
-        Copy "_18"
+        Copy "_14"
           Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:10:14 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:11:13 written
-      Destination "_28"
+      Destination "_23"
       Binary "Add"
-        Copy "_26"
+        Copy "_21"
         Constant 2
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:11:9 written
-      Destination "_27"
+      Destination "_22"
       Use
-        Copy "_28"
+        Copy "_23"
           Deref
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:11:13 generated
     ArgumentsEvaluated a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:12:5 generated
     Call a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:12:5 written "free" "bb5"
-      Copy "_18"
+      Copy "_14"
   Block "bb5"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:12:5 generated
     Operation a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:13:5 written
       Destination "_0"
       Use
-        Copy "_27"
+        Copy "_22"
     Sequenced a_pointer_stored_inside_a_row_and_read_back_past_the_row_is_doubted.c:13:12 generated
     Return

@@ -13,19 +13,15 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
   Local "_4" "int ***" "t3"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int" "k"
-  Local "_9" "int"
-  Local "_10" "int *" "p"
-  Local "_11" "void *"
+  Local "_7" "int" "k"
+  Local "_8" "int"
+  Local "_9" "int *" "p"
+  Local "_10" "void *"
+  Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
+  Local "_13" "int *" "q"
   Local "_14" "int"
-  Local "_15" "int *" "q"
-  Local "_16" "int"
-  Local "_17" "int *"
-  Local "_18" "int"
-  Local "_19" "int"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:4:5 generated
       Destination "_0"
@@ -79,32 +75,27 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
         Deref
       Use
         Copy "_2"
-    Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:11:5 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:12:9 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:12:13 generated
     Goto "bb5"
   Block "bb5"
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:13:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Lt"
-        Copy "_8"
+        Copy "_7"
         Constant 2
     Branch a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:13:12 written "bb6" "bb7"
-      Copy "_9"
+      Copy "_8"
   Block "bb6"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:13:12 generated
-    StorageLive a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:9 generated "_10"
+    StorageLive a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:9 generated "_9"
     ArgumentsEvaluated a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:18 generated
     Call a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:18 written "malloc" "bb8"
-      Destination "_11"
+      Destination "_10"
       Constant 4
   Block "bb7"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:13:12 generated
@@ -116,17 +107,17 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
     Return
   Block "bb8"
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:14 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:14:18 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:15:13 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Branch a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:15:13 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_11"
   Block "bb9"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:15:13 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:16:13 written
@@ -134,47 +125,42 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
       Use
         Constant 0
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:16:20 generated
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:16:13 generated "_10"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:16:13 generated "_9"
     Return
   Block "bb10"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:15:13 generated
     Goto "bb11"
   Block "bb11"
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:18:9 written
-      Destination "_10"
+      Destination "_9"
         Deref
       Use
         Constant 1
-    Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:18:9 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:18:9 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:19:13 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
-        Copy "_8"
+        Copy "_7"
         Constant 1
     Branch a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:19:13 written "bb12" "bb13"
-      Copy "_14"
+      Copy "_12"
   Block "bb12"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:19:13 generated
-    StorageLive a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:20:13 generated "_15"
+    StorageLive a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:20:13 generated "_13"
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:20:18 written
-      Destination "_15"
+      Destination "_13"
       Use
         Copy "_4"
           Deref
             Deref
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:20:22 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:21:17 written
-      Destination "_16"
+      Destination "_14"
       Binary "Eq"
-        Copy "_15"
+        Copy "_13"
         Constant 0
     Branch a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:21:17 written "bb15" "bb16"
-      Copy "_16"
+      Copy "_14"
   Block "bb13"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:19:13 generated
     Goto "bb14"
@@ -183,16 +169,11 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
       Destination "_2"
         Deref
       Use
-        Copy "_10"
-    Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:26:9 written
-      Destination "_17"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_9"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:26:9 generated
     ArgumentsEvaluated a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:27:9 generated
     Call a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:27:9 written "free" "bb18"
-      Copy "_10"
+      Copy "_9"
   Block "bb15"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:21:17 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:17 written
@@ -200,8 +181,8 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
       Use
         Constant 0
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:24 generated
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:17 generated "_15"
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:17 generated "_10"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:17 generated "_13"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:22:17 generated "_9"
     Return
   Block "bb16"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:21:17 generated
@@ -210,27 +191,23 @@ Function a_local_this_check_lost_read_two_levels_down_through_a_stored_address_i
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_13"
           Deref
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:20 generated
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 generated "_15"
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 generated "_10"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 generated "_13"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 generated "_9"
     Return
   Block "bb18"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:27:9 generated
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:28:13 written
-      Destination "_18"
+      Destination "_15"
       Binary "Add"
-        Copy "_8"
+        Copy "_7"
         Constant 1
     Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:28:9 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_18"
-    Operation a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:28:9 written
-      Destination "_19"
-      Use
-        Copy "_8"
+        Copy "_15"
     Sequenced a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:28:9 generated
-    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:29:5 generated "_10"
+    StorageDead a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:29:5 generated "_9"
     Goto "bb5"

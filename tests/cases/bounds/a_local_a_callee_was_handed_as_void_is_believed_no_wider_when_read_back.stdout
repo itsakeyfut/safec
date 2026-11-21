@@ -4,7 +4,6 @@ Function a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back
   Local "_1" "void **" parameter "slot"
   Local "_2" "char *" parameter "c"
   Local "_3" "int"
-  Local "_4" "void *"
   Block "bb0" entry
     Operation a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:2:9 written
       Destination "_3"
@@ -20,11 +19,6 @@ Function a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back
         Deref
       Use
         Copy "_2"
-    Operation a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:3:9 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:3:9 generated
     Goto "bb3"
   Block "bb2"
@@ -42,7 +36,6 @@ Function a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back
   Local "_6" "char *"
   Local "_7" "int *" "q"
   Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     Operation a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:7:5 generated
       Destination "_0"
@@ -97,11 +90,6 @@ Function a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back
         Deref
       Use
         Constant 1
-    Operation a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:15:9 written
-      Destination "_9"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_local_a_callee_was_handed_as_void_is_believed_no_wider_when_read_back.c:15:9 generated
     Goto "bb4"
   Block "bb3"

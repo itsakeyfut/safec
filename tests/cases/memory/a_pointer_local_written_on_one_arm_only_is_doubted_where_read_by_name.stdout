@@ -9,8 +9,7 @@ Function a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c
   Local "_4" "int **"
   Local "_5" "int"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:2:5 generated
       Destination "_0"
@@ -47,11 +46,6 @@ Function a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c
         Deref
       Use
         Copy "_6"
-    Operation a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:7:9 written
-      Destination "_7"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:7:9 generated
     Goto "bb4"
   Block "bb3"
@@ -59,13 +53,13 @@ Function a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c
     Goto "bb4"
   Block "bb4"
     Operation a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:9:12 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:9:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_pointer_local_written_on_one_arm_only_is_doubted_where_read_by_name.c:9:12 generated
     Return

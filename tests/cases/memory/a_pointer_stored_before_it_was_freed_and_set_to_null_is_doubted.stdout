@@ -14,9 +14,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
   Local "_5" "int *" "p"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int *" "q"
+  Local "_8" "int *" "q"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:5:15 generated
     Call a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:5:15 written "malloc" "bb1"
@@ -81,11 +79,6 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:13:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:13:5 generated
     Branch a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:14:9 written "bb9" "bb10"
       Copy "_1"
@@ -99,7 +92,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
     Goto "bb11"
   Block "bb11"
     Operation a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:18:10 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_2"
           Deref
@@ -107,7 +100,7 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
     Operation a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:19:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
           Deref
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:19:12 generated
     Return
@@ -117,9 +110,5 @@ Function a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:4:5 "
       Destination "_5"
       Use
         Constant 0
-    Operation a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:16:9 written
-      Destination "_9"
-      Use
-        Copy "_5"
     Sequenced a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:16:9 generated
     Goto "bb11"

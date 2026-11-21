@@ -13,9 +13,7 @@ Function a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_writte
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:5:16 generated
     Call a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:5:16 written "malloc" "bb1"
@@ -50,30 +48,20 @@ Function a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_writte
         Deref
       Use
         Constant 0
-    Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:7:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:7:5 generated
     Branch a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:9 generated
     Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:17 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
     Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:12 written
       Destination "_3"
         Deref
       Use
-        Copy "_7"
-    Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:12 written
-      Destination "_8"
-      Use
-        Copy "_3"
-          Deref
+        Copy "_6"
     Sequenced a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:8:12 generated
     Goto "bb7"
   Block "bb6"
@@ -86,13 +74,13 @@ Function a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_writte
   Block "bb8"
     Sequenced a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:9:5 generated
     Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:10:12 written
-      Destination "_9"
+      Destination "_7"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Operation a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:10:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_7"
     Sequenced a_local_a_block_holding_a_null_on_one_path_names_is_not_believed_written_by_a_call.c:10:12 generated
     Return

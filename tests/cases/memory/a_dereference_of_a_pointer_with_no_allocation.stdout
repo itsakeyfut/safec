@@ -4,7 +4,6 @@ Function a_dereference_of_a_pointer_with_no_allocation.c:1:5 "f"
   Local "_1" "int" "x"
   Local "_2" "int *" "p"
   Local "_3" "int *"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_dereference_of_a_pointer_with_no_allocation.c:2:9 written
       Destination "_1"
@@ -25,11 +24,6 @@ Function a_dereference_of_a_pointer_with_no_allocation.c:1:5 "f"
         Deref
       Use
         Constant 2
-    Operation a_dereference_of_a_pointer_with_no_allocation.c:4:5 written
-      Destination "_4"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_dereference_of_a_pointer_with_no_allocation.c:4:5 generated
     Operation a_dereference_of_a_pointer_with_no_allocation.c:5:5 written
       Destination "_0"

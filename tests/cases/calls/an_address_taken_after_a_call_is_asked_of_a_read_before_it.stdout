@@ -17,16 +17,13 @@ Function an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:5:5 "f"
   Local "_4" "int **" "hp"
   Local "_5" "int *" "a"
   Local "_6" "void *"
-  Local "_7" "int *"
+  Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_11" "int **"
+  Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:10:9 generated
     Call an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:10:9 written "malloc" "bb1"
@@ -37,18 +34,14 @@ Function an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:5:5 "f"
       Destination "_5"
       Use
         Copy "_6"
-    Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:10:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:10:5 generated
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:11:9 written "bb2" "bb3"
-      Copy "_8"
+      Copy "_7"
   Block "bb2"
     Sequenced an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:11:9 generated
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:12:9 written
@@ -66,14 +59,9 @@ Function an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:5:5 "f"
         Deref
       Use
         Constant 1
-    Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:14:5 written
-      Destination "_9"
-      Use
-        Copy "_5"
-          Deref
     Sequenced an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:14:5 generated
     Call an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:9 written "release_all" "bb5"
-      Destination "_10"
+      Destination "_8"
   Block "bb5"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:26 written
       Destination "_2"
@@ -81,39 +69,35 @@ Function an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:5:5 "f"
         Copy "_5"
           Deref
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:26 written
-      Destination "_11"
+      Destination "_9"
       Use
         Copy "_2"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:9 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
-        Copy "_10"
-        Copy "_11"
+        Copy "_8"
+        Copy "_9"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:44 written
-      Destination "_13"
+      Destination "_11"
       Address
         Place "_5"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:39 written
       Destination "_4"
       Use
-        Copy "_13"
+        Copy "_11"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:39 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_4"
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:9 written
-      Destination "_15"
+      Destination "_13"
       Binary "Add"
-        Copy "_12"
+        Copy "_10"
         Constant 0
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:5 written
       Destination "_3"
       Use
-        Copy "_15"
-    Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:5 written
-      Destination "_16"
-      Use
-        Copy "_3"
+        Copy "_13"
     Sequenced an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:5 generated
     Operation an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:16:5 written
       Destination "_0"

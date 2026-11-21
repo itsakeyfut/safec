@@ -7,7 +7,6 @@ Function two_escaped_pointers_written_through_one_another_are_each_said_once.c:1
   Local "_4" "int **"
   Local "_5" "int **" "b"
   Local "_6" "int **"
-  Local "_7" "int"
   Block "bb0" entry
     Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:2:15 written
       Destination "_4"
@@ -33,11 +32,6 @@ Function two_escaped_pointers_written_through_one_another_are_each_said_once.c:1
       Use
         Copy "_2"
           Deref
-    Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:4:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced two_escaped_pointers_written_through_one_another_are_each_said_once.c:4:5 generated
     Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:5:5 written
       Destination "_0"
@@ -54,7 +48,6 @@ Function two_escaped_pointers_written_through_one_another_are_each_said_once.c:7
   Local "_5" "int **" "b"
   Local "_6" "int **"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:8:15 written
       Destination "_4"
@@ -86,11 +79,6 @@ Function two_escaped_pointers_written_through_one_another_are_each_said_once.c:7
         Deref
       Use
         Copy "_7"
-    Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:10:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced two_escaped_pointers_written_through_one_another_are_each_said_once.c:10:5 generated
     Operation two_escaped_pointers_written_through_one_another_are_each_said_once.c:11:5 written
       Destination "_0"

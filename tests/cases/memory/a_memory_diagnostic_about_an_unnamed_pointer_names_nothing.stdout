@@ -47,7 +47,6 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 generated
     Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:11:16 written "malloc" "bb1"
@@ -112,11 +111,6 @@ Function a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:10:5 "deep
         Deref
       Use
         Copy "_3"
-    Operation a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:16:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:16:5 generated
     ArgumentsEvaluated a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 generated
     Call a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:17:5 written "free" "bb8"

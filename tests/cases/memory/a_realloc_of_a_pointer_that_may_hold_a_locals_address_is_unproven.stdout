@@ -16,9 +16,8 @@ Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5
   Local "_3" "int *" "r"
   Local "_4" "void *"
   Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int *" "q"
-  Local "_8" "void *"
+  Local "_6" "int *" "q"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 generated
     Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 written "malloc" "bb1"
@@ -42,10 +41,6 @@ Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5
       Destination "_3"
       Use
         Copy "_5"
-    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
     Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:9 generated
     Goto "bb4"
   Block "bb3"
@@ -54,18 +49,18 @@ Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5
   Block "bb4"
     ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 generated
     Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 written "realloc" "bb5"
-      Destination "_8"
+      Destination "_7"
       Copy "_3"
       Constant 8
   Block "bb5"
     Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:10 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 generated
     ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated
     Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 written "free" "bb6"
-      Copy "_7"
+      Copy "_6"
   Block "bb6"
     Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated
     Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:13:5 written

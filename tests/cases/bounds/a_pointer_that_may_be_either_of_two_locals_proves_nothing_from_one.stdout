@@ -12,8 +12,6 @@ Function a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:1:
   Local "_9" "int **" "pi"
   Local "_10" "int **"
   Local "_11" "int **"
-  Local "_12" "int **"
-  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:1:5 generated
       Destination "_0"
@@ -63,10 +61,6 @@ Function a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:1:
       Destination "_9"
       Use
         Copy "_11"
-    Operation a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:9:9 written
-      Destination "_12"
-      Use
-        Copy "_9"
     Sequenced a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:9:9 generated
     Goto "bb3"
   Block "bb2"
@@ -79,12 +73,6 @@ Function a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:1:
           Deref
       Use
         Constant 1
-    Operation a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:11:5 written
-      Destination "_13"
-      Use
-        Copy "_9"
-          Deref
-            Deref
     Sequenced a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:11:5 generated
     Operation a_pointer_that_may_be_either_of_two_locals_proves_nothing_from_one.c:12:5 written
       Destination "_0"

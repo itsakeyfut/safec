@@ -16,13 +16,10 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
+  Local "_10" "int **"
+  Local "_11" "int *" "q"
   Local "_12" "int **"
-  Local "_13" "int *"
-  Local "_14" "int *" "q"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 generated
       Destination "_0"
@@ -120,38 +117,23 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:17:5 generated
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:18:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:18:5 generated
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:19:5 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:19:5 written
-      Destination "_12"
+      Destination "_10"
         Deref
       Use
         Copy "_6"
-    Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:19:5 written
-      Destination "_13"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:19:5 generated
     ArgumentsEvaluated a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 generated
     Call a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 written "free" "bb13"
@@ -159,23 +141,23 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
   Block "bb13"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:20:5 generated
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:21:14 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:21:10 written
-      Destination "_14"
+      Destination "_11"
       Use
-        Copy "_15"
+        Copy "_12"
           Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:21:14 generated
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 written
-      Destination "_16"
+      Destination "_13"
       Binary "Eq"
-        Copy "_14"
+        Copy "_11"
         Constant 0
     Branch a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 written "bb14" "bb15"
-      Copy "_16"
+      Copy "_13"
   Block "bb14"
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:22:9 generated
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:23:9 written
@@ -191,7 +173,7 @@ Function a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:4:5 "main"
     Operation a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:25:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_11"
           Deref
     Sequenced a_live_slot_of_a_table_with_a_freed_one_is_doubted.c:25:12 generated
     Return

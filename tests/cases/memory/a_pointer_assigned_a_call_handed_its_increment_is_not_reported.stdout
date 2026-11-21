@@ -9,7 +9,6 @@ Function a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:2:5 "f
   Local "_3" "int *"
   Local "_4" "int *"
   Local "_5" "int *"
-  Local "_6" "int *"
   Block "bb0" entry
     Operation a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:3:10 written
       Destination "_2"
@@ -38,10 +37,6 @@ Function a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:2:5 "f
       Destination "_2"
       Use
         Copy "_5"
-    Operation a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:4:5 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:4:5 generated
     Operation a_pointer_assigned_a_call_handed_its_increment_is_not_reported.c:5:5 written
       Destination "_0"

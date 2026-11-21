@@ -7,7 +7,6 @@ Function an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.
   Local "_4" "int **" "back"
   Local "_5" "int *" "p"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:2:9 written
       Destination "_2"
@@ -56,11 +55,6 @@ Function an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.
         Deref
       Use
         Constant 1
-    Operation an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:7:13 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced an_int_pointer_to_pointer_round_trip_through_void_says_nothing_of_size.c:7:13 generated
     Goto "bb6"
   Block "bb5"

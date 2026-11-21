@@ -12,11 +12,8 @@ Function a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_l
   Local "_3" "void *"
   Local "_4" "int *" "r"
   Local "_5" "int **"
-  Local "_6" "int **"
-  Local "_7" "int *" "q"
-  Local "_8" "void *"
-  Local "_9" "int *"
-  Local "_10" "int"
+  Local "_6" "int *" "q"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:4:14 generated
     Call a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:4:14 written "malloc" "bb1"
@@ -42,34 +39,23 @@ Function a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_l
         Deref
       Use
         Copy "_5"
-    Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:6:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:6:5 generated
     ArgumentsEvaluated a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:7:14 generated
     Call a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:7:14 written "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 8
   Block "bb2"
     Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:7:10 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:7:14 generated
     Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:8:5 written
       Destination "_1"
         Deref
           Deref
       Use
-        Copy "_7"
-    Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:8:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
-            Deref
+        Copy "_6"
     Sequenced a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:8:5 generated
     ArgumentsEvaluated a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:9:5 generated
     Call a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:9:5 written "free" "bb3"
@@ -81,11 +67,6 @@ Function a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_l
         Deref
       Use
         Constant 1
-    Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:10:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:10:5 generated
     Operation a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds.c:11:5 written
       Destination "_0"

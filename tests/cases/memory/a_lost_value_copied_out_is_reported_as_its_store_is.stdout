@@ -25,9 +25,7 @@ Function a_lost_value_copied_out_is_reported_as_its_store_is.c:6:6 "f"
   Local "_11" "int *" "v"
   Local "_12" "int **"
   Local "_13" "void *"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:7:9 written
       Destination "_3"
@@ -124,10 +122,6 @@ Function a_lost_value_copied_out_is_reported_as_its_store_is.c:6:6 "f"
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:17:9 written
-      Destination "_14"
-      Use
-        Copy "_4"
     Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:17:9 generated
     ArgumentsEvaluated a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 generated
     Call a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 written "free" "bb15"
@@ -139,18 +133,14 @@ Function a_lost_value_copied_out_is_reported_as_its_store_is.c:6:6 "f"
   Block "bb15"
     Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:18:9 generated
     Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:13 written
-      Destination "_15"
+      Destination "_14"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 written
       Destination "_5"
       Use
-        Copy "_15"
-    Operation a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 written
-      Destination "_16"
-      Use
-        Copy "_5"
+        Copy "_14"
     Sequenced a_lost_value_copied_out_is_reported_as_its_store_is.c:19:9 generated
     StorageDead a_lost_value_copied_out_is_reported_as_its_store_is.c:20:5 generated "_7"
     Goto "bb4"

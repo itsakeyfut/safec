@@ -13,7 +13,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_
   Local "_2" "int ***" "v"
   Local "_3" "void *" "pv"
   Local "_4" "int ****"
-  Local "_5" "int ***"
   Block "bb0" entry
     Operation a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join.c:5:12 written
       Destination "_2"
@@ -44,10 +43,6 @@ Function a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_
       Destination "_2"
       Use
         Constant 0
-    Operation a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join.c:10:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join.c:10:5 generated
     ArgumentsEvaluated a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join.c:11:5 generated
     Call a_local_a_callee_wrote_on_one_arm_is_bounded_where_a_later_call_writes_it_again_after_the_join.c:11:5 written "tick" "bb5"

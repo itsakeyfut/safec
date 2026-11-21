@@ -17,10 +17,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:5:16 generated
     Call a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:5:16 written "malloc" "bb1"
@@ -114,11 +110,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
         Deref
       Use
         Constant 1
-    Operation a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:18:5 written
-      Destination "_12"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:18:5 generated
     Branch a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:19:9 written "bb13" "bb14"
       Copy "_1"
@@ -128,10 +119,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
       Destination "_6"
       Use
         Copy "_2"
-    Operation a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:20:9 written
-      Destination "_13"
-      Use
-        Copy "_6"
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:20:9 generated
     Goto "bb15"
   Block "bb14"
@@ -140,10 +127,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
       Destination "_6"
       Use
         Copy "_4"
-    Operation a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:22:9 written
-      Destination "_14"
-      Use
-        Copy "_6"
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:22:9 generated
     Goto "bb15"
   Block "bb15"
@@ -152,11 +135,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
         Deref
       Use
         Copy "_7"
-    Operation a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:24:5 written
-      Destination "_15"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:24:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:25:5 generated
     Call a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:25:5 written "release_all" "bb16"

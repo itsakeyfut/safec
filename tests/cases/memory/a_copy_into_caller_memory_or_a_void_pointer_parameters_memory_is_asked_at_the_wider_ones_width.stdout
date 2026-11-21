@@ -19,11 +19,9 @@ Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "void *" "t"
-  Local "_11" "void *"
-  Local "_12" "void *"
-  Local "_13" "void **" "vo"
-  Local "_14" "char **"
-  Local "_15" "void *"
+  Local "_11" "void **" "vo"
+  Local "_12" "char **"
+  Local "_13" "void *"
   Block "bb0" entry
     Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:3:9 written
       Destination "_4"
@@ -89,10 +87,6 @@ Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_
       Destination "_10"
       Use
         Copy "_1"
-    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:12 written
-      Destination "_11"
-      Use
-        Copy "_10"
     Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:12 generated
     Goto "bb12"
   Block "bb11"
@@ -101,27 +95,23 @@ Function a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_
       Destination "_10"
       Use
         Copy "_2"
-    Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:26 written
-      Destination "_12"
-      Use
-        Copy "_10"
     Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:7:26 generated
     Goto "bb12"
   Block "bb12"
     Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:8:12 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_10"
     Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:8:17 generated
     Operation a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:16 written
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_7"
     ArgumentsEvaluated a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 generated
     Call a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 written "memcpy" "bb13"
-      Destination "_15"
-      Copy "_13"
-      Copy "_14"
+      Destination "_13"
+      Copy "_11"
+      Copy "_12"
       Constant 8
   Block "bb13"
     Sequenced a_copy_into_caller_memory_or_a_void_pointer_parameters_memory_is_asked_at_the_wider_ones_width.c:9:5 generated

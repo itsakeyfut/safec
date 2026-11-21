@@ -16,9 +16,8 @@ Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_
   Local "_5" "int **" "n"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *" "r"
+  Local "_8" "void *"
+  Local "_9" "int *" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:38 generated
     Call a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:38 written "malloc" "bb1"
@@ -81,22 +80,17 @@ Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:107 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:107 generated
     ArgumentsEvaluated a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 generated
     Call a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 written "memcpy" "bb9"
-      Destination "_9"
+      Destination "_8"
       Copy "_5"
       Copy "_2"
       Constant 8
   Block "bb9"
     Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:117 generated
     Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:139 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
           Deref
@@ -104,6 +98,6 @@ Function a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_
     Operation a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:149 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_heap_block_element_written_and_then_copied_over_unwritten_is_doubted_where_read.c:3:156 generated
     Return

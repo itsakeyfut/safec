@@ -11,11 +11,9 @@ Function a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory
   Local "_5" "int **" "c"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int **"
-  Local "_9" "int ****" "t"
-  Local "_10" "int"
-  Local "_11" "int ***"
-  Local "_12" "int *" "x"
+  Local "_8" "int ****" "t"
+  Local "_9" "int"
+  Local "_10" "int *" "x"
   Block "bb0" entry
     ArgumentsEvaluated a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:3:16 generated
     Call a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:3:16 written "malloc" "bb1"
@@ -68,24 +66,19 @@ Function a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory
         Deref
       Use
         Copy "_5"
-    Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:7:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:7:5 generated
     Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:8:13 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
     Sequenced a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:8:17 generated
     Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:9:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
-        Copy "_9"
+        Copy "_8"
     Branch a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:9:9 written "bb9" "bb10"
-      Copy "_10"
+      Copy "_9"
   Block "bb9"
     Sequenced a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:9:9 generated
     Return
@@ -94,18 +87,13 @@ Function a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory
     Goto "bb11"
   Block "bb11"
     Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:10:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
         Copy "_2"
-    Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:10:5 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:10:5 generated
     Operation a_block_reached_through_one_stored_through_a_pointer_read_out_of_memory_is_read_back_unwritten.c:11:10 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_5"
           Deref

@@ -10,7 +10,6 @@ Function a_use_after_a_free_a_goto_reaches_is_proved.c:3:5 "f"
   Local "_1" "int" parameter "c"
   Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_use_after_a_free_a_goto_reaches_is_proved.c:4:14 generated
     Call a_use_after_a_free_a_goto_reaches_is_proved.c:4:14 written "malloc" "bb1"
@@ -48,11 +47,6 @@ Function a_use_after_a_free_a_goto_reaches_is_proved.c:3:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_use_after_a_free_a_goto_reaches_is_proved.c:11:5 written
-      Destination "_4"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_use_after_a_free_a_goto_reaches_is_proved.c:11:5 generated
     Operation a_use_after_a_free_a_goto_reaches_is_proved.c:12:5 written
       Destination "_0"

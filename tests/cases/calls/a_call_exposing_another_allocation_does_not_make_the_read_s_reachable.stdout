@@ -27,7 +27,6 @@ Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:6:5 generated
       Destination "_0"
@@ -123,10 +122,6 @@ Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c
       Destination "_1"
       Use
         Copy "_13"
-    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:5 written
-      Destination "_14"
-      Use
-        Copy "_1"
     Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:5 generated
     Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:17:5 written
       Destination "_0"

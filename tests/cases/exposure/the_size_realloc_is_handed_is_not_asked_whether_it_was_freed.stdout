@@ -18,7 +18,6 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
   Local "_5" "int *" "q"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Operation the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 generated
       Destination "_0"
@@ -93,11 +92,6 @@ Function the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:5:5 "mai
         Deref
       Use
         Constant 1
-    Operation the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:15:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:15:5 generated
     ArgumentsEvaluated the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 generated
     Call the_size_realloc_is_handed_is_not_asked_whether_it_was_freed.c:16:5 written "free" "bb9"

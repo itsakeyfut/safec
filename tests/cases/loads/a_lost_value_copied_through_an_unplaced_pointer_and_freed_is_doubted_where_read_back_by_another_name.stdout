@@ -21,19 +21,14 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
   Local "_7" "int *" "q"
   Local "_8" "int" "i"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "void *"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int **"
+  Local "_14" "void *"
+  Local "_15" "int *" "r"
   Local "_16" "int"
-  Local "_17" "int **"
-  Local "_18" "void *"
-  Local "_19" "int *"
-  Local "_20" "int *" "r"
-  Local "_21" "int"
-  Local "_22" "int" "v"
+  Local "_17" "int" "v"
   Block "bb0" entry
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:5:9 written
       Destination "_4"
@@ -101,43 +96,35 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
       Destination "_6"
       Use
         Copy "_7"
-    Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:11:9 written
-      Destination "_10"
-      Use
-        Copy "_6"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:11:9 generated
     ArgumentsEvaluated a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:12:13 generated
     Call a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:12:13 written "malloc" "bb10"
-      Destination "_11"
+      Destination "_10"
       Constant 4
   Block "bb9"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:10:12 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:17:15 written
-      Destination "_17"
+      Destination "_13"
       Address
         Place "_6"
     ArgumentsEvaluated a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:17:5 generated
     Call a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:17:5 written "memcpy" "bb14"
-      Destination "_18"
+      Destination "_14"
       Copy "_1"
-      Copy "_17"
+      Copy "_13"
       Constant 8
   Block "bb10"
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:12:9 written
       Destination "_7"
       Use
-        Copy "_11"
-    Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:12:9 written
-      Destination "_12"
-      Use
-        Copy "_7"
+        Copy "_10"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:12:9 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:13:13 written
-      Destination "_13"
+      Destination "_11"
       Unary "Not"
         Copy "_7"
     Branch a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:13:13 written "bb11" "bb12"
-      Copy "_13"
+      Copy "_11"
   Block "bb11"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:13:13 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:13:17 written
@@ -155,25 +142,16 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
         Deref
       Use
         Constant 1
-    Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:14:9 written
-      Destination "_14"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:14:9 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:15:13 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:15:9 written
       Destination "_8"
       Use
-        Copy "_15"
-    Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:15:9 written
-      Destination "_16"
-      Use
-        Copy "_8"
+        Copy "_12"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:15:9 generated
     Goto "bb7"
   Block "bb14"
@@ -190,17 +168,17 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
     Goto "bb17"
   Block "bb17"
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:19:10 written
-      Destination "_20"
+      Destination "_15"
       Use
         Copy "_2"
           Deref
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:19:14 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:20:9 written
-      Destination "_21"
+      Destination "_16"
       Unary "Not"
-        Copy "_20"
+        Copy "_15"
     Branch a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:20:9 written "bb20" "bb21"
-      Copy "_21"
+      Copy "_16"
   Block "bb18"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:18:14 generated
     ArgumentsEvaluated a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:18:23 generated
@@ -212,10 +190,6 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
       Destination "_7"
       Use
         Constant 0
-    Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:18:32 written
-      Destination "_19"
-      Use
-        Copy "_7"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:18:32 generated
     Goto "bb17"
   Block "bb20"
@@ -231,14 +205,14 @@ Function a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_wh
     Goto "bb22"
   Block "bb22"
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:21:9 written
-      Destination "_22"
+      Destination "_17"
       Use
-        Copy "_20"
+        Copy "_15"
           Deref
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:21:13 generated
     Operation a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:22:5 written
       Destination "_0"
       Use
-        Copy "_22"
+        Copy "_17"
     Sequenced a_lost_value_copied_through_an_unplaced_pointer_and_freed_is_doubted_where_read_back_by_another_name.c:22:12 generated
     Return

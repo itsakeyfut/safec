@@ -13,38 +13,27 @@ Function a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:
   Local "_2" "int **" "pp"
   Local "_3" "int *" "a"
   Local "_4" "int" "x"
-  Local "_5" "int *"
-  Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "void *"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
   Local "_9" "int *"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:10:5 written
       Destination "_1"
       Use
         Constant 0
-    Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:10:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:10:5 generated
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:11:10 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_1"
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:11:5 written
       Destination "_2"
       Use
-        Copy "_6"
-    Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_2"
+        Copy "_5"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:11:5 generated
     ArgumentsEvaluated a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:12:5 generated
     Call a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:12:5 written "keep" "bb1"
@@ -53,25 +42,21 @@ Function a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:12:5 generated
     ArgumentsEvaluated a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:9 generated
     Call a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:9 written "malloc" "bb2"
-      Destination "_8"
+      Destination "_6"
       Constant 4
   Block "bb2"
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:5 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:5 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:13:5 generated
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:14:9 written
-      Destination "_10"
+      Destination "_7"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:14:9 written "bb3" "bb4"
-      Copy "_10"
+      Copy "_7"
   Block "bb3"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:14:9 generated
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:15:9 written
@@ -90,7 +75,7 @@ Function a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:
         Copy "_3"
           Deref
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:13 written
-      Destination "_11"
+      Destination "_8"
       Use
         Copy "_4"
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:26 written
@@ -99,25 +84,25 @@ Function a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:
       Use
         Copy "_3"
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:26 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_2"
           Deref
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:12 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
-        Copy "_11"
+        Copy "_8"
         Constant 0
     Call a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:41 written "release_all" "bb6"
   Block "bb6"
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:12 written
-      Destination "_14"
+      Destination "_11"
       Binary "Add"
-        Copy "_13"
+        Copy "_10"
         Constant 0
     Operation a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_11"
     Sequenced a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds.c:17:12 generated
     Return

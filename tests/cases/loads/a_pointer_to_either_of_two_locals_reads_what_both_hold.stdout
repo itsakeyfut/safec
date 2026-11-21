@@ -15,14 +15,11 @@ Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 "main"
   Local "_4" "int *" "b"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int"
-  Local "_9" "int **" "t2"
+  Local "_7" "int **" "t2"
+  Local "_8" "int **"
+  Local "_9" "int"
   Local "_10" "int **"
-  Local "_11" "int"
-  Local "_12" "int **"
-  Local "_13" "int **"
-  Local "_14" "int *" "q"
+  Local "_11" "int *" "q"
   Block "bb0" entry
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 generated
       Destination "_0"
@@ -91,52 +88,38 @@ Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:14:5 generated
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:15:5 written
       Destination "_4"
         Deref
       Use
         Constant 1
-    Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:15:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:15:5 generated
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:16:16 written
-      Destination "_10"
+      Destination "_8"
       Address
         Place "_1"
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:16:11 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:16:16 generated
     ArgumentsEvaluated a_pointer_to_either_of_two_locals_reads_what_both_hold.c:17:9 generated
     Call a_pointer_to_either_of_two_locals_reads_what_both_hold.c:17:9 written "cond" "bb9"
-      Destination "_11"
+      Destination "_9"
   Block "bb9"
     Branch a_pointer_to_either_of_two_locals_reads_what_both_hold.c:17:9 written "bb10" "bb11"
-      Copy "_11"
+      Copy "_9"
   Block "bb10"
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:17:9 generated
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:18:14 written
-      Destination "_12"
+      Destination "_10"
       Address
         Place "_4"
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:18:9 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_12"
-    Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:18:9 written
-      Destination "_13"
-      Use
-        Copy "_9"
+        Copy "_10"
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:18:9 generated
     Goto "bb12"
   Block "bb11"
@@ -149,15 +132,15 @@ Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 "main"
   Block "bb13"
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:20:5 generated
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:21:10 written
-      Destination "_14"
+      Destination "_11"
       Use
-        Copy "_9"
+        Copy "_7"
           Deref
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:21:14 generated
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:22:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_11"
           Deref
     Sequenced a_pointer_to_either_of_two_locals_reads_what_both_hold.c:22:12 generated
     Return

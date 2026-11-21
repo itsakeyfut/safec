@@ -8,11 +8,9 @@ Function a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothi
   Local "_2" "void *"
   Local "_3" "int **[2]" "a"
   Local "_4" "int ***"
-  Local "_5" "int **"
+  Local "_5" "int ***"
   Local "_6" "int ***"
   Local "_7" "int ***"
-  Local "_8" "int **"
-  Local "_9" "int ***"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:27 generated
     Call a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:27 written "malloc" "bb1"
@@ -35,36 +33,26 @@ Function a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothi
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:50 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:50 generated
     Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 generated
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
-        Copy "_6"
+        Copy "_5"
         Constant 1
     Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:60 generated
     Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:77 generated
-      Destination "_9"
+      Destination "_7"
       Address
         Place "_3"
           Index
@@ -72,7 +60,7 @@ Function a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothi
     Operation a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:70 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_7"
           Deref
     Sequenced a_pointer_read_out_of_a_local_array_and_returned_points_at_memory_nothing_wrote.c:2:77 generated
     Return

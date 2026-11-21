@@ -16,11 +16,8 @@ Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
-  Local "_13" "int *" "q"
-  Local "_14" "int"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5 generated
       Destination "_0"
@@ -118,33 +115,18 @@ Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5
         Deref
       Use
         Constant 1
-    Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:17:5 generated
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:18:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:18:5 generated
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:19:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:19:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:19:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:20:5 generated
     Call a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:20:5 written "free" "bb13"
@@ -152,19 +134,19 @@ Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5
   Block "bb13"
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:20:5 generated
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:21:10 written
-      Destination "_13"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
             Deref
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:21:14 generated
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:22:9 written
-      Destination "_14"
+      Destination "_11"
       Binary "Eq"
-        Copy "_13"
+        Copy "_10"
         Constant 0
     Branch a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:22:9 written "bb14" "bb15"
-      Copy "_14"
+      Copy "_11"
   Block "bb14"
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:22:9 generated
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:23:9 written
@@ -180,7 +162,7 @@ Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:25:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_10"
           Deref
     Sequenced a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:25:12 generated
     Return

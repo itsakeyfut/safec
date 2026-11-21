@@ -22,12 +22,9 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
   Local "_11" "int ***" "h"
   Local "_12" "void *"
   Local "_13" "int"
-  Local "_14" "int *"
-  Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "void *"
-  Local "_18" "int *" "r"
-  Local "_19" "int"
+  Local "_14" "void *"
+  Local "_15" "int *" "r"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:3:9 written
       Destination "_4"
@@ -141,11 +138,6 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
       Use
         Copy "_3"
           Deref
-    Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:7:12 written
-      Destination "_14"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:7:12 generated
     Goto "bb18"
   Block "bb17"
@@ -157,11 +149,6 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
         Deref
       Use
         Copy "_8"
-    Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:8:5 written
-      Destination "_15"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:8:5 generated
     Branch a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:9:9 written "bb19" "bb20"
       Copy "_2"
@@ -172,11 +159,6 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
         Deref
       Use
         Copy "_5"
-    Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:9:12 written
-      Destination "_16"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:9:12 generated
     Goto "bb21"
   Block "bb20"
@@ -185,7 +167,7 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
   Block "bb21"
     ArgumentsEvaluated a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:10:5 generated
     Call a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:10:5 written "memcpy" "bb22"
-      Destination "_17"
+      Destination "_14"
       Copy "_11"
         Deref
       Copy "_3"
@@ -193,17 +175,17 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
   Block "bb22"
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:10:5 generated
     Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:10 written
-      Destination "_18"
+      Destination "_15"
       Use
         Copy "_5"
           Deref
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:14 generated
     Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:22 written
-      Destination "_19"
+      Destination "_16"
       Unary "Not"
-        Copy "_18"
+        Copy "_15"
     Branch a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:22 written "bb23" "bb24"
-      Copy "_19"
+      Copy "_16"
   Block "bb23"
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:22 generated
     Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:11:26 written
@@ -219,7 +201,7 @@ Function a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_abo
     Operation a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:12:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_15"
           Deref
     Sequenced a_copy_through_a_deep_destination_naming_two_blocks_keeps_the_doubt_about_one.c:12:12 generated
     Return

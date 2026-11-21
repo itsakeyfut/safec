@@ -17,8 +17,7 @@ Function a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_writ
   Local "_8" "int **"
   Local "_9" "int **"
   Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:5:9 written
       Destination "_3"
@@ -102,11 +101,6 @@ Function a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_writ
         Deref
       Use
         Copy "_9"
-    Operation a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:9:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:9:5 generated
     ArgumentsEvaluated a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:10:5 generated
     Call a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:10:5 written "fill3" "bb11"
@@ -114,20 +108,20 @@ Function a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_writ
   Block "bb11"
     Sequenced a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:10:5 generated
     Operation a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:11:12 generated
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:11:12 written
-      Destination "_12"
+      Destination "_11"
       Binary "Ne"
-        Copy "_11"
+        Copy "_10"
           Deref
         Constant 0
     Operation a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:11:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_local_array_an_element_kept_in_a_block_points_at_is_not_believed_written_by_a_call.c:11:12 generated
     Return

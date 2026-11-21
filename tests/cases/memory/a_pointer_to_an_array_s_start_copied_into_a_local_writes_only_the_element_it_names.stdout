@@ -16,11 +16,10 @@ Function a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_eleme
   Local "_8" "int ***"
   Local "_9" "int ***"
   Local "_10" "void *"
-  Local "_11" "int *"
-  Local "_12" "int *" "r"
+  Local "_11" "int *" "r"
+  Local "_12" "int **"
   Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:2:5 generated
       Destination "_0"
@@ -77,37 +76,32 @@ Function a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_eleme
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:9:5 written
-      Destination "_11"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:9:5 generated
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:10:14 generated
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_4"
           Index
             Constant 0
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:10:14 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
-        Copy "_13"
+        Copy "_12"
         Constant 1
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:10:10 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
     Sequenced a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:10:14 generated
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:11:12 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
-        Copy "_12"
+        Copy "_11"
         Constant 0
     Operation a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:11:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced a_pointer_to_an_array_s_start_copied_into_a_local_writes_only_the_element_it_names.c:11:12 generated
     Return

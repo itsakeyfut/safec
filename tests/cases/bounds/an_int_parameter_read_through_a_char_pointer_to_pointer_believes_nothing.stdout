@@ -6,7 +6,6 @@ Function an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothin
   Local "_3" "char **" "pi"
   Local "_4" "char *" "p"
   Local "_5" "int"
-  Local "_6" "char"
   Block "bb0" entry
     Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:2:11 written
       Destination "_2"
@@ -38,11 +37,6 @@ Function an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothin
         Deref
       Use
         Constant 1
-    Operation an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:6:9 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced an_int_parameter_read_through_a_char_pointer_to_pointer_believes_nothing.c:6:9 generated
     Goto "bb3"
   Block "bb2"

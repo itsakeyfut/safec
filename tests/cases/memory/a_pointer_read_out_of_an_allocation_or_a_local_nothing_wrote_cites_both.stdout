@@ -10,9 +10,8 @@ Function a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int *" "q"
-  Local "_9" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:5:15 generated
     Call a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:5:15 written "malloc" "bb1"
@@ -57,10 +56,6 @@ Function a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both
       Destination "_3"
       Use
         Copy "_6"
-    Operation a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:10:9 written
-      Destination "_7"
-      Use
-        Copy "_3"
     Sequenced a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:10:9 generated
     Goto "bb7"
   Block "bb6"
@@ -68,19 +63,19 @@ Function a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:12:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:12:14 generated
     Operation a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:13:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
-        Copy "_8"
+        Copy "_7"
         Constant 0
     Operation a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:13:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_read_out_of_an_allocation_or_a_local_nothing_wrote_cites_both.c:13:12 generated
     Return

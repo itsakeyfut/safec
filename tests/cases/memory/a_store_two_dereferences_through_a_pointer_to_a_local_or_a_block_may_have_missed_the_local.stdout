@@ -10,14 +10,12 @@ Function a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_ha
   Local "_4" "int **" "g"
   Local "_5" "int **"
   Local "_6" "void *"
-  Local "_7" "int **"
-  Local "_8" "int"
-  Local "_9" "int ***" "h"
-  Local "_10" "int ***"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int *" "r"
-  Local "_14" "int"
+  Local "_7" "int"
+  Local "_8" "int ***" "h"
+  Local "_9" "int ***"
+  Local "_10" "int *"
+  Local "_11" "int *" "r"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:4:15 written
       Destination "_5"
@@ -41,45 +39,39 @@ Function a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_ha
     Goto "bb3"
   Block "bb3"
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:6:16 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_4"
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:6:12 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:6:16 generated
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:7:11 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_2"
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:7:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
           Deref
       Use
-        Copy "_11"
-    Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:7:5 written
-      Destination "_12"
-      Use
-        Copy "_9"
-          Deref
-            Deref
+        Copy "_10"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:7:5 generated
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:8:10 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_3"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:8:14 generated
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:9:12 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:9:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:9:12 generated
     Return
   Block "bb4"
@@ -87,17 +79,13 @@ Function a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_ha
       Destination "_4"
       Use
         Copy "_6"
-    Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:14 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:14 generated
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:33 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
         Copy "_4"
     Branch a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:33 written "bb5" "bb6"
-      Copy "_8"
+      Copy "_7"
   Block "bb5"
     Sequenced a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:33 generated
     Operation a_store_two_dereferences_through_a_pointer_to_a_local_or_a_block_may_have_missed_the_local.c:5:37 written

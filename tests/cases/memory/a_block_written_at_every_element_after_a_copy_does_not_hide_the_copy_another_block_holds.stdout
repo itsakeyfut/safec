@@ -21,17 +21,14 @@ Function a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_an
   Local "_10" "void *"
   Local "_11" "int"
   Local "_12" "void *"
-  Local "_13" "int *"
-  Local "_14" "int **"
-  Local "_15" "int *"
-  Local "_16" "int **" "c"
+  Local "_13" "int **"
+  Local "_14" "int **" "c"
+  Local "_15" "void *"
+  Local "_16" "int"
   Local "_17" "void *"
-  Local "_18" "int"
-  Local "_19" "void *"
-  Local "_20" "int **" "p"
-  Local "_21" "int **"
-  Local "_22" "int *" "r"
-  Local "_23" "int"
+  Local "_18" "int **" "p"
+  Local "_19" "int *" "r"
+  Local "_20" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:6:15 generated
     Call a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:6:15 written "malloc" "bb1"
@@ -130,44 +127,34 @@ Function a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_an
         Deref
       Use
         Copy "_2"
-    Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:10:5 written
-      Destination "_13"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:10:5 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:11:5 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
         Copy "_9"
         Constant 1
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:11:5 written
-      Destination "_14"
+      Destination "_13"
         Deref
       Use
         Copy "_2"
-    Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:11:5 written
-      Destination "_15"
-      Use
-        Copy "_14"
-          Deref
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:11:5 generated
     ArgumentsEvaluated a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:15 generated
     Call a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:15 written "malloc" "bb14"
-      Destination "_17"
+      Destination "_15"
       Constant 8
   Block "bb14"
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:11 written
-      Destination "_16"
+      Destination "_14"
       Use
-        Copy "_17"
+        Copy "_15"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:15 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:30 written
-      Destination "_18"
+      Destination "_16"
       Unary "Not"
-        Copy "_16"
+        Copy "_14"
     Branch a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:30 written "bb15" "bb16"
-      Copy "_18"
+      Copy "_16"
   Block "bb15"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:30 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:12:34 written
@@ -182,14 +169,14 @@ Function a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_an
   Block "bb17"
     ArgumentsEvaluated a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:13:5 generated
     Call a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:13:5 written "memcpy" "bb18"
-      Destination "_19"
-      Copy "_16"
+      Destination "_17"
+      Copy "_14"
       Copy "_6"
       Constant 8
   Block "bb18"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:13:5 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:14:11 written
-      Destination "_20"
+      Destination "_18"
       Use
         Copy "_9"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:14:15 generated
@@ -198,13 +185,9 @@ Function a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_an
   Block "bb19"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:15:9 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:15:12 written
-      Destination "_20"
+      Destination "_18"
       Use
-        Copy "_16"
-    Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:15:12 written
-      Destination "_21"
-      Use
-        Copy "_20"
+        Copy "_14"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:15:12 generated
     Goto "bb21"
   Block "bb20"
@@ -212,19 +195,19 @@ Function a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_an
     Goto "bb21"
   Block "bb21"
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:16:10 written
-      Destination "_22"
+      Destination "_19"
       Use
-        Copy "_20"
+        Copy "_18"
           Deref
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:16:14 generated
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:17:12 written
-      Destination "_23"
+      Destination "_20"
       Binary "Eq"
-        Copy "_22"
+        Copy "_19"
         Constant 0
     Operation a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:17:5 written
       Destination "_0"
       Use
-        Copy "_23"
+        Copy "_20"
     Sequenced a_block_written_at_every_element_after_a_copy_does_not_hide_the_copy_another_block_holds.c:17:12 generated
     Return

@@ -15,11 +15,10 @@ Function a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_addr
   Local "_9" "int ***"
   Local "_10" "int **" "f"
   Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int *" "r"
+  Local "_12" "int *" "r"
+  Local "_13" "int **"
   Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:2:5 generated
       Destination "_0"
@@ -79,37 +78,32 @@ Function a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_addr
         Deref
       Use
         Copy "_11"
-    Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:9:5 written
-      Destination "_12"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:9:5 generated
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:10:14 generated
-      Destination "_14"
+      Destination "_13"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:10:14 written
-      Destination "_15"
+      Destination "_14"
       Binary "Add"
-        Copy "_14"
+        Copy "_13"
         Constant 1
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:10:10 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_15"
+        Copy "_14"
           Deref
     Sequenced a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:10:14 generated
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:11:12 written
-      Destination "_16"
+      Destination "_15"
       Binary "Eq"
-        Copy "_13"
+        Copy "_12"
         Constant 0
     Operation a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:11:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
     Sequenced a_pointer_into_an_array_handed_to_a_call_and_read_back_through_its_address_names_no_element.c:11:12 generated
     Return

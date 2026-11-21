@@ -19,10 +19,8 @@ Function a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int **" "pt"
-  Local "_10" "int **"
-  Local "_11" "int *"
+  Local "_8" "int **" "pt"
+  Local "_9" "int **"
   Block "bb0" entry
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:8:11 written
       Destination "_3"
@@ -65,19 +63,15 @@ Function a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points
       Destination "_2"
       Use
         Copy "_7"
-    Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
     Sequenced a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:11:5 generated
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:12:16 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_1"
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:12:11 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:12:16 generated
     ArgumentsEvaluated a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:13:5 generated
     Call a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:13:5 written "free" "bb6"
@@ -85,15 +79,10 @@ Function a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points
   Block "bb6"
     Sequenced a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:13:5 generated
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:14:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
         Copy "_4"
-    Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:14:5 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:14:5 generated
     ArgumentsEvaluated a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:15:5 generated
     Call a_freed_pointer_stored_through_a_pointer_to_a_local_a_kept_local_points_at_is_reported.c:15:5 written "use_kept" "bb7"

@@ -13,10 +13,7 @@ Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 "main
   Local "_7" "int **" "pi"
   Local "_8" "int **"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int"
+  Local "_10" "int *"
   Block "bb0" entry
     Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 generated
       Destination "_0"
@@ -82,10 +79,6 @@ Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 "main
       Destination "_7"
       Use
         Copy "_9"
-    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:9 written
-      Destination "_10"
-      Use
-        Copy "_7"
     Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:12:9 generated
     Goto "bb7"
   Block "bb6"
@@ -93,18 +86,14 @@ Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 "main
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_2"
         Constant 4
     Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 written
       Destination "_5"
       Use
-        Copy "_11"
-    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
+        Copy "_10"
     Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:14:5 generated
     Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 written
       Destination "_7"
@@ -112,12 +101,6 @@ Function a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:3:5 "main
           Deref
       Use
         Constant 1
-    Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 written
-      Destination "_13"
-      Use
-        Copy "_7"
-          Deref
-            Deref
     Sequenced a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:15:5 generated
     Operation a_pointer_that_may_be_either_of_two_locals_is_asked_of_each.c:16:5 written
       Destination "_0"

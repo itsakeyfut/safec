@@ -13,8 +13,6 @@ Function a_goto_into_a_loop_leaves_its_function_unread.c:3:5 "f"
   Local "_4" "int" "n"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_goto_into_a_loop_leaves_its_function_unread.c:4:14 generated
     Call a_goto_into_a_loop_leaves_its_function_unread.c:4:14 written "malloc" "bb1"
@@ -30,10 +28,6 @@ Function a_goto_into_a_loop_leaves_its_function_unread.c:3:5 "f"
       Destination "_4"
       Use
         Constant 0
-    Operation a_goto_into_a_loop_leaves_its_function_unread.c:6:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced a_goto_into_a_loop_leaves_its_function_unread.c:6:5 generated
     Branch a_goto_into_a_loop_leaves_its_function_unread.c:7:9 written "bb2" "bb3"
       Copy "_1"
@@ -47,30 +41,26 @@ Function a_goto_into_a_loop_leaves_its_function_unread.c:3:5 "f"
     Goto "bb7"
   Block "bb5"
     Operation a_goto_into_a_loop_leaves_its_function_unread.c:11:13 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_goto_into_a_loop_leaves_its_function_unread.c:11:9 written
       Destination "_4"
       Use
-        Copy "_7"
-    Operation a_goto_into_a_loop_leaves_its_function_unread.c:11:9 written
-      Destination "_8"
-      Use
-        Copy "_4"
+        Copy "_6"
     Sequenced a_goto_into_a_loop_leaves_its_function_unread.c:11:9 generated
     Goto "bb7"
   Block "bb6"
     Goto "bb5"
   Block "bb7"
     Operation a_goto_into_a_loop_leaves_its_function_unread.c:8:12 written
-      Destination "_6"
+      Destination "_5"
       Binary "Lt"
         Copy "_4"
         Constant 3
     Branch a_goto_into_a_loop_leaves_its_function_unread.c:8:12 written "bb8" "bb9"
-      Copy "_6"
+      Copy "_5"
   Block "bb8"
     Sequenced a_goto_into_a_loop_leaves_its_function_unread.c:8:12 generated
     ArgumentsEvaluated a_goto_into_a_loop_leaves_its_function_unread.c:9:9 generated

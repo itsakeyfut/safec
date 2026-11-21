@@ -8,9 +8,7 @@ Function two_allocations_of_different_sizes_are_neither_proved_inside_nor_outsid
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "void *"
-  Local "_5" "int *"
-  Local "_6" "int"
-  Local "_7" "int"
+  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:14 generated
     Call two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:4:14 written "malloc" "bb1"
@@ -35,21 +33,17 @@ Function two_allocations_of_different_sizes_are_neither_proved_inside_nor_outsid
     Goto "bb4"
   Block "bb4"
     Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 written
-      Destination "_6"
+      Destination "_5"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:8:9 written "bb6" "bb7"
-      Copy "_6"
+      Copy "_5"
   Block "bb5"
     Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 written
       Destination "_2"
       Use
         Copy "_4"
-    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:6:9 generated
     Goto "bb4"
   Block "bb6"
@@ -69,11 +63,6 @@ Function two_allocations_of_different_sizes_are_neither_proved_inside_nor_outsid
         Deref
       Use
         Constant 5
-    Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_2"
-          Deref
     Sequenced two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:11:5 generated
     Operation two_allocations_of_different_sizes_are_neither_proved_inside_nor_outside.c:12:5 written
       Destination "_0"

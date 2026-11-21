@@ -10,10 +10,8 @@ Function a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_dou
   Local "_4" "int **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int *" "q"
-  Local "_10" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:4:15 generated
     Call a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:4:15 written "malloc" "bb1"
@@ -49,11 +47,6 @@ Function a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_dou
         Deref
       Use
         Copy "_4"
-    Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:8:5 written
-      Destination "_7"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:8:5 generated
     Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:9:5 written
       Destination "_1"
@@ -61,27 +54,21 @@ Function a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_dou
           Deref
       Use
         Copy "_3"
-    Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
-            Deref
     Sequenced a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:9:5 generated
     Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:10 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_4"
           Deref
     Sequenced a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:14 generated
     Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:11:12 written
-      Destination "_10"
+      Destination "_8"
       Binary "Ne"
-        Copy "_9"
+        Copy "_7"
         Constant 0
     Operation a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:11:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:11:12 generated
     Return

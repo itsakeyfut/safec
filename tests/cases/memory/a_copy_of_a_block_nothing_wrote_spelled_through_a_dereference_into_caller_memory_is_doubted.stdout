@@ -17,8 +17,7 @@ Function a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_call
   Local "_6" "int **" "m"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "void *"
+  Local "_9" "void *"
   Block "bb0" entry
     Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:3:9 written
       Destination "_2"
@@ -84,15 +83,10 @@ Function a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_call
         Deref
       Use
         Copy "_6"
-    Operation a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:8:5 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:8:5 generated
     ArgumentsEvaluated a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 generated
     Call a_copy_of_a_block_nothing_wrote_spelled_through_a_dereference_into_caller_memory_is_doubted.c:9:5 written "memcpy" "bb12"
-      Destination "_10"
+      Destination "_9"
       Copy "_1"
       Copy "_3"
         Deref

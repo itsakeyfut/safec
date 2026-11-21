@@ -24,7 +24,6 @@ Function an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:5:5 "
   Local "_8" "int" "r"
   Local "_9" "char *" "c"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:6:9 written
       Destination "_1"
@@ -97,10 +96,6 @@ Function an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:5:5 "
       Destination "_8"
       Use
         Copy "_10"
-    Operation an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:13:5 written
-      Destination "_11"
-      Use
-        Copy "_8"
     Sequenced an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:13:5 generated
     ArgumentsEvaluated an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:14:5 generated
     Call an_int_read_out_of_a_block_a_partial_copy_wrote_is_not_reported.c:14:5 written "free" "bb6"

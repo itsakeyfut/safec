@@ -11,17 +11,14 @@ Function a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:
   Local "_6" "int"
   Local "_7" "int **"
   Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int *" "r"
-  Local "_11" "int **"
+  Local "_9" "int *" "r"
+  Local "_10" "int **"
+  Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int **"
-  Local "_16" "int *"
-  Local "_17" "int *"
-  Local "_18" "int"
-  Local "_19" "int"
+  Local "_13" "int **"
+  Local "_14" "int *"
+  Local "_15" "int"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:2:5 generated
       Destination "_0"
@@ -87,84 +84,70 @@ Function a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:
         Deref
       Use
         Copy "_8"
-    Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:8:13 written
-      Destination "_9"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:8:13 generated
     Goto "bb7"
   Block "bb6"
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:7:13 generated
     Goto "bb7"
   Block "bb7"
-    StorageLive a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:10:9 generated "_10"
+    StorageLive a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:10:9 generated "_9"
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:10:18 generated
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_5"
           Index
             Constant 0
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:10:14 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:10:18 generated
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:11:18 written
-      Destination "_12"
+      Destination "_11"
       Binary "Ne"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:11:13 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_2"
-        Copy "_12"
+        Copy "_11"
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:11:9 written
       Destination "_2"
       Use
-        Copy "_13"
-    Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:11:9 written
-      Destination "_14"
-      Use
-        Copy "_2"
+        Copy "_12"
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:11:9 generated
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:12:9 generated
-      Destination "_15"
+      Destination "_13"
       Address
         Place "_5"
           Index
             Constant 0
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:12:16 written
-      Destination "_16"
+      Destination "_14"
       Address
         Place "_1"
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:12:9 written
-      Destination "_15"
+      Destination "_13"
         Deref
       Use
-        Copy "_16"
-    Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:12:9 written
-      Destination "_17"
-      Use
-        Copy "_15"
-          Deref
+        Copy "_14"
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:12:9 generated
-    StorageDead a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:13:5 generated "_10"
+    StorageDead a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:13:5 generated "_9"
     StorageDead a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:13:5 generated "_5"
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:5:28 written
-      Destination "_18"
+      Destination "_15"
       Use
         Copy "_3"
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:5:28 written
-      Destination "_19"
+      Destination "_16"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:5:28 written
       Destination "_3"
       Use
-        Copy "_19"
+        Copy "_16"
     Sequenced a_local_array_made_again_each_turn_and_written_on_one_arm_is_doubted.c:5:28 generated
     Goto "bb1"

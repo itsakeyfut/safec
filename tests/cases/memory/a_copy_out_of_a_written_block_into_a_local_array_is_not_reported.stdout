@@ -13,13 +13,12 @@ Function a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:5 
   Local "_2" "int **" "m"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
-  Local "_6" "int *[1]" "a"
-  Local "_7" "int **"
-  Local "_8" "void *"
-  Local "_9" "int *" "r"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_5" "int *[1]" "a"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int *" "r"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:27 generated
     Call a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:27 written "malloc" "bb1"
@@ -54,46 +53,41 @@ Function a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:5 
         Deref
       Use
         Copy "_1"
-    Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:56 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:56 generated
     Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:82 generated
-      Destination "_7"
+      Destination "_6"
       Address
-        Place "_6"
+        Place "_5"
           Index
             Constant 0
     ArgumentsEvaluated a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:75 generated
     Call a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:75 written "memcpy" "bb5"
-      Destination "_8"
-      Copy "_7"
+      Destination "_7"
+      Copy "_6"
       Copy "_2"
       Constant 8
   Block "bb5"
     Sequenced a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:75 generated
     Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:101 generated
-      Destination "_10"
+      Destination "_9"
       Address
-        Place "_6"
+        Place "_5"
           Index
             Constant 0
     Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:97 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:101 generated
     Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:114 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Copy "_1"
     Operation a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:107 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_copy_out_of_a_written_block_into_a_local_array_is_not_reported.c:2:114 generated
     Return

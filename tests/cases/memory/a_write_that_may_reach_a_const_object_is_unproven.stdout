@@ -25,7 +25,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:4:7 "malloc" declar
 Function a_write_that_may_reach_a_const_object_is_unproven.c:9:6 "set"
   Local "_0" "void" return
   Local "_1" "int *" parameter "p"
-  Local "_2" "int"
   Block "bb0" entry
     Branch a_write_that_may_reach_a_const_object_is_unproven.c:10:9 written "bb1" "bb2"
       Copy "_1"
@@ -36,11 +35,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:9:6 "set"
         Deref
       Use
         Constant 2
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:11:9 written
-      Destination "_2"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:11:9 generated
     Goto "bb3"
   Block "bb2"
@@ -53,7 +47,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:14:6 "through_its_a
   Local "_1" "int *" "p"
   Local "_2" "int (*)[2]"
   Local "_3" "int *"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:15:22 generated
       Destination "_2"
@@ -72,11 +65,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:14:6 "through_its_a
         Deref
       Use
         Constant 1
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:16:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:16:5 generated
     Return
 Function a_write_that_may_reach_a_const_object_is_unproven.c:18:6 "read_back_out_of_a_local"
@@ -86,7 +74,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:18:6 "read_back_out
   Local "_3" "int *" "q"
   Local "_4" "int **"
   Local "_5" "int **"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:19:21 generated
       Destination "_2"
@@ -119,11 +106,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:18:6 "read_back_out
         Deref
       Use
         Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:22:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:22:9 generated
     Goto "bb3"
   Block "bb2"
@@ -139,7 +121,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:25:6 "read_back_thr
   Local "_4" "int **"
   Local "_5" "int **" "pp"
   Local "_6" "int *" "q"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:26:21 generated
       Destination "_2"
@@ -178,11 +159,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:25:6 "read_back_thr
         Deref
       Use
         Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:31:9 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:31:9 generated
     Goto "bb3"
   Block "bb2"
@@ -198,7 +174,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:34:6 "a_const_local
   Local "_4" "int *" "q"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:35:15 written
       Destination "_1"
@@ -237,11 +212,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:34:6 "a_const_local
         Deref
       Use
         Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:39:9 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:39:9 generated
     Goto "bb3"
   Block "bb2"
@@ -310,7 +280,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:51:6 "found_by_memc
   Local "_1" "int *" "p"
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:52:22 generated
       Destination "_2"
@@ -336,11 +305,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:51:6 "found_by_memc
         Deref
       Use
         Constant 2
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:54:9 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:54:9 generated
     Goto "bb4"
   Block "bb3"
@@ -354,12 +318,9 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:57:6 "joined"
   Local "_2" "int *" "c"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int *" "q"
-  Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int"
+  Local "_5" "int *" "q"
+  Local "_6" "int **"
+  Local "_7" "int **"
   Block "bb0" entry
     Branch a_write_that_may_reach_a_const_object_is_unproven.c:59:9 written "bb1" "bb2"
       Copy "_1"
@@ -372,56 +333,43 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:57:6 "joined"
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:60:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:60:9 generated
     Goto "bb3"
   Block "bb2"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:59:9 generated
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:62:14 generated
-      Destination "_5"
+      Destination "_4"
       Static "h"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:62:9 written
       Destination "_2"
       Use
-        Copy "_5"
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:62:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
+        Copy "_4"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:62:9 generated
     Goto "bb3"
   Block "bb3"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:64:23 written
-      Destination "_8"
+      Destination "_6"
       Address
         Place "_2"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:64:15 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_8"
+        Copy "_6"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:64:10 written
-      Destination "_7"
-      Use
-        Copy "_9"
-          Deref
-    Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:64:14 generated
-    Branch a_write_that_may_reach_a_const_object_is_unproven.c:65:9 written "bb4" "bb5"
-      Copy "_7"
-  Block "bb4"
-    Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:65:9 generated
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:66:9 written
-      Destination "_7"
-        Deref
-      Use
-        Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:66:9 written
-      Destination "_10"
+      Destination "_5"
       Use
         Copy "_7"
           Deref
+    Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:64:14 generated
+    Branch a_write_that_may_reach_a_const_object_is_unproven.c:65:9 written "bb4" "bb5"
+      Copy "_5"
+  Block "bb4"
+    Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:65:9 generated
+    Operation a_write_that_may_reach_a_const_object_is_unproven.c:66:9 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 3
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:66:9 generated
     Goto "bb6"
   Block "bb5"
@@ -437,11 +385,8 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:69:6 "stored_on_one
   Local "_4" "int"
   Local "_5" "int *"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int *" "q"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_write_that_may_reach_a_const_object_is_unproven.c:70:23 generated
     Call a_write_that_may_reach_a_const_object_is_unproven.c:70:23 written "malloc" "bb1"
@@ -478,55 +423,40 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:69:6 "stored_on_one
         Deref
       Use
         Copy "_5"
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:75:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:75:9 generated
     Goto "bb7"
   Block "bb6"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:74:9 generated
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:77:17 generated
-      Destination "_7"
+      Destination "_6"
       Static "h"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:77:9 written
       Destination "_2"
         Deref
       Use
-        Copy "_7"
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:77:9 written
-      Destination "_8"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_6"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:77:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:79:15 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_2"
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:79:10 written
-      Destination "_9"
+      Destination "_7"
       Use
-        Copy "_10"
+        Copy "_8"
           Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:79:14 generated
     Branch a_write_that_may_reach_a_const_object_is_unproven.c:80:9 written "bb8" "bb9"
-      Copy "_9"
+      Copy "_7"
   Block "bb8"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:80:9 generated
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:81:9 written
-      Destination "_9"
+      Destination "_7"
         Deref
       Use
         Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:81:9 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:81:9 generated
     Goto "bb10"
   Block "bb9"
@@ -543,8 +473,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:84:6 "moved_by_arit
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:85:20 generated
       Destination "_2"
@@ -581,21 +509,12 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:84:6 "moved_by_arit
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:87:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:87:5 generated
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:88:5 written
       Destination "_4"
         Deref
       Use
         Constant 3
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:88:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:88:5 generated
     Return
 Function a_write_that_may_reach_a_const_object_is_unproven.c:90:6 "a_const_local_handed_on"
@@ -692,7 +611,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:102:6 "a_const_para
   Local "_4" "int *" "q"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:103:20 written
       Destination "_3"
@@ -726,11 +644,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:102:6 "a_const_para
         Deref
       Use
         Constant 1
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:106:9 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:106:9 generated
     Goto "bb3"
   Block "bb2"
@@ -745,7 +658,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:109:6 "an_extern_co
   Local "_3" "int *" "q"
   Local "_4" "int **"
   Local "_5" "int **"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:110:21 generated
       Destination "_2"
@@ -778,11 +690,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:109:6 "an_extern_co
         Deref
       Use
         Constant 1
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:113:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:113:9 generated
     Goto "bb3"
   Block "bb2"
@@ -797,7 +704,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:116:6 "a_block_exte
   Local "_3" "int *" "q"
   Local "_4" "int **"
   Local "_5" "int **"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_write_that_may_reach_a_const_object_is_unproven.c:118:21 generated
       Destination "_2"
@@ -830,11 +736,6 @@ Function a_write_that_may_reach_a_const_object_is_unproven.c:116:6 "a_block_exte
         Deref
       Use
         Constant 1
-    Operation a_write_that_may_reach_a_const_object_is_unproven.c:121:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_write_that_may_reach_a_const_object_is_unproven.c:121:9 generated
     Goto "bb3"
   Block "bb2"

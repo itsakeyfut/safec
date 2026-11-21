@@ -8,7 +8,6 @@ Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:3:9 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:
         Deref
       Use
         Constant 1
-    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:6:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:6:13 generated
     Goto "bb6"
   Block "bb5"
@@ -67,9 +61,7 @@ Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "void *"
-  Local "_8" "void *"
-  Local "_9" "void *"
-  Local "_10" "void *" "pm"
+  Local "_8" "void *" "pm"
   Block "bb0" entry
     Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:11:9 written
       Destination "_2"
@@ -125,31 +117,21 @@ Function a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:
         Deref
       Use
         Copy "_7"
-    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:19:5 generated
     Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 written
       Destination "_4"
         Deref
       Use
         Copy "_3"
-    Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:20:5 generated
     Operation a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:21:11 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_4"
     Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:21:16 generated
     ArgumentsEvaluated a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 generated
     Call a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 written "use" "bb9"
-      Copy "_10"
+      Copy "_8"
   Block "bb9"
     Sequenced a_load_stored_over_a_whole_allocation_is_still_bounded_by_its_belief.c:22:5 generated
     Return

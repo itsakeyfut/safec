@@ -17,7 +17,6 @@ Function a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:6:5 "f
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *" "r"
-  Local "_8" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:7:14 generated
     Call a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:7:14 written "malloc" "bb1"
@@ -71,10 +70,6 @@ Function a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:6:5 "f
       Destination "_7"
       Use
         Copy "_4"
-    Operation a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:14:9 written
-      Destination "_8"
-      Use
-        Copy "_7"
     Sequenced a_free_proved_before_a_call_handed_what_may_be_it_stays_proved.c:14:9 generated
     Goto "bb8"
   Block "bb7"

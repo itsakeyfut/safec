@@ -31,8 +31,7 @@ Function a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_wri
   Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:8:16 generated
     Call a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:8:16 written "mk" "bb1"
@@ -97,11 +96,6 @@ Function a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_wri
         Deref
       Use
         Copy "_9"
-    Operation a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:12:5 written
-      Destination "_10"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:12:5 generated
     ArgumentsEvaluated a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:13:5 generated
     Call a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:13:5 written "fill" "bb9"
@@ -109,13 +103,13 @@ Function a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_wri
   Block "bb9"
     Sequenced a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:13:5 generated
     Operation a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:14:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Operation a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:14:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_local_one_of_two_blocks_a_function_returned_names_is_not_believed_written_by_a_call_handed_the_other.c:14:12 generated
     Return

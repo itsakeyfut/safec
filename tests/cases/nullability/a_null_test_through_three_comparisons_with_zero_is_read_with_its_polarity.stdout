@@ -15,7 +15,6 @@ Function a_null_test_through_three_comparisons_with_zero_is_read_with_its_polari
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity.c:5:14 generated
     Call a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity.c:5:14 written "malloc" "bb1"
@@ -72,11 +71,6 @@ Function a_null_test_through_three_comparisons_with_zero_is_read_with_its_polari
         Deref
       Use
         Constant 1
-    Operation a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity.c:7:9 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_null_test_through_three_comparisons_with_zero_is_read_with_its_polarity.c:7:9 generated
     Goto "bb6"
   Block "bb5"

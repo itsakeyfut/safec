@@ -13,12 +13,10 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_
   Local "_7" "int **" "m"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int **"
-  Local "_11" "int **" "v"
-  Local "_12" "int"
-  Local "_13" "int *"
-  Local "_14" "int *" "q"
-  Local "_15" "int"
+  Local "_10" "int **" "v"
+  Local "_11" "int"
+  Local "_12" "int *" "q"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:3:9 written
       Destination "_4"
@@ -94,25 +92,20 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_
         Deref
       Use
         Copy "_7"
-    Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:5 written
-      Destination "_10"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:5 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:11:11 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:11:15 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:12:9 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
-        Copy "_11"
+        Copy "_10"
         Constant 0
     Branch a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:12:9 written "bb10" "bb11"
-      Copy "_12"
+      Copy "_11"
   Block "bb10"
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:12:9 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:13:9 written
@@ -126,30 +119,25 @@ Function a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_
     Goto "bb12"
   Block "bb12"
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:15:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Copy "_3"
-    Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:15:5 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:15:5 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:16:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_7"
           Deref
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:16:14 generated
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:17:12 written
-      Destination "_15"
+      Destination "_13"
       Binary "Ne"
-        Copy "_14"
+        Copy "_12"
         Constant 0
     Operation a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:17:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_store_through_a_pointer_read_out_of_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:17:12 generated
     Return

@@ -9,10 +9,8 @@ Function a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_ot
   Local "_3" "int **" "b"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int *" "r"
+  Local "_6" "int **"
+  Local "_7" "int *" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:45 generated
     Call a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:45 written "malloc" "bb1"
@@ -51,35 +49,25 @@ Function a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_ot
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:82 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:82 generated
     Goto "bb7"
   Block "bb6"
     Sequenced a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:79 generated
     Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:97 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:97 written
-      Destination "_7"
+      Destination "_6"
         Deref
       Use
         Copy "_1"
-    Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:97 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:97 generated
     Goto "bb7"
   Block "bb7"
     Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:112 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_3"
           Deref
@@ -87,6 +75,6 @@ Function a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_ot
     Operation a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:122 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_7"
     Sequenced a_heap_block_written_at_one_element_on_one_branch_and_another_on_the_other_is_doubted_where_read.c:2:129 generated
     Return

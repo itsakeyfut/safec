@@ -16,9 +16,8 @@ Function a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_dou
   Local "_5" "void *" "v"
   Local "_6" "char **" "cp"
   Local "_7" "char *"
-  Local "_8" "char *"
-  Local "_9" "int"
-  Local "_10" "void *"
+  Local "_8" "int"
+  Local "_9" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:4:23 generated
     Call a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:4:23 written "malloc" "bb1"
@@ -73,20 +72,15 @@ Function a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_dou
         Deref
       Use
         Copy "_7"
-    Operation a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:9:5 generated
     Operation a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:10:9 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
         Copy "_1"
           Deref
         Constant 0
     Branch a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:10:9 written "bb5" "bb6"
-      Copy "_9"
+      Copy "_8"
   Block "bb5"
     Sequenced a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:10:9 generated
     Operation a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:10:19 written
@@ -101,7 +95,7 @@ Function a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_dou
   Block "bb7"
     ArgumentsEvaluated a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:11:5 generated
     Call a_proof_at_a_later_argument_of_a_library_call_is_not_displaced_by_a_doubt_at_an_earlier_one.c:11:5 written "memcpy" "bb8"
-      Destination "_10"
+      Destination "_9"
       Copy "_1"
         Deref
       Copy "_1"

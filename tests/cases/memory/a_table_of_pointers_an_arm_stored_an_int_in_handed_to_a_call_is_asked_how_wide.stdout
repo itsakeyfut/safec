@@ -8,7 +8,6 @@ Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_h
   Local "_2" "int"
   Local "_3" "int *" "q"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:3:9 written
       Destination "_2"
@@ -47,11 +46,6 @@ Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_h
         Deref
       Use
         Constant 1
-    Operation a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:6:5 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:6:5 generated
     Return
 Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:8:5 "f"
@@ -62,9 +56,7 @@ Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_h
   Local "_4" "int"
   Local "_5" "void *" "vb"
   Local "_6" "int *" "ib"
-  Local "_7" "int"
-  Local "_8" "void *"
-  Local "_9" "int *"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:9:17 generated
     Call a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:9:17 written "malloc" "bb1"
@@ -113,18 +105,13 @@ Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_h
         Deref
       Use
         Constant 7
-    Operation a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:14 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:14 generated
     Goto "bb7"
   Block "bb6"
     Sequenced a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:9 generated
     ArgumentsEvaluated a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:39 generated
     Call a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:39 written "malloc" "bb8"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb7"
     ArgumentsEvaluated a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:14:5 generated
@@ -135,12 +122,7 @@ Function a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_h
       Destination "_2"
         Deref
       Use
-        Copy "_8"
-    Operation a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:32 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_7"
     Sequenced a_table_of_pointers_an_arm_stored_an_int_in_handed_to_a_call_is_asked_how_wide.c:13:32 generated
     Goto "bb7"
   Block "bb9"

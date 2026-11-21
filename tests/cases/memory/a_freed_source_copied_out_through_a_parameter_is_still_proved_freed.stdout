@@ -20,8 +20,7 @@ Function a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:3
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "void *"
+  Local "_9" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:4:14 generated
     Call a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:4:14 written "malloc" "bb1"
@@ -81,11 +80,6 @@ Function a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:3
         Deref
       Use
         Copy "_2"
-    Operation a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:7:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:7:5 generated
     ArgumentsEvaluated a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:8:5 generated
     Call a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:8:5 written "free" "bb8"
@@ -99,7 +93,7 @@ Function a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:3
     Sequenced a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:9:5 generated
     ArgumentsEvaluated a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:10:5 generated
     Call a_freed_source_copied_out_through_a_parameter_is_still_proved_freed.c:10:5 written "memcpy" "bb10"
-      Destination "_10"
+      Destination "_9"
       Copy "_1"
       Copy "_4"
       Constant 8

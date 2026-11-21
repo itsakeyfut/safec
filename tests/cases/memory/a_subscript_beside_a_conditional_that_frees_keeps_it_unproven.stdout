@@ -15,7 +15,6 @@ Function a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 generated
     Call a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 written "malloc" "bb1"
@@ -64,10 +63,6 @@ Function a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_8"
-    Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
     Sequenced a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 generated
     Operation a_subscript_beside_a_conditional_that_frees_keeps_it_unproven.c:8:5 written
       Destination "_0"

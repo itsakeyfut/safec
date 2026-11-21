@@ -11,9 +11,8 @@ Function a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.
   Local "_2" "int" "k"
   Local "_3" "int"
   Local "_4" "void *"
-  Local "_5" "int *"
+  Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:3:5 generated
       Destination "_0"
@@ -56,24 +55,20 @@ Function a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.
       Destination "_1"
       Use
         Copy "_4"
-    Operation a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:7:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
     Sequenced a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:7:9 generated
     Operation a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:5:28 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
     Operation a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:5:28 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:5:28 written
       Destination "_2"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_pointer_local_freed_in_a_loop_before_the_body_assigns_it_is_reported.c:5:28 generated
     Goto "bb1"
   Block "bb6"

@@ -16,8 +16,6 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
   Local "_5" "int *" "q"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int *"
   Block "bb0" entry
     Operation a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:5:5 generated
       Destination "_0"
@@ -69,26 +67,18 @@ Function a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c
       Destination "_5"
       Use
         Copy "_2"
-    Operation a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:13:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:13:9 generated
     Goto "bb8"
   Block "bb7"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:12:9 generated
     Operation a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:15:13 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     Operation a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:15:9 written
       Destination "_5"
       Use
-        Copy "_8"
-    Operation a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:15:9 written
-      Destination "_9"
-      Use
-        Copy "_5"
+        Copy "_7"
     Sequenced a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted.c:15:9 generated
     Goto "bb8"
   Block "bb8"

@@ -22,10 +22,9 @@ Function a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported
   Local "_8" "void *"
   Local "_9" "int *"
   Local "_10" "void *"
-  Local "_11" "int"
-  Local "_12" "void **" "b"
-  Local "_13" "void *" "s"
-  Local "_14" "int"
+  Local "_11" "void **" "b"
+  Local "_12" "void *" "s"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:5:9 written
       Destination "_2"
@@ -97,22 +96,18 @@ Function a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported
       Destination "_1"
       Use
         Constant 2
-    Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:13:9 written
-      Destination "_11"
-      Use
-        Copy "_1"
     Sequenced a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:13:9 generated
     Goto "bb8"
   Block "bb8"
     Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:15:12 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
     Sequenced a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:15:16 generated
     Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:16:11 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:16:15 generated
     ArgumentsEvaluated a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:17:5 generated
@@ -124,13 +119,13 @@ Function a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported
   Block "bb10"
     Sequenced a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:17:5 generated
     Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:18:12 written
-      Destination "_14"
+      Destination "_13"
       Binary "Ne"
-        Copy "_13"
+        Copy "_12"
         Constant 0
     Operation a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:18:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_13"
     Sequenced a_partial_pointer_copied_on_one_arm_and_read_after_the_join_is_reported.c:18:12 generated
     Return

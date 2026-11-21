@@ -14,13 +14,11 @@ Function a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:
   Local "_5" "int **" "b"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int *" "m"
-  Local "_10" "void *"
-  Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int *" "q"
-  Local "_14" "int"
+  Local "_8" "int *" "m"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int *" "q"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:4:9 written
       Destination "_3"
@@ -92,28 +90,23 @@ Function a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:
       Use
         Copy "_1"
           Deref
-    Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:8:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:8:5 generated
     ArgumentsEvaluated a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:9:14 generated
     Call a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:9:14 written "malloc" "bb11"
-      Destination "_10"
+      Destination "_9"
       Constant 4
   Block "bb11"
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:9:10 written
-      Destination "_9"
+      Destination "_8"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:9:14 generated
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:10:9 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
-        Copy "_9"
+        Copy "_8"
     Branch a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:10:9 written "bb12" "bb13"
-      Copy "_11"
+      Copy "_10"
   Block "bb12"
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:10:9 generated
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:10:13 written
@@ -130,30 +123,25 @@ Function a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:
       Destination "_5"
         Deref
       Use
-        Copy "_9"
-    Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:11:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
+        Copy "_8"
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:11:5 generated
     ArgumentsEvaluated a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:12:5 generated
     Call a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:12:5 written "free" "bb15"
-      Copy "_9"
+      Copy "_8"
   Block "bb15"
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:12:5 generated
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:13:10 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_2"
           Deref
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:13:14 generated
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:14:9 written
-      Destination "_14"
+      Destination "_12"
       Unary "Not"
-        Copy "_13"
+        Copy "_11"
     Branch a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:14:9 written "bb16" "bb17"
-      Copy "_14"
+      Copy "_12"
   Block "bb16"
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:14:9 generated
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:14:13 written
@@ -174,7 +162,7 @@ Function a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:
     Operation a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:16:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_11"
           Deref
     Sequenced a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter.c:16:12 generated
     Return

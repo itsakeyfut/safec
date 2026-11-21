@@ -8,8 +8,7 @@ Function a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:2
   Local "_2" "int" parameter "d"
   Local "_3" "int *" parameter _Nonnull "q"
   Local "_4" "int *" "p"
-  Local "_5" "int *"
-  Local "_6" "int"
+  Local "_5" "int"
   Block "bb0" entry
     Branch a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:4:9 written "bb1" "bb2"
       Copy "_1"
@@ -19,10 +18,6 @@ Function a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:2
       Destination "_4"
       Use
         Copy "_3"
-    Operation a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:4:12 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:4:12 generated
     Goto "bb3"
   Block "bb2"
@@ -39,14 +34,14 @@ Function a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:2
   Block "bb5"
     Sequenced a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:6:9 generated
     Operation a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:6:19 written
-      Destination "_6"
+      Destination "_5"
       Binary "Eq"
         Copy "_4"
         Copy "_3"
     Operation a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:6:12 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_pointer_some_path_left_unassigned_is_doubted_at_each_of_its_reads.c:6:19 generated
     Return
   Block "bb6"

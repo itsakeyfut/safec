@@ -15,10 +15,9 @@ Function a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:6:7 "grow"
   Local "_2" "int **" "b"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
-  Local "_6" "int **" "c"
-  Local "_7" "void *"
-  Local "_8" "int"
+  Local "_5" "int **" "c"
+  Local "_6" "void *"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:7:15 generated
     Call a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:7:15 written "malloc" "bb1"
@@ -53,29 +52,24 @@ Function a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:6:7 "grow"
         Deref
       Use
         Copy "_1"
-    Operation a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:9:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:9:5 generated
     ArgumentsEvaluated a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:10:15 generated
     Call a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:10:15 written "realloc" "bb5"
-      Destination "_7"
+      Destination "_6"
       Copy "_2"
       Constant 16
   Block "bb5"
     Operation a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:10:11 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:10:15 generated
     Operation a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:11:9 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:11:9 generated
     ArgumentsEvaluated a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:11:15 generated
@@ -88,7 +82,7 @@ Function a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:6:7 "grow"
     Operation a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:12:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_block_grown_by_realloc_is_doubted_where_it_is_returned.c:12:12 generated
     Return
   Block "bb9"

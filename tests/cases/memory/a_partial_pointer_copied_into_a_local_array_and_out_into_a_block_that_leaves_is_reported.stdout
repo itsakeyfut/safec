@@ -31,7 +31,6 @@ Function a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_l
   Local "_15" "char *"
   Local "_16" "void *"
   Local "_17" "void **" "q"
-  Local "_18" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported.c:6:9 written
       Destination "_2"
@@ -139,11 +138,6 @@ Function a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_l
         Deref
       Use
         Copy "_17"
-    Operation a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported.c:16:5 written
-      Destination "_18"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported.c:16:5 generated
     ArgumentsEvaluated a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported.c:17:5 generated
     Call a_partial_pointer_copied_into_a_local_array_and_out_into_a_block_that_leaves_is_reported.c:17:5 written "use" "bb11"

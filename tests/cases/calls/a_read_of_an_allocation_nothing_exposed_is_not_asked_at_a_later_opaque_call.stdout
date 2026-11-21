@@ -16,8 +16,6 @@ Function a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:5:5 generated
       Destination "_0"
@@ -57,11 +55,6 @@ Function a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_
         Deref
       Use
         Constant 1
-    Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:12:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:12:5 generated
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:10 written
       Destination "_1"
@@ -69,24 +62,20 @@ Function a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_
         Copy "_3"
           Deref
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:10 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_1"
     Call a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:23 written "release_all" "bb5"
   Block "bb5"
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 0
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 written
       Destination "_2"
       Use
-        Copy "_8"
-    Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 written
-      Destination "_9"
-      Use
-        Copy "_2"
+        Copy "_7"
     Sequenced a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 generated
     ArgumentsEvaluated a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:14:5 generated
     Call a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:14:5 written "free" "bb6"

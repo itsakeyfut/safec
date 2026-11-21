@@ -14,8 +14,7 @@ Function a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int ****"
-  Local "_8" "int ****"
-  Local "_9" "void *" "pb"
+  Local "_8" "void *" "pb"
   Block "bb0" entry
     Operation a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:4:11 written
       Destination "_2"
@@ -60,20 +59,15 @@ Function a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_
         Deref
       Use
         Copy "_7"
-    Operation a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:8:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:8:5 generated
     Operation a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:9:11 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_4"
     Sequenced a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:9:16 generated
     ArgumentsEvaluated a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:10:5 generated
     Call a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:10:5 written "use" "bb5"
-      Copy "_9"
+      Copy "_8"
   Block "bb5"
     Sequenced a_local_s_address_stored_in_memory_is_asked_by_what_the_local_believes_where_it_leaves.c:10:5 generated
     Return

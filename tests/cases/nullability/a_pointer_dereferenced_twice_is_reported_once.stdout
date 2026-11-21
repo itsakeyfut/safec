@@ -2,30 +2,18 @@ Target "x86_64-pc-windows-msvc"
 Function a_pointer_dereferenced_twice_is_reported_once.c:1:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" parameter "p"
-  Local "_2" "int"
-  Local "_3" "int"
   Block "bb0" entry
     Operation a_pointer_dereferenced_twice_is_reported_once.c:2:5 written
       Destination "_1"
         Deref
       Use
         Constant 1
-    Operation a_pointer_dereferenced_twice_is_reported_once.c:2:5 written
-      Destination "_2"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_dereferenced_twice_is_reported_once.c:2:5 generated
     Operation a_pointer_dereferenced_twice_is_reported_once.c:3:5 written
       Destination "_1"
         Deref
       Use
         Constant 2
-    Operation a_pointer_dereferenced_twice_is_reported_once.c:3:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_dereferenced_twice_is_reported_once.c:3:5 generated
     Operation a_pointer_dereferenced_twice_is_reported_once.c:4:5 written
       Destination "_0"

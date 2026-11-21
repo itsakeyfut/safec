@@ -10,8 +10,7 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:4:5 "use2
   Local "_1" "int **" parameter "pp"
   Local "_2" "int *" "q"
   Local "_3" "int"
-  Local "_4" "int *"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:6:9 written
       Destination "_3"
@@ -37,18 +36,14 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:4:5 "use2
       Use
         Copy "_1"
           Deref
-    Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:9:5 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:9:5 generated
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 written
-      Destination "_5"
+      Destination "_4"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 written "bb4" "bb5"
-      Copy "_5"
+      Copy "_4"
   Block "bb4"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:10:9 generated
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:11:9 written

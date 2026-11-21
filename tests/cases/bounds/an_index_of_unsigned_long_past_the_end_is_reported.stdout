@@ -5,7 +5,6 @@ Function an_index_of_unsigned_long_past_the_end_is_reported.c:1:5 "main"
   Local "_2" "unsigned long" "i"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "int"
   Block "bb0" entry
     Operation an_index_of_unsigned_long_past_the_end_is_reported.c:1:5 generated
       Destination "_0"
@@ -32,11 +31,6 @@ Function an_index_of_unsigned_long_past_the_end_is_reported.c:1:5 "main"
         Deref
       Use
         Constant 1
-    Operation an_index_of_unsigned_long_past_the_end_is_reported.c:4:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced an_index_of_unsigned_long_past_the_end_is_reported.c:4:5 generated
     Operation an_index_of_unsigned_long_past_the_end_is_reported.c:5:5 written
       Destination "_0"

@@ -28,7 +28,6 @@ Function a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reporte
   Local "_14" "int *"
   Local "_15" "void *"
   Local "_16" "void **" "q"
-  Local "_17" "void **"
   Block "bb0" entry
     Operation a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reported_at_the_partial_copy.c:5:9 written
       Destination "_2"
@@ -126,10 +125,5 @@ Function a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reporte
         Deref
       Use
         Copy "_16"
-    Operation a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reported_at_the_partial_copy.c:15:5 written
-      Destination "_17"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_whole_int_copied_into_an_int_before_a_partial_pointer_copy_is_reported_at_the_partial_copy.c:15:5 generated
     Return

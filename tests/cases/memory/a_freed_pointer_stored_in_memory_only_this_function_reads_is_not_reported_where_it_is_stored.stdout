@@ -13,8 +13,7 @@ Function a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_report
   Local "_4" "int *" "x"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
+  Local "_7" "int *" "q"
   Block "bb0" entry
     Operation a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:4:5 generated
       Destination "_0"
@@ -93,14 +92,9 @@ Function a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_report
         Deref
       Use
         Copy "_4"
-    Operation a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:15:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:15:5 generated
     Operation a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:16:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
@@ -113,7 +107,7 @@ Function a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_report
     Operation a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:18:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
           Deref
     Sequenced a_freed_pointer_stored_in_memory_only_this_function_reads_is_not_reported_where_it_is_stored.c:18:12 generated
     Return

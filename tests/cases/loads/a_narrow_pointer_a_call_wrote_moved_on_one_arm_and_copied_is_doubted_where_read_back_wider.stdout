@@ -16,15 +16,14 @@ Function a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_wh
   Local "_2" "char *" "c"
   Local "_3" "char **"
   Local "_4" "char *" "t"
-  Local "_5" "char *"
-  Local "_6" "void *" "m"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "char **"
-  Local "_10" "void *"
-  Local "_11" "int **" "ib"
-  Local "_12" "int *" "r"
-  Local "_13" "int"
+  Local "_5" "void *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "char **"
+  Local "_9" "void *"
+  Local "_10" "int **" "ib"
+  Local "_11" "int *" "r"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:6:9 written
       Destination "_3"
@@ -48,10 +47,6 @@ Function a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_wh
       Destination "_4"
       Use
         Copy "_2"
-    Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:8:12 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:8:12 generated
     Goto "bb4"
   Block "bb3"
@@ -60,20 +55,20 @@ Function a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_wh
   Block "bb4"
     ArgumentsEvaluated a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:9:15 generated
     Call a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:9:15 written "malloc" "bb5"
-      Destination "_7"
+      Destination "_6"
       Constant 8
   Block "bb5"
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:9:11 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:9:15 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:10:9 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:10:9 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:10:9 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:10:13 written
@@ -87,34 +82,34 @@ Function a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_wh
     Goto "bb8"
   Block "bb8"
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:11:15 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_4"
     ArgumentsEvaluated a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:11:5 generated
     Call a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:11:5 written "memcpy" "bb9"
-      Destination "_10"
-      Copy "_6"
-      Copy "_9"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
       Constant 8
   Block "bb9"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:11:5 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:12:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:12:16 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:13:10 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:13:14 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:14:9 written
-      Destination "_13"
+      Destination "_12"
       Unary "Not"
-        Copy "_12"
+        Copy "_11"
     Branch a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:14:9 written "bb10" "bb11"
-      Copy "_13"
+      Copy "_12"
   Block "bb10"
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:14:9 generated
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:14:13 written
@@ -130,7 +125,7 @@ Function a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_wh
     Operation a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:15:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_narrow_pointer_a_call_wrote_moved_on_one_arm_and_copied_is_doubted_where_read_back_wider.c:15:12 generated
     Return

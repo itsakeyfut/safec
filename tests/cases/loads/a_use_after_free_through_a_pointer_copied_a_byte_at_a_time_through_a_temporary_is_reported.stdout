@@ -16,23 +16,18 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_te
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "void *" "vd"
-  Local "_12" "void *" "vs"
-  Local "_13" "char *" "d"
-  Local "_14" "char *" "s"
-  Local "_15" "int" "i"
+  Local "_10" "void *" "vd"
+  Local "_11" "void *" "vs"
+  Local "_12" "char *" "d"
+  Local "_13" "char *" "s"
+  Local "_14" "int" "i"
+  Local "_15" "int"
   Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "char" "c"
-  Local "_20" "char"
-  Local "_21" "char *"
-  Local "_22" "char *"
-  Local "_23" "char *"
-  Local "_24" "char *"
-  Local "_25" "int"
-  Local "_26" "int"
+  Local "_18" "char" "c"
+  Local "_19" "char *"
+  Local "_20" "char *"
+  Local "_21" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:4:5 generated
       Destination "_0"
@@ -130,55 +125,50 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_te
         Deref
       Use
         Copy "_7"
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:17:5 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:18:11 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_4"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:18:16 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:19:11 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_1"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:19:16 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:20:11 written
+      Destination "_12"
+      Use
+        Copy "_10"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:20:15 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:21:11 written
       Destination "_13"
       Use
         Copy "_11"
-    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:20:15 generated
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:21:11 written
-      Destination "_14"
-      Use
-        Copy "_12"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:21:15 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:22:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Constant 0
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:22:13 generated
     Goto "bb13"
   Block "bb13"
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:23:12 written
-      Destination "_16"
+      Destination "_15"
       Binary "Lt"
-        Copy "_15"
+        Copy "_14"
         Constant 8
     Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:23:12 written "bb14" "bb15"
-      Copy "_16"
+      Copy "_15"
   Block "bb14"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:23:12 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:24:13 written
-      Destination "_17"
+      Destination "_16"
       Binary "Ne"
-        Copy "_13"
+        Copy "_12"
         Constant 0
     Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:24:13 written "bb16" "bb17"
-      Copy "_17"
+      Copy "_16"
   Block "bb15"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:23:12 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:34:5 generated
@@ -188,80 +178,63 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_te
   Block "bb16"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:24:13 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:25:17 written
-      Destination "_18"
+      Destination "_17"
       Binary "Ne"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:25:17 written "bb19" "bb20"
-      Copy "_18"
+      Copy "_17"
   Block "bb17"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:24:13 generated
     Goto "bb18"
   Block "bb18"
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:30:13 written
-      Destination "_21"
+      Destination "_19"
       Binary "Add"
-        Copy "_13"
+        Copy "_12"
         Constant 1
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:30:9 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_21"
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:30:9 written
-      Destination "_22"
-      Use
-        Copy "_13"
+        Copy "_19"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:30:9 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:31:13 written
-      Destination "_23"
+      Destination "_20"
       Binary "Add"
-        Copy "_14"
+        Copy "_13"
         Constant 1
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:31:9 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_23"
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:31:9 written
-      Destination "_24"
-      Use
-        Copy "_14"
+        Copy "_20"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:31:9 generated
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:32:13 written
-      Destination "_25"
+      Destination "_21"
       Binary "Add"
-        Copy "_15"
+        Copy "_14"
         Constant 1
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:32:9 written
-      Destination "_15"
+      Destination "_14"
       Use
-        Copy "_25"
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:32:9 written
-      Destination "_26"
-      Use
-        Copy "_15"
+        Copy "_21"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:32:9 generated
     Goto "bb13"
   Block "bb19"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:25:17 generated
-    StorageLive a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:26:17 generated "_19"
+    StorageLive a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:26:17 generated "_18"
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:26:22 written
-      Destination "_19"
-      Use
-        Copy "_14"
-          Deref
-    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:26:26 generated
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:27:17 written
-      Destination "_13"
-        Deref
-      Use
-        Copy "_19"
-    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:27:17 written
-      Destination "_20"
+      Destination "_18"
       Use
         Copy "_13"
           Deref
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:26:26 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:27:17 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_18"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:27:17 generated
-    StorageDead a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:28:13 generated "_19"
+    StorageDead a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:28:13 generated "_18"
     Goto "bb21"
   Block "bb20"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported.c:25:17 generated

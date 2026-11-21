@@ -11,8 +11,7 @@ Function a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubte
   Local "_2" "int **[1]" "a"
   Local "_3" "int ***"
   Local "_4" "int **"
-  Local "_5" "int **"
-  Local "_6" "int **(*)[1]"
+  Local "_5" "int **(*)[1]"
   Block "bb0" entry
     Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:4:10 written
       Destination "_1"
@@ -34,19 +33,14 @@ Function a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubte
         Deref
       Use
         Copy "_4"
-    Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:6:5 generated
     Operation a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:9 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_2"
     ArgumentsEvaluated a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 generated
     Call a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 written "put" "bb1"
-      Copy "_6"
+      Copy "_5"
   Block "bb1"
     Sequenced a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:7:5 generated
     ArgumentsEvaluated a_local_an_array_holds_handed_to_a_callee_as_its_own_type_is_not_doubted.c:8:5 generated

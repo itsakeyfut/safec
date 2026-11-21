@@ -10,9 +10,8 @@ Function a_library_reach_is_not_asked_again_as_a_departure.c:4:5 "main"
   Local "_1" "char *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "char"
-  Local "_5" "char *"
-  Local "_6" "int"
+  Local "_4" "char *"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_library_reach_is_not_asked_again_as_a_departure.c:4:5 generated
       Destination "_0"
@@ -52,25 +51,20 @@ Function a_library_reach_is_not_asked_again_as_a_departure.c:4:5 "main"
         Deref
       Use
         Constant 0
-    Operation a_library_reach_is_not_asked_again_as_a_departure.c:9:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_library_reach_is_not_asked_again_as_a_departure.c:9:5 generated
     Operation a_library_reach_is_not_asked_again_as_a_departure.c:10:19 written
-      Destination "_5"
+      Destination "_4"
       Binary "Add"
         Copy "_1"
         Constant 1
     ArgumentsEvaluated a_library_reach_is_not_asked_again_as_a_departure.c:10:12 generated
     Call a_library_reach_is_not_asked_again_as_a_departure.c:10:12 written "strlen" "bb5"
-      Destination "_6"
-      Copy "_5"
+      Destination "_5"
+      Copy "_4"
   Block "bb5"
     Operation a_library_reach_is_not_asked_again_as_a_departure.c:10:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_library_reach_is_not_asked_again_as_a_departure.c:10:12 generated
     Return

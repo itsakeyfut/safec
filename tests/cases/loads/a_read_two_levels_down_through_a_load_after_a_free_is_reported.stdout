@@ -16,11 +16,8 @@ Function a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:4:5 "m
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
-  Local "_13" "int **" "q2"
-  Local "_14" "int"
+  Local "_10" "int **" "q2"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:4:5 generated
       Destination "_0"
@@ -118,33 +115,18 @@ Function a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:4:5 "m
         Deref
       Use
         Constant 1
-    Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:17:5 generated
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:18:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:18:5 generated
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:19:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:19:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:19:5 generated
     ArgumentsEvaluated a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:20:5 generated
     Call a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:20:5 written "free" "bb13"
@@ -152,18 +134,18 @@ Function a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:4:5 "m
   Block "bb13"
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:20:5 generated
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:21:11 written
-      Destination "_13"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:21:16 generated
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:22:9 written
-      Destination "_14"
+      Destination "_11"
       Binary "Eq"
-        Copy "_13"
+        Copy "_10"
         Constant 0
     Branch a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:22:9 written "bb14" "bb15"
-      Copy "_14"
+      Copy "_11"
   Block "bb14"
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:22:9 generated
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:23:9 written
@@ -179,7 +161,7 @@ Function a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:4:5 "m
     Operation a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:25:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_10"
           Deref
             Deref
     Sequenced a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:25:12 generated

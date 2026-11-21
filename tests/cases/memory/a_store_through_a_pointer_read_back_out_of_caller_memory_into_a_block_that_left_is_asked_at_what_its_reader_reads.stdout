@@ -20,14 +20,10 @@ Function a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_t
   Local "_9" "int **" "b"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "void *" "vb"
-  Local "_15" "void **" "vv"
-  Local "_16" "void **"
-  Local "_17" "void **" "w"
-  Local "_18" "int"
-  Local "_19" "void *"
+  Local "_12" "void *" "vb"
+  Local "_13" "void **" "vv"
+  Local "_14" "void **" "w"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:3:9 written
       Destination "_3"
@@ -113,56 +109,41 @@ Function a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_t
         Deref
       Use
         Constant 0
-    Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:6:5 written
-      Destination "_12"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:6:5 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:5 written
       Destination "_1"
         Deref
       Use
         Copy "_9"
-    Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:5 written
-      Destination "_13"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:7:5 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:11 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_9"
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:16 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:26 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:8:31 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 written
       Destination "_2"
         Deref
       Use
-        Copy "_15"
-    Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 written
-      Destination "_16"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_13"
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:9:5 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:10:12 written
-      Destination "_17"
+      Destination "_14"
       Use
         Copy "_2"
           Deref
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:10:16 generated
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:11:9 written
-      Destination "_18"
+      Destination "_15"
       Unary "Not"
-        Copy "_17"
+        Copy "_14"
     Branch a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:11:9 written "bb14" "bb15"
-      Copy "_18"
+      Copy "_15"
   Block "bb14"
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:11:9 generated
     Return
@@ -171,14 +152,9 @@ Function a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_t
     Goto "bb16"
   Block "bb16"
     Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:12:5 written
-      Destination "_17"
+      Destination "_14"
         Deref
       Use
         Copy "_6"
-    Operation a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:12:5 written
-      Destination "_19"
-      Use
-        Copy "_17"
-          Deref
     Sequenced a_store_through_a_pointer_read_back_out_of_caller_memory_into_a_block_that_left_is_asked_at_what_its_reader_reads.c:12:5 generated
     Return

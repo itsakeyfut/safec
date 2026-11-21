@@ -11,15 +11,12 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
   Local "_2" "int *" "r"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int ***" "t3"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "int *" "slot"
-  Local "_10" "int **" "t2"
-  Local "_11" "int **"
-  Local "_12" "int **"
-  Local "_13" "int *"
+  Local "_5" "int ***" "t3"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *" "slot"
+  Local "_9" "int **" "t2"
+  Local "_10" "int **"
   Block "bb0" entry
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 generated
       Destination "_0"
@@ -59,29 +56,24 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
         Deref
       Use
         Constant 1
-    Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:9:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:9:5 generated
     ArgumentsEvaluated a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:10:17 generated
     Call a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:10:17 written "malloc" "bb5"
-      Destination "_7"
+      Destination "_6"
       Constant 8
   Block "bb5"
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:10:12 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:10:17 generated
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Branch a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:11:9 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:11:9 generated
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:12:9 written
@@ -95,33 +87,28 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
     Goto "bb8"
   Block "bb8"
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:14:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Constant 0
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:14:17 generated
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:15:16 written
-      Destination "_11"
-      Address
-        Place "_9"
-    Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:15:11 written
       Destination "_10"
+      Address
+        Place "_8"
+    Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:15:11 written
+      Destination "_9"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:15:16 generated
     Branch a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:16:9 written "bb9" "bb10"
       Copy "_1"
   Block "bb9"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:16:9 generated
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:17:9 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
-        Copy "_10"
-    Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:17:9 written
-      Destination "_12"
-      Use
-        Copy "_6"
-          Deref
+        Copy "_9"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:17:9 generated
     Goto "bb11"
   Block "bb10"
@@ -129,17 +116,11 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
     Goto "bb11"
   Block "bb11"
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:19:5 written
-      Destination "_6"
+      Destination "_5"
         Deref
           Deref
       Use
         Copy "_2"
-    Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:19:5 written
-      Destination "_13"
-      Use
-        Copy "_6"
-          Deref
-            Deref
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:19:5 generated
     ArgumentsEvaluated a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 generated
     Call a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 written "free" "bb12"
@@ -149,7 +130,7 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:21:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
           Deref
             Deref
               Deref

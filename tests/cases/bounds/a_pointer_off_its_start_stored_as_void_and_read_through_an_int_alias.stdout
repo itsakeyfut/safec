@@ -13,10 +13,8 @@ Function a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:
   Local "_7" "void **" "as_void"
   Local "_8" "int **" "slot"
   Local "_9" "int *"
-  Local "_10" "void *"
-  Local "_11" "int *" "q"
-  Local "_12" "int"
-  Local "_13" "int"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:3:5 generated
       Destination "_0"
@@ -100,25 +98,20 @@ Function a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:
         Deref
       Use
         Copy "_9"
-    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:14:5 generated
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:15:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_8"
           Deref
     Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:15:14 generated
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
-        Copy "_11"
+        Copy "_10"
         Constant 0
     Branch a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 written "bb9" "bb10"
-      Copy "_12"
+      Copy "_11"
   Block "bb9"
     Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:16:9 generated
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:17:9 written
@@ -132,15 +125,10 @@ Function a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:
     Goto "bb11"
   Block "bb11"
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Constant 1
-    Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:19:5 generated
     Operation a_pointer_off_its_start_stored_as_void_and_read_through_an_int_alias.c:20:5 written
       Destination "_0"

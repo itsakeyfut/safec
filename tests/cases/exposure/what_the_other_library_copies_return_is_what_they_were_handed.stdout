@@ -29,19 +29,18 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
   Local "_1" "char *" "s"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "char"
-  Local "_5" "char *" "a"
+  Local "_4" "char *" "a"
+  Local "_5" "void *"
   Local "_6" "void *"
-  Local "_7" "void *"
-  Local "_8" "char *" "b"
-  Local "_9" "void *"
-  Local "_10" "char *"
-  Local "_11" "char *" "c"
-  Local "_12" "void *"
-  Local "_13" "char *"
-  Local "_14" "char *" "d"
-  Local "_15" "void *"
-  Local "_16" "char *"
+  Local "_7" "char *" "b"
+  Local "_8" "void *"
+  Local "_9" "char *"
+  Local "_10" "char *" "c"
+  Local "_11" "void *"
+  Local "_12" "char *"
+  Local "_13" "char *" "d"
+  Local "_14" "void *"
+  Local "_15" "char *"
   Block "bb0" entry
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 generated
       Destination "_0"
@@ -81,97 +80,92 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
         Deref
       Use
         Constant 0
-    Operation what_the_other_library_copies_return_is_what_they_were_handed.c:13:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:13:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:14:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:14:23 written "malloc" "bb5"
-      Destination "_6"
+      Destination "_5"
       Constant 4
   Block "bb5"
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:14:15 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:14:15 written "memmove" "bb6"
-      Destination "_7"
-      Copy "_6"
+      Destination "_6"
+      Copy "_5"
       Copy "_1"
       Constant 1
   Block "bb6"
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:14:11 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:14:15 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:15:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:15:23 written "malloc" "bb7"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb7"
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:15:15 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:15:15 written "strncpy" "bb8"
-      Destination "_10"
-      Copy "_9"
+      Destination "_9"
+      Copy "_8"
       Copy "_1"
       Constant 1
   Block "bb8"
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:15:11 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:15:15 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:16:22 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:16:22 written "malloc" "bb9"
-      Destination "_12"
+      Destination "_11"
       Constant 4
   Block "bb9"
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:16:15 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:16:15 written "strcat" "bb10"
-      Destination "_13"
-      Copy "_12"
+      Destination "_12"
+      Copy "_11"
       Copy "_1"
   Block "bb10"
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:16:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:16:15 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:17:23 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:17:23 written "malloc" "bb11"
-      Destination "_15"
+      Destination "_14"
       Constant 4
   Block "bb11"
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:17:15 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:17:15 written "strncat" "bb12"
-      Destination "_16"
-      Copy "_15"
+      Destination "_15"
+      Copy "_14"
       Copy "_1"
       Constant 1
   Block "bb12"
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:17:11 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_15"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:17:15 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 written "free" "bb13"
-      Copy "_5"
+      Copy "_4"
   Block "bb13"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 written "free" "bb14"
-      Copy "_8"
+      Copy "_7"
   Block "bb14"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 written "free" "bb15"
-      Copy "_11"
+      Copy "_10"
   Block "bb15"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 written "free" "bb16"
-      Copy "_14"
+      Copy "_13"
   Block "bb16"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:22:5 generated

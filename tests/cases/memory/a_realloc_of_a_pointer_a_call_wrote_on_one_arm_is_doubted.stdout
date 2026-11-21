@@ -27,11 +27,9 @@ Function a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:5 "f"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int *" "r"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int *" "s"
-  Local "_14" "void *"
-  Local "_15" "int"
+  Local "_11" "int *" "s"
+  Local "_12" "void *"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:14 generated
     Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:14 written "malloc" "bb1"
@@ -116,10 +114,6 @@ Function a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:5 "f"
       Destination "_10"
       Use
         Copy "_5"
-    Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:14 written
-      Destination "_11"
-      Use
-        Copy "_10"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:14 generated
     Goto "bb14"
   Block "bb13"
@@ -128,30 +122,26 @@ Function a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:5 "f"
       Destination "_10"
       Use
         Copy "_7"
-    Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:30 written
-      Destination "_12"
-      Use
-        Copy "_10"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:30 generated
     Goto "bb14"
   Block "bb14"
     ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:14 generated
     Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:14 written "realloc" "bb15"
-      Destination "_14"
+      Destination "_12"
       Copy "_10"
       Constant 8
   Block "bb15"
     Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_12"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:14 generated
     Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
-        Copy "_13"
+        Copy "_11"
     Branch a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 written "bb16" "bb17"
-      Copy "_15"
+      Copy "_13"
   Block "bb16"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 generated
     Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:13 written
@@ -166,7 +156,7 @@ Function a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:5 "f"
   Block "bb18"
     ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 generated
     Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 written "free" "bb19"
-      Copy "_13"
+      Copy "_11"
   Block "bb19"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 generated
     Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:5 written

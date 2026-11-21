@@ -16,10 +16,8 @@ Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubt
   Local "_4" "int *" "x"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int **" "slot"
-  Local "_9" "int ***"
-  Local "_10" "int **"
+  Local "_7" "int **" "slot"
+  Local "_8" "int ***"
   Block "bb0" entry
     ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:27 generated
     Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:27 written "malloc" "bb1"
@@ -84,33 +82,24 @@ Function a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubt
         Deref
       Use
         Copy "_4"
-    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:120 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:120 generated
     Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:134 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:141 generated
     Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:149 written
-      Destination "_9"
+      Destination "_8"
       Address
-        Place "_8"
+        Place "_7"
     ArgumentsEvaluated a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 generated
     Call a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 written "keep" "bb11"
-      Copy "_9"
+      Copy "_8"
   Block "bb11"
     Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:144 generated
     Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
-    Operation a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 written
-      Destination "_10"
-      Use
-        Copy "_8"
     Sequenced a_box_holding_a_freed_pointer_written_into_a_local_a_call_kept_is_doubted.c:5:157 generated
     Return

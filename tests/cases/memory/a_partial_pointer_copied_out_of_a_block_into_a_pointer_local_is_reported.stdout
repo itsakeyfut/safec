@@ -28,7 +28,6 @@ Function a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reporte
   Local "_12" "void *"
   Local "_13" "void **"
   Local "_14" "void *"
-  Local "_15" "void *"
   Block "bb0" entry
     Operation a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reported.c:6:9 written
       Destination "_2"
@@ -122,10 +121,5 @@ Function a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reporte
         Deref
       Use
         Copy "_8"
-    Operation a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reported.c:16:5 written
-      Destination "_15"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_out_of_a_block_into_a_pointer_local_is_reported.c:16:5 generated
     Return

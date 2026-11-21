@@ -10,7 +10,6 @@ Function a_returned_box_written_on_one_path_is_not_named_where_the_block_below_i
   Local "_4" "int ***" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path.c:3:15 generated
     Call a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path.c:3:15 written "malloc" "bb1"
@@ -59,11 +58,6 @@ Function a_returned_box_written_on_one_path_is_not_named_where_the_block_below_i
         Deref
       Use
         Copy "_2"
-    Operation a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path.c:6:12 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_returned_box_written_on_one_path_is_not_named_where_the_block_below_it_is_unwritten_on_every_path.c:6:12 generated
     Goto "bb8"
   Block "bb7"

@@ -12,9 +12,7 @@ Function two_declarators_from_one_expansion_are_two_locals.c:5:5 "main"
   Local "_3" "int *" "b"
   Local "_4" "int"
   Local "_5" "void *"
-  Local "_6" "int *"
-  Local "_7" "int"
-  Local "_8" "int"
+  Local "_6" "int"
   Block "bb0" entry
     Operation two_declarators_from_one_expansion_are_two_locals.c:5:5 generated
       Destination "_0"
@@ -67,17 +65,13 @@ Function two_declarators_from_one_expansion_are_two_locals.c:5:5 "main"
       Destination "_3"
       Use
         Copy "_5"
-    Operation two_declarators_from_one_expansion_are_two_locals.c:9:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
     Sequenced two_declarators_from_one_expansion_are_two_locals.c:9:5 generated
     Operation two_declarators_from_one_expansion_are_two_locals.c:10:9 written
-      Destination "_7"
+      Destination "_6"
       Unary "Not"
         Copy "_3"
     Branch two_declarators_from_one_expansion_are_two_locals.c:10:9 written "bb7" "bb8"
-      Copy "_7"
+      Copy "_6"
   Block "bb7"
     Sequenced two_declarators_from_one_expansion_are_two_locals.c:10:9 generated
     Operation two_declarators_from_one_expansion_are_two_locals.c:10:13 written
@@ -95,11 +89,6 @@ Function two_declarators_from_one_expansion_are_two_locals.c:5:5 "main"
         Deref
       Use
         Constant 1
-    Operation two_declarators_from_one_expansion_are_two_locals.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced two_declarators_from_one_expansion_are_two_locals.c:11:5 generated
     ArgumentsEvaluated two_declarators_from_one_expansion_are_two_locals.c:12:5 generated
     Call two_declarators_from_one_expansion_are_two_locals.c:12:5 written "free" "bb10"

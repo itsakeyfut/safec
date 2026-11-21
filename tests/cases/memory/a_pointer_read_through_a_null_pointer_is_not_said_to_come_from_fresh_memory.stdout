@@ -22,7 +22,6 @@ Function a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_me
   Local "_1" "int **" "p"
   Local "_2" "int *" "t"
   Local "_3" "int"
-  Local "_4" "int"
   Block "bb0" entry
     Operation a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_memory.c:8:11 written
       Destination "_1"
@@ -49,11 +48,6 @@ Function a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_me
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_memory.c:11:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_read_through_a_null_pointer_is_not_said_to_come_from_fresh_memory.c:11:9 generated
     Goto "bb3"
   Block "bb2"

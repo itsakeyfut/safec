@@ -16,7 +16,6 @@ Function a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:3:5 "f"
   Local "_7" "int" "x"
   Local "_8" "int *"
   Local "_9" "int"
-  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:4:14 generated
     Call a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:4:14 written "malloc" "bb1"
@@ -102,10 +101,6 @@ Function a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:3:5 "f"
       Destination "_7"
       Use
         Copy "_9"
-    Operation a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:10:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
     Sequenced a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:10:5 generated
     ArgumentsEvaluated a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:11:5 generated
     Call a_sum_reading_a_pointer_its_other_operand_writes_is_reported.c:11:5 written "free" "bb10"

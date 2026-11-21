@@ -21,16 +21,15 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
   Local "_4" "int **" "h"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int **" "g"
-  Local "_9" "void *"
-  Local "_10" "int"
-  Local "_11" "int *" "b"
-  Local "_12" "int **"
-  Local "_13" "void *"
-  Local "_14" "int *" "c"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_7" "int **" "g"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *" "b"
+  Local "_11" "int **"
+  Local "_12" "void *"
+  Local "_13" "int *" "c"
+  Local "_14" "int **"
+  Local "_15" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:7:14 generated
     Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:7:14 written "malloc" "bb1"
@@ -95,29 +94,24 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
         Deref
       Use
         Copy "_1"
-    Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:15:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:15:5 generated
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 generated
     Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 written "malloc" "bb9"
-      Destination "_9"
+      Destination "_8"
       Constant 8
   Block "bb9"
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:11 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:16:15 generated
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
-        Copy "_8"
+        Copy "_7"
         Constant 0
     Branch a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 written "bb10" "bb11"
-      Copy "_10"
+      Copy "_9"
   Block "bb10"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:17:9 generated
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:18:9 written
@@ -131,45 +125,45 @@ Function a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:
     Goto "bb12"
   Block "bb12"
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:20:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_1"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:20:14 generated
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:17 written
-      Destination "_12"
+      Destination "_11"
       Address
-        Place "_11"
+        Place "_10"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 generated
     Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 written "release_ref" "bb13"
-      Copy "_12"
+      Copy "_11"
   Block "bb13"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:21:5 generated
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 generated
     Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 written "memcpy" "bb14"
-      Destination "_13"
-      Copy "_8"
+      Destination "_12"
+      Copy "_7"
       Copy "_4"
       Constant 8
   Block "bb14"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 generated
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:23:10 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_8"
+        Copy "_7"
           Deref
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:23:14 generated
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:17 written
-      Destination "_15"
+      Destination "_14"
       Address
-        Place "_14"
+        Place "_13"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 generated
     Call a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 written "use2" "bb15"
-      Destination "_16"
-      Copy "_15"
+      Destination "_15"
+      Copy "_14"
   Block "bb15"
     Operation a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
     Sequenced a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 generated
     Return

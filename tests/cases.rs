@@ -138,6 +138,14 @@ cases! {
         // `handed_unprototyped` where an unprototyped argument is asked as
         // writable at every level.
         read_only_storage_below_what_leaves_or_arrives_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` written through a pointer that may name itself may leave
+        // it half written, and is `SC0413` only where the pointer is read
+        // again, `self_then_read`. An assignment statement reads nothing back,
+        // so `self_no_read` and `after_an_out_parameter` say nothing of it
+        // (#1137). Mutation: read the value back in `Lowering` even where it
+        // is discarded; `self_no_read` and `after_an_out_parameter` are
+        // `SC0413`.
+        a_write_through_a_pointer_that_may_name_itself_is_asked_only_where_it_is_read_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer holding a pointer to `const`'s bytes is still asked where
         // it leaves, returned or handed to a call declared without a
         // prototype, since the other side may read it as a pointer. Found by

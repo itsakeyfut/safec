@@ -13,15 +13,13 @@ Function a_local_s_address_read_out_two_levels_down_another_parameter_is_written
   Local "_4" "int"
   Local "_5" "int *" "x"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int *" "m"
-  Local "_9" "void *"
-  Local "_10" "int"
-  Local "_11" "int **" "t"
-  Local "_12" "int"
-  Local "_13" "int *"
-  Local "_14" "int *" "q"
-  Local "_15" "int"
+  Local "_7" "int *" "m"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int **" "t"
+  Local "_11" "int"
+  Local "_12" "int *" "q"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:4:9 written
       Destination "_3"
@@ -73,28 +71,23 @@ Function a_local_s_address_read_out_two_levels_down_another_parameter_is_written
         Deref
       Use
         Copy "_6"
-    Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:7:5 generated
     ArgumentsEvaluated a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:8:14 generated
     Call a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:8:14 written "malloc" "bb7"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb7"
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:8:10 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:8:14 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:9:9 written
-      Destination "_10"
+      Destination "_9"
       Unary "Not"
-        Copy "_8"
+        Copy "_7"
     Branch a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:9:9 written "bb8" "bb9"
-      Copy "_10"
+      Copy "_9"
   Block "bb8"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:9:9 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:9:13 written
@@ -108,18 +101,18 @@ Function a_local_s_address_read_out_two_levels_down_another_parameter_is_written
     Goto "bb10"
   Block "bb10"
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:10:11 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_2"
           Deref
             Deref
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:10:15 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:11:9 written
-      Destination "_12"
+      Destination "_11"
       Unary "Not"
-        Copy "_11"
+        Copy "_10"
     Branch a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:11:9 written "bb11" "bb12"
-      Copy "_12"
+      Copy "_11"
   Block "bb11"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:11:9 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:11:13 written
@@ -133,32 +126,27 @@ Function a_local_s_address_read_out_two_levels_down_another_parameter_is_written
     Goto "bb13"
   Block "bb13"
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:12:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
-        Copy "_8"
-    Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:12:5 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
+        Copy "_7"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:12:5 generated
     ArgumentsEvaluated a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:13:5 generated
     Call a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:13:5 written "free" "bb14"
-      Copy "_8"
+      Copy "_7"
   Block "bb14"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:13:5 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:14:10 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_5"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:14:14 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:15:9 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
-        Copy "_14"
+        Copy "_12"
     Branch a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:15:9 written "bb15" "bb16"
-      Copy "_15"
+      Copy "_13"
   Block "bb15"
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:15:9 generated
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:15:13 written
@@ -174,7 +162,7 @@ Function a_local_s_address_read_out_two_levels_down_another_parameter_is_written
     Operation a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:16:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:16:12 generated
     Return

@@ -18,7 +18,6 @@ Function a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:
   Local "_5" "int"
   Local "_6" "void *"
   Local "_7" "void **" "q"
-  Local "_8" "void **"
   Block "bb0" entry
     Operation a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:26 written
       Destination "_2"
@@ -74,11 +73,6 @@ Function a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:
         Deref
       Use
         Copy "_7"
-    Operation a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:108 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:108 generated
     ArgumentsEvaluated a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:117 generated
     Call a_memset_of_part_of_a_pointer_into_a_table_that_leaves_is_reported.c:2:117 written "use" "bb9"

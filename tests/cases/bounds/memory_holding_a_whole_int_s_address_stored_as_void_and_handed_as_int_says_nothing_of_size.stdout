@@ -8,7 +8,6 @@ Function memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_s
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:4:9 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_s
         Deref
       Use
         Constant 1
-    Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:7:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -66,8 +60,7 @@ Function memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_s
   Local "_4" "void **" "m"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void *" "pm"
+  Local "_7" "void *" "pm"
   Block "bb0" entry
     Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:12:5 generated
       Destination "_0"
@@ -136,20 +129,15 @@ Function memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_s
         Deref
       Use
         Copy "_1"
-    Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:21:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:21:5 generated
     Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:22:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:22:16 generated
     ArgumentsEvaluated memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:23:5 generated
     Call memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:23:5 written "use" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:23:5 generated
     Operation memory_holding_a_whole_int_s_address_stored_as_void_and_handed_as_int_says_nothing_of_size.c:24:5 written

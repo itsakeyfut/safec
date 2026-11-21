@@ -18,7 +18,6 @@ Function a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_l
   Local "_5" "int **" "v"
   Local "_6" "int ***"
   Local "_7" "int **"
-  Local "_8" "int **"
   Block "bb0" entry
     Operation a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call.c:6:9 written
       Destination "_2"
@@ -63,10 +62,6 @@ Function a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_l
       Destination "_5"
       Use
         Copy "_7"
-    Operation a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
     Sequenced a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call.c:14:5 generated
     ArgumentsEvaluated a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call.c:15:5 generated
     Call a_local_put_below_one_a_callee_kept_on_the_other_arm_is_asked_after_a_later_call.c:15:5 written "other" "bb6"

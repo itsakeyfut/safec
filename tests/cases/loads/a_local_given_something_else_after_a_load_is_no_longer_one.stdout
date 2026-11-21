@@ -13,9 +13,7 @@ Function a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 "main"
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
-  Local "_9" "int *"
+  Local "_7" "int *" "q"
   Block "bb0" entry
     Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 generated
       Destination "_0"
@@ -84,30 +82,21 @@ Function a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 "main"
         Deref
       Use
         Copy "_4"
-    Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:13:5 generated
     Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:14:14 generated
     Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:15:5 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
-    Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_8"
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:15:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 generated
     Call a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 written "show" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 generated
     Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:17:5 written

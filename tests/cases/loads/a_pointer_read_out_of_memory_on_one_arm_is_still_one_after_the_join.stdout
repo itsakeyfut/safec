@@ -20,11 +20,8 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
   Local "_11" "int *" "p"
   Local "_12" "void *"
   Local "_13" "int"
-  Local "_14" "int **"
-  Local "_15" "int *"
-  Local "_16" "int **" "t"
-  Local "_17" "int **"
-  Local "_18" "int"
+  Local "_14" "int **" "t"
+  Local "_15" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 generated
     Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 written "malloc" "bb1"
@@ -147,25 +144,15 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:21:5 written
-      Destination "_14"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:21:5 generated
     Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 written
       Destination "_5"
         Deref
       Use
         Copy "_11"
-    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 written
-      Destination "_15"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 generated
     Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:23:11 written
-      Destination "_16"
+      Destination "_14"
       Use
         Copy "_8"
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:23:15 generated
@@ -174,14 +161,10 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
   Block "bb17"
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:24:9 generated
     Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 written
-      Destination "_16"
+      Destination "_14"
       Use
         Copy "_2"
           Deref
-    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 written
-      Destination "_17"
-      Use
-        Copy "_16"
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 generated
     Goto "bb19"
   Block "bb18"
@@ -189,12 +172,12 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
     Goto "bb19"
   Block "bb19"
     Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 written
-      Destination "_18"
+      Destination "_15"
       Binary "Eq"
-        Copy "_16"
+        Copy "_14"
         Constant 0
     Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 written "bb20" "bb21"
-      Copy "_18"
+      Copy "_15"
   Block "bb20"
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 generated
     Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:28:9 written
@@ -209,7 +192,7 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
   Block "bb22"
     ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 generated
     Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 written "show" "bb23"
-      Copy "_16"
+      Copy "_14"
         Deref
   Block "bb23"
     Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 generated

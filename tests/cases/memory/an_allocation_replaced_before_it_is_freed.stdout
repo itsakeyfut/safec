@@ -10,7 +10,6 @@ Function an_allocation_replaced_before_it_is_freed.c:3:5 "f"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "void *"
-  Local "_4" "int *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_replaced_before_it_is_freed.c:4:14 generated
     Call an_allocation_replaced_before_it_is_freed.c:4:14 written "malloc" "bb1"
@@ -36,10 +35,6 @@ Function an_allocation_replaced_before_it_is_freed.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_3"
-    Operation an_allocation_replaced_before_it_is_freed.c:6:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
     Sequenced an_allocation_replaced_before_it_is_freed.c:6:5 generated
     ArgumentsEvaluated an_allocation_replaced_before_it_is_freed.c:7:5 generated
     Call an_allocation_replaced_before_it_is_freed.c:7:5 written "free" "bb4"

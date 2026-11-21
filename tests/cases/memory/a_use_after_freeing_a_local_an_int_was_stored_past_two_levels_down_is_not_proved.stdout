@@ -15,11 +15,9 @@ Function a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_n
   Local "_6" "int **"
   Local "_7" "int *" "pi"
   Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int" "n"
-  Local "_11" "int **" "ppi"
-  Local "_12" "int **"
-  Local "_13" "int"
+  Local "_9" "int" "n"
+  Local "_10" "int **" "ppi"
+  Local "_11" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:12:14 generated
     Call a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:12:14 written "malloc" "bb1"
@@ -77,37 +75,27 @@ Function a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_n
       Destination "_7"
       Use
         Copy "_8"
-    Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:17:5 written
-      Destination "_9"
-      Use
-        Copy "_7"
     Sequenced a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:17:5 generated
     Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:18:9 written
-      Destination "_10"
+      Destination "_9"
       Use
         Constant 5
     Sequenced a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:18:13 generated
     Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:19:17 written
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_7"
     Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:19:11 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:19:17 generated
     Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:20:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
           Deref
       Use
-        Copy "_10"
-    Operation a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:20:5 written
-      Destination "_13"
-      Use
-        Copy "_11"
-          Deref
-            Deref
+        Copy "_9"
     Sequenced a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:20:5 generated
     ArgumentsEvaluated a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:21:5 generated
     Call a_use_after_freeing_a_local_an_int_was_stored_past_two_levels_down_is_not_proved.c:21:5 written "free" "bb5"

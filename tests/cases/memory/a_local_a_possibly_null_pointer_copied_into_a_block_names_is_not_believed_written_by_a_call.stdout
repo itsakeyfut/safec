@@ -16,13 +16,12 @@ Function a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believ
   Local "_2" "int *" "a"
   Local "_3" "int **" "p"
   Local "_4" "int **"
-  Local "_5" "int **"
-  Local "_6" "int ***" "b"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "int ***"
-  Local "_10" "void *"
-  Local "_11" "int"
+  Local "_5" "int ***" "b"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int ***"
+  Local "_9" "void *"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:6:11 written
       Destination "_3"
@@ -41,10 +40,6 @@ Function a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believ
       Destination "_3"
       Use
         Copy "_4"
-    Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:7:12 written
-      Destination "_5"
-      Use
-        Copy "_3"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:7:12 generated
     Goto "bb3"
   Block "bb2"
@@ -53,20 +48,20 @@ Function a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believ
   Block "bb3"
     ArgumentsEvaluated a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:8:16 generated
     Call a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:8:16 written "malloc" "bb4"
-      Destination "_7"
+      Destination "_6"
       Constant 8
   Block "bb4"
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:8:12 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:8:16 generated
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:9:9 written
-      Destination "_8"
+      Destination "_7"
       Unary "Not"
-        Copy "_6"
+        Copy "_5"
     Branch a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:9:9 written "bb5" "bb6"
-      Copy "_8"
+      Copy "_7"
   Block "bb5"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:9:9 generated
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:9:13 written
@@ -80,30 +75,30 @@ Function a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believ
     Goto "bb7"
   Block "bb7"
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:10:15 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_3"
     ArgumentsEvaluated a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:10:5 generated
     Call a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:10:5 written "memcpy" "bb8"
-      Destination "_10"
-      Copy "_6"
-      Copy "_9"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
       Constant 8
   Block "bb8"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:10:5 generated
     ArgumentsEvaluated a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:11:5 generated
     Call a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:11:5 written "fill" "bb9"
-      Copy "_6"
+      Copy "_5"
   Block "bb9"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:11:5 generated
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:12:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Operation a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:12:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_local_a_possibly_null_pointer_copied_into_a_block_names_is_not_believed_written_by_a_call.c:12:12 generated
     Return

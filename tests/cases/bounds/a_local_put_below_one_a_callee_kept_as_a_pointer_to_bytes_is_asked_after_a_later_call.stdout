@@ -16,7 +16,6 @@ Function a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_afte
   Local "_5" "void *" "pv"
   Local "_6" "int ***"
   Local "_7" "int **"
-  Local "_8" "int **"
   Block "bb0" entry
     Operation a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call.c:5:9 written
       Destination "_1"
@@ -59,10 +58,6 @@ Function a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_afte
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call.c:10:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call.c:10:5 generated
     ArgumentsEvaluated a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call.c:11:5 generated
     Call a_local_put_below_one_a_callee_kept_as_a_pointer_to_bytes_is_asked_after_a_later_call.c:11:5 written "other" "bb2"

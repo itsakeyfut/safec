@@ -17,10 +17,9 @@ Function a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returne
   Local "_3" "int"
   Local "_4" "int *" "x"
   Local "_5" "void *"
-  Local "_6" "int *"
-  Local "_7" "int *" "z"
-  Local "_8" "int **"
-  Local "_9" "void *"
+  Local "_6" "int *" "z"
+  Local "_7" "int **"
+  Local "_8" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:5:15 generated
     Call a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:5:15 written "malloc" "bb1"
@@ -66,11 +65,6 @@ Function a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returne
         Deref
       Use
         Copy "_4"
-    Operation a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:8:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:8:5 generated
     ArgumentsEvaluated a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:9:5 generated
     Call a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:9:5 written "free" "bb6"
@@ -78,19 +72,19 @@ Function a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returne
   Block "bb6"
     Sequenced a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:9:5 generated
     Operation a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:10:10 written
-      Destination "_7"
+      Destination "_6"
       Use
         Constant 0
     Sequenced a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:10:14 generated
     Operation a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:11:15 written
-      Destination "_8"
+      Destination "_7"
       Address
-        Place "_7"
+        Place "_6"
     ArgumentsEvaluated a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:11:5 generated
     Call a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:11:5 written "memcpy" "bb7"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
-      Copy "_8"
+      Copy "_7"
       Constant 8
   Block "bb7"
     Sequenced a_copy_of_a_null_over_a_freed_pointer_in_a_block_of_one_slot_is_returned_without_a_doubt.c:11:5 generated

@@ -13,9 +13,8 @@ Function a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_
   Local "_8" "int"
   Local "_9" "int **"
   Local "_10" "int *"
-  Local "_11" "int *"
+  Local "_11" "int"
   Local "_12" "int"
-  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:3:5 generated
       Destination "_0"
@@ -105,24 +104,19 @@ Function a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_
         Deref
       Use
         Copy "_10"
-    Operation a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:11:9 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:11:9 generated
     Operation a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:6:28 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_3"
     Operation a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:6:28 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:6:28 written
       Destination "_3"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_pointer_read_on_an_arm_that_leaves_a_loop_that_runs_before_its_write_is_doubted.c:6:28 generated
     Goto "bb1"

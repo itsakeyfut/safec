@@ -14,11 +14,9 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int *"
+  Local "_8" "int" "r"
   Local "_9" "int"
-  Local "_10" "int" "r"
-  Local "_11" "int"
-  Local "_12" "int"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:4:10 written
       Destination "_3"
@@ -59,11 +57,6 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
         Deref
       Use
         Constant 1
-    Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:7:5 generated
     Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:9 written "bb5" "bb6"
       Copy "_1"
@@ -77,21 +70,17 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:9:9 written
-      Destination "_9"
+      Destination "_7"
       Unary "Not"
         Copy "_4"
     Branch a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:9:9 written "bb9" "bb10"
-      Copy "_9"
+      Copy "_7"
   Block "bb8"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:14 generated
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:23 written
       Destination "_4"
       Use
         Constant 0
-    Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:23 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:8:23 generated
     Goto "bb7"
   Block "bb9"
@@ -107,7 +96,7 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
     Goto "bb11"
   Block "bb11"
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:10:9 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_4"
           Deref
@@ -118,18 +107,18 @@ Function a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:3:
   Block "bb12"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:11:5 generated
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:12:17 written
-      Destination "_11"
+      Destination "_9"
       Binary "Ne"
         Copy "_3"
         Constant 0
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:12:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Add"
-        Copy "_10"
-        Copy "_11"
+        Copy "_8"
+        Copy "_9"
     Operation a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:12:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load.c:12:12 generated
     Return

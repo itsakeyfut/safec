@@ -15,10 +15,9 @@ Function a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_funct
   Local "_4" "void **" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void **" "c"
-  Local "_9" "void ***"
-  Local "_10" "void *"
+  Local "_7" "void **" "c"
+  Local "_8" "void ***"
+  Local "_9" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:4:15 generated
     Call a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:4:15 written "malloc" "bb1"
@@ -58,26 +57,21 @@ Function a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_funct
         Deref
       Use
         Copy "_2"
-    Operation a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:7:5 generated
     Operation a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:8:12 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
     Sequenced a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:8:16 generated
     Operation a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:9:17 written
-      Destination "_9"
+      Destination "_8"
       Address
-        Place "_8"
+        Place "_7"
     ArgumentsEvaluated a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:9:5 generated
     Call a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:9:5 written "memcpy" "bb6"
-      Destination "_10"
+      Destination "_9"
       Copy "_1"
-      Copy "_9"
+      Copy "_8"
       Constant 8
   Block "bb6"
     Sequenced a_block_below_a_void_pointer_box_copied_out_is_reported_where_the_function_returns.c:9:5 generated

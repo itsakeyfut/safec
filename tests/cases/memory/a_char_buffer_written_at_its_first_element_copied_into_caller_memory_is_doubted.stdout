@@ -10,9 +10,8 @@ Function a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is
   Local "_2" "int"
   Local "_3" "char[8]" "b"
   Local "_4" "char *"
-  Local "_5" "char"
-  Local "_6" "char *"
-  Local "_7" "void *"
+  Local "_5" "char *"
+  Local "_6" "void *"
   Block "bb0" entry
     Operation a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:25 written
       Destination "_2"
@@ -38,23 +37,18 @@ Function a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is
         Deref
       Use
         Constant 0
-    Operation a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:50 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:50 generated
     Operation a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:72 generated
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_3"
           Index
             Constant 0
     ArgumentsEvaluated a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:60 generated
     Call a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:60 written "memcpy" "bb4"
-      Destination "_7"
+      Destination "_6"
       Copy "_1"
-      Copy "_6"
+      Copy "_5"
       Constant 8
   Block "bb4"
     Sequenced a_char_buffer_written_at_its_first_element_copied_into_caller_memory_is_doubted.c:2:60 generated

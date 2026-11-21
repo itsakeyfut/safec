@@ -20,7 +20,6 @@ Function a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:3:5 "m
   Local "_9" "void *"
   Local "_10" "int *" "q"
   Local "_11" "int"
-  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:3:5 generated
       Destination "_0"
@@ -116,11 +115,6 @@ Function a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:3:5 "m
         Deref
       Use
         Constant 1
-    Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 written
-      Destination "_12"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:12:5 generated
     Operation a_pointer_to_a_char_copied_into_memory_by_memcpy_and_read_back.c:13:5 written
       Destination "_0"

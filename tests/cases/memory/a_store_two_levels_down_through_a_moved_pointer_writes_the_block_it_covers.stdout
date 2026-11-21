@@ -18,14 +18,11 @@ Function a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_cov
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int **"
-  Local "_13" "int ***"
-  Local "_14" "int **"
-  Local "_15" "int ***" "pp"
-  Local "_16" "int ***"
-  Local "_17" "int *"
-  Local "_18" "int *" "r"
-  Local "_19" "int"
+  Local "_12" "int ***"
+  Local "_13" "int ***" "pp"
+  Local "_14" "int ***"
+  Local "_15" "int *" "r"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:2:5 generated
       Destination "_0"
@@ -124,53 +121,37 @@ Function a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_cov
         Deref
       Use
         Copy "_3"
-    Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:7:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:7:5 generated
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:8:5 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:8:5 written
-      Destination "_13"
+      Destination "_12"
         Deref
       Use
         Copy "_3"
-    Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:8:5 written
-      Destination "_14"
-      Use
-        Copy "_13"
-          Deref
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:8:5 generated
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:9:17 written
-      Destination "_16"
+      Destination "_14"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:9:12 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:9:17 generated
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:10:5 written
-      Destination "_15"
+      Destination "_13"
         Deref
           Deref
       Use
         Copy "_5"
-    Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:10:5 written
-      Destination "_17"
-      Use
-        Copy "_15"
-          Deref
-            Deref
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:10:5 generated
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:11:10 written
-      Destination "_18"
+      Destination "_15"
       Use
         Copy "_3"
           Deref
@@ -191,13 +172,13 @@ Function a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_cov
   Block "bb13"
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:14:5 generated
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:15:12 written
-      Destination "_19"
+      Destination "_16"
       Binary "Eq"
-        Copy "_18"
+        Copy "_15"
         Constant 0
     Operation a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:15:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_16"
     Sequenced a_store_two_levels_down_through_a_moved_pointer_writes_the_block_it_covers.c:15:12 generated
     Return

@@ -9,12 +9,10 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:2:7
   Local "_3" "int **" "a"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int **" "b"
-  Local "_8" "void *"
-  Local "_9" "int"
-  Local "_10" "int **" "r"
-  Local "_11" "int **"
+  Local "_6" "int **" "b"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **" "r"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:3:15 generated
     Call a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:3:15 written "malloc" "bb1"
@@ -49,28 +47,23 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:2:7
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:5:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:5:5 generated
     ArgumentsEvaluated a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:6:15 generated
     Call a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:6:15 written "malloc" "bb5"
-      Destination "_8"
+      Destination "_7"
       Constant 8
   Block "bb5"
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:6:11 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:6:15 generated
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:7:9 written
-      Destination "_9"
+      Destination "_8"
       Unary "Not"
-        Copy "_7"
+        Copy "_6"
     Branch a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:7:9 written "bb6" "bb7"
-      Copy "_9"
+      Copy "_8"
   Block "bb6"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:7:9 generated
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:7:13 written
@@ -84,7 +77,7 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:2:7
     Goto "bb8"
   Block "bb8"
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:8:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:8:15 generated
@@ -93,13 +86,9 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:2:7
   Block "bb9"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:9:9 generated
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:9:12 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_7"
-    Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:9:12 written
-      Destination "_11"
-      Use
-        Copy "_10"
+        Copy "_6"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:9:12 generated
     Goto "bb11"
   Block "bb10"
@@ -109,6 +98,6 @@ Function a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:2:7
     Operation a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:10:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_pointer_that_may_name_a_block_nothing_wrote_returned_is_doubted.c:10:12 generated
     Return

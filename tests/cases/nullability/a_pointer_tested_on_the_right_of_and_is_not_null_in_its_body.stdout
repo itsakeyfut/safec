@@ -13,7 +13,6 @@ Function a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:4:5 "f"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:5:14 generated
     Call a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:5:14 written "malloc" "bb1"
@@ -60,11 +59,6 @@ Function a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:4:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:7:9 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_tested_on_the_right_of_and_is_not_null_in_its_body.c:7:9 generated
     Goto "bb6"
   Block "bb5"

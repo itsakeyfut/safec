@@ -21,8 +21,7 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
   Local "_7" "int **" "pa"
   Local "_8" "int **"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 written "malloc" "bb1"
@@ -96,11 +95,6 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:16:5 written
-      Destination "_9"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:16:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 written "stash" "bb9"
@@ -112,17 +106,17 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
   Block "bb10"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 generated
     Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:17 written
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 written "use2" "bb11"
-      Destination "_11"
-      Copy "_10"
+      Destination "_10"
+      Copy "_9"
   Block "bb11"
     Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 generated
     Return

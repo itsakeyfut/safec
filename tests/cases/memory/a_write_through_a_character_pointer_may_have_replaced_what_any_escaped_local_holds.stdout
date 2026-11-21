@@ -22,10 +22,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
   Local "_13" "int"
   Local "_14" "char *"
   Local "_15" "char *"
-  Local "_16" "char"
-  Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "int"
+  Local "_16" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 generated
     Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 written "malloc" "bb1"
@@ -112,25 +109,16 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
       Use
         Copy "_15"
           Deref
-    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 written
-      Destination "_16"
-      Use
-        Copy "_14"
-          Deref
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 generated
     Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:13 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
         Copy "_12"
         Constant 1
     Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 written
       Destination "_12"
       Use
-        Copy "_17"
-    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 written
-      Destination "_18"
-      Use
-        Copy "_12"
+        Copy "_16"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 generated
     Goto "bb3"
   Block "bb5"
@@ -145,11 +133,6 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
         Deref
       Use
         Constant 1
-    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 written
-      Destination "_19"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 generated
     Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:18:5 written
       Destination "_0"

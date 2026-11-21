@@ -13,7 +13,6 @@ Function a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one
   Local "_4" "void *" "v"
   Local "_5" "int **"
   Local "_6" "char *" "c"
-  Local "_7" "char"
   Block "bb0" entry
     ArgumentsEvaluated a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:14 generated
     Call a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:8:14 written "malloc" "bb1"
@@ -67,11 +66,6 @@ Function a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one
         Deref
       Use
         Constant 1
-    Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:11:5 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:11:5 generated
     Operation a_one_byte_stored_into_a_freed_pointer_leaves_it_freed_as_a_copy_of_one_byte_does.c:12:5 written
       Destination "_0"

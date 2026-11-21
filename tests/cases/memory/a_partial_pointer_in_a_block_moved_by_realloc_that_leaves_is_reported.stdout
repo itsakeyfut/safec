@@ -33,7 +33,6 @@ Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c
   Local "_13" "void *"
   Local "_14" "int"
   Local "_15" "void **" "q"
-  Local "_16" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:7:9 written
       Destination "_2"
@@ -141,11 +140,6 @@ Function a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c
         Deref
       Use
         Copy "_15"
-    Operation a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:17:5 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:17:5 generated
     ArgumentsEvaluated a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:18:5 generated
     Call a_partial_pointer_in_a_block_moved_by_realloc_that_leaves_is_reported.c:18:5 written "use" "bb15"

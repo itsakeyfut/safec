@@ -3,7 +3,6 @@ Function a_pointer_moved_past_its_allocation_handed_to_a_call.c:1:6 "g"
   Local "_0" "void" return
   Local "_1" "int *" parameter "q"
   Local "_2" "int"
-  Local "_3" "int"
   Block "bb0" entry
     Operation a_pointer_moved_past_its_allocation_handed_to_a_call.c:2:9 written
       Destination "_2"
@@ -19,11 +18,6 @@ Function a_pointer_moved_past_its_allocation_handed_to_a_call.c:1:6 "g"
         Deref
       Use
         Constant 1
-    Operation a_pointer_moved_past_its_allocation_handed_to_a_call.c:3:9 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_moved_past_its_allocation_handed_to_a_call.c:3:9 generated
     Goto "bb3"
   Block "bb2"

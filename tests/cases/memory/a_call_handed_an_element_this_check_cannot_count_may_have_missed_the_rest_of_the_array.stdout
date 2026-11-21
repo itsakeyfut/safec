@@ -177,9 +177,8 @@ Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_re
   Local "_7" "int **"
   Local "_8" "int **"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int *"
-  Local "_12" "int"
+  Local "_10" "int *"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:34:9 written
       Destination "_3"
@@ -214,10 +213,6 @@ Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_re
       Destination "_6"
       Use
         Copy "_9"
-    Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:38:12 written
-      Destination "_10"
-      Use
-        Copy "_6"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:38:12 generated
     Goto "bb3"
   Block "bb2"
@@ -225,24 +220,24 @@ Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_re
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:39:13 written
-      Destination "_11"
+      Destination "_10"
       Address
         Place "_3"
     ArgumentsEvaluated a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:39:5 generated
     Call a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:39:5 written "fill" "bb4"
       Copy "_6"
-      Copy "_11"
+      Copy "_10"
   Block "bb4"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:39:5 generated
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:40:12 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:40:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:40:12 generated
     Return
 Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:43:6 "stash" declared
@@ -259,8 +254,7 @@ Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_re
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:49:11 written
       Destination "_4"
@@ -286,30 +280,26 @@ Function a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_re
       Destination "_3"
       Use
         Copy "_6"
-    Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:50:5 written
-      Destination "_7"
-      Use
-        Copy "_3"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:50:5 generated
     ArgumentsEvaluated a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:51:5 generated
     Call a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:51:5 written "tick" "bb2"
   Block "bb2"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:51:5 generated
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:52:12 generated
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:52:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
-        Copy "_8"
+        Copy "_7"
           Deref
         Constant 0
     Operation a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:52:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_call_handed_an_element_this_check_cannot_count_may_have_missed_the_rest_of_the_array.c:52:12 generated
     Return

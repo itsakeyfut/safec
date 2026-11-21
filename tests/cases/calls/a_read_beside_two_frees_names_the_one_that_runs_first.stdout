@@ -13,11 +13,10 @@ Function a_read_beside_two_frees_names_the_one_that_runs_first.c:4:5 "f"
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
-  Local "_5" "int *" "q"
-  Local "_6" "int" "x"
+  Local "_4" "int *" "q"
+  Local "_5" "int" "x"
+  Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_read_beside_two_frees_names_the_one_that_runs_first.c:5:14 generated
     Call a_read_beside_two_frees_names_the_one_that_runs_first.c:5:14 written "malloc" "bb1"
@@ -52,41 +51,36 @@ Function a_read_beside_two_frees_names_the_one_that_runs_first.c:4:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:9:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:9:5 generated
     Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:10:10 written
-      Destination "_5"
+      Destination "_4"
       Use
         Copy "_1"
     Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:10:14 generated
     Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 written "g" "bb5"
-      Destination "_7"
+      Destination "_6"
       Copy "_1"
         Deref
   Block "bb5"
     Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:31 written "free" "bb6"
-      Copy "_5"
+      Copy "_4"
   Block "bb6"
     Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:22 written "free" "bb7"
       Copy "_1"
   Block "bb7"
     Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 0
     Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:11:9 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 generated
     Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:12:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:12:12 generated
     Return

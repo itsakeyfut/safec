@@ -13,12 +13,9 @@ Function a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_hol
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int"
-  Local "_8" "int *"
+  Local "_7" "int **"
+  Local "_8" "int *" "q"
   Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int *" "q"
-  Local "_12" "int **"
   Block "bb0" entry
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:4:5 generated
       Destination "_0"
@@ -87,53 +84,38 @@ Function a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_hol
         Deref
       Use
         Constant 1
-    Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:13:5 generated
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:14:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:14:5 generated
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:15:5 written
-      Destination "_9"
+      Destination "_7"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:15:5 written
-      Destination "_9"
+      Destination "_7"
         Deref
       Use
         Constant 0
-    Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:15:5 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:15:5 generated
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:16:14 written
-      Destination "_12"
+      Destination "_9"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:16:10 written
-      Destination "_11"
+      Destination "_8"
       Use
-        Copy "_12"
+        Copy "_9"
           Deref
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:16:14 generated
     ArgumentsEvaluated a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 generated
     Call a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 written "free" "bb9"
-      Copy "_11"
+      Copy "_8"
   Block "bb9"
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 generated
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:18:5 written

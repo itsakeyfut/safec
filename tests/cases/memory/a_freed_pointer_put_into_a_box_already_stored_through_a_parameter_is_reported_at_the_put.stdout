@@ -11,11 +11,9 @@ Function a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_re
   Local "_2" "int **" "b"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int **"
-  Local "_6" "int *" "x"
-  Local "_7" "void *"
-  Local "_8" "int"
-  Local "_9" "int *"
+  Local "_5" "int *" "x"
+  Local "_6" "void *"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:5:15 generated
     Call a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:5:15 written "malloc" "bb1"
@@ -46,29 +44,24 @@ Function a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_re
         Deref
       Use
         Copy "_2"
-    Operation a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:9:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:9:5 generated
     ArgumentsEvaluated a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:10:14 generated
     Call a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:10:14 written "malloc" "bb5"
-      Destination "_7"
+      Destination "_6"
       Constant 4
   Block "bb5"
     Operation a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:10:10 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:10:14 generated
     Operation a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:11:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Branch a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:11:9 written "bb6" "bb7"
-      Copy "_8"
+      Copy "_7"
   Block "bb6"
     Sequenced a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:11:9 generated
     Return
@@ -78,18 +71,13 @@ Function a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_re
   Block "bb8"
     ArgumentsEvaluated a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:14:5 generated
     Call a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:14:5 written "free" "bb9"
-      Copy "_6"
+      Copy "_5"
   Block "bb9"
     Sequenced a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:14:5 generated
     Operation a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:15:5 written
       Destination "_2"
         Deref
       Use
-        Copy "_6"
-    Operation a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_5"
     Sequenced a_freed_pointer_put_into_a_box_already_stored_through_a_parameter_is_reported_at_the_put.c:15:5 generated
     Return

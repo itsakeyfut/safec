@@ -20,7 +20,6 @@ Function a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_
   Local "_7" "int *"
   Local "_8" "void *"
   Local "_9" "void **" "q"
-  Local "_10" "void **"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:5:9 written
       Destination "_2"
@@ -85,11 +84,6 @@ Function a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_
         Deref
       Use
         Copy "_9"
-    Operation a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:11:5 written
-      Destination "_10"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:11:5 generated
     ArgumentsEvaluated a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:12:5 generated
     Call a_partial_pointer_copied_into_a_block_before_it_is_held_as_pointers_is_reported.c:12:5 written "use" "bb9"

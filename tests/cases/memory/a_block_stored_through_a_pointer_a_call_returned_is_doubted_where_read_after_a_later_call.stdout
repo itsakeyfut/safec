@@ -14,8 +14,7 @@ Function a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_
   Local "_4" "int **" "b"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:5:16 generated
     Call a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:5:16 written "mk" "bb1"
@@ -77,18 +76,13 @@ Function a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_
         Deref
       Use
         Copy "_4"
-    Operation a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:9:5 generated
     ArgumentsEvaluated a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:10:5 generated
     Call a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:10:5 written "tick" "bb9"
   Block "bb9"
     Sequenced a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:10:5 generated
     Operation a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:11:12 written
-      Destination "_8"
+      Destination "_7"
       Binary "Ne"
         Copy "_4"
           Deref
@@ -96,6 +90,6 @@ Function a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_
     Operation a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:11:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_block_stored_through_a_pointer_a_call_returned_is_doubted_where_read_after_a_later_call.c:11:12 generated
     Return

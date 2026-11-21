@@ -15,13 +15,12 @@ Function a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out
   Local "_2" "int *" "u"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int *" "w"
-  Local "_7" "int *" "r"
+  Local "_5" "int *" "w"
+  Local "_6" "int *" "r"
+  Local "_7" "int **"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int *" "s"
-  Local "_11" "int"
+  Local "_9" "int *" "s"
+  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:5:14 generated
     Call a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:5:14 written "malloc" "bb1"
@@ -56,40 +55,35 @@ Function a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out
         Deref
       Use
         Constant 1
-    Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:5:43 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:5:43 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:6:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:6:14 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:7:10 written
-      Destination "_7"
+      Destination "_6"
       Use
         Constant 0
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:7:14 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:9 written
-      Destination "_8"
-      Address
-        Place "_7"
-    Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:13 written
-      Destination "_9"
+      Destination "_7"
       Address
         Place "_6"
+    Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:13 written
+      Destination "_8"
+      Address
+        Place "_5"
     ArgumentsEvaluated a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:5 generated
     Call a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:5 written "get" "bb5"
+      Copy "_7"
       Copy "_8"
-      Copy "_9"
   Block "bb5"
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:8:5 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:9:10 written
-      Destination "_10"
+      Destination "_9"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:9:14 generated
     ArgumentsEvaluated a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:10:5 generated
     Call a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:10:5 written "free" "bb6"
@@ -97,11 +91,11 @@ Function a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out
   Block "bb6"
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:10:5 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:11:9 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
-        Copy "_10"
+        Copy "_9"
     Branch a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:11:9 written "bb7" "bb8"
-      Copy "_11"
+      Copy "_10"
   Block "bb7"
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:11:9 generated
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:11:13 written
@@ -117,7 +111,7 @@ Function a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out
     Operation a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:12:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free.c:12:12 generated
     Return

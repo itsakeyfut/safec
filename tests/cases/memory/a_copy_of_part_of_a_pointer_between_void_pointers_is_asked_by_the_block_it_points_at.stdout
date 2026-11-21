@@ -17,10 +17,9 @@ Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "void *" "d"
-  Local "_9" "void *" "s"
-  Local "_10" "void *"
+  Local "_7" "void *" "d"
+  Local "_8" "void *" "s"
+  Local "_9" "void *"
   Block "bb0" entry
     Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:3:9 written
       Destination "_2"
@@ -59,27 +58,22 @@ Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block
         Deref
       Use
         Copy "_6"
-    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:6:5 written
-      Destination "_7"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:6:5 generated
     Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:7:11 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:7:15 generated
     Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:7:26 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_3"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:7:30 generated
     ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:8:5 generated
     Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:8:5 written "memcpy" "bb5"
-      Destination "_10"
+      Destination "_9"
+      Copy "_7"
       Copy "_8"
-      Copy "_9"
       Constant 4
   Block "bb5"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_the_block_it_points_at.c:8:5 generated

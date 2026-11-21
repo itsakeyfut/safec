@@ -11,11 +11,9 @@ Function a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_des
   Local "_3" "int *" "a"
   Local "_4" "int **" "s"
   Local "_5" "int **"
-  Local "_6" "int **"
+  Local "_6" "int *" "r"
   Local "_7" "int **"
-  Local "_8" "int *" "r"
-  Local "_9" "int **"
-  Local "_10" "void *"
+  Local "_8" "void *"
   Block "bb0" entry
     Branch a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:10:9 written "bb1" "bb2"
       Copy "_1"
@@ -29,10 +27,6 @@ Function a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_des
       Destination "_4"
       Use
         Copy "_5"
-    Operation a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:10:12 written
-      Destination "_6"
-      Use
-        Copy "_4"
     Sequenced a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:10:12 generated
     Goto "bb3"
   Block "bb2"
@@ -42,21 +36,17 @@ Function a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_des
       Use
         Copy "_2"
           Deref
-    Operation a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:10:25 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:10:25 generated
     Goto "bb3"
   Block "bb3"
     Operation a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:12:12 written
-      Destination "_9"
+      Destination "_7"
       Address
-        Place "_8"
+        Place "_6"
     ArgumentsEvaluated a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:12:5 generated
     Call a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:12:5 written "memcpy" "bb4"
-      Destination "_10"
-      Copy "_9"
+      Destination "_8"
+      Copy "_7"
       Copy "_4"
       Constant 8
   Block "bb4"
@@ -64,6 +54,6 @@ Function a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_des
     Operation a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:13:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_6"
     Sequenced a_copy_from_a_pointer_that_may_be_memory_a_caller_wrote_reports_its_destination_as_maybe_unwritten.c:13:12 generated
     Return

@@ -14,13 +14,10 @@ Function a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_
   Local "_8" "void **" "m"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "void *"
-  Local "_12" "void *"
-  Local "_13" "void *" "pm"
-  Local "_14" "int **" "pi"
-  Local "_15" "int *" "p"
-  Local "_16" "int"
-  Local "_17" "int"
+  Local "_11" "void *" "pm"
+  Local "_12" "int **" "pi"
+  Local "_13" "int *" "p"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:3:9 written
       Destination "_3"
@@ -98,58 +95,43 @@ Function a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_
         Deref
       Use
         Copy "_6"
-    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:12:5 written
-      Destination "_11"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:12:5 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 written
       Destination "_8"
         Deref
       Use
         Copy "_7"
-    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 written
-      Destination "_12"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:13:5 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:14:11 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_8"
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:14:16 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:15:11 written
-      Destination "_14"
+      Destination "_12"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:15:16 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:16:10 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:16:14 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 written
-      Destination "_16"
+      Destination "_14"
       Binary "Ne"
-        Copy "_15"
+        Copy "_13"
         Constant 0
     Branch a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 written "bb10" "bb11"
-      Copy "_16"
+      Copy "_14"
   Block "bb10"
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:17:9 generated
     Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 written
-      Destination "_15"
+      Destination "_13"
         Deref
       Use
         Constant 1
-    Operation a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 written
-      Destination "_17"
-      Use
-        Copy "_15"
-          Deref
     Sequenced a_stored_bound_is_not_raised_by_a_later_store_since_slots_are_not_told_apart.c:18:9 generated
     Goto "bb12"
   Block "bb11"

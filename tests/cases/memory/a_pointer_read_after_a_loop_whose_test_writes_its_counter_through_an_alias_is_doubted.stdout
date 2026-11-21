@@ -11,11 +11,9 @@ Function a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_al
   Local "_8" "int"
   Local "_9" "int **"
   Local "_10" "int *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int *" "q"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_11" "int *" "q"
+  Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:1:5 generated
       Destination "_0"
@@ -86,44 +84,35 @@ Function a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_al
         Deref
       Use
         Copy "_10"
-    Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:7:9 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:7:9 generated
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:8:9 written
       Destination "_3"
       Use
         Constant 9
-    Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:8:9 written
-      Destination "_12"
-      Use
-        Copy "_3"
     Sequenced a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:8:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:6:13 generated
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:10:14 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:10:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:10:14 generated
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:11:12 written
-      Destination "_15"
+      Destination "_13"
       Binary "Eq"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Operation a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:11:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced a_pointer_read_after_a_loop_whose_test_writes_its_counter_through_an_alias_is_doubted.c:11:12 generated
     Return

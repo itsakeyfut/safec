@@ -8,7 +8,6 @@ Function a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_
   Local "_3" "int **"
   Local "_4" "int *" "q"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported.c:3:5 generated
       Destination "_0"
@@ -59,11 +58,6 @@ Function a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported.c:11:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported.c:11:5 generated
     Operation a_pointer_read_out_of_a_local_array_an_unrelated_call_did_not_reach_is_reported.c:12:5 written
       Destination "_0"

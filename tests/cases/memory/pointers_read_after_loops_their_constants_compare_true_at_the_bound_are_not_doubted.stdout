@@ -7,12 +7,10 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_7" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:2:9 written
       Destination "_1"
@@ -50,50 +48,41 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
         Deref
       Use
         Copy "_6"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:6:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:6:9 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:7:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:7:9 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:7:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_7"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:7:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:5:12 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:9:14 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_2"
           Index
             Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:9:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:9:14 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:10:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:10:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:10:12 generated
     Return
 Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:13:5 "le_inside"
@@ -104,12 +93,10 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_7" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:14:9 written
       Destination "_1"
@@ -147,50 +134,41 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
         Deref
       Use
         Copy "_6"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:18:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:18:9 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:19:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:19:9 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:19:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_7"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:19:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:17:12 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:21:14 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_2"
           Index
             Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:21:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:21:14 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:22:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:22:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:22:12 generated
     Return
 Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:25:5 "ge_at"
@@ -201,12 +179,10 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_7" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:26:9 written
       Destination "_1"
@@ -244,50 +220,41 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
         Deref
       Use
         Copy "_6"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:30:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:30:9 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:31:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Sub"
         Copy "_3"
         Constant 1
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:31:9 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:31:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_7"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:31:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:29:12 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:33:14 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_2"
           Index
             Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:33:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:33:14 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:34:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:34:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:34:12 generated
     Return
 Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:37:5 "ge_inside"
@@ -298,12 +265,10 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_7" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:38:9 written
       Destination "_1"
@@ -341,50 +306,41 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
         Deref
       Use
         Copy "_6"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:42:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:42:9 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:43:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Sub"
         Copy "_3"
         Constant 1
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:43:9 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:43:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_7"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:43:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:41:12 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:45:14 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_2"
           Index
             Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:45:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:45:14 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:46:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:46:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:46:12 generated
     Return
 Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:49:5 "ne"
@@ -395,12 +351,10 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int **"
-  Local "_12" "int"
+  Local "_7" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int **"
+  Local "_10" "int"
   Block "bb0" entry
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:50:9 written
       Destination "_1"
@@ -438,49 +392,40 @@ Function pointers_read_after_loops_their_constants_compare_true_at_the_bound_are
         Deref
       Use
         Copy "_6"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:54:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:54:9 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:55:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:55:9 written
       Destination "_3"
       Use
-        Copy "_8"
-    Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:55:9 written
-      Destination "_9"
-      Use
-        Copy "_3"
+        Copy "_7"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:55:9 generated
     Goto "bb1"
   Block "bb3"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:53:12 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:57:14 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_2"
           Index
             Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:57:10 written
-      Destination "_10"
+      Destination "_8"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:57:14 generated
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:58:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Operation pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:58:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced pointers_read_after_loops_their_constants_compare_true_at_the_bound_are_not_doubted.c:58:12 generated
     Return

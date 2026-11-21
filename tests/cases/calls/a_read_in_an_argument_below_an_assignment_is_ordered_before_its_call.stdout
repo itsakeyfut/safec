@@ -11,10 +11,8 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
   Local "_2" "void *"
   Local "_3" "int" "x"
   Local "_4" "int"
-  Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int"
-  Local "_8" "int"
+  Local "_5" "int *"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:4:5 generated
       Destination "_0"
@@ -54,31 +52,22 @@ Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:
         Deref
       Use
         Constant 0
-    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:10:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:10:5 generated
     Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:11 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Copy "_1"
         Copy "_1"
           Deref
     ArgumentsEvaluated a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 generated
     Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 written "h" "bb5"
-      Destination "_7"
-      Copy "_6"
+      Destination "_6"
+      Copy "_5"
   Block "bb5"
     Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 generated
     Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:12:5 written
       Destination "_0"

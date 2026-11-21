@@ -19,7 +19,6 @@ Function a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_a
   Local "_6" "int"
   Local "_7" "int **" "old"
   Local "_8" "int"
-  Local "_9" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:5:18 generated
     Call a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:5:18 written "calloc" "bb1"
@@ -94,11 +93,6 @@ Function a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_a
         Deref
       Use
         Copy "_4"
-    Operation a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:15:9 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:15:9 generated
     StorageDead a_block_kept_in_memory_from_an_earlier_turn_is_doubted_where_returned_after_a_later_allocation_fails.c:16:5 generated "_4"
     Goto "bb5"

@@ -12,16 +12,6 @@ error[SC0411]: this lets a pointer leave to memory that may not have been writte
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: write every pointer in it on every path before the function returns, or allocate it with `calloc`
-error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:9:5 ]
-   │
- 9 │     **t = y;
-   │     ───┬───  
-   │        ╰───── this check cannot say this is inside its object
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven, and unproven results are errors in this compilation
-  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0411]: `*m` may be read before anything was assigned to it
     ╭─[ a_store_through_a_parameter_that_may_not_reach_a_block_leaves_it_in_doubt.c:10:10 ]
     │

@@ -8,17 +8,12 @@ Function a_pointer_read_and_written_by_one_statement_is_read_first.c:2:6 "free" 
 Function a_pointer_read_and_written_by_one_statement_is_read_first.c:4:5 "f"
   Local "_0" "int" return
   Local "_1" "void **" "p"
-  Local "_2" "void **"
   Block "bb0" entry
     Operation a_pointer_read_and_written_by_one_statement_is_read_first.c:6:5 written
       Destination "_1"
       Use
         Copy "_1"
           Deref
-    Operation a_pointer_read_and_written_by_one_statement_is_read_first.c:6:5 written
-      Destination "_2"
-      Use
-        Copy "_1"
     Sequenced a_pointer_read_and_written_by_one_statement_is_read_first.c:6:5 generated
     Operation a_pointer_read_and_written_by_one_statement_is_read_first.c:7:5 written
       Destination "_0"

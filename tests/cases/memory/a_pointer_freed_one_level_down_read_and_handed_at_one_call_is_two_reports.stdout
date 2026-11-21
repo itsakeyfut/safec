@@ -17,9 +17,8 @@ Function a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_repor
   Local "_4" "int *" "x"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
-  Local "_9" "int"
+  Local "_7" "int *" "q"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:13:15 generated
     Call a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:13:15 written "malloc" "bb1"
@@ -82,26 +81,21 @@ Function a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_repor
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:17:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:17:5 generated
     Operation a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:18:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:18:14 generated
     ArgumentsEvaluated a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:19:5 generated
     Call a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:19:5 written "free" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb9"
     Sequenced a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:19:5 generated
     ArgumentsEvaluated a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:20:12 generated
     Call a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:20:12 written "g" "bb10"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
         Deref
       Copy "_1"
@@ -111,6 +105,6 @@ Function a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_repor
     Operation a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:20:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_freed_one_level_down_read_and_handed_at_one_call_is_two_reports.c:20:12 generated
     Return

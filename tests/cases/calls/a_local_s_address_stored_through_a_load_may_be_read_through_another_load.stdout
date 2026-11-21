@@ -18,15 +18,12 @@ Function a_local_s_address_stored_through_a_load_may_be_read_through_another_loa
   Local "_9" "int *" "m"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int *" "x"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int **" "t"
+  Local "_12" "int *" "x"
+  Local "_13" "int **"
+  Local "_14" "int **" "t"
+  Local "_15" "int"
+  Local "_16" "int *" "q"
   Local "_17" "int"
-  Local "_18" "int *"
-  Local "_19" "int *" "q"
-  Local "_20" "int"
   Block "bb0" entry
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:4:9 written
       Destination "_3"
@@ -145,44 +142,34 @@ Function a_local_s_address_stored_through_a_load_may_be_read_through_another_loa
         Deref
       Use
         Constant 1
-    Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:12:5 written
-      Destination "_12"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:12:5 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:13:10 written
-      Destination "_13"
+      Destination "_12"
       Use
         Constant 0
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:13:14 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:14:10 written
-      Destination "_14"
+      Destination "_13"
       Address
-        Place "_13"
+        Place "_12"
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:14:5 written
       Destination "_5"
         Deref
       Use
-        Copy "_14"
-    Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:14:5 written
-      Destination "_15"
-      Use
-        Copy "_5"
-          Deref
+        Copy "_13"
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:14:5 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:15:11 written
-      Destination "_16"
+      Destination "_14"
       Use
         Copy "_7"
           Deref
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:15:15 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:16:9 written
-      Destination "_17"
+      Destination "_15"
       Unary "Not"
-        Copy "_16"
+        Copy "_14"
     Branch a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:16:9 written "bb17" "bb18"
-      Copy "_17"
+      Copy "_15"
   Block "bb17"
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:16:9 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:16:13 written
@@ -196,15 +183,10 @@ Function a_local_s_address_stored_through_a_load_may_be_read_through_another_loa
     Goto "bb19"
   Block "bb19"
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:17:5 written
-      Destination "_16"
+      Destination "_14"
         Deref
       Use
         Copy "_9"
-    Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:17:5 written
-      Destination "_18"
-      Use
-        Copy "_16"
-          Deref
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:17:5 generated
     ArgumentsEvaluated a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:18:5 generated
     Call a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:18:5 written "free" "bb20"
@@ -212,16 +194,16 @@ Function a_local_s_address_stored_through_a_load_may_be_read_through_another_loa
   Block "bb20"
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:18:5 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:19:10 written
-      Destination "_19"
+      Destination "_16"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:19:14 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:20:9 written
-      Destination "_20"
+      Destination "_17"
       Unary "Not"
-        Copy "_19"
+        Copy "_16"
     Branch a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:20:9 written "bb21" "bb22"
-      Copy "_20"
+      Copy "_17"
   Block "bb21"
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:20:9 generated
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:20:13 written
@@ -237,7 +219,7 @@ Function a_local_s_address_stored_through_a_load_may_be_read_through_another_loa
     Operation a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:21:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_16"
           Deref
     Sequenced a_local_s_address_stored_through_a_load_may_be_read_through_another_load.c:21:12 generated
     Return

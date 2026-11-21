@@ -6,17 +6,15 @@ Function every_element_of_a_local_array_written_one_by_one_is_not_reported.c:1:5
   Local "_3" "int *[2]" "m"
   Local "_4" "int **"
   Local "_5" "int *"
-  Local "_6" "int *"
+  Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int *" "q"
+  Local "_8" "int *"
+  Local "_9" "int *" "q"
+  Local "_10" "int **"
+  Local "_11" "int *" "r"
   Local "_12" "int **"
-  Local "_13" "int *" "r"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_13" "int **"
+  Local "_14" "int"
   Block "bb0" entry
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:1:5 generated
       Destination "_0"
@@ -47,77 +45,67 @@ Function every_element_of_a_local_array_written_one_by_one_is_not_reported.c:1:5
         Deref
       Use
         Copy "_5"
-    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:5:5 generated
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 generated
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_3"
           Index
             Constant 0
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 1
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:12 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_2"
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
-        Copy "_9"
-    Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 written
-      Destination "_10"
-      Use
         Copy "_8"
-          Deref
     Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:6:5 generated
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:14 generated
-      Destination "_12"
+      Destination "_10"
       Address
         Place "_3"
           Index
             Constant 0
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:10 written
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_12"
+        Copy "_10"
           Deref
     Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:7:14 generated
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_3"
           Index
             Constant 0
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 written
-      Destination "_15"
+      Destination "_13"
       Binary "Add"
-        Copy "_14"
+        Copy "_12"
         Constant 1
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_15"
+        Copy "_13"
           Deref
     Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:8:14 generated
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:12 written
-      Destination "_16"
+      Destination "_14"
       Binary "Add"
-        Copy "_11"
+        Copy "_9"
           Deref
-        Copy "_13"
+        Copy "_11"
           Deref
     Operation every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced every_element_of_a_local_array_written_one_by_one_is_not_reported.c:9:12 generated
     Return

@@ -13,10 +13,9 @@ Function a_block_written_before_it_is_copied_out_is_not_doubted.c:3:6 "copied"
   Local "_2" "int *" parameter "x"
   Local "_3" "int **" "b"
   Local "_4" "void *"
-  Local "_5" "int *"
-  Local "_6" "int **" "c"
-  Local "_7" "int ***"
-  Local "_8" "void *"
+  Local "_5" "int **" "c"
+  Local "_6" "int ***"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_written_before_it_is_copied_out_is_not_doubted.c:4:15 generated
     Call a_block_written_before_it_is_copied_out_is_not_doubted.c:4:15 written "malloc" "bb1"
@@ -37,11 +36,6 @@ Function a_block_written_before_it_is_copied_out_is_not_doubted.c:3:6 "copied"
         Deref
       Use
         Copy "_2"
-    Operation a_block_written_before_it_is_copied_out_is_not_doubted.c:5:12 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_block_written_before_it_is_copied_out_is_not_doubted.c:5:12 generated
     Goto "bb4"
   Block "bb3"
@@ -49,19 +43,19 @@ Function a_block_written_before_it_is_copied_out_is_not_doubted.c:3:6 "copied"
     Goto "bb4"
   Block "bb4"
     Operation a_block_written_before_it_is_copied_out_is_not_doubted.c:6:11 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_3"
     Sequenced a_block_written_before_it_is_copied_out_is_not_doubted.c:6:15 generated
     Operation a_block_written_before_it_is_copied_out_is_not_doubted.c:7:17 written
-      Destination "_7"
+      Destination "_6"
       Address
-        Place "_6"
+        Place "_5"
     ArgumentsEvaluated a_block_written_before_it_is_copied_out_is_not_doubted.c:7:5 generated
     Call a_block_written_before_it_is_copied_out_is_not_doubted.c:7:5 written "memcpy" "bb5"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
-      Copy "_7"
+      Copy "_6"
       Constant 8
   Block "bb5"
     Sequenced a_block_written_before_it_is_copied_out_is_not_doubted.c:7:5 generated

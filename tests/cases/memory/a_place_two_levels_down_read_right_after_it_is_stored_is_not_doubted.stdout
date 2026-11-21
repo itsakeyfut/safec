@@ -19,9 +19,6 @@ Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:
   Local "_10" "int ***" "h"
   Local "_11" "void *"
   Local "_12" "int"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int *"
   Block "bb0" entry
     Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:4:9 written
       Destination "_3"
@@ -130,11 +127,6 @@ Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:
         Deref
       Use
         Copy "_7"
-    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:8:5 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:8:5 generated
     Branch a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:9 written "bb16" "bb17"
       Copy "_1"
@@ -145,11 +137,6 @@ Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:
         Deref
       Use
         Copy "_4"
-    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:12 written
-      Destination "_14"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:9:12 generated
     Goto "bb18"
   Block "bb17"
@@ -163,12 +150,6 @@ Function a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:
       Use
         Copy "_2"
           Deref
-    Operation a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 written
-      Destination "_15"
-      Use
-        Copy "_10"
-          Deref
-            Deref
     Sequenced a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:5 generated
     ArgumentsEvaluated a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 generated
     Call a_place_two_levels_down_read_right_after_it_is_stored_is_not_doubted.c:10:16 written "g" "bb19"

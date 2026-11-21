@@ -9,36 +9,24 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
   Local "_0" "void" return
   Local "_1" "int **" parameter "out"
   Local "_2" "int *" parameter "p"
-  Local "_3" "int *"
   Block "bb0" entry
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:3:31 written
       Destination "_1"
         Deref
       Use
         Copy "_2"
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:3:31 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:3:31 generated
     Return
 Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:4:6 "put"
   Local "_0" "void" return
   Local "_1" "int **" parameter "box"
   Local "_2" "int *" parameter "p"
-  Local "_3" "int *"
   Block "bb0" entry
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:4:31 written
       Destination "_1"
         Deref
       Use
         Copy "_2"
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:4:31 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:4:31 generated
     Return
 Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:5:6 "take"
@@ -59,19 +47,15 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
   Local "_3" "int *" "q"
   Local "_4" "int" "i"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "void *"
-  Local "_8" "int *"
-  Local "_9" "int"
-  Local "_10" "int"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int **" "box"
+  Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int **" "box"
-  Local "_14" "void *"
-  Local "_15" "int"
-  Local "_16" "int *" "r"
-  Local "_17" "int"
-  Local "_18" "int" "v"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
+  Local "_14" "int" "v"
   Block "bb0" entry
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:7:10 written
       Destination "_2"
@@ -103,37 +87,29 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:21 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:21 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 generated
     Call a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:32 written "malloc" "bb4"
-      Destination "_7"
+      Destination "_6"
       Constant 4
   Block "bb3"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:12 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:17 generated
     Call a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:17 written "malloc" "bb8"
-      Destination "_14"
+      Destination "_10"
       Constant 8
   Block "bb4"
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:28 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:28 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:28 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 written
-      Destination "_9"
+      Destination "_7"
       Unary "Not"
         Copy "_3"
     Branch a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 written "bb5" "bb6"
-      Copy "_9"
+      Copy "_7"
   Block "bb5"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:47 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:51 written
@@ -151,39 +127,30 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
         Deref
       Use
         Constant 1
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:61 written
-      Destination "_10"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:61 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:73 written
-      Destination "_11"
+      Destination "_8"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:69 written
       Destination "_4"
       Use
-        Copy "_11"
-    Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:69 written
-      Destination "_12"
-      Use
-        Copy "_4"
+        Copy "_8"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:8:69 generated
     Goto "bb1"
   Block "bb8"
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:11 written
-      Destination "_13"
+      Destination "_9"
       Use
-        Copy "_14"
+        Copy "_10"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:17 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:32 written
-      Destination "_15"
+      Destination "_11"
       Unary "Not"
-        Copy "_13"
+        Copy "_9"
     Branch a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:32 written "bb9" "bb10"
-      Copy "_15"
+      Copy "_11"
   Block "bb9"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:32 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:9:38 written
@@ -198,14 +165,14 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
   Block "bb11"
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:5 generated
     Call a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:5 written "put" "bb12"
-      Copy "_13"
+      Copy "_9"
       Copy "_2"
   Block "bb12"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:10:5 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:11:10 written
-      Destination "_16"
+      Destination "_12"
       Use
-        Copy "_13"
+        Copy "_9"
           Deref
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:11:14 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:12:5 generated
@@ -214,11 +181,11 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
   Block "bb13"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:12:5 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:9 written
-      Destination "_17"
+      Destination "_13"
       Unary "Not"
-        Copy "_16"
+        Copy "_12"
     Branch a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:9 written "bb14" "bb15"
-      Copy "_17"
+      Copy "_13"
   Block "bb14"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:9 generated
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:13:13 written
@@ -232,14 +199,14 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
     Goto "bb16"
   Block "bb16"
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:14:9 written
-      Destination "_18"
+      Destination "_14"
       Use
-        Copy "_16"
+        Copy "_12"
           Deref
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:14:13 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:15:5 generated
     Call a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:15:5 written "free" "bb17"
-      Copy "_13"
+      Copy "_9"
   Block "bb17"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:15:5 generated
     ArgumentsEvaluated a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:15:16 generated
@@ -250,6 +217,6 @@ Function a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_it
     Operation a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_14"
     Sequenced a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free.c:16:12 generated
     Return

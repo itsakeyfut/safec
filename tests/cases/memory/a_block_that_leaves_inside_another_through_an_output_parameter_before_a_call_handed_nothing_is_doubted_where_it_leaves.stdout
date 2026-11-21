@@ -12,8 +12,6 @@ Function a_block_that_leaves_inside_another_through_an_output_parameter_before_a
   Local "_4" "int ***" "box"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int ***"
   Block "bb0" entry
     ArgumentsEvaluated a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:4:15 generated
     Call a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:4:15 written "malloc" "bb1"
@@ -53,22 +51,12 @@ Function a_block_that_leaves_inside_another_through_an_output_parameter_before_a
         Deref
       Use
         Copy "_2"
-    Operation a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:7:5 generated
     Operation a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:8:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:8:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:8:5 generated
     ArgumentsEvaluated a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:9:5 generated
     Call a_block_that_leaves_inside_another_through_an_output_parameter_before_a_call_handed_nothing_is_doubted_where_it_leaves.c:9:5 written "tick" "bb6"

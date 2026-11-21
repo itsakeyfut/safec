@@ -16,10 +16,8 @@ Function a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_anot
   Local "_7" "int *" "m"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int *" "q"
-  Local "_13" "int"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:4:9 written
       Destination "_3"
@@ -114,22 +112,12 @@ Function a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_anot
         Deref
       Use
         Constant 1
-    Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:10:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:10:5 generated
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:11:5 written
       Destination "_2"
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:11:5 written
-      Destination "_11"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:11:5 generated
     ArgumentsEvaluated a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:12:5 generated
     Call a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:12:5 written "free" "bb14"
@@ -137,17 +125,17 @@ Function a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_anot
   Block "bb14"
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:12:5 generated
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:13:10 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_5"
           Deref
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:13:14 generated
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:14:9 written
-      Destination "_13"
+      Destination "_11"
       Unary "Not"
-        Copy "_12"
+        Copy "_10"
     Branch a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:14:9 written "bb15" "bb16"
-      Copy "_13"
+      Copy "_11"
   Block "bb15"
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:14:9 generated
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:14:13 written
@@ -163,7 +151,7 @@ Function a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_anot
     Operation a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:15:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
           Deref
     Sequenced a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another.c:15:12 generated
     Return

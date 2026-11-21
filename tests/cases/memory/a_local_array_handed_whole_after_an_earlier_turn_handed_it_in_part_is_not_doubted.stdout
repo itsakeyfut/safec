@@ -18,7 +18,6 @@ Function a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_n
   Local "_12" "int"
   Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
   Block "bb0" entry
     Operation a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:2:5 generated
       Destination "_0"
@@ -93,18 +92,18 @@ Function a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_n
   Block "bb6"
     StorageDead a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:13:5 generated "_4"
     Operation a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:4:28 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_2"
     Operation a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:4:28 written
-      Destination "_15"
+      Destination "_14"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:4:28 written
       Destination "_2"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:4:28 generated
     Goto "bb1"
   Block "bb7"
@@ -139,10 +138,6 @@ Function a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_n
       Destination "_1"
       Use
         Copy "_12"
-    Operation a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:11:13 written
-      Destination "_13"
-      Use
-        Copy "_1"
     Sequenced a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:11:13 generated
     StorageDead a_local_array_handed_whole_after_an_earlier_turn_handed_it_in_part_is_not_doubted.c:12:9 generated "_9"
     Goto "bb6"

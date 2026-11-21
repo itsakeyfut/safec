@@ -38,9 +38,7 @@ Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_
   Local "_22" "void *"
   Local "_23" "void *" "from"
   Local "_24" "void *"
-  Local "_25" "void *"
-  Local "_26" "void **" "q"
-  Local "_27" "void **"
+  Local "_25" "void **" "q"
   Block "bb0" entry
     Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:6:9 written
       Destination "_3"
@@ -210,10 +208,6 @@ Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_
       Destination "_23"
       Use
         Copy "_6"
-    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:12 written
-      Destination "_24"
-      Use
-        Copy "_23"
     Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:20:12 generated
     Goto "bb25"
   Block "bb24"
@@ -222,7 +216,7 @@ Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_
   Block "bb25"
     ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:21:5 generated
     Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:21:5 written "memcpy" "bb26"
-      Destination "_25"
+      Destination "_24"
       Copy "_12"
       Copy "_23"
       Constant 8
@@ -239,7 +233,7 @@ Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_
   Block "bb28"
     Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:23:5 generated
     Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:24:12 written
-      Destination "_26"
+      Destination "_25"
       Use
         Copy "_12"
     Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:24:16 generated
@@ -247,12 +241,7 @@ Function a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_
       Destination "_1"
         Deref
       Use
-        Copy "_26"
-    Operation a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:25:5 written
-      Destination "_27"
-      Use
-        Copy "_1"
-          Deref
+        Copy "_25"
     Sequenced a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:25:5 generated
     ArgumentsEvaluated a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:26:5 generated
     Call a_partial_pointer_carried_from_either_of_two_blocks_is_reported_at_the_earlier_copy.c:26:5 written "use" "bb29"

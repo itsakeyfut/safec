@@ -5,7 +5,6 @@ Function a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:1:
   Local "_2" "int"
   Local "_3" "void *" "pm"
   Local "_4" "int **" "pi"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:2:9 written
       Destination "_2"
@@ -34,12 +33,6 @@ Function a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:1:
           Deref
       Use
         Constant 1
-    Operation a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:5:9 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
-            Deref
     Sequenced a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:5:9 generated
     StorageDead a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:6:5 generated "_4"
     StorageDead a_write_two_levels_through_a_void_parameter_is_asked_of_the_memory.c:6:5 generated "_3"

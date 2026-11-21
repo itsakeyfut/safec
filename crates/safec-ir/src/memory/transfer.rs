@@ -2989,11 +2989,11 @@ impl Allocations<'_> {
         //
         // **Before the arms, so that no arm's early return can skip it, and
         // nothing observes that today.** Measured: moving it below the match
-        // changes no answer, because the one arm that returns early is the
-        // write through a pointer, and this frontend reads an assignment's
-        // value back into a temporary, so the read is recorded by that element
-        // instead. That is a property of one lowering rather than of the IR,
-        // and such a return has already skipped the rules below it here once,
+        // changes no answer, though the one arm that returns early is the
+        // write through a pointer. Measured again once this frontend stopped
+        // reading back the value of an assignment whose value is discarded
+        // (#1137), which had recorded that write's read in a second element.
+        // Such a return has already skipped the rules below it here once,
         // turning a suspicion into a proof. Written first because the order is
         // free and the alternative is guarded by nothing.
         value.met(dereferenced_in_element(element));

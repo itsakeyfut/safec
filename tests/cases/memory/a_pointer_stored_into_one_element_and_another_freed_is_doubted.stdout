@@ -15,14 +15,12 @@ Function a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:3:5 "m
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int **"
-  Local "_9" "int *"
+  Local "_9" "int **"
   Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int *"
-  Local "_13" "int *" "q"
-  Local "_14" "int **"
-  Local "_15" "int"
-  Local "_16" "int" "v"
+  Local "_11" "int *" "q"
+  Local "_12" "int **"
+  Local "_13" "int"
+  Local "_14" "int" "v"
   Block "bb0" entry
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:3:5 generated
       Destination "_0"
@@ -94,33 +92,23 @@ Function a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:3:5 "m
         Deref
       Use
         Copy "_2"
-    Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:9:5 written
-      Destination "_9"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:9:5 generated
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:10:5 generated
-      Destination "_10"
+      Destination "_9"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:10:5 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
-        Copy "_10"
+        Copy "_9"
         Constant 1
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:10:5 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:10:5 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:10:5 generated
     ArgumentsEvaluated a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:11:5 generated
     Call a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:11:5 written "free" "bb10"
@@ -136,31 +124,31 @@ Function a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:3:5 "m
   Block "bb10"
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:11:5 generated
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:12:14 generated
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:12:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_14"
+        Copy "_12"
           Deref
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:12:14 generated
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:9 written
-      Destination "_15"
+      Destination "_13"
       Binary "Ne"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Branch a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:9 written "bb11" "bb12"
-      Copy "_15"
+      Copy "_13"
   Block "bb11"
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:9 generated
-    StorageLive a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:19 generated "_16"
+    StorageLive a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:19 generated "_14"
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:23 written
-      Destination "_16"
+      Destination "_14"
       Use
-        Copy "_13"
+        Copy "_11"
           Deref
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:27 generated
     ArgumentsEvaluated a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:31 generated
@@ -178,9 +166,9 @@ Function a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:3:5 "m
     Operation a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:40 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:47 generated
-    StorageDead a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:40 generated "_16"
+    StorageDead a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:13:40 generated "_14"
     Return
   Block "bb15"
     Sequenced a_pointer_stored_into_one_element_and_another_freed_is_doubted.c:14:5 generated

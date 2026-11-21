@@ -21,11 +21,10 @@ Function a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_a
   Local "_6" "int **" "b"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int **"
-  Local "_10" "void *" "vb"
-  Local "_11" "char **" "vv"
-  Local "_12" "char **"
-  Local "_13" "void *"
+  Local "_9" "void *" "vb"
+  Local "_10" "char **" "vv"
+  Local "_11" "char **"
+  Local "_12" "void *"
   Block "bb0" entry
     Operation a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:3:9 written
       Destination "_2"
@@ -91,31 +90,26 @@ Function a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_a
         Deref
       Use
         Copy "_6"
-    Operation a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:6:5 generated
     Operation a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:11 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_6"
     Sequenced a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:16 generated
     Operation a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:26 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:7:31 generated
     Operation a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:16 written
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_3"
     ArgumentsEvaluated a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 generated
     Call a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 written "memcpy" "bb12"
-      Destination "_13"
+      Destination "_12"
+      Copy "_10"
       Copy "_11"
-      Copy "_12"
       Constant 8
   Block "bb12"
     Sequenced a_copy_into_a_block_that_left_through_a_char_pointer_pointer_local_is_asked_at_what_its_reader_reads.c:8:5 generated

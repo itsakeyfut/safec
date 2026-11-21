@@ -3,7 +3,6 @@ Function a_parameter_written_through_is_inside.c:1:6 "set"
   Local "_0" "void" return
   Local "_1" "int *" parameter "p"
   Local "_2" "int"
-  Local "_3" "int"
   Block "bb0" entry
     Operation a_parameter_written_through_is_inside.c:2:9 written
       Destination "_2"
@@ -19,11 +18,6 @@ Function a_parameter_written_through_is_inside.c:1:6 "set"
         Deref
       Use
         Constant 1
-    Operation a_parameter_written_through_is_inside.c:3:9 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_parameter_written_through_is_inside.c:3:9 generated
     Goto "bb3"
   Block "bb2"

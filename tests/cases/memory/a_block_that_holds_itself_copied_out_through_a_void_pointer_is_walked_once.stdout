@@ -13,10 +13,9 @@ Function a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_o
   Local "_2" "void **" "p"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "void *"
-  Local "_6" "void *" "v"
-  Local "_7" "void ***"
-  Local "_8" "void *"
+  Local "_5" "void *" "v"
+  Local "_6" "void ***"
+  Local "_7" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:4:16 generated
     Call a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:4:16 written "malloc" "bb1"
@@ -46,26 +45,21 @@ Function a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_o
         Deref
       Use
         Copy "_2"
-    Operation a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:6:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:6:5 generated
     Operation a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:7:15 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
     Operation a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:7:11 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:7:15 generated
     ArgumentsEvaluated a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:8:5 generated
     Call a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:8:5 written "memcpy" "bb5"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
-      Copy "_6"
+      Copy "_5"
       Constant 8
   Block "bb5"
     Sequenced a_block_that_holds_itself_copied_out_through_a_void_pointer_is_walked_once.c:8:5 generated

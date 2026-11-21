@@ -21,12 +21,9 @@ Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_aske
   Local "_9" "int **" "a"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "int **"
-  Local "_15" "int **"
-  Local "_16" "int **" "m"
-  Local "_17" "int"
+  Local "_12" "int **"
+  Local "_13" "int **" "m"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:16 generated
     Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:6:16 written "malloc" "bb1"
@@ -125,30 +122,20 @@ Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_aske
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:19:5 written
-      Destination "_12"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:19:5 generated
     Branch a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:20:9 written "bb13" "bb14"
       Copy "_1"
   Block "bb13"
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:20:9 generated
     Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:14 written
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_8"
     Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 written
       Destination "_2"
         Deref
       Use
-        Copy "_13"
-    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 written
-      Destination "_14"
-      Use
-        Copy "_2"
-          Deref
+        Copy "_12"
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:21:9 generated
     Goto "bb15"
   Block "bb14"
@@ -158,28 +145,23 @@ Function a_pointer_reaching_one_allocation_through_memory_and_an_address_is_aske
         Deref
       Use
         Copy "_9"
-    Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:23:9 written
-      Destination "_15"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:23:9 generated
     Goto "bb15"
   Block "bb15"
     Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:25:11 written
-      Destination "_16"
+      Destination "_13"
       Use
         Copy "_2"
           Deref
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:25:15 generated
     ArgumentsEvaluated a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 generated
     Call a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 written "use2" "bb16"
-      Destination "_17"
-      Copy "_16"
+      Destination "_14"
+      Copy "_13"
   Block "bb16"
     Operation a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:5 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_14"
     Sequenced a_pointer_reaching_one_allocation_through_memory_and_an_address_is_asked_through_memory.c:26:12 generated
     Return

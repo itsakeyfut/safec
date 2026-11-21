@@ -25,20 +25,15 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
   Local "_7" "int" "i"
   Local "_8" "int"
   Local "_9" "void *"
-  Local "_10" "void **"
-  Local "_11" "int"
-  Local "_12" "void *"
-  Local "_13" "void **"
-  Local "_14" "void *"
-  Local "_15" "void **"
-  Local "_16" "int"
-  Local "_17" "int"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "void **"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "void **" "g"
+  Local "_17" "void *"
   Local "_18" "int"
-  Local "_19" "void *"
-  Local "_20" "void **" "g"
-  Local "_21" "void *"
-  Local "_22" "int"
-  Local "_23" "void **"
   Block "bb0" entry
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:3:9 written
       Destination "_4"
@@ -88,27 +83,23 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:6:21 generated
     StorageDead part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:12:5 generated "_7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:13:9 written
-      Destination "_18"
+      Destination "_15"
       Unary "Not"
         Copy "_5"
     Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:13:9 written "bb15" "bb16"
-      Copy "_18"
+      Copy "_15"
   Block "bb7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:7:9 written
       Destination "_5"
       Use
         Copy "_9"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:7:9 written
-      Destination "_10"
-      Use
-        Copy "_5"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:7:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:8:13 written
-      Destination "_11"
+      Destination "_10"
       Unary "Not"
         Copy "_5"
     Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:8:13 written "bb8" "bb9"
-      Copy "_11"
+      Copy "_10"
   Block "bb8"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:8:13 generated
     Goto "bb11"
@@ -118,7 +109,7 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
   Block "bb10"
     ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:9:9 generated
     Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:9:9 written "memset" "bb14"
-      Destination "_12"
+      Destination "_11"
       Copy "_5"
       Constant 1
       Constant 4
@@ -133,43 +124,34 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
   Block "bb14"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:9:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:10:9 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:10:9 written
-      Destination "_13"
+      Destination "_12"
         Deref
       Use
         Copy "_6"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:10:9 written
-      Destination "_14"
-      Use
-        Copy "_13"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:10:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:11:9 written
       Destination "_6"
       Use
         Copy "_5"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:11:9 written
-      Destination "_15"
-      Use
-        Copy "_6"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:11:9 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:6:28 written
-      Destination "_16"
+      Destination "_13"
       Use
         Copy "_7"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:6:28 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:6:28 written
       Destination "_7"
       Use
-        Copy "_17"
+        Copy "_14"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:6:28 generated
     Goto "bb4"
   Block "bb15"
@@ -184,15 +166,10 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
         Deref
       Use
         Copy "_3"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:14:5 written
-      Destination "_19"
-      Use
-        Copy "_5"
-          Deref
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:14:5 generated
     ArgumentsEvaluated part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:15:16 generated
     Call part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:15:16 written "realloc" "bb21"
-      Destination "_21"
+      Destination "_17"
       Copy "_5"
       Constant 16
   Block "bb18"
@@ -205,16 +182,16 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
     Goto "bb17"
   Block "bb21"
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:15:12 written
-      Destination "_20"
+      Destination "_16"
       Use
-        Copy "_21"
+        Copy "_17"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:15:16 generated
     Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:16:9 written
-      Destination "_22"
+      Destination "_18"
       Unary "Not"
-        Copy "_20"
+        Copy "_16"
     Branch part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:16:9 written "bb22" "bb23"
-      Copy "_22"
+      Copy "_18"
   Block "bb22"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:16:9 generated
     Goto "bb25"
@@ -226,12 +203,7 @@ Function part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_real
       Destination "_1"
         Deref
       Use
-        Copy "_20"
-    Operation part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:17:5 written
-      Destination "_23"
-      Use
-        Copy "_1"
-          Deref
+        Copy "_16"
     Sequenced part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_through_a_realloc_of_the_newest.c:17:5 generated
     Return
   Block "bb25"

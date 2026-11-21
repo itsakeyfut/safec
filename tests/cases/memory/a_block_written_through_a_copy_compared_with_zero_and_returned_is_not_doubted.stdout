@@ -9,7 +9,6 @@ Function a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_d
   Local "_3" "void *"
   Local "_4" "int **" "c"
   Local "_5" "int"
-  Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_doubted.c:3:15 generated
     Call a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_doubted.c:3:15 written "malloc" "bb1"
@@ -40,11 +39,6 @@ Function a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_d
         Deref
       Use
         Copy "_1"
-    Operation a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_doubted.c:5:17 written
-      Destination "_6"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_block_written_through_a_copy_compared_with_zero_and_returned_is_not_doubted.c:5:17 generated
     Goto "bb4"
   Block "bb3"

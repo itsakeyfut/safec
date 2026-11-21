@@ -13,8 +13,7 @@ Function a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_
   Local "_1" "int ***" "v"
   Local "_2" "void *" "pv"
   Local "_3" "int ****"
-  Local "_4" "int ***"
-  Local "_5" "int ****"
+  Local "_4" "int ****"
   Block "bb0" entry
     Operation a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:5:12 written
       Destination "_1"
@@ -39,18 +38,14 @@ Function a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_
       Destination "_1"
       Use
         Constant 0
-    Operation a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
     Sequenced a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:8:5 generated
     Operation a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:9:10 written
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_1"
     ArgumentsEvaluated a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:9:5 generated
     Call a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:9:5 written "put4" "bb2"
-      Copy "_5"
+      Copy "_4"
   Block "bb2"
     Sequenced a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:9:5 generated
     ArgumentsEvaluated a_local_once_handed_through_a_void_pointer_is_bounded_by_it_at_a_later_well_typed_call.c:10:5 generated

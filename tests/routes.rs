@@ -3357,26 +3357,6 @@ const ACCEPTED: &[(&str, Side, Why)] = &[
         Why::Belief(WRITES_WHAT_IT_IS_HANDED),
     ),
     (
-        "returned_by_address_d1_both",
-        Side::Control,
-        Why::Cost(RETURNED_MAY_NAME),
-    ),
-    (
-        "returned_by_address_d1_one",
-        Side::Control,
-        Why::Cost(RETURNED_MAY_NAME),
-    ),
-    (
-        "returned_by_address_loaded_d1_both",
-        Side::Control,
-        Why::Cost(RETURNED_MAY_NAME),
-    ),
-    (
-        "returned_by_address_loaded_d1_one",
-        Side::Control,
-        Why::Cost(RETURNED_MAY_NAME),
-    ),
-    (
         "returned_memcpy_block_d2_both",
         Side::Control,
         Why::Cost(RETURNED_MAY_NAME),

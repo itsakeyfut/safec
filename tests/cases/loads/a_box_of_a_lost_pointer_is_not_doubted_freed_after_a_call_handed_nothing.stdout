@@ -35,18 +35,13 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
   Local "_9" "int *" "q"
   Local "_10" "int" "i"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "void *"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int *" "t"
+  Local "_16" "int *" "s"
   Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "int *" "t"
-  Local "_21" "int *" "s"
-  Local "_22" "int"
-  Local "_23" "int" "v"
+  Local "_18" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:10:17 generated
     Call a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:10:17 written "malloc" "bb1"
@@ -134,14 +129,10 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
       Destination "_8"
       Use
         Copy "_9"
-    Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:18:9 written
-      Destination "_12"
-      Use
-        Copy "_8"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:18:9 generated
     ArgumentsEvaluated a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:19:13 generated
     Call a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:19:13 written "malloc" "bb12"
-      Destination "_13"
+      Destination "_12"
       Constant 4
   Block "bb11"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:17:12 generated
@@ -150,14 +141,9 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
         Deref
       Use
         Copy "_8"
-    Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:24:5 written
-      Destination "_19"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:24:5 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:25:10 written
-      Destination "_20"
+      Destination "_15"
       Use
         Copy "_2"
           Deref
@@ -168,18 +154,14 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:19:9 written
       Destination "_9"
       Use
-        Copy "_13"
-    Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:19:9 written
-      Destination "_14"
-      Use
-        Copy "_9"
+        Copy "_12"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:19:9 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:20:13 written
-      Destination "_15"
+      Destination "_13"
       Unary "Not"
         Copy "_9"
     Branch a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:20:13 written "bb13" "bb14"
-      Copy "_15"
+      Copy "_13"
   Block "bb13"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:20:13 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:20:17 written
@@ -197,41 +179,32 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
         Deref
       Use
         Constant 1
-    Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:21:9 written
-      Destination "_16"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:21:9 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:22:13 written
-      Destination "_17"
+      Destination "_14"
       Binary "Add"
         Copy "_10"
         Constant 1
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:22:9 written
       Destination "_10"
       Use
-        Copy "_17"
-    Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:22:9 written
-      Destination "_18"
-      Use
-        Copy "_10"
+        Copy "_14"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:22:9 generated
     Goto "bb9"
   Block "bb16"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:26:5 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:27:10 written
-      Destination "_21"
+      Destination "_16"
       Use
         Copy "_2"
           Deref
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:27:14 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:28:9 written
-      Destination "_22"
+      Destination "_17"
       Unary "Not"
-        Copy "_21"
+        Copy "_16"
     Branch a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:28:9 written "bb17" "bb18"
-      Copy "_22"
+      Copy "_17"
   Block "bb17"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:28:9 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:28:13 written
@@ -245,14 +218,14 @@ Function a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothin
     Goto "bb19"
   Block "bb19"
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:29:9 written
-      Destination "_23"
+      Destination "_18"
       Use
-        Copy "_21"
+        Copy "_16"
           Deref
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:29:13 generated
     Operation a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:30:5 written
       Destination "_0"
       Use
-        Copy "_23"
+        Copy "_18"
     Sequenced a_box_of_a_lost_pointer_is_not_doubted_freed_after_a_call_handed_nothing.c:30:12 generated
     Return

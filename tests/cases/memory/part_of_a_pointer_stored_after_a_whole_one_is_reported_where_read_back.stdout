@@ -13,10 +13,8 @@ Function part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.
   Local "_4" "void *" "v"
   Local "_5" "int *" "ip"
   Local "_6" "void **" "w"
-  Local "_7" "void *"
+  Local "_7" "void *" "r"
   Local "_8" "int"
-  Local "_9" "void *" "r"
-  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:4:16 generated
     Call part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:4:16 written "malloc" "bb1"
@@ -66,25 +64,15 @@ Function part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.
         Deref
       Use
         Copy "_4"
-    Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:9:5 generated
     Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:10:5 written
       Destination "_5"
         Deref
       Use
         Constant 1
-    Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:10:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:10:5 generated
     Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:11:11 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_6"
           Deref
@@ -95,13 +83,13 @@ Function part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.
   Block "bb5"
     Sequenced part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:12:5 generated
     Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:13:12 written
-      Destination "_10"
+      Destination "_8"
       Binary "Eq"
-        Copy "_9"
+        Copy "_7"
         Constant 0
     Operation part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:13:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced part_of_a_pointer_stored_after_a_whole_one_is_reported_where_read_back.c:13:12 generated
     Return

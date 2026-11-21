@@ -18,8 +18,7 @@ Function a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:5:5 "
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:6:14 generated
     Call a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:6:14 written "malloc" "bb1"
@@ -88,11 +87,6 @@ Function a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:5:5 "
         Deref
       Use
         Copy "_7"
-    Operation a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:14:5 generated
     ArgumentsEvaluated a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:15:5 generated
     Call a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:15:5 written "free" "bb9"
@@ -101,7 +95,7 @@ Function a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:5:5 "
     Sequenced a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:15:5 generated
     ArgumentsEvaluated a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:16:12 generated
     Call a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:16:12 written "two" "bb10"
-      Destination "_9"
+      Destination "_8"
       Copy "_4"
         Deref
       Copy "_4"
@@ -111,6 +105,6 @@ Function a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:5:5 "
     Operation a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:16:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:16:12 generated
     Return

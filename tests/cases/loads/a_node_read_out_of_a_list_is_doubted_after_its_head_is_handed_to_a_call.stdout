@@ -19,16 +19,12 @@ Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call
   Local "_4" "void **" "node"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void *"
-  Local "_8" "void **"
+  Local "_7" "int"
+  Local "_8" "void **" "first"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "void **" "first"
-  Local "_12" "int"
-  Local "_13" "void **" "n"
-  Local "_14" "int" "c"
-  Local "_15" "void *" "z"
-  Local "_16" "int"
+  Local "_10" "void **" "n"
+  Local "_11" "int" "c"
+  Local "_12" "void *" "z"
   Block "bb0" entry
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:7:12 written
       Destination "_1"
@@ -59,16 +55,16 @@ Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call
   Block "bb3"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:9:12 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:16:12 written
-      Destination "_11"
+      Destination "_8"
       Use
         Copy "_1"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:16:20 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 written
-      Destination "_12"
+      Destination "_9"
       Unary "Not"
-        Copy "_11"
+        Copy "_8"
     Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 written "bb8" "bb9"
-      Copy "_12"
+      Copy "_9"
   Block "bb4"
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:16 written
       Destination "_4"
@@ -100,34 +96,21 @@ Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call
         Deref
       Use
         Copy "_1"
-    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:12:9 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:12:9 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 written
       Destination "_1"
       Use
         Copy "_4"
-    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 written
-      Destination "_8"
-      Use
-        Copy "_1"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:13 written
-      Destination "_9"
+      Destination "_7"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 written
       Destination "_2"
       Use
-        Copy "_9"
-    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 written
-      Destination "_10"
-      Use
-        Copy "_2"
+        Copy "_7"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 generated
     StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:15:5 generated "_4"
     Goto "bb1"
@@ -144,42 +127,38 @@ Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call
     Goto "bb10"
   Block "bb10"
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:34 written
-      Destination "_13"
+      Destination "_10"
       Use
-        Copy "_11"
+        Copy "_8"
           Deref
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:38 generated
     ArgumentsEvaluated a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 generated
     Call a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 written "log_ptr" "bb11"
-      Copy "_11"
+      Copy "_8"
   Block "bb11"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:19:9 written
-      Destination "_14"
+      Destination "_11"
       Use
         Constant 0
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:19:13 generated
     Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 written "bb12" "bb13"
-      Copy "_13"
+      Copy "_10"
   Block "bb12"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 generated
-    StorageLive a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:14 generated "_15"
+    StorageLive a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:14 generated "_12"
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:20 written
-      Destination "_15"
+      Destination "_12"
       Use
-        Copy "_13"
+        Copy "_10"
           Deref
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:24 generated
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 written
-      Destination "_14"
+      Destination "_11"
       Use
         Constant 1
-    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 written
-      Destination "_16"
-      Use
-        Copy "_14"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 generated
-    StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:35 generated "_15"
+    StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:35 generated "_12"
     Goto "bb14"
   Block "bb13"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 generated
@@ -188,6 +167,6 @@ Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call
     Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:21:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_11"
     Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:21:12 generated
     Return

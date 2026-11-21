@@ -28,12 +28,9 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int **" "p"
-  Local "_12" "int **"
-  Local "_13" "int *" "t"
-  Local "_14" "int"
-  Local "_15" "int"
+  Local "_10" "int **" "p"
+  Local "_11" "int *" "t"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:8:9 written
       Destination "_2"
@@ -104,14 +101,9 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
         Deref
       Use
         Copy "_9"
-    Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:18:5 written
-      Destination "_10"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:18:5 generated
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:19:11 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_3"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:19:15 generated
@@ -128,13 +120,9 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
   Block "bb10"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:20:9 generated
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:21:9 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
-    Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:21:9 written
-      Destination "_12"
-      Use
-        Copy "_11"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:21:9 generated
     Goto "bb12"
   Block "bb11"
@@ -142,9 +130,9 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:23:10 written
-      Destination "_13"
+      Destination "_11"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:23:14 generated
     Branch a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:24:9 written "bb13" "bb14"
@@ -152,12 +140,12 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
   Block "bb13"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:24:9 generated
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:25:13 written
-      Destination "_14"
+      Destination "_12"
       Binary "Ne"
-        Copy "_13"
+        Copy "_11"
         Constant 0
     Branch a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:25:13 written "bb16" "bb17"
-      Copy "_14"
+      Copy "_12"
   Block "bb14"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:24:9 generated
     Goto "bb15"
@@ -168,15 +156,10 @@ Function a_pointer_read_through_either_of_two_allocations_one_written_is_doubted
   Block "bb16"
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:25:13 generated
     Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:26:13 written
-      Destination "_13"
+      Destination "_11"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:26:13 written
-      Destination "_15"
-      Use
-        Copy "_13"
-          Deref
     Sequenced a_pointer_read_through_either_of_two_allocations_one_written_is_doubted.c:26:13 generated
     Goto "bb18"
   Block "bb17"

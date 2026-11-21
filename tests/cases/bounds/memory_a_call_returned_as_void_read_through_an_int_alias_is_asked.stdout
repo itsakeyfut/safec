@@ -8,7 +8,6 @@ Function memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:3:8
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "void *"
-  Local "_5" "void *"
   Block "bb0" entry
     ArgumentsEvaluated memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:4:16 generated
     Call memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:4:16 written "malloc" "bb1"
@@ -49,11 +48,6 @@ Function memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:3:8
         Deref
       Use
         Copy "_4"
-    Operation memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:6:9 written
-      Destination "_5"
-      Use
-        Copy "_1"
-          Deref
     Sequenced memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:6:9 generated
     Goto "bb4"
 Function memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:11:5 "main"
@@ -65,7 +59,6 @@ Function memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:11:
   Local "_5" "int"
   Local "_6" "int *" "p"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Operation memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:11:5 generated
       Destination "_0"
@@ -130,11 +123,6 @@ Function memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:11:
         Deref
       Use
         Constant 1
-    Operation memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:18:13 written
-      Destination "_8"
-      Use
-        Copy "_6"
-          Deref
     Sequenced memory_a_call_returned_as_void_read_through_an_int_alias_is_asked.c:18:13 generated
     Goto "bb7"
   Block "bb6"

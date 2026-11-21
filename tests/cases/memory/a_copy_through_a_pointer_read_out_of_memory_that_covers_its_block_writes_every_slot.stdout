@@ -19,19 +19,16 @@ Function a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_write
   Local "_5" "int **" "s"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int **"
-  Local "_10" "int *"
-  Local "_11" "int ***" "bb"
-  Local "_12" "void *"
+  Local "_8" "int **"
+  Local "_9" "int ***" "bb"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int **" "d"
   Local "_13" "int"
-  Local "_14" "int **"
-  Local "_15" "int **" "d"
-  Local "_16" "int"
-  Local "_17" "void *"
-  Local "_18" "int *" "r"
-  Local "_19" "int **"
-  Local "_20" "int"
+  Local "_14" "void *"
+  Local "_15" "int *" "r"
+  Local "_16" "int **"
+  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:3:15 generated
     Call a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:3:15 written "malloc" "bb1"
@@ -94,44 +91,34 @@ Function a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_write
         Deref
       Use
         Copy "_1"
-    Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:5 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:16 written
-      Destination "_9"
+      Destination "_8"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:16 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
         Copy "_1"
-    Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:16 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:5:16 generated
     ArgumentsEvaluated a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:17 generated
     Call a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:17 written "malloc" "bb9"
-      Destination "_12"
+      Destination "_10"
       Constant 8
   Block "bb9"
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:12 written
-      Destination "_11"
+      Destination "_9"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:17 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:32 written
-      Destination "_13"
+      Destination "_11"
       Unary "Not"
-        Copy "_11"
+        Copy "_9"
     Branch a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:32 written "bb10" "bb11"
-      Copy "_13"
+      Copy "_11"
   Block "bb10"
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:32 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:6:37 written
@@ -145,28 +132,23 @@ Function a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_write
     Goto "bb12"
   Block "bb12"
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:7:5 written
-      Destination "_11"
+      Destination "_9"
         Deref
       Use
         Copy "_2"
-    Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:7:5 written
-      Destination "_14"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:7:5 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:8:11 written
-      Destination "_15"
+      Destination "_12"
       Use
-        Copy "_11"
+        Copy "_9"
           Deref
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:8:15 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:9:9 written
-      Destination "_16"
+      Destination "_13"
       Unary "Not"
-        Copy "_15"
+        Copy "_12"
     Branch a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:9:9 written "bb13" "bb14"
-      Copy "_16"
+      Copy "_13"
   Block "bb13"
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:9:9 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:9:13 written
@@ -181,31 +163,31 @@ Function a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_write
   Block "bb15"
     ArgumentsEvaluated a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:10:5 generated
     Call a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:10:5 written "memcpy" "bb16"
-      Destination "_17"
-      Copy "_15"
+      Destination "_14"
+      Copy "_12"
       Copy "_5"
       Constant 16
   Block "bb16"
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:10:5 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:11:14 written
-      Destination "_19"
+      Destination "_16"
       Binary "Add"
         Copy "_2"
         Constant 1
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:11:10 written
-      Destination "_18"
+      Destination "_15"
       Use
-        Copy "_19"
+        Copy "_16"
           Deref
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:11:14 generated
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:12:12 written
-      Destination "_20"
+      Destination "_17"
       Binary "Eq"
-        Copy "_18"
+        Copy "_15"
         Constant 0
     Operation a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:12:5 written
       Destination "_0"
       Use
-        Copy "_20"
+        Copy "_17"
     Sequenced a_copy_through_a_pointer_read_out_of_memory_that_covers_its_block_writes_every_slot.c:12:12 generated
     Return

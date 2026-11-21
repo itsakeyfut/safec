@@ -19,10 +19,9 @@ Function a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:2:5 "f"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int **" "p"
-  Local "_11" "int **"
-  Local "_12" "void *"
-  Local "_13" "int *" "r"
-  Local "_14" "int"
+  Local "_11" "void *"
+  Local "_12" "int *" "r"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:3:9 written
       Destination "_3"
@@ -111,10 +110,6 @@ Function a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:2:5 "f"
       Destination "_10"
       Use
         Copy "_4"
-    Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:7:12 written
-      Destination "_11"
-      Use
-        Copy "_10"
     Sequenced a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:7:12 generated
     Goto "bb14"
   Block "bb13"
@@ -123,24 +118,24 @@ Function a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:2:5 "f"
   Block "bb14"
     ArgumentsEvaluated a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:8:5 generated
     Call a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:8:5 written "memcpy" "bb15"
-      Destination "_12"
+      Destination "_11"
       Copy "_10"
       Copy "_2"
       Constant 8
   Block "bb15"
     Sequenced a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:8:5 generated
     Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:9:10 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_10"
           Deref
     Sequenced a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:9:14 generated
     Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:10:9 written
-      Destination "_14"
+      Destination "_13"
       Unary "Not"
-        Copy "_13"
+        Copy "_12"
     Branch a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:10:9 written "bb16" "bb17"
-      Copy "_14"
+      Copy "_13"
   Block "bb16"
     Sequenced a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:10:9 generated
     Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:10:13 written
@@ -156,7 +151,7 @@ Function a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:2:5 "f"
     Operation a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:11:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_12"
           Deref
     Sequenced a_read_back_through_a_copy_s_own_destination_is_not_doubted.c:11:12 generated
     Return

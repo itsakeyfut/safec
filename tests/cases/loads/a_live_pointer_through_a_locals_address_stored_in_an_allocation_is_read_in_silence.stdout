@@ -10,15 +10,12 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
   Local "_1" "int *" "r"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
-  Local "_5" "int ***" "t3"
-  Local "_6" "void *"
-  Local "_7" "int"
-  Local "_8" "int *" "slot"
-  Local "_9" "int **" "t2"
-  Local "_10" "int **"
-  Local "_11" "int **"
-  Local "_12" "int *"
+  Local "_4" "int ***" "t3"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "slot"
+  Local "_8" "int **" "t2"
+  Local "_9" "int **"
   Block "bb0" entry
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:4:5 generated
       Destination "_0"
@@ -58,29 +55,24 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
         Deref
       Use
         Constant 1
-    Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:9:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:9:5 generated
     ArgumentsEvaluated a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 generated
     Call a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 written "malloc" "bb5"
-      Destination "_6"
+      Destination "_5"
       Constant 8
   Block "bb5"
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:12 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:10:17 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 written
-      Destination "_7"
+      Destination "_6"
       Binary "Eq"
-        Copy "_5"
+        Copy "_4"
         Constant 0
     Branch a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 written "bb6" "bb7"
-      Copy "_7"
+      Copy "_6"
   Block "bb6"
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:11:9 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:12:9 written
@@ -94,47 +86,36 @@ Function a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read
     Goto "bb8"
   Block "bb8"
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:14:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:14:17 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:15:16 written
-      Destination "_10"
-      Address
-        Place "_8"
-    Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:15:11 written
       Destination "_9"
-      Use
-        Copy "_10"
-    Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:15:16 generated
-    Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:16:5 written
-      Destination "_5"
-        Deref
+      Address
+        Place "_7"
+    Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:15:11 written
+      Destination "_8"
       Use
         Copy "_9"
+    Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:15:16 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:16:5 written
-      Destination "_11"
+      Destination "_4"
+        Deref
       Use
-        Copy "_5"
-          Deref
+        Copy "_8"
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:16:5 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:17:5 written
-      Destination "_5"
+      Destination "_4"
         Deref
           Deref
       Use
         Copy "_1"
-    Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:17:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
-            Deref
     Sequenced a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:17:5 generated
     Operation a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:18:5 written
       Destination "_0"
       Use
-        Copy "_5"
+        Copy "_4"
           Deref
             Deref
               Deref

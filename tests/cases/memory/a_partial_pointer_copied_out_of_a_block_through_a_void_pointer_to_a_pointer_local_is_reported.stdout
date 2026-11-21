@@ -27,7 +27,6 @@ Function a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_poi
   Local "_13" "void *" "d"
   Local "_14" "void **"
   Local "_15" "void *"
-  Local "_16" "void *"
   Block "bb0" entry
     Operation a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported.c:5:9 written
       Destination "_2"
@@ -131,10 +130,5 @@ Function a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_poi
         Deref
       Use
         Copy "_4"
-    Operation a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported.c:16:5 written
-      Destination "_16"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_out_of_a_block_through_a_void_pointer_to_a_pointer_local_is_reported.c:16:5 generated
     Return

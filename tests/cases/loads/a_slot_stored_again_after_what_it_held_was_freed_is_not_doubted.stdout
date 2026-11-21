@@ -13,12 +13,9 @@ Function a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:4:5 "
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "void *"
-  Local "_9" "int *"
-  Local "_10" "int *" "q"
-  Local "_11" "int"
-  Local "_12" "int"
+  Local "_7" "void *"
+  Local "_8" "int *" "q"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:4:5 generated
       Destination "_0"
@@ -87,11 +84,6 @@ Function a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:4:5 "
         Deref
       Use
         Copy "_4"
-    Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:13:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:13:5 generated
     ArgumentsEvaluated a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:14:5 generated
     Call a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:14:5 written "free" "bb9"
@@ -100,33 +92,28 @@ Function a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:4:5 "
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:14:5 generated
     ArgumentsEvaluated a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:15:12 generated
     Call a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:15:12 written "malloc" "bb10"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb10"
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:15:5 written
       Destination "_1"
         Deref
       Use
-        Copy "_8"
-    Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:15:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
+        Copy "_7"
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:15:5 generated
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:16:10 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:16:14 generated
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:17:9 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
-        Copy "_10"
+        Copy "_8"
         Constant 0
     Branch a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:17:9 written "bb11" "bb12"
-      Copy "_11"
+      Copy "_9"
   Block "bb11"
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:17:9 generated
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:18:9 written
@@ -140,20 +127,15 @@ Function a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:4:5 "
     Goto "bb13"
   Block "bb13"
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:20:5 written
-      Destination "_10"
+      Destination "_8"
         Deref
       Use
         Constant 1
-    Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:20:5 written
-      Destination "_12"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:20:5 generated
     Operation a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:21:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
           Deref
     Sequenced a_slot_stored_again_after_what_it_held_was_freed_is_not_doubted.c:21:12 generated
     Return

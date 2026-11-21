@@ -12,7 +12,6 @@ Function a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call.
   Local "_4" "int **" "p"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int **"
   Block "bb0" entry
     Operation a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call.c:5:10 written
       Destination "_3"
@@ -40,10 +39,6 @@ Function a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call.
       Destination "_4"
       Use
         Copy "_6"
-    Operation a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call.c:7:12 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_local_a_call_may_have_missed_is_not_believed_written_by_a_later_call.c:7:12 generated
     Goto "bb3"
   Block "bb2"

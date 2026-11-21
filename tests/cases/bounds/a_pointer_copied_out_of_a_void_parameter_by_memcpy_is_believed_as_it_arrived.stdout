@@ -13,7 +13,6 @@ Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_ar
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:5:9 written
       Destination "_2"
@@ -50,11 +49,6 @@ Function a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_ar
         Deref
       Use
         Constant 1
-    Operation a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:8:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_copied_out_of_a_void_parameter_by_memcpy_is_believed_as_it_arrived.c:8:13 generated
     Goto "bb6"
   Block "bb5"

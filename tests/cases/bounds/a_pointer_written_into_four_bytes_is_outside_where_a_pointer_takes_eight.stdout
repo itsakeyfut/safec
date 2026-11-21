@@ -7,7 +7,6 @@ Function a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eigh
   Local "_1" "int **" "pp"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
   Block "bb0" entry
     Operation a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight.c:3:5 generated
       Destination "_0"
@@ -47,11 +46,6 @@ Function a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eigh
         Deref
       Use
         Constant 0
-    Operation a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight.c:8:5 generated
     Operation a_pointer_written_into_four_bytes_is_outside_where_a_pointer_takes_eight.c:9:5 written
       Destination "_0"

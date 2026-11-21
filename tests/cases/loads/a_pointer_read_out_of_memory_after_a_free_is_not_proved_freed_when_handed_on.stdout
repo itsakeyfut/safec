@@ -16,8 +16,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_hand
   Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
-  Local "_8" "int *" "q"
+  Local "_7" "int *" "q"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:5:5 generated
       Destination "_0"
@@ -86,11 +85,6 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_hand
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:14:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:14:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 written "free" "bb9"
@@ -98,14 +92,14 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_hand
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 generated
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:16:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:16:14 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 written "h" "bb10"
-      Copy "_8"
+      Copy "_7"
   Block "bb10"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 generated
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:18:5 written

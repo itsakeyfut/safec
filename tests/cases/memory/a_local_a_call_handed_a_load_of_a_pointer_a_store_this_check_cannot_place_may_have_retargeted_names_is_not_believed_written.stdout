@@ -17,14 +17,12 @@ Function a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_pla
   Local "_7" "int ****"
   Local "_8" "int *****"
   Local "_9" "int ***"
-  Local "_10" "int ***"
-  Local "_11" "int ****" "t"
-  Local "_12" "int ***"
-  Local "_13" "int ***"
-  Local "_14" "int ***" "r"
-  Local "_15" "int *" "q"
-  Local "_16" "int **"
-  Local "_17" "int"
+  Local "_10" "int ****" "t"
+  Local "_11" "int ***"
+  Local "_12" "int ***" "r"
+  Local "_13" "int *" "q"
+  Local "_14" "int **"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:5:15 generated
       Destination "_3"
@@ -74,34 +72,25 @@ Function a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_pla
       Destination "_5"
       Use
         Copy "_9"
-    Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:10:5 written
-      Destination "_10"
-      Use
-        Copy "_5"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:10:5 generated
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:11:13 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:11:17 generated
     Branch a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:9 written "bb2" "bb3"
-      Copy "_11"
+      Copy "_10"
   Block "bb2"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:9 generated
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:17 written
-      Destination "_12"
+      Destination "_11"
       Address
         Place "_4"
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:12 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
-        Copy "_12"
-    Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:12 written
-      Destination "_13"
-      Use
         Copy "_11"
-          Deref
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:12:12 generated
     Goto "bb4"
   Block "bb3"
@@ -109,17 +98,17 @@ Function a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_pla
     Goto "bb4"
   Block "bb4"
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:13:12 written
-      Destination "_14"
+      Destination "_12"
       Use
         Copy "_5"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:13:16 generated
     Branch a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:14:9 written "bb5" "bb6"
-      Copy "_14"
+      Copy "_12"
   Block "bb5"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:14:9 generated
     ArgumentsEvaluated a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:15:9 generated
     Call a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:15:9 written "fill" "bb8"
-      Copy "_14"
+      Copy "_12"
         Deref
   Block "bb6"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:14:9 generated
@@ -133,28 +122,28 @@ Function a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_pla
     Return
   Block "bb8"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:15:9 generated
-    StorageLive a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:16:9 generated "_15"
+    StorageLive a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:16:9 generated "_13"
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:16:18 generated
-      Destination "_16"
+      Destination "_14"
       Address
         Place "_1"
           Index
             Constant 0
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:16:14 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_14"
           Deref
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:16:18 generated
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:17:16 written
-      Destination "_17"
+      Destination "_15"
       Binary "Eq"
-        Copy "_15"
+        Copy "_13"
         Constant 0
     Operation a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:17:9 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_15"
     Sequenced a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:17:16 generated
-    StorageDead a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:17:9 generated "_15"
+    StorageDead a_local_a_call_handed_a_load_of_a_pointer_a_store_this_check_cannot_place_may_have_retargeted_names_is_not_believed_written.c:17:9 generated "_13"
     Return

@@ -16,8 +16,7 @@ Function a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still
   Local "_2" "int **" "b"
   Local "_3" "int **"
   Local "_4" "void *"
-  Local "_5" "int *"
-  Local "_6" "void *"
+  Local "_5" "void *"
   Block "bb0" entry
     Operation a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:4:15 written
       Destination "_3"
@@ -37,14 +36,10 @@ Function a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still
       Destination "_1"
       Use
         Copy "_4"
-    Operation a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:5:5 written
-      Destination "_5"
-      Use
-        Copy "_1"
     Sequenced a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:5:5 generated
     ArgumentsEvaluated a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:6:5 generated
     Call a_pointer_to_too_little_copied_by_memcpy_to_a_null_destination_is_still_asked_how_wide.c:6:5 written "memcpy" "bb2"
-      Destination "_6"
+      Destination "_5"
       Constant 0
       Copy "_2"
       Constant 8

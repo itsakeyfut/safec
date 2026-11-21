@@ -14,7 +14,6 @@ Function a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:3:5 "f
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:4:14 generated
     Call a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:4:14 written "malloc" "bb1"
@@ -96,11 +95,6 @@ Function a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:3:5 "f
         Deref
       Use
         Constant 0
-    Operation a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:9:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:9:5 generated
     ArgumentsEvaluated a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:10:5 generated
     Call a_store_through_a_freed_pointer_the_value_replaces_is_reported.c:10:5 written "free" "bb10"

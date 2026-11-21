@@ -10,7 +10,6 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:4:6 "f"
   Local "_1" "int" parameter "c"
   Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:5:14 generated
     Call a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:5:14 written "malloc" "bb1"
@@ -45,9 +44,5 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:4:6 "f"
       Destination "_2"
       Use
         Constant 0
-    Operation a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:8:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:8:9 generated
     Goto "bb4"

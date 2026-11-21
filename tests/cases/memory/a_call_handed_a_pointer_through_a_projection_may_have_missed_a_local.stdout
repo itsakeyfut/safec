@@ -13,10 +13,9 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Local "_4" "int **" "p"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int ***" "pp"
-  Local "_9" "int ***"
-  Local "_10" "int"
+  Local "_7" "int ***" "pp"
+  Local "_8" "int ***"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:13:15 written
       Destination "_5"
@@ -39,10 +38,6 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
       Destination "_4"
       Use
         Copy "_6"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:14:12 written
-      Destination "_7"
-      Use
-        Copy "_4"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:14:12 generated
     Goto "bb3"
   Block "bb2"
@@ -50,29 +45,29 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:15:17 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_4"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:15:12 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:15:17 generated
     ArgumentsEvaluated a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:16:5 generated
     Call a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:16:5 written "fill" "bb4"
-      Copy "_8"
+      Copy "_7"
         Deref
   Block "bb4"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:16:5 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:17:12 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:17:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:17:12 generated
     Return
 Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:20:5 "through_an_index"
@@ -83,12 +78,10 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Local "_4" "int **[1]" "ps"
   Local "_5" "int ***"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int ***"
-  Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int ***"
-  Local "_12" "int"
+  Local "_7" "int ***"
+  Local "_8" "int **"
+  Local "_9" "int ***"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:24:5 generated
       Destination "_5"
@@ -105,36 +98,26 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
         Deref
       Use
         Copy "_6"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:24:5 written
-      Destination "_7"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:24:5 generated
     Branch a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:9 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:12 generated
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_4"
           Index
             Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:20 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:12 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
-        Copy "_9"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:12 written
-      Destination "_10"
-      Use
         Copy "_8"
-          Deref
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:25:12 generated
     Goto "bb3"
   Block "bb2"
@@ -142,26 +125,26 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:26:10 generated
-      Destination "_11"
+      Destination "_9"
       Address
         Place "_4"
           Index
             Constant 0
     ArgumentsEvaluated a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:26:5 generated
     Call a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:26:5 written "fill" "bb4"
-      Copy "_11"
+      Copy "_9"
         Deref
   Block "bb4"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:26:5 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:27:12 written
-      Destination "_12"
+      Destination "_10"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:27:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_10"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:27:12 generated
     Return
 Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:30:5 "through_a_block"
@@ -174,9 +157,7 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Local "_6" "int"
   Local "_7" "int **"
   Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:33:18 generated
     Call a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:33:18 written "malloc" "bb1"
@@ -215,30 +196,20 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
         Deref
       Use
         Copy "_7"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:35:5 written
-      Destination "_8"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:35:5 generated
     Branch a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:9 written "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:9 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:19 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:12 written
       Destination "_4"
         Deref
       Use
-        Copy "_9"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:12 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
+        Copy "_8"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:36:12 generated
     Goto "bb7"
   Block "bb6"
@@ -252,14 +223,14 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Block "bb8"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:37:5 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:38:12 written
-      Destination "_11"
+      Destination "_9"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:38:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:38:12 generated
     Return
 Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:41:5 "null_through_a_dereference"
@@ -268,10 +239,9 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Local "_2" "int *" "a"
   Local "_3" "int **" "p"
   Local "_4" "int **"
-  Local "_5" "int **"
-  Local "_6" "int ***" "pp"
-  Local "_7" "int ***"
-  Local "_8" "int"
+  Local "_5" "int ***" "pp"
+  Local "_6" "int ***"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:43:11 written
       Destination "_3"
@@ -290,10 +260,6 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
       Destination "_3"
       Use
         Copy "_4"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:44:12 written
-      Destination "_5"
-      Use
-        Copy "_3"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:44:12 generated
     Goto "bb3"
   Block "bb2"
@@ -301,29 +267,29 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:45:17 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:45:12 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:45:17 generated
     ArgumentsEvaluated a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:46:5 generated
     Call a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:46:5 written "fill" "bb4"
-      Copy "_6"
+      Copy "_5"
         Deref
   Block "bb4"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:46:5 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:47:12 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:47:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:47:12 generated
     Return
 Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:50:5 "null_through_an_index"
@@ -332,12 +298,10 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
   Local "_2" "int *" "a"
   Local "_3" "int **[1]" "q"
   Local "_4" "int ***"
-  Local "_5" "int **"
-  Local "_6" "int ***"
-  Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int ***"
-  Local "_10" "int"
+  Local "_5" "int ***"
+  Local "_6" "int **"
+  Local "_7" "int ***"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:53:5 generated
       Destination "_4"
@@ -350,36 +314,26 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
         Deref
       Use
         Constant 0
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:53:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:53:5 generated
     Branch a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:9 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:12 generated
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:19 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:12 written
-      Destination "_6"
+      Destination "_5"
         Deref
       Use
-        Copy "_7"
-    Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:12 written
-      Destination "_8"
-      Use
         Copy "_6"
-          Deref
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:54:12 generated
     Goto "bb3"
   Block "bb2"
@@ -387,26 +341,26 @@ Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:
     Goto "bb3"
   Block "bb3"
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:55:10 generated
-      Destination "_9"
+      Destination "_7"
       Address
         Place "_3"
           Index
             Constant 0
     ArgumentsEvaluated a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:55:5 generated
     Call a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:55:5 written "fill" "bb4"
-      Copy "_9"
+      Copy "_7"
         Deref
   Block "bb4"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:55:5 generated
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:56:12 written
-      Destination "_10"
+      Destination "_8"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Operation a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:56:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_8"
     Sequenced a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:56:12 generated
     Return
 Function a_call_handed_a_pointer_through_a_projection_may_have_missed_a_local.c:59:5 "one_local_through_a_dereference"

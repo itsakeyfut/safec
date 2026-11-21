@@ -13,9 +13,7 @@ Function a_char_cast_reads_the_allocation_in_bytes.c:3:5 "main"
   Local "_4" "char *" "c"
   Local "_5" "char *"
   Local "_6" "char *"
-  Local "_7" "char"
-  Local "_8" "char *"
-  Local "_9" "char"
+  Local "_7" "char *"
   Block "bb0" entry
     Operation a_char_cast_reads_the_allocation_in_bytes.c:3:5 generated
       Destination "_0"
@@ -68,27 +66,17 @@ Function a_char_cast_reads_the_allocation_in_bytes.c:3:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_char_cast_reads_the_allocation_in_bytes.c:9:5 written
-      Destination "_7"
-      Use
-        Copy "_6"
-          Deref
     Sequenced a_char_cast_reads_the_allocation_in_bytes.c:9:5 generated
     Operation a_char_cast_reads_the_allocation_in_bytes.c:10:5 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_4"
         Constant 8
     Operation a_char_cast_reads_the_allocation_in_bytes.c:10:5 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
         Constant 2
-    Operation a_char_cast_reads_the_allocation_in_bytes.c:10:5 written
-      Destination "_9"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_char_cast_reads_the_allocation_in_bytes.c:10:5 generated
     ArgumentsEvaluated a_char_cast_reads_the_allocation_in_bytes.c:11:5 generated
     Call a_char_cast_reads_the_allocation_in_bytes.c:11:5 written "free" "bb5"

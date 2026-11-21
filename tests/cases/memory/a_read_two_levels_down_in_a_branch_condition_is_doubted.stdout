@@ -10,7 +10,6 @@ Function a_read_two_levels_down_in_a_branch_condition_is_doubted.c:2:5 "f"
   Local "_4" "int **" "n"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_read_two_levels_down_in_a_branch_condition_is_doubted.c:3:16 generated
     Call a_read_two_levels_down_in_a_branch_condition_is_doubted.c:3:16 written "malloc" "bb1"
@@ -73,11 +72,6 @@ Function a_read_two_levels_down_in_a_branch_condition_is_doubted.c:2:5 "f"
         Deref
       Use
         Copy "_4"
-    Operation a_read_two_levels_down_in_a_branch_condition_is_doubted.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_read_two_levels_down_in_a_branch_condition_is_doubted.c:7:5 generated
     Branch a_read_two_levels_down_in_a_branch_condition_is_doubted.c:8:9 written "bb9" "bb10"
       Copy "_1"

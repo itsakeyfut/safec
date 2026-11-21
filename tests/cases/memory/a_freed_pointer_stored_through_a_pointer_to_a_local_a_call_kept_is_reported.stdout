@@ -17,7 +17,6 @@ Function a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_repo
   Local "_5" "int *" "x"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
   Block "bb0" entry
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported.c:5:5 generated
       Destination "_0"
@@ -85,11 +84,6 @@ Function a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_repo
         Deref
       Use
         Copy "_5"
-    Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported.c:14:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported.c:14:5 generated
     Operation a_freed_pointer_stored_through_a_pointer_to_a_local_a_call_kept_is_reported.c:15:5 written
       Destination "_0"

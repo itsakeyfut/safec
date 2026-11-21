@@ -9,7 +9,6 @@ Function a_free_in_a_do_body_has_happened_after_the_loop.c:3:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" "p"
   Local "_2" "void *"
-  Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_free_in_a_do_body_has_happened_after_the_loop.c:4:14 generated
     Call a_free_in_a_do_body_has_happened_after_the_loop.c:4:14 written "malloc" "bb1"
@@ -35,11 +34,6 @@ Function a_free_in_a_do_body_has_happened_after_the_loop.c:3:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_free_in_a_do_body_has_happened_after_the_loop.c:6:5 written
-      Destination "_3"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_free_in_a_do_body_has_happened_after_the_loop.c:6:5 generated
     Operation a_free_in_a_do_body_has_happened_after_the_loop.c:7:5 written
       Destination "_0"

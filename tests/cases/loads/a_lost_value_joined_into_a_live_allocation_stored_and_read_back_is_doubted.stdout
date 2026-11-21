@@ -10,22 +10,16 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
   Local "_4" "int" "i"
   Local "_5" "int"
   Local "_6" "void *"
-  Local "_7" "void *"
-  Local "_8" "void *"
-  Local "_9" "int"
-  Local "_10" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int *" "x"
+  Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *" "x"
+  Local "_12" "int **" "box"
   Local "_13" "void *"
   Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int **" "box"
-  Local "_17" "void *"
-  Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "int *" "t"
-  Local "_21" "int"
-  Local "_22" "int"
+  Local "_15" "int *" "t"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:3:11 written
       Destination "_2"
@@ -57,37 +51,29 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:7:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:7:9 generated
     ArgumentsEvaluated a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:8:13 generated
     Call a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:8:13 written "malloc" "bb4"
-      Destination "_7"
+      Destination "_6"
       Constant 1
   Block "bb3"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:6:12 generated
     ArgumentsEvaluated a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:12:14 generated
     Call a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:12:14 written "malloc" "bb8"
-      Destination "_13"
+      Destination "_10"
       Constant 4
   Block "bb4"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:8:9 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:8:9 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:8:9 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:9:13 written
-      Destination "_9"
+      Destination "_7"
       Unary "Not"
         Copy "_3"
     Branch a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:9:13 written "bb5" "bb6"
-      Copy "_9"
+      Copy "_7"
   Block "bb5"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:9:13 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:9:17 written
@@ -101,32 +87,28 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
     Goto "bb7"
   Block "bb7"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:10:13 written
-      Destination "_10"
+      Destination "_8"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:10:9 written
       Destination "_4"
       Use
-        Copy "_10"
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:10:9 written
-      Destination "_11"
-      Use
-        Copy "_4"
+        Copy "_8"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:10:9 generated
     Goto "bb1"
   Block "bb8"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:12:10 written
-      Destination "_12"
+      Destination "_9"
       Use
-        Copy "_13"
+        Copy "_10"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:12:14 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:13:9 written
-      Destination "_14"
+      Destination "_11"
       Unary "Not"
-        Copy "_12"
+        Copy "_9"
     Branch a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:13:9 written "bb9" "bb10"
-      Copy "_14"
+      Copy "_11"
   Block "bb9"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:13:9 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:13:13 written
@@ -144,13 +126,9 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
   Block "bb12"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:14:9 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:14:14 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_2"
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:14:14 written
-      Destination "_15"
-      Use
-        Copy "_12"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:14:14 generated
     Goto "bb14"
   Block "bb13"
@@ -159,20 +137,20 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
   Block "bb14"
     ArgumentsEvaluated a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:15:17 generated
     Call a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:15:17 written "malloc" "bb15"
-      Destination "_17"
+      Destination "_13"
       Constant 8
   Block "bb15"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:15:11 written
-      Destination "_16"
+      Destination "_12"
       Use
-        Copy "_17"
+        Copy "_13"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:15:17 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:16:9 written
-      Destination "_18"
+      Destination "_14"
       Unary "Not"
-        Copy "_16"
+        Copy "_12"
     Branch a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:16:9 written "bb16" "bb17"
-      Copy "_18"
+      Copy "_14"
   Block "bb16"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:16:9 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:16:15 written
@@ -186,28 +164,23 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
     Goto "bb18"
   Block "bb18"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:17:5 written
-      Destination "_16"
+      Destination "_12"
         Deref
       Use
-        Copy "_12"
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:17:5 written
-      Destination "_19"
-      Use
-        Copy "_16"
-          Deref
+        Copy "_9"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:17:5 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:18:10 written
-      Destination "_20"
+      Destination "_15"
       Use
-        Copy "_16"
+        Copy "_12"
           Deref
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:18:14 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:19:9 written
-      Destination "_21"
+      Destination "_16"
       Unary "Not"
-        Copy "_20"
+        Copy "_15"
     Branch a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:19:9 written "bb19" "bb20"
-      Copy "_21"
+      Copy "_16"
   Block "bb19"
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:19:9 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:19:13 written
@@ -221,15 +194,10 @@ Function a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doub
     Goto "bb21"
   Block "bb21"
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:20:5 written
-      Destination "_20"
+      Destination "_15"
         Deref
       Use
         Constant 1
-    Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:20:5 written
-      Destination "_22"
-      Use
-        Copy "_20"
-          Deref
     Sequenced a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:20:5 generated
     Operation a_lost_value_joined_into_a_live_allocation_stored_and_read_back_is_doubted.c:21:5 written
       Destination "_0"

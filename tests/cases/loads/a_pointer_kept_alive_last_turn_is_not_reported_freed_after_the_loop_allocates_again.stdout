@@ -17,12 +17,8 @@ Function a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_all
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int *" "q"
-  Local "_13" "int"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
+  Local "_11" "int *" "q"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:4:5 generated
       Destination "_0"
@@ -122,24 +118,19 @@ Function a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_all
         Deref
       Use
         Constant 1
-    Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:16:9 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:16:9 generated
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:17:13 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
         Copy "_4"
         Constant 1
     Branch a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:17:13 written "bb12" "bb13"
-      Copy "_11"
+      Copy "_10"
   Block "bb12"
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:17:13 generated
-    StorageLive a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:18:13 generated "_12"
+    StorageLive a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:18:13 generated "_11"
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:18:18 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_1"
           Deref
@@ -147,14 +138,10 @@ Function a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_all
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:19:13 written
       Destination "_5"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
-    Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:19:13 written
-      Destination "_13"
-      Use
-        Copy "_5"
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:19:13 generated
-    StorageDead a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:20:9 generated "_12"
+    StorageDead a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:20:9 generated "_11"
     Goto "bb14"
   Block "bb13"
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:17:13 generated
@@ -165,25 +152,16 @@ Function a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_all
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:21:9 written
-      Destination "_14"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:21:9 generated
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:22:13 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:22:9 written
       Destination "_4"
       Use
-        Copy "_15"
-    Operation a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:22:9 written
-      Destination "_16"
-      Use
-        Copy "_4"
+        Copy "_12"
     Sequenced a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:22:9 generated
     StorageDead a_pointer_kept_alive_last_turn_is_not_reported_freed_after_the_loop_allocates_again.c:23:5 generated "_7"
     Goto "bb5"

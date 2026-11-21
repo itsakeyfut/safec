@@ -7,7 +7,6 @@ Function an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:3:5
   Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
   Block "bb0" entry
     Operation an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:3:5 generated
       Destination "_0"
@@ -47,11 +46,6 @@ Function an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:3:5
         Deref
       Use
         Constant 5
-    Operation an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:8:5 generated
     Operation an_int_written_into_one_byte_is_an_error_where_unknown_is_allowed.c:9:5 written
       Destination "_0"

@@ -18,8 +18,6 @@ Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:6 "b
   Local "_5" "int"
   Local "_6" "void *" "v"
   Local "_7" "int *" "ip"
-  Local "_8" "int"
-  Local "_9" "void **"
   Block "bb0" entry
     Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:26 written
       Destination "_2"
@@ -72,22 +70,12 @@ Function an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:6 "b
         Deref
       Use
         Constant 1
-    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 written
-      Destination "_8"
-      Use
-        Copy "_7"
-          Deref
     Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:104 generated
     Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 written
       Destination "_1"
         Deref
       Use
         Copy "_3"
-    Operation an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 written
-      Destination "_9"
-      Use
-        Copy "_1"
-          Deref
     Sequenced an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:113 generated
     ArgumentsEvaluated an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:122 generated
     Call an_int_stored_into_a_table_of_pointers_that_leaves_is_reported.c:2:122 written "use" "bb8"

@@ -18,58 +18,46 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
   Local "_2" "int" "r"
   Local "_3" "int *" "a"
   Local "_4" "int *" "holder"
-  Local "_5" "int *"
-  Local "_6" "int **"
-  Local "_7" "void *"
-  Local "_8" "int *"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
+  Local "_11" "int *"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int *"
-  Local "_15" "int"
-  Local "_16" "int"
   Block "bb0" entry
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:10:5 written
       Destination "_4"
       Use
         Constant 0
-    Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:10:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:10:5 generated
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:11 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_4"
     ArgumentsEvaluated a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 written "stash" "bb1"
-      Copy "_6"
+      Copy "_5"
   Block "bb1"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     ArgumentsEvaluated a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 generated
     Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:9 written "malloc" "bb2"
-      Destination "_7"
+      Destination "_6"
       Constant 4
   Block "bb2"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:5 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:12:5 generated
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 written
-      Destination "_9"
+      Destination "_7"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 written "bb3" "bb4"
-      Copy "_9"
+      Copy "_7"
   Block "bb3"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:13:9 generated
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:14:9 written
@@ -87,14 +75,9 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
         Deref
       Use
         Constant 1
-    Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:16:5 written
-      Destination "_10"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:16:5 generated
     Call a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:9 written "release_all" "bb6"
-      Destination "_11"
+      Destination "_8"
   Block "bb6"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:26 written
       Destination "_1"
@@ -102,35 +85,31 @@ Function a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it
         Copy "_3"
           Deref
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:26 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_1"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:9 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
-        Copy "_11"
-        Copy "_12"
+        Copy "_8"
+        Copy "_9"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:39 written
       Destination "_4"
       Use
         Copy "_3"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:39 written
-      Destination "_14"
+      Destination "_11"
       Use
         Copy "_4"
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:9 written
-      Destination "_15"
+      Destination "_12"
       Binary "Add"
-        Copy "_13"
+        Copy "_10"
         Constant 0
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:5 written
       Destination "_2"
       Use
-        Copy "_15"
-    Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:5 written
-      Destination "_16"
-      Use
-        Copy "_2"
+        Copy "_12"
     Sequenced a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:17:5 generated
     Operation a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it.c:18:5 written
       Destination "_0"

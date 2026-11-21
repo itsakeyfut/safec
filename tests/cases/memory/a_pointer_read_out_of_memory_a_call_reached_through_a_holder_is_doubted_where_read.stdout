@@ -28,10 +28,8 @@ Function a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted
   Local "_4" "int ***" "h"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int **"
-  Local "_8" "int *" "t"
-  Local "_9" "int"
-  Local "_10" "int"
+  Local "_7" "int *" "t"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:9:17 generated
     Call a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:9:17 written "malloc" "bb1"
@@ -93,11 +91,6 @@ Function a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:18:5 written
-      Destination "_7"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:18:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:19:5 generated
     Call a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:19:5 written "init" "bb10"
@@ -113,30 +106,25 @@ Function a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted
   Block "bb10"
     Sequenced a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:19:5 generated
     Operation a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:20:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:20:14 generated
     Operation a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:21:9 written
-      Destination "_9"
+      Destination "_8"
       Binary "Ne"
-        Copy "_8"
+        Copy "_7"
         Constant 0
     Branch a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:21:9 written "bb11" "bb12"
-      Copy "_9"
+      Copy "_8"
   Block "bb11"
     Sequenced a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:21:9 generated
     Operation a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:22:9 written
-      Destination "_8"
+      Destination "_7"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:22:9 written
-      Destination "_10"
-      Use
-        Copy "_8"
-          Deref
     Sequenced a_pointer_read_out_of_memory_a_call_reached_through_a_holder_is_doubted_where_read.c:22:9 generated
     Goto "bb13"
   Block "bb12"

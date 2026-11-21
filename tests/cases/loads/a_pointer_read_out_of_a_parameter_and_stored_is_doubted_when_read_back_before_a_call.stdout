@@ -11,9 +11,8 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
   Local "_3" "int **" "box"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "int *" "r"
-  Local "_8" "int"
+  Local "_6" "int *" "r"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:5:9 written
       Destination "_2"
@@ -69,25 +68,20 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
       Use
         Copy "_1"
           Deref
-    Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:12:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:12:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:13:10 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:13:14 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:14:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Eq"
-        Copy "_7"
+        Copy "_6"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:14:9 written "bb8" "bb9"
-      Copy "_8"
+      Copy "_7"
   Block "bb8"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:14:9 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:15:9 written
@@ -107,7 +101,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:18:5 written
       Destination "_0"
       Use
-        Copy "_7"
+        Copy "_6"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call.c:18:12 generated
     Return

@@ -16,8 +16,6 @@ Function a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:
   Local "_5" "int *" "q"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
-  Local "_9" "int *"
   Block "bb0" entry
     Operation a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:5:5 generated
       Destination "_0"
@@ -69,10 +67,6 @@ Function a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:
       Destination "_5"
       Use
         Copy "_2"
-    Operation a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:13:9 written
-      Destination "_7"
-      Use
-        Copy "_5"
     Sequenced a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:13:9 generated
     ArgumentsEvaluated a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:14:9 generated
     Call a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:14:9 written "free" "bb9"
@@ -80,17 +74,13 @@ Function a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:
   Block "bb7"
     Sequenced a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:12:9 generated
     Operation a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:16:13 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     Operation a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:16:9 written
       Destination "_5"
       Use
-        Copy "_8"
-    Operation a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:16:9 written
-      Destination "_9"
-      Use
-        Copy "_5"
+        Copy "_7"
     Sequenced a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted.c:16:9 generated
     Goto "bb8"
   Block "bb8"

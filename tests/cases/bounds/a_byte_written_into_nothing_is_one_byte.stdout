@@ -7,7 +7,6 @@ Function a_byte_written_into_nothing_is_one_byte.c:3:5 "main"
   Local "_1" "char *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "char"
   Block "bb0" entry
     Operation a_byte_written_into_nothing_is_one_byte.c:3:5 generated
       Destination "_0"
@@ -47,11 +46,6 @@ Function a_byte_written_into_nothing_is_one_byte.c:3:5 "main"
         Deref
       Use
         Constant 5
-    Operation a_byte_written_into_nothing_is_one_byte.c:8:5 written
-      Destination "_4"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_byte_written_into_nothing_is_one_byte.c:8:5 generated
     Operation a_byte_written_into_nothing_is_one_byte.c:9:5 written
       Destination "_0"

@@ -12,12 +12,9 @@ Function a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_den
   Local "_3" "void *"
   Local "_4" "int *" "r"
   Local "_5" "int **"
-  Local "_6" "int **"
-  Local "_7" "int *" "q"
-  Local "_8" "void *"
-  Local "_9" "int **" "alias"
-  Local "_10" "int *"
-  Local "_11" "int"
+  Local "_6" "int *" "q"
+  Local "_7" "void *"
+  Local "_8" "int **" "alias"
   Block "bb0" entry
     ArgumentsEvaluated a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:4:14 generated
     Call a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:4:14 written "malloc" "bb1"
@@ -43,38 +40,28 @@ Function a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_den
         Deref
       Use
         Copy "_5"
-    Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:6:5 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:6:5 generated
     ArgumentsEvaluated a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:7:14 generated
     Call a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:7:14 written "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 8
   Block "bb2"
     Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:7:10 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:7:14 generated
     Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:8:11 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
     Sequenced a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:8:19 generated
     Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:9:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
-        Copy "_7"
-    Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:9:5 written
-      Destination "_10"
-      Use
-        Copy "_9"
-          Deref
+        Copy "_6"
     Sequenced a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:9:5 generated
     ArgumentsEvaluated a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:10:5 generated
     Call a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:10:5 written "free" "bb3"
@@ -86,11 +73,6 @@ Function a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_den
         Deref
       Use
         Constant 1
-    Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:11:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:11:5 generated
     Operation a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:12:5 written
       Destination "_0"

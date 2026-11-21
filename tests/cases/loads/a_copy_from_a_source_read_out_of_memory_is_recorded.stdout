@@ -27,20 +27,15 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
   Local "_7" "int *" "r"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int **" "src"
-  Local "_13" "void *"
-  Local "_14" "int"
-  Local "_15" "int ***" "ps"
+  Local "_10" "int **" "src"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int ***" "ps"
+  Local "_14" "void *"
+  Local "_15" "int"
   Local "_16" "void *"
-  Local "_17" "int"
-  Local "_18" "int *"
-  Local "_19" "int *"
-  Local "_20" "int **"
-  Local "_21" "void *"
-  Local "_22" "int *" "q"
-  Local "_23" "int"
+  Local "_17" "int *" "q"
+  Local "_18" "int"
   Block "bb0" entry
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 generated
       Destination "_0"
@@ -138,40 +133,30 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
         Deref
       Use
         Constant 1
-    Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:20:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:20:5 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:21:5 written
       Destination "_7"
         Deref
       Use
         Constant 2
-    Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:21:5 written
-      Destination "_11"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:21:5 generated
     ArgumentsEvaluated a_copy_from_a_source_read_out_of_memory_is_recorded.c:22:17 generated
     Call a_copy_from_a_source_read_out_of_memory_is_recorded.c:22:17 written "malloc" "bb13"
-      Destination "_13"
+      Destination "_11"
       Constant 8
   Block "bb13"
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:22:11 written
-      Destination "_12"
+      Destination "_10"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:22:17 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:23:9 written
-      Destination "_14"
+      Destination "_12"
       Binary "Eq"
-        Copy "_12"
+        Copy "_10"
         Constant 0
     Branch a_copy_from_a_source_read_out_of_memory_is_recorded.c:23:9 written "bb14" "bb15"
-      Copy "_14"
+      Copy "_12"
   Block "bb14"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:23:9 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:24:9 written
@@ -186,21 +171,21 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
   Block "bb16"
     ArgumentsEvaluated a_copy_from_a_source_read_out_of_memory_is_recorded.c:26:17 generated
     Call a_copy_from_a_source_read_out_of_memory_is_recorded.c:26:17 written "malloc" "bb17"
-      Destination "_16"
+      Destination "_14"
       Constant 8
   Block "bb17"
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:26:12 written
-      Destination "_15"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:26:17 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:27:9 written
-      Destination "_17"
+      Destination "_15"
       Binary "Eq"
-        Copy "_15"
+        Copy "_13"
         Constant 0
     Branch a_copy_from_a_source_read_out_of_memory_is_recorded.c:27:9 written "bb18" "bb19"
-      Copy "_17"
+      Copy "_15"
   Block "bb18"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:27:9 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:28:9 written
@@ -218,39 +203,24 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
         Deref
       Use
         Copy "_4"
-    Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:30:5 written
-      Destination "_18"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:30:5 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:31:5 written
-      Destination "_12"
+      Destination "_10"
         Deref
       Use
         Copy "_7"
-    Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:31:5 written
-      Destination "_19"
-      Use
-        Copy "_12"
-          Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:31:5 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:32:5 written
-      Destination "_15"
+      Destination "_13"
         Deref
       Use
-        Copy "_12"
-    Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:32:5 written
-      Destination "_20"
-      Use
-        Copy "_15"
-          Deref
+        Copy "_10"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:32:5 generated
     ArgumentsEvaluated a_copy_from_a_source_read_out_of_memory_is_recorded.c:33:5 generated
     Call a_copy_from_a_source_read_out_of_memory_is_recorded.c:33:5 written "memcpy" "bb21"
-      Destination "_21"
+      Destination "_16"
       Copy "_1"
-      Copy "_15"
+      Copy "_13"
         Deref
       Constant 8
   Block "bb21"
@@ -261,18 +231,18 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
   Block "bb22"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:34:5 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:35:10 written
-      Destination "_22"
+      Destination "_17"
       Use
         Copy "_1"
           Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:35:14 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:36:9 written
-      Destination "_23"
+      Destination "_18"
       Binary "Eq"
-        Copy "_22"
+        Copy "_17"
         Constant 0
     Branch a_copy_from_a_source_read_out_of_memory_is_recorded.c:36:9 written "bb23" "bb24"
-      Copy "_23"
+      Copy "_18"
   Block "bb23"
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:36:9 generated
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:37:9 written
@@ -288,7 +258,7 @@ Function a_copy_from_a_source_read_out_of_memory_is_recorded.c:7:5 "main"
     Operation a_copy_from_a_source_read_out_of_memory_is_recorded.c:39:5 written
       Destination "_0"
       Use
-        Copy "_22"
+        Copy "_17"
           Deref
     Sequenced a_copy_from_a_source_read_out_of_memory_is_recorded.c:39:12 generated
     Return

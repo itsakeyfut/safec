@@ -18,9 +18,8 @@ Function a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_repor
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "void **" "q"
-  Local "_8" "void **"
-  Local "_9" "int *"
-  Local "_10" "void *"
+  Local "_8" "int *"
+  Local "_9" "void *"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:5:9 written
       Destination "_2"
@@ -73,21 +72,16 @@ Function a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_repor
         Deref
       Use
         Copy "_7"
-    Operation a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:10:5 written
-      Destination "_8"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:10:5 generated
     Operation a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:11:15 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_2"
     ArgumentsEvaluated a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:11:5 generated
     Call a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:11:5 written "memcpy" "bb8"
-      Destination "_10"
+      Destination "_9"
       Copy "_4"
-      Copy "_9"
+      Copy "_8"
       Constant 4
   Block "bb8"
     Sequenced a_partial_pointer_copied_into_a_block_aliased_before_it_leaves_is_reported.c:11:5 generated

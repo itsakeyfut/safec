@@ -16,7 +16,6 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
   Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 generated
     Call an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:4:14 written "malloc" "bb1"
@@ -75,10 +74,6 @@ Function an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:3:5 "f
       Destination "_4"
       Use
         Copy "_9"
-    Operation an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
     Sequenced an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:7:5 generated
     Operation an_increment_beside_a_conditional_that_frees_keeps_it_unproven.c:8:5 written
       Destination "_0"

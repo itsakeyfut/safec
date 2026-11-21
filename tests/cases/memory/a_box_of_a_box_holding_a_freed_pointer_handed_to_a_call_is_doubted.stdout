@@ -19,8 +19,6 @@ Function a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:4:
   Local "_7" "int *" "x"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
-  Local "_11" "int **"
   Block "bb0" entry
     Operation a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:4:5 generated
       Destination "_0"
@@ -123,22 +121,12 @@ Function a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:4:
         Deref
       Use
         Copy "_7"
-    Operation a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:12:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:12:5 generated
     Operation a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 written
-      Destination "_11"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:13:5 generated
     ArgumentsEvaluated a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 generated
     Call a_box_of_a_box_holding_a_freed_pointer_handed_to_a_call_is_doubted.c:14:5 written "use3" "bb14"

@@ -19,14 +19,12 @@ Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_do
   Local "_8" "int"
   Local "_9" "int *[1]" "a"
   Local "_10" "int **"
-  Local "_11" "int *"
-  Local "_12" "void *" "d"
-  Local "_13" "int **"
-  Local "_14" "void *"
-  Local "_15" "void *"
-  Local "_16" "int *" "r"
-  Local "_17" "int **"
-  Local "_18" "int"
+  Local "_11" "void *" "d"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "int *" "r"
+  Local "_15" "int **"
+  Local "_16" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:34 generated
     Call a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:34 written "malloc" "bb1"
@@ -95,35 +93,26 @@ Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_do
         Deref
       Use
         Copy "_1"
-    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 written
-      Destination "_11"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:113 generated
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:133 generated
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_9"
           Index
             Constant 0
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:129 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:133 generated
     Branch a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:140 written "bb9" "bb10"
       Copy "_2"
   Block "bb9"
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:140 generated
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_6"
-    Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 written
-      Destination "_14"
-      Use
-        Copy "_12"
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:143 generated
     Goto "bb11"
   Block "bb10"
@@ -132,32 +121,32 @@ Function a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_do
   Block "bb11"
     ArgumentsEvaluated a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 generated
     Call a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 written "memcpy" "bb12"
-      Destination "_15"
-      Copy "_12"
+      Destination "_13"
+      Copy "_11"
       Copy "_3"
       Constant 8
   Block "bb12"
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:150 generated
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:176 generated
-      Destination "_17"
+      Destination "_15"
       Address
         Place "_9"
           Index
             Constant 0
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:172 written
-      Destination "_16"
+      Destination "_14"
       Use
-        Copy "_17"
+        Copy "_15"
           Deref
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:176 generated
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:189 written
-      Destination "_18"
+      Destination "_16"
       Binary "Eq"
-        Copy "_16"
+        Copy "_14"
         Copy "_1"
     Operation a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:182 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_16"
     Sequenced a_copy_into_a_local_array_or_a_block_out_of_a_block_nothing_wrote_is_doubted_not_certain.c:2:189 generated
     Return

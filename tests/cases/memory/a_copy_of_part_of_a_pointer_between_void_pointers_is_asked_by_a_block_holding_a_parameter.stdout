@@ -16,10 +16,9 @@ Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_h
   Local "_3" "int **" "b"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "void *" "d"
-  Local "_8" "void *" "s"
-  Local "_9" "void *"
+  Local "_6" "void *" "d"
+  Local "_7" "void *" "s"
+  Local "_8" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:15 generated
     Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:3:15 written "malloc" "bb1"
@@ -49,27 +48,22 @@ Function a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_h
         Deref
       Use
         Copy "_2"
-    Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:5:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:5:5 generated
     Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:11 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_1"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:15 generated
     Operation a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:26 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_3"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:6:30 generated
     ArgumentsEvaluated a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 generated
     Call a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 written "memcpy" "bb5"
-      Destination "_9"
+      Destination "_8"
+      Copy "_6"
       Copy "_7"
-      Copy "_8"
       Constant 4
   Block "bb5"
     Sequenced a_copy_of_part_of_a_pointer_between_void_pointers_is_asked_by_a_block_holding_a_parameter.c:7:5 generated

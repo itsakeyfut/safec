@@ -16,9 +16,6 @@ Function a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "int *"
-  Local "_12" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:5:17 generated
     Call a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:5:17 written "malloc" "bb1"
@@ -112,33 +109,18 @@ Function a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:17:5 generated
     Operation a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:18:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:18:5 generated
     Operation a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:19:5 written
       Destination "_1"
         Deref
       Use
         Copy "_4"
-    Operation a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:19:5 written
-      Destination "_12"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:19:5 generated
     ArgumentsEvaluated a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:20:5 generated
     Call a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:20:5 written "free" "bb13"

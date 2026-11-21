@@ -23,10 +23,9 @@ Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_i
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
-  Local "_12" "int *"
-  Local "_13" "int ***" "t"
-  Local "_14" "int ***"
-  Local "_15" "void *"
+  Local "_12" "int ***" "t"
+  Local "_13" "int ***"
+  Local "_14" "void *"
   Block "bb0" entry
     Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:4:5 generated
       Destination "_0"
@@ -125,25 +124,20 @@ Function a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_i
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:9:5 generated
     Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:16 written
-      Destination "_14"
+      Destination "_13"
       Address
         Place "_3"
     Operation a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:12 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_14"
+        Copy "_13"
     Sequenced a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:10:16 generated
     ArgumentsEvaluated a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 generated
     Call a_pointer_copied_two_dereferences_through_a_local_s_address_and_freed_is_doubted.c:11:5 written "memcpy" "bb11"
-      Destination "_15"
-      Copy "_13"
+      Destination "_14"
+      Copy "_12"
         Deref
       Copy "_5"
       Constant 8

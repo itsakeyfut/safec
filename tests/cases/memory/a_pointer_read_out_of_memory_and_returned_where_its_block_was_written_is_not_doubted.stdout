@@ -11,8 +11,6 @@ Function a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_i
   Local "_5" "int **" "b"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:42 generated
     Call a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:42 written "malloc" "bb1"
@@ -75,22 +73,12 @@ Function a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_i
         Deref
       Use
         Copy "_1"
-    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:112 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:112 generated
     Operation a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:120 written
       Destination "_2"
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:120 written
-      Destination "_9"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:120 generated
     Operation a_pointer_read_out_of_memory_and_returned_where_its_block_was_written_is_not_doubted.c:2:130 written
       Destination "_0"

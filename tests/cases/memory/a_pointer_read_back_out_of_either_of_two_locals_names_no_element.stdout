@@ -14,13 +14,11 @@ Function a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:1:5 
   Local "_11" "int ***" "pe"
   Local "_12" "int ***"
   Local "_13" "int ***"
-  Local "_14" "int ***"
-  Local "_15" "int **" "g"
-  Local "_16" "int *"
-  Local "_17" "int *"
-  Local "_18" "int *" "r"
-  Local "_19" "int **"
-  Local "_20" "int"
+  Local "_14" "int **" "g"
+  Local "_15" "int *"
+  Local "_16" "int *" "r"
+  Local "_17" "int **"
+  Local "_18" "int"
   Block "bb0" entry
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:2:9 written
       Destination "_2"
@@ -85,10 +83,6 @@ Function a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:1:5 
       Destination "_11"
       Use
         Copy "_13"
-    Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:7:12 written
-      Destination "_14"
-      Use
-        Copy "_11"
     Sequenced a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:7:12 generated
     Goto "bb3"
   Block "bb2"
@@ -96,46 +90,41 @@ Function a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:1:5 
     Goto "bb3"
   Block "bb3"
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:8:11 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_11"
           Deref
     Sequenced a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:8:15 generated
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:9:10 written
-      Destination "_16"
+      Destination "_15"
       Address
         Place "_2"
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:9:5 written
-      Destination "_15"
+      Destination "_14"
         Deref
       Use
-        Copy "_16"
-    Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:9:5 written
-      Destination "_17"
-      Use
         Copy "_15"
-          Deref
     Sequenced a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:9:5 generated
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:10:14 generated
-      Destination "_19"
+      Destination "_17"
       Address
         Place "_3"
           Index
             Constant 0
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:10:10 written
-      Destination "_18"
+      Destination "_16"
       Use
-        Copy "_19"
+        Copy "_17"
           Deref
     Sequenced a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:10:14 generated
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:11:12 written
-      Destination "_20"
+      Destination "_18"
       Binary "Eq"
-        Copy "_18"
+        Copy "_16"
         Constant 0
     Operation a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:11:5 written
       Destination "_0"
       Use
-        Copy "_20"
+        Copy "_18"
     Sequenced a_pointer_read_back_out_of_either_of_two_locals_names_no_element.c:11:12 generated
     Return

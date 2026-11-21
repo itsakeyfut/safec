@@ -17,10 +17,9 @@ Function a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:2:5 "
   Local "_6" "int **" "n"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "int *"
-  Local "_10" "void *"
-  Local "_11" "int *" "r"
-  Local "_12" "int"
+  Local "_9" "void *"
+  Local "_10" "int *" "r"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:3:15 generated
     Call a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:3:15 written "malloc" "bb1"
@@ -87,11 +86,6 @@ Function a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:2:5 "
         Deref
       Use
         Copy "_2"
-    Operation a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:5:12 written
-      Destination "_9"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:5:12 generated
     Goto "bb11"
   Block "bb10"
@@ -100,24 +94,24 @@ Function a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:2:5 "
   Block "bb11"
     ArgumentsEvaluated a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:6:5 generated
     Call a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:6:5 written "memcpy" "bb12"
-      Destination "_10"
+      Destination "_9"
       Copy "_6"
       Copy "_3"
       Constant 8
   Block "bb12"
     Sequenced a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:6:5 generated
     Operation a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
           Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:14 generated
     Operation a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:22 written
-      Destination "_12"
+      Destination "_11"
       Unary "Not"
-        Copy "_11"
+        Copy "_10"
     Branch a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:22 written "bb13" "bb14"
-      Copy "_12"
+      Copy "_11"
   Block "bb13"
     Sequenced a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:22 generated
     Operation a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:7:26 written
@@ -133,7 +127,7 @@ Function a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:2:5 "
     Operation a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:8:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
           Deref
     Sequenced a_copy_out_of_a_block_written_on_one_path_is_doubted_where_read.c:8:12 generated
     Return

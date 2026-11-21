@@ -11,12 +11,10 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
   Local "_1" "int" parameter "c"
   Local "_2" "int **" "pp"
   Local "_3" "int **"
-  Local "_4" "int **"
-  Local "_5" "void *"
-  Local "_6" "int **"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int *" "q"
   Local "_7" "int"
-  Local "_8" "int *" "q"
-  Local "_9" "int"
   Block "bb0" entry
     Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 written "bb1" "bb2"
       Copy "_1"
@@ -29,36 +27,28 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 generated
     ArgumentsEvaluated a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 generated
     Call a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:14 written "malloc" "bb5"
-      Destination "_5"
+      Destination "_4"
       Constant 8
   Block "bb3"
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:11:9 written
-      Destination "_7"
+      Destination "_5"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:11:9 written "bb6" "bb7"
-      Copy "_7"
+      Copy "_5"
   Block "bb4"
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:9 written
       Destination "_2"
       Use
         Copy "_3"
-    Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:9 written
-      Destination "_4"
-      Use
-        Copy "_2"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:7:9 generated
     Goto "bb3"
   Block "bb5"
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:9 written
       Destination "_2"
       Use
-        Copy "_5"
-    Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
+        Copy "_4"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:9:9 generated
     Goto "bb3"
   Block "bb6"
@@ -74,18 +64,18 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
     Goto "bb8"
   Block "bb8"
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:14:10 written
-      Destination "_8"
+      Destination "_6"
       Use
         Copy "_2"
           Deref
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:14:14 generated
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 written
-      Destination "_9"
+      Destination "_7"
       Binary "Eq"
-        Copy "_8"
+        Copy "_6"
         Constant 0
     Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 written "bb9" "bb10"
-      Copy "_9"
+      Copy "_7"
   Block "bb9"
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:15:9 generated
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:16:9 written
@@ -105,7 +95,7 @@ Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_al
     Operation a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:19:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_6"
           Deref
     Sequenced a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:19:12 generated
     Return

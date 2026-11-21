@@ -16,9 +16,8 @@ Function a_partial_pointer_copied_into_a_returned_block_is_reported.c:4:8 "retur
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "void **" "q"
-  Local "_6" "void *"
-  Local "_7" "int *"
-  Local "_8" "void *"
+  Local "_6" "int *"
+  Local "_7" "void *"
   Block "bb0" entry
     Operation a_partial_pointer_copied_into_a_returned_block_is_reported.c:5:9 written
       Destination "_1"
@@ -63,21 +62,16 @@ Function a_partial_pointer_copied_into_a_returned_block_is_reported.c:4:8 "retur
         Deref
       Use
         Constant 0
-    Operation a_partial_pointer_copied_into_a_returned_block_is_reported.c:9:5 written
-      Destination "_6"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_partial_pointer_copied_into_a_returned_block_is_reported.c:9:5 generated
     Operation a_partial_pointer_copied_into_a_returned_block_is_reported.c:10:15 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_1"
     ArgumentsEvaluated a_partial_pointer_copied_into_a_returned_block_is_reported.c:10:5 generated
     Call a_partial_pointer_copied_into_a_returned_block_is_reported.c:10:5 written "memcpy" "bb5"
-      Destination "_8"
+      Destination "_7"
       Copy "_2"
-      Copy "_7"
+      Copy "_6"
       Constant 4
   Block "bb5"
     Sequenced a_partial_pointer_copied_into_a_returned_block_is_reported.c:10:5 generated

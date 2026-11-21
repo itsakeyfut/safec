@@ -1418,8 +1418,8 @@ pub(super) struct Held {
     /// it then reads the element it wrote, whichever that is.
     ///
     /// **What keeps the lowering's own read of an assignment's value from
-    /// being doubted** (#667): `*e = &x;` reads `*e` back as the value of the
-    /// expression, and with `e` moved through a loop the element is not
+    /// being doubted** (#667): `t = *e = &x;` reads `*e` back as the value of
+    /// the expression, and with `e` moved through a loop the element is not
     /// known, so the write left the array [`Known::written`] and the
     /// read back of it was a doubt about the element just written. Held by
     /// the pointer, so a new value for it clears it and a copy of it keeps

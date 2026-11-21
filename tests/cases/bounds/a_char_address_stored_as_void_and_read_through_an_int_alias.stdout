@@ -11,10 +11,8 @@ Function a_char_address_stored_as_void_and_read_through_an_int_alias.c:2:5 "main
   Local "_5" "void **" "as_void"
   Local "_6" "int **" "slot"
   Local "_7" "char *"
-  Local "_8" "void *"
-  Local "_9" "int *" "q"
-  Local "_10" "int"
-  Local "_11" "int"
+  Local "_8" "int *" "q"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:2:5 generated
       Destination "_0"
@@ -73,25 +71,20 @@ Function a_char_address_stored_as_void_and_read_through_an_int_alias.c:2:5 "main
         Deref
       Use
         Copy "_7"
-    Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:8:5 written
-      Destination "_8"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_char_address_stored_as_void_and_read_through_an_int_alias.c:8:5 generated
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:9:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_6"
           Deref
     Sequenced a_char_address_stored_as_void_and_read_through_an_int_alias.c:9:14 generated
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:10:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 0
     Branch a_char_address_stored_as_void_and_read_through_an_int_alias.c:10:9 written "bb5" "bb6"
-      Copy "_10"
+      Copy "_9"
   Block "bb5"
     Sequenced a_char_address_stored_as_void_and_read_through_an_int_alias.c:10:9 generated
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:10:19 written
@@ -105,15 +98,10 @@ Function a_char_address_stored_as_void_and_read_through_an_int_alias.c:2:5 "main
     Goto "bb7"
   Block "bb7"
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:11:5 written
-      Destination "_9"
+      Destination "_8"
         Deref
       Use
         Constant 1
-    Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:11:5 written
-      Destination "_11"
-      Use
-        Copy "_9"
-          Deref
     Sequenced a_char_address_stored_as_void_and_read_through_an_int_alias.c:11:5 generated
     Operation a_char_address_stored_as_void_and_read_through_an_int_alias.c:12:5 written
       Destination "_0"

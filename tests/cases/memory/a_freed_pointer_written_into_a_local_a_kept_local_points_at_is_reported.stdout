@@ -19,8 +19,6 @@ Function a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int *"
   Block "bb0" entry
     Operation a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:8:11 written
       Destination "_3"
@@ -63,10 +61,6 @@ Function a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported
       Destination "_2"
       Use
         Copy "_7"
-    Operation a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:11:5 written
-      Destination "_8"
-      Use
-        Copy "_2"
     Sequenced a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:11:5 generated
     ArgumentsEvaluated a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:12:5 generated
     Call a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:12:5 written "free" "bb6"
@@ -77,10 +71,6 @@ Function a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported
       Destination "_1"
       Use
         Copy "_4"
-    Operation a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:13:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
     Sequenced a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:13:5 generated
     ArgumentsEvaluated a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:14:5 generated
     Call a_freed_pointer_written_into_a_local_a_kept_local_points_at_is_reported.c:14:5 written "use_kept" "bb7"

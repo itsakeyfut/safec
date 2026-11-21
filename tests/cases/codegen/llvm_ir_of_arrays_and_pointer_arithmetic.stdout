@@ -62,14 +62,12 @@ entry:
   %_3 = alloca ptr
   %_4 = alloca ptr
   %_5 = alloca ptr
-  %_6 = alloca i32
+  %_6 = alloca ptr
   %_7 = alloca ptr
   %_8 = alloca ptr
   %_9 = alloca ptr
   %_10 = alloca ptr
   %_11 = alloca i32
-  %_12 = alloca ptr
-  %_13 = alloca i32
   br label %bb0
 
 bb0:
@@ -86,34 +84,28 @@ bb0:
   store ptr %t5, ptr %_5
   %t6 = load ptr, ptr %_5
   store i32 4, ptr %t6
-  %t7 = load ptr, ptr %_5
-  %t8 = load i32, ptr %t7
-  store i32 %t8, ptr %_6
-  %t9 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
+  %t7 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
+  store ptr %t7, ptr %_6
+  %t8 = load ptr, ptr %_6
+  %t9 = getelementptr [3 x i32], ptr %t8, i64 1
   store ptr %t9, ptr %_7
   %t10 = load ptr, ptr %_7
-  %t11 = getelementptr [3 x i32], ptr %t10, i64 1
-  store ptr %t11, ptr %_8
-  %t12 = load ptr, ptr %_8
+  store ptr %t10, ptr %_8
+  %t11 = load ptr, ptr %_8
+  %t12 = getelementptr i32, ptr %t11, i64 2
   store ptr %t12, ptr %_9
   %t13 = load ptr, ptr %_9
-  %t14 = getelementptr i32, ptr %t13, i64 2
+  store i32 5, ptr %t13
+  %t14 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
   store ptr %t14, ptr %_10
   %t15 = load ptr, ptr %_10
-  store i32 5, ptr %t15
-  %t16 = load ptr, ptr %_10
-  %t17 = load i32, ptr %t16
-  store i32 %t17, ptr %_11
-  %t18 = getelementptr [2 x [3 x i32]], ptr %_1, i64 0, i64 0
-  store ptr %t18, ptr %_12
-  %t19 = load ptr, ptr %_12
-  %t20 = call i32 @pick(ptr %t19, i32 1, i8 2)
-  store i32 %t20, ptr %_13
+  %t16 = call i32 @pick(ptr %t15, i32 1, i8 2)
+  store i32 %t16, ptr %_11
   br label %bb1
 
 bb1:
-  %t21 = load i32, ptr %_13
-  store i32 %t21, ptr %_0
-  %t22 = load i32, ptr %_0
-  ret i32 %t22
+  %t17 = load i32, ptr %_11
+  store i32 %t17, ptr %_0
+  %t18 = load i32, ptr %_0
+  ret i32 %t18
 }

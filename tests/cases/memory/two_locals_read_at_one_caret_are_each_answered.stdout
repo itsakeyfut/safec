@@ -10,7 +10,6 @@ Function two_locals_read_at_one_caret_are_each_answered.c:2:5 "f"
   Local "_3" "int *" parameter _Nonnull "q"
   Local "_4" "int *" "r"
   Local "_5" "int *" "p"
-  Local "_6" "int *"
   Block "bb0" entry
     Branch two_locals_read_at_one_caret_are_each_answered.c:5:9 written "bb1" "bb2"
       Copy "_1"
@@ -20,10 +19,6 @@ Function two_locals_read_at_one_caret_are_each_answered.c:2:5 "f"
       Destination "_5"
       Use
         Copy "_3"
-    Operation two_locals_read_at_one_caret_are_each_answered.c:5:12 written
-      Destination "_6"
-      Use
-        Copy "_5"
     Sequenced two_locals_read_at_one_caret_are_each_answered.c:5:12 generated
     Goto "bb3"
   Block "bb2"

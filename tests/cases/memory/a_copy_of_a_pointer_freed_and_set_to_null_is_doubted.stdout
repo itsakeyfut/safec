@@ -11,7 +11,6 @@ Function a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:4:6 "f"
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int *" "q"
-  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:5:14 generated
     Call a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:5:14 written "malloc" "bb1"
@@ -51,9 +50,5 @@ Function a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:4:6 "f"
       Destination "_2"
       Use
         Constant 0
-    Operation a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:9:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:9:9 generated
     Goto "bb4"

@@ -11,13 +11,12 @@ Function a_local_copied_past_its_end_is_doubted_where_read.c:2:5 "f"
   Local "_3" "int **" "pp"
   Local "_4" "int **"
   Local "_5" "int **"
-  Local "_6" "int **"
-  Local "_7" "int *" "px"
-  Local "_8" "int *"
-  Local "_9" "int **"
-  Local "_10" "void *"
-  Local "_11" "int *" "q"
-  Local "_12" "int"
+  Local "_6" "int *" "px"
+  Local "_7" "int *"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int *" "q"
+  Local "_11" "int"
   Block "bb0" entry
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:3:9 written
       Destination "_1"
@@ -42,45 +41,41 @@ Function a_local_copied_past_its_end_is_doubted_where_read.c:2:5 "f"
       Destination "_3"
       Use
         Copy "_5"
-    Operation a_local_copied_past_its_end_is_doubted_where_read.c:6:5 written
-      Destination "_6"
-      Use
-        Copy "_3"
     Sequenced a_local_copied_past_its_end_is_doubted_where_read.c:6:5 generated
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:7:15 written
-      Destination "_8"
+      Destination "_7"
       Address
         Place "_1"
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:7:10 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_local_copied_past_its_end_is_doubted_where_read.c:7:15 generated
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:8:16 written
-      Destination "_9"
+      Destination "_8"
       Address
-        Place "_7"
+        Place "_6"
     ArgumentsEvaluated a_local_copied_past_its_end_is_doubted_where_read.c:8:5 generated
     Call a_local_copied_past_its_end_is_doubted_where_read.c:8:5 written "memcpy" "bb1"
-      Destination "_10"
+      Destination "_9"
       Copy "_3"
-      Copy "_9"
+      Copy "_8"
       Constant 8
   Block "bb1"
     Sequenced a_local_copied_past_its_end_is_doubted_where_read.c:8:5 generated
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:9:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_2"
     Sequenced a_local_copied_past_its_end_is_doubted_where_read.c:9:14 generated
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:10:12 written
-      Destination "_12"
+      Destination "_11"
       Binary "Ne"
-        Copy "_11"
+        Copy "_10"
         Constant 0
     Operation a_local_copied_past_its_end_is_doubted_where_read.c:10:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_local_copied_past_its_end_is_doubted_where_read.c:10:12 generated
     Return

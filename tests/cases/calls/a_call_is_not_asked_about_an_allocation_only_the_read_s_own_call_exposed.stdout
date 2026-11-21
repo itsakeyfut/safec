@@ -16,8 +16,6 @@ Function a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_expose
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
-  Local "_9" "int"
   Block "bb0" entry
     Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:5:5 generated
       Destination "_0"
@@ -57,32 +55,23 @@ Function a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_expose
         Deref
       Use
         Constant 1
-    Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:11:5 written
-      Destination "_5"
-      Use
-        Copy "_2"
-          Deref
     Sequenced a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:11:5 generated
     Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:9 written "keep" "bb5"
-      Destination "_6"
+      Destination "_5"
       Copy "_2"
   Block "bb5"
     Call a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:19 written "release_all" "bb6"
-      Destination "_7"
+      Destination "_6"
   Block "bb6"
     Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:9 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
+        Copy "_5"
         Copy "_6"
-        Copy "_7"
     Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:5 written
       Destination "_1"
       Use
-        Copy "_8"
-    Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:5 written
-      Destination "_9"
-      Use
-        Copy "_1"
+        Copy "_7"
     Sequenced a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:12:5 generated
     Operation a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed.c:13:5 written
       Destination "_0"

@@ -13,19 +13,14 @@ Function a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int *"
-  Local "_7" "int *"
-  Local "_8" "int" "i"
-  Local "_9" "int"
-  Local "_10" "int *" "q"
-  Local "_11" "int *"
-  Local "_12" "int *"
-  Local "_13" "int *"
+  Local "_7" "int" "i"
+  Local "_8" "int"
+  Local "_9" "int *" "q"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "int *" "z"
+  Local "_13" "int" "r"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int *" "z"
-  Local "_17" "int" "r"
-  Local "_18" "int"
-  Local "_19" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:5:17 generated
     Call a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:5:17 written "malloc" "bb1"
@@ -67,46 +62,37 @@ Function a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.
         Deref
       Use
         Copy "_6"
-    Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:7:5 written
-      Destination "_7"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:7:5 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:8:9 written
-      Destination "_8"
+      Destination "_7"
       Use
         Constant 0
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:8:13 generated
     Goto "bb5"
   Block "bb5"
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:9:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Lt"
-        Copy "_8"
+        Copy "_7"
         Copy "_1"
     Branch a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:9:12 written "bb6" "bb7"
-      Copy "_9"
+      Copy "_8"
   Block "bb6"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:9:12 generated
-    StorageLive a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:10:9 generated "_10"
+    StorageLive a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:10:9 generated "_9"
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:10:14 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:10:18 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:11:13 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
-        Copy "_10"
+        Copy "_9"
         Constant 1
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:11:9 written
-      Destination "_10"
-      Use
-        Copy "_11"
-    Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:11:9 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_10"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:11:9 generated
@@ -114,60 +100,47 @@ Function a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.
       Destination "_3"
         Deref
       Use
-        Copy "_10"
-    Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:12:9 written
-      Destination "_13"
-      Use
-        Copy "_3"
-          Deref
+        Copy "_9"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:12:9 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:13:13 written
-      Destination "_14"
+      Destination "_11"
       Binary "Add"
-        Copy "_8"
+        Copy "_7"
         Constant 1
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:13:9 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_14"
-    Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:13:9 written
-      Destination "_15"
-      Use
-        Copy "_8"
+        Copy "_11"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:13:9 generated
-    StorageDead a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:14:5 generated "_10"
+    StorageDead a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:14:5 generated "_9"
     Goto "bb5"
   Block "bb7"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:9:12 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:15:10 written
-      Destination "_16"
+      Destination "_12"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:15:14 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:16:9 written
-      Destination "_17"
+      Destination "_13"
       Use
         Constant 0
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:16:13 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:9 written
-      Destination "_18"
+      Destination "_14"
       Binary "Ne"
-        Copy "_16"
+        Copy "_12"
         Constant 0
     Branch a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:9 written "bb8" "bb9"
-      Copy "_18"
+      Copy "_14"
   Block "bb8"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:9 generated
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:17 written
-      Destination "_17"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_12"
           Deref
-    Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:17 written
-      Destination "_19"
-      Use
-        Copy "_17"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:17:17 generated
     Goto "bb10"
   Block "bb9"
@@ -177,6 +150,6 @@ Function a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.
     Operation a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:18:5 written
       Destination "_0"
       Use
-        Copy "_17"
+        Copy "_13"
     Sequenced a_pointer_a_loop_moves_and_stores_back_into_a_block_reaches_a_fixpoint.c:18:12 generated
     Return

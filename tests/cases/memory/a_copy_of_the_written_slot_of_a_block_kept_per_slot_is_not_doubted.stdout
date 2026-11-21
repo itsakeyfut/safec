@@ -14,8 +14,7 @@ Function a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:
   Local "_3" "int **" "b"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int *"
-  Local "_7" "void *"
+  Local "_6" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:59 generated
     Call a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:59 written "malloc" "bb1"
@@ -45,15 +44,10 @@ Function a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:
         Deref
       Use
         Copy "_2"
-    Operation a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:87 written
-      Destination "_6"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:87 generated
     ArgumentsEvaluated a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:97 generated
     Call a_copy_of_the_written_slot_of_a_block_kept_per_slot_is_not_doubted.c:2:97 written "memcpy" "bb5"
-      Destination "_7"
+      Destination "_6"
       Copy "_1"
       Copy "_3"
       Constant 8

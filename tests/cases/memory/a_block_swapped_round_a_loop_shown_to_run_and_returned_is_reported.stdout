@@ -11,10 +11,8 @@ Function a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:2:
   Local "_5" "int" "i"
   Local "_6" "int"
   Local "_7" "int **" "t"
-  Local "_8" "int **"
-  Local "_9" "int **"
-  Local "_10" "int"
-  Local "_11" "int"
+  Local "_8" "int"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:3:15 generated
     Call a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:3:15 written "malloc" "bb1"
@@ -76,34 +74,26 @@ Function a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:2:
       Destination "_1"
       Use
         Copy "_4"
-    Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:8:9 written
-      Destination "_8"
-      Use
-        Copy "_1"
     Sequenced a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:8:9 generated
     Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:9:9 written
       Destination "_4"
       Use
         Copy "_7"
-    Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:9:9 written
-      Destination "_9"
-      Use
-        Copy "_4"
     Sequenced a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:9:9 generated
     StorageDead a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:10:5 generated "_7"
     Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:6:28 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_5"
     Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:6:28 written
-      Destination "_11"
+      Destination "_9"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:6:28 written
       Destination "_5"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_block_swapped_round_a_loop_shown_to_run_and_returned_is_reported.c:6:28 generated
     Goto "bb5"
   Block "bb7"

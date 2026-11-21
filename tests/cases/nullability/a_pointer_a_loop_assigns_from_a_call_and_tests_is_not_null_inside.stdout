@@ -9,7 +9,6 @@ Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:2:5
   Local "_3" "int *"
   Local "_4" "int *"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:3:9 written
       Destination "_2"
@@ -45,10 +44,6 @@ Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:2:5
       Destination "_2"
       Use
         Copy "_5"
-    Operation a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:5:9 written
-      Destination "_6"
-      Use
-        Copy "_2"
     Sequenced a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:5:9 generated
     Goto "bb1"
   Block "bb4"

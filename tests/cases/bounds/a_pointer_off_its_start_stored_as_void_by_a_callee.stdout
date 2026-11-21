@@ -6,7 +6,6 @@ Function a_pointer_off_its_start_stored_as_void_by_a_callee.c:1:6 "put"
   Local "_3" "int"
   Local "_4" "int"
   Local "_5" "int *"
-  Local "_6" "void *"
   Block "bb0" entry
     Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:2:9 written
       Destination "_3"
@@ -41,11 +40,6 @@ Function a_pointer_off_its_start_stored_as_void_by_a_callee.c:1:6 "put"
         Deref
       Use
         Copy "_5"
-    Operation a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 written
-      Destination "_6"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_pointer_off_its_start_stored_as_void_by_a_callee.c:4:13 generated
     Goto "bb6"
   Block "bb5"

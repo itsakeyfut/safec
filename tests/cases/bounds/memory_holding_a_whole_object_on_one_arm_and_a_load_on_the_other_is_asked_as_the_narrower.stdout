@@ -8,7 +8,6 @@ Function memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_ask
   Local "_2" "int"
   Local "_3" "int *" "p"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:4:9 written
       Destination "_2"
@@ -45,11 +44,6 @@ Function memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_ask
         Deref
       Use
         Constant 1
-    Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:7:13 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:7:13 generated
     Goto "bb6"
   Block "bb5"
@@ -69,9 +63,7 @@ Function memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_ask
   Local "_7" "void **" "m"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "void *"
-  Local "_11" "void *"
-  Local "_12" "void *" "pm"
+  Local "_10" "void *" "pm"
   Block "bb0" entry
     Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:13:9 written
       Destination "_3"
@@ -136,11 +128,6 @@ Function memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_ask
         Deref
       Use
         Copy "_4"
-    Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:23:9 written
-      Destination "_10"
-      Use
-        Copy "_7"
-          Deref
     Sequenced memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:23:9 generated
     Goto "bb11"
   Block "bb10"
@@ -150,22 +137,17 @@ Function memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_ask
         Deref
       Use
         Copy "_5"
-    Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:25:9 written
-      Destination "_11"
-      Use
-        Copy "_7"
-          Deref
     Sequenced memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:25:9 generated
     Goto "bb11"
   Block "bb11"
     Operation memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:27:11 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_7"
     Sequenced memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:27:16 generated
     ArgumentsEvaluated memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:28:5 generated
     Call memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:28:5 written "use" "bb12"
-      Copy "_12"
+      Copy "_10"
   Block "bb12"
     Sequenced memory_holding_a_whole_object_on_one_arm_and_a_load_on_the_other_is_asked_as_the_narrower.c:28:5 generated
     Return

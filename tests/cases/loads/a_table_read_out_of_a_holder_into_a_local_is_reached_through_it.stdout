@@ -16,9 +16,7 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
   Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int **"
-  Local "_11" "int *"
-  Local "_12" "int **" "t"
+  Local "_10" "int **" "t"
   Block "bb0" entry
     Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 generated
       Destination "_0"
@@ -116,32 +114,22 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
         Deref
       Use
         Copy "_4"
-    Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:17:5 written
-      Destination "_10"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:17:5 generated
     Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:18:5 written
       Destination "_4"
         Deref
       Use
         Copy "_7"
-    Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:18:5 written
-      Destination "_11"
-      Use
-        Copy "_4"
-          Deref
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:18:5 generated
     Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:19:11 written
-      Destination "_12"
+      Destination "_10"
       Use
         Copy "_1"
           Deref
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:19:15 generated
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated
     Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 written "drop_inner" "bb13"
-      Copy "_12"
+      Copy "_10"
   Block "bb13"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated
     Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:21:5 written

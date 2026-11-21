@@ -25,57 +25,45 @@ Function memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:8:
   Local "_2" "int" "r"
   Local "_3" "int *" "a"
   Local "_4" "int *" "holder"
-  Local "_5" "int *"
-  Local "_6" "int **"
-  Local "_7" "void *"
-  Local "_8" "int *"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
-  Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "void *"
-  Local "_15" "int"
+  Local "_11" "void *"
   Block "bb0" entry
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:13:5 written
       Destination "_4"
       Use
         Constant 0
-    Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:13:5 written
-      Destination "_5"
-      Use
-        Copy "_4"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:13:5 generated
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:14:11 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_4"
     ArgumentsEvaluated memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:14:5 generated
     Call memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:14:5 written "stash" "bb1"
-      Copy "_6"
+      Copy "_5"
   Block "bb1"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:14:5 generated
     ArgumentsEvaluated memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:15:9 generated
     Call memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:15:9 written "malloc" "bb2"
-      Destination "_7"
+      Destination "_6"
       Constant 4
   Block "bb2"
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:15:5 written
       Destination "_3"
       Use
-        Copy "_7"
-    Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:15:5 written
-      Destination "_8"
-      Use
-        Copy "_3"
+        Copy "_6"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:15:5 generated
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:16:9 written
-      Destination "_9"
+      Destination "_7"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:16:9 written "bb3" "bb4"
-      Copy "_9"
+      Copy "_7"
   Block "bb3"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:16:9 generated
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:17:9 written
@@ -93,14 +81,9 @@ Function memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:8:
         Deref
       Use
         Constant 1
-    Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:19:5 written
-      Destination "_10"
-      Use
-        Copy "_3"
-          Deref
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:19:5 generated
     Call memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:7 written "release_all" "bb6"
-      Destination "_11"
+      Destination "_8"
   Block "bb6"
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:24 written
       Destination "_1"
@@ -108,34 +91,30 @@ Function memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:8:
         Copy "_3"
           Deref
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:24 written
-      Destination "_12"
+      Destination "_9"
       Use
         Copy "_1"
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:7 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
-        Copy "_11"
-        Copy "_12"
+        Copy "_8"
+        Copy "_9"
     Call memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:35 written "memset" "bb7"
-      Destination "_14"
+      Destination "_11"
       Copy "_3"
       Constant 0
       Constant 4
   Block "bb7"
     ArgumentsEvaluated memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:5 generated
     Call memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:5 written "g" "bb8"
-      Copy "_13"
-      Copy "_14"
+      Copy "_10"
+      Copy "_11"
   Block "bb8"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:20:5 generated
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:21:5 written
       Destination "_2"
       Use
         Constant 0
-    Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:21:5 written
-      Destination "_15"
-      Use
-        Copy "_2"
     Sequenced memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:21:5 generated
     Operation memset_in_a_call_whose_next_block_clears_the_reads_reports_nothing.c:22:5 written
       Destination "_0"

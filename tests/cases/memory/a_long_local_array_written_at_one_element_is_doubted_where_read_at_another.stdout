@@ -5,11 +5,10 @@ Function a_long_local_array_written_at_one_element_is_doubted_where_read_at_anot
   Local "_2" "int *[100]" "a"
   Local "_3" "int **"
   Local "_4" "int *"
-  Local "_5" "int *"
-  Local "_6" "int *" "t"
+  Local "_5" "int *" "t"
+  Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int **"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:4:9 written
       Destination "_1"
@@ -31,37 +30,32 @@ Function a_long_local_array_written_at_one_element_is_doubted_where_read_at_anot
         Deref
       Use
         Copy "_4"
-    Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:6:5 written
-      Destination "_5"
-      Use
-        Copy "_3"
-          Deref
     Sequenced a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:6:5 generated
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:7:14 generated
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:7:14 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
-        Copy "_7"
+        Copy "_6"
         Constant 5
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:7:10 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_8"
+        Copy "_7"
           Deref
     Sequenced a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:7:14 generated
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:8:12 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Operation a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:8:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_long_local_array_written_at_one_element_is_doubted_where_read_at_another.c:8:12 generated
     Return

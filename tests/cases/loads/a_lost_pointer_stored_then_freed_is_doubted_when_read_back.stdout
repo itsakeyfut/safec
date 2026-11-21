@@ -14,17 +14,12 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
   Local "_5" "int *" "q"
   Local "_6" "int" "i"
   Local "_7" "int"
-  Local "_8" "int *"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *" "r"
   Local "_12" "int"
-  Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *"
-  Local "_16" "int *" "r"
-  Local "_17" "int"
-  Local "_18" "int" "v"
+  Local "_13" "int" "v"
   Block "bb0" entry
     ArgumentsEvaluated a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:4:17 generated
     Call a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:4:17 written "malloc" "bb1"
@@ -84,14 +79,10 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
-    Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:10:9 written
-      Destination "_8"
-      Use
-        Copy "_4"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:10:9 generated
     ArgumentsEvaluated a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:11:13 generated
     Call a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:11:13 written "malloc" "bb8"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb7"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:9:12 generated
@@ -100,11 +91,6 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
         Deref
       Use
         Copy "_4"
-    Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:16:5 written
-      Destination "_15"
-      Use
-        Copy "_1"
-          Deref
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:16:5 generated
     ArgumentsEvaluated a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:17:5 generated
     Call a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:17:5 written "free" "bb12"
@@ -113,18 +99,14 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:11:9 written
       Destination "_5"
       Use
-        Copy "_9"
-    Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:11:9 written
-      Destination "_10"
-      Use
-        Copy "_5"
+        Copy "_8"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:11:9 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:12:13 written
-      Destination "_11"
+      Destination "_9"
       Unary "Not"
         Copy "_5"
     Branch a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:12:13 written "bb9" "bb10"
-      Copy "_11"
+      Copy "_9"
   Block "bb9"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:12:13 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:12:17 written
@@ -142,41 +124,32 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
         Deref
       Use
         Constant 1
-    Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:13:9 written
-      Destination "_12"
-      Use
-        Copy "_5"
-          Deref
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:13:9 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:14:13 written
-      Destination "_13"
+      Destination "_10"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:14:9 written
       Destination "_6"
       Use
-        Copy "_13"
-    Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:14:9 written
-      Destination "_14"
-      Use
-        Copy "_6"
+        Copy "_10"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:14:9 generated
     Goto "bb5"
   Block "bb12"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:17:5 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:18:10 written
-      Destination "_16"
+      Destination "_11"
       Use
         Copy "_1"
           Deref
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:18:14 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:19:9 written
-      Destination "_17"
+      Destination "_12"
       Unary "Not"
-        Copy "_16"
+        Copy "_11"
     Branch a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:19:9 written "bb13" "bb14"
-      Copy "_17"
+      Copy "_12"
   Block "bb13"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:19:9 generated
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:19:13 written
@@ -190,9 +163,9 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
     Goto "bb15"
   Block "bb15"
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:20:9 written
-      Destination "_18"
+      Destination "_13"
       Use
-        Copy "_16"
+        Copy "_11"
           Deref
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:20:13 generated
     ArgumentsEvaluated a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:21:5 generated
@@ -208,6 +181,6 @@ Function a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:3:5 "f"
     Operation a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:23:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_13"
     Sequenced a_lost_pointer_stored_then_freed_is_doubted_when_read_back.c:23:12 generated
     Return

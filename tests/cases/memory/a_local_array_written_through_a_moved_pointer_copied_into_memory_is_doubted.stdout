@@ -18,10 +18,9 @@ Function a_local_array_written_through_a_moved_pointer_copied_into_memory_is_dou
   Local "_10" "int **" "f"
   Local "_11" "int ***"
   Local "_12" "int *"
-  Local "_13" "int *"
-  Local "_14" "int *" "r"
-  Local "_15" "int **"
-  Local "_16" "int"
+  Local "_13" "int *" "r"
+  Local "_14" "int **"
+  Local "_15" "int"
   Block "bb0" entry
     Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:3:5 generated
       Destination "_0"
@@ -87,32 +86,27 @@ Function a_local_array_written_through_a_moved_pointer_copied_into_memory_is_dou
         Deref
       Use
         Copy "_12"
-    Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:10:5 written
-      Destination "_13"
-      Use
-        Copy "_10"
-          Deref
     Sequenced a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:10:5 generated
     Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:11:14 generated
-      Destination "_15"
+      Destination "_14"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:11:10 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_15"
+        Copy "_14"
           Deref
     Sequenced a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:11:14 generated
     Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:12:12 written
-      Destination "_16"
+      Destination "_15"
       Binary "Eq"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Operation a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:12:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
     Sequenced a_local_array_written_through_a_moved_pointer_copied_into_memory_is_doubted.c:12:12 generated
     Return

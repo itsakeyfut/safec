@@ -20,9 +20,7 @@ Function a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:5:5 "f
   Local "_7" "int"
   Local "_8" "int **" "c"
   Local "_9" "int **"
-  Local "_10" "int **"
-  Local "_11" "int *" "t"
-  Local "_12" "int"
+  Local "_10" "int *" "t"
   Block "bb0" entry
     Operation a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:6:9 written
       Destination "_2"
@@ -84,10 +82,6 @@ Function a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:5:5 "f
       Destination "_8"
       Use
         Copy "_9"
-    Operation a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:14:9 written
-      Destination "_10"
-      Use
-        Copy "_8"
     Sequenced a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:14:9 generated
     Goto "bb7"
   Block "bb6"
@@ -95,7 +89,7 @@ Function a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:5:5 "f
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:16:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_8"
           Deref
@@ -105,15 +99,10 @@ Function a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:5:5 "f
   Block "bb8"
     Sequenced a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:17:9 generated
     Operation a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:18:9 written
-      Destination "_11"
+      Destination "_10"
         Deref
       Use
         Constant 1
-    Operation a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:18:9 written
-      Destination "_12"
-      Use
-        Copy "_11"
-          Deref
     Sequenced a_pointer_read_through_what_may_be_a_locals_address_is_doubted.c:18:9 generated
     Goto "bb10"
   Block "bb9"

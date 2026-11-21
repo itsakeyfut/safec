@@ -13,8 +13,6 @@ Function a_pointer_three_levels_through_locals_is_asked_at_the_last.c:3:5 "main"
   Local "_7" "int ***" "ppv"
   Local "_8" "int ***"
   Local "_9" "int *"
-  Local "_10" "int *"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_pointer_three_levels_through_locals_is_asked_at_the_last.c:3:5 generated
       Destination "_0"
@@ -81,10 +79,6 @@ Function a_pointer_three_levels_through_locals_is_asked_at_the_last.c:3:5 "main"
       Destination "_4"
       Use
         Copy "_9"
-    Operation a_pointer_three_levels_through_locals_is_asked_at_the_last.c:11:5 written
-      Destination "_10"
-      Use
-        Copy "_4"
     Sequenced a_pointer_three_levels_through_locals_is_asked_at_the_last.c:11:5 generated
     Operation a_pointer_three_levels_through_locals_is_asked_at_the_last.c:12:5 written
       Destination "_7"
@@ -93,13 +87,6 @@ Function a_pointer_three_levels_through_locals_is_asked_at_the_last.c:3:5 "main"
             Deref
       Use
         Constant 1
-    Operation a_pointer_three_levels_through_locals_is_asked_at_the_last.c:12:5 written
-      Destination "_11"
-      Use
-        Copy "_7"
-          Deref
-            Deref
-              Deref
     Sequenced a_pointer_three_levels_through_locals_is_asked_at_the_last.c:12:5 generated
     Operation a_pointer_three_levels_through_locals_is_asked_at_the_last.c:13:5 written
       Destination "_0"

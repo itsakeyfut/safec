@@ -10,7 +10,6 @@ Function a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_i
   Local "_3" "int" "x"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:5:14 generated
     Call a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:5:14 written "maybe" "bb1"
@@ -42,7 +41,7 @@ Function a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_i
     Goto "bb4"
   Block "bb4"
     Operation a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:10:12 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Copy "_1"
           Deref
@@ -50,7 +49,7 @@ Function a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_i
     Operation a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:10:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:10:12 generated
     Return
   Block "bb5"
@@ -59,9 +58,5 @@ Function a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_i
       Destination "_3"
       Use
         Constant 0
-    Operation a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:8:9 written
-      Destination "_5"
-      Use
-        Copy "_3"
     Sequenced a_pointer_tested_null_on_an_arm_that_calls_abort_inside_an_expression_is_read_in_silence.c:8:9 generated
     Goto "bb4"

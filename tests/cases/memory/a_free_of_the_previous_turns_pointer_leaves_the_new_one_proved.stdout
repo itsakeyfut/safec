@@ -11,10 +11,7 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
   Local "_2" "int *" "p"
   Local "_3" "int *" "keep"
   Local "_4" "void *"
-  Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "int"
-  Local "_8" "int"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:4:10 written
       Destination "_2"
@@ -46,10 +43,6 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
       Destination "_2"
       Use
         Copy "_4"
-    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:9 written
-      Destination "_5"
-      Use
-        Copy "_2"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:9 generated
     Branch a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 written "bb5" "bb6"
       Copy "_3"
@@ -66,24 +59,16 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
       Destination "_3"
       Use
         Copy "_2"
-    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:9:9 written
-      Destination "_6"
-      Use
-        Copy "_3"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:9:9 generated
     Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:13 written
-      Destination "_7"
+      Destination "_5"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:9 written
       Destination "_1"
       Use
-        Copy "_7"
-    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:9 written
-      Destination "_8"
-      Use
-        Copy "_1"
+        Copy "_5"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:9 generated
     Goto "bb1"
   Block "bb8"
