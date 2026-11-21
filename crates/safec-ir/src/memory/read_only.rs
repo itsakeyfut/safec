@@ -4,13 +4,13 @@
 //! and a call handed a pointer it may write through. See ADR-0120.
 
 use crate::analysis::Conclusion;
-use crate::ir::{Element, FuncId, Function, Operand, Rvalue, Shape, Terminator};
+use crate::ir::{Element, FuncId, Function, Operand, Place, Rvalue, Shape, Terminator, Ty, TyId};
 use crate::library::Callee;
 
 use super::allocations::Allocations;
 use super::index::LocalIdx;
 use super::known::Known;
-use super::store::Landing;
+use super::store::{Landing, StoreKind};
 use super::{Finding, Kind};
 
 /// The locals of `function` defined `const`, by their position.
@@ -47,24 +47,74 @@ fn names_read_only(operand: &Operand, read_only: &[LocalIdx], known: &Known) -> 
     let Operand::Copy(place) = operand else {
         return false;
     };
-    match place.shape() {
-        Shape::Local => {
-            let held = &known.points_to[place.local];
-            held.read_only || held.locals().any(|local| read_only.contains(&local))
-        }
-        // **And the locals it may point at, read as the value is**: `set(*pp)`
-        // with `*pp` holding a `const` local's address was asked for a static
-        // alone. Found by review.
-        Shape::Deref(depth) => {
-            known.read_only_on_the_way(place.local, depth)
-                || known
-                    .levels_below(place.local, depth)
-                    .1
-                    .iter()
-                    .any(|local| read_only.contains(local))
-        }
-        Shape::Indexed => false,
+    match depth_of(place) {
+        Some(depth) => names_read_only_at(place.local, depth, read_only, known),
+        None => false,
     }
+}
+
+/// How many dereferences `place` reads below its local, where it is one this
+/// check reads levels of.
+fn depth_of(place: &Place) -> Option<usize> {
+    match place.shape() {
+        Shape::Local => Some(0),
+        Shape::Deref(depth) => Some(depth),
+        Shape::Indexed => None,
+    }
+}
+
+/// [`names_read_only`] of the value read `depth` dereferences below `local`.
+fn names_read_only_at(
+    local: crate::ir::LocalId,
+    depth: usize,
+    read_only: &[LocalIdx],
+    known: &Known,
+) -> bool {
+    if depth == 0 {
+        let held = &known.points_to[local];
+        return held.read_only || held.locals().any(|local| read_only.contains(&local));
+    }
+    // **And the locals it may point at, read as the value is**: `set(*pp)`
+    // with `*pp` holding a `const` local's address was asked for a static
+    // alone. Found by review.
+    known.read_only_on_the_way(local, depth)
+        || known
+            .levels_below(local, depth)
+            .1
+            .iter()
+            .any(|local| read_only.contains(local))
+}
+
+/// How many levels of pointer `ty` has: `int **` two.
+fn pointer_levels(analysis: &Allocations<'_>, ty: TyId) -> usize {
+    let mut levels = 0;
+    let mut ty = ty;
+    while let Ty::Pointer(pointee) = analysis.unit.ty(ty) {
+        levels += 1;
+        ty = pointee;
+    }
+    levels
+}
+
+/// Whether a level from `from` down of what `place` holds, leaving for a
+/// reader of `receiver` whose `const` levels are `levels`, may name read-only
+/// storage where the reader believes it may write: a level its type has as a
+/// pointer, not to `const`. `int *c = (int *)&k; set2(&c);` with `set2`
+/// taking `int **` hands `k` one level below. See ADR-0121.
+fn below_read_only(
+    analysis: &Allocations<'_>,
+    place: &Place,
+    (receiver, levels): (TyId, u32),
+    from: usize,
+    read_only: &[LocalIdx],
+    known: &Known,
+) -> bool {
+    let Some(depth) = depth_of(place) else {
+        return false;
+    };
+    (from..pointer_levels(analysis, receiver)).any(|level| {
+        levels >> level & 1 == 0 && names_read_only_at(place.local, depth + level, read_only, known)
+    })
 }
 
 /// Report a `return` of a pointer that may name read-only storage from a
@@ -76,6 +126,7 @@ fn names_read_only(operand: &Operand, read_only: &[LocalIdx], known: &Known) -> 
 /// `a_write_to_a_string_literal_is_unproven`'s `returned` goes silent.
 pub(super) fn returned_read_only(
     findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
     function: &Function,
     element: &Element,
     known: &Known,
@@ -84,16 +135,34 @@ pub(super) fn returned_read_only(
     let Element::Assign(operation) = element else {
         return;
     };
-    if operation.place.local != function.return_place()
-        || !operation.place.steps().is_empty()
-        || function.returns_reads_only()
-    {
+    if operation.place.local != function.return_place() || !operation.place.steps().is_empty() {
         return;
     }
+    let returns_reads_only = function.returns_reads_only();
     let Rvalue::Use(operand) = &operation.value else {
         return;
     };
-    if names_read_only(operand, &read_only_locals(function), known) {
+    let read_only = read_only_locals(function);
+    let return_place = function.return_place();
+    // **And every level below it its type believes writable**, a block
+    // returned holding a pointer to `const` (#1134). Mutation: skip this;
+    // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `returned_block` goes silent.
+    let below = match operand {
+        Operand::Copy(place) => below_read_only(
+            analysis,
+            place,
+            (
+                function.local(return_place),
+                function.const_levels(return_place),
+            ),
+            1,
+            &read_only,
+            known,
+        ),
+        Operand::Constant(_) => false,
+    };
+    if below || (!returns_reads_only && names_read_only(operand, &read_only, known)) {
         findings.push(Finding {
             function: func,
             kind: Kind::WritesReadOnly,
@@ -173,14 +242,26 @@ pub(super) fn handed_read_only(
     }
     let called = analysis.unit.function(*callee);
     let read_only = read_only_locals(function);
+    let parameters: Vec<_> = called.parameters().collect();
     for (index, argument) in arguments.iter().enumerate() {
-        if called.reads_only_through(index) {
+        let Operand::Copy(place) = argument else {
             continue;
-        }
-        if names_read_only(argument, &read_only, known) {
-            let Operand::Copy(place) = argument else {
-                unreachable!("only a place names storage")
-            };
+        };
+        // **And every level below it the callee's type believes writable**,
+        // `set2(&c)` with `c` holding a pointer to `const` (#1134); past the
+        // last parameter, the argument's own type at every level. Mutation:
+        // skip this; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+        // `handed_below` goes silent.
+        let receiver = match parameters.get(index) {
+            Some(&parameter) => Some((called.local(parameter), called.const_levels(parameter))),
+            None => analysis.unit.place_ty(function, place).map(|ty| (ty, 0)),
+        };
+        let below = receiver.is_some_and(|receiver| {
+            below_read_only(analysis, place, receiver, 1, &read_only, known)
+        });
+        if below
+            || (!called.reads_only_through(index) && names_read_only(argument, &read_only, known))
+        {
             findings.push(Finding {
                 function: func,
                 kind: Kind::WritesReadOnly,
@@ -192,5 +273,70 @@ pub(super) fn handed_read_only(
                 unproven: None,
             });
         }
+    }
+}
+
+/// Report a store, into memory that leaves this function, of a pointer that
+/// may name read-only storage at a level the memory's reader believes it may
+/// write: `*out = "ab";` through an out-parameter, `G = "ab";` into a static,
+/// `*b = (int *)&k;` into a block returned. The reader reads it as the
+/// stored-into type, which says nothing of `const` (#1134). The return place
+/// is [`returned_read_only`]'s. See ADR-0121. Mutation: skip this;
+/// `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+/// `out_parameter` goes silent.
+pub(super) fn stored_read_only(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    element: &Element,
+    known: &Known,
+    func: FuncId,
+) {
+    let Element::Assign(operation) = element else {
+        return;
+    };
+    if operation.place.local == function.return_place() {
+        return;
+    }
+    let Some(store) = analysis.store_in(element, known) else {
+        return;
+    };
+    // Into memory that leaves, as `departed_in_element` reads a departure.
+    let leaves = match store.kind {
+        StoreKind::Through { .. } | StoreKind::Direct => store.leaves,
+        StoreKind::Copy => false,
+    };
+    if !leaves {
+        return;
+    }
+    let (Rvalue::Use(Operand::Copy(value)), Some(depth), Some(receiver)) = (
+        &operation.value,
+        depth_of(&operation.place),
+        analysis.unit.place_ty(function, &operation.place),
+    ) else {
+        return;
+    };
+    let levels = function
+        .const_levels(operation.place.local)
+        .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
+        .unwrap_or(0);
+    if below_read_only(
+        analysis,
+        value,
+        (receiver, levels),
+        0,
+        &read_only_locals(function),
+        known,
+    ) {
+        findings.push(Finding {
+            function: func,
+            kind: Kind::WritesReadOnly,
+            conclusion: Conclusion::Unknown,
+            at: operation.origin.span(),
+            local: None,
+            freed: None,
+            made: None,
+            unproven: None,
+        });
     }
 }

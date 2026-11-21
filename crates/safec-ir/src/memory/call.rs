@@ -1971,6 +1971,14 @@ impl Allocations<'_> {
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
             value.points_to[result].set_contents(&contents);
+            // And what it holds below may name read-only storage where its
+            // type says `const` there, as a parameter's. See ADR-0121.
+            // Mutation: skip this;
+            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `cast_after_a_result` goes silent.
+            if function.const_levels(place.local) >> 1 != 0 {
+                value.contents[site].arrives_holding_read_only();
+            }
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as

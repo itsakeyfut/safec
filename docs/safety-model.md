@@ -351,6 +351,13 @@ object is followed rather than the cast that reached it, so every spelling of
 the pointer is asked; a pointer declared to point at `const`, a parameter or a
 call's result among them, is taken to name such storage, since it may. See
 [ADR-0120](adr/0120-a-write-that-may-reach-storage-the-program-may-not-modify-is-unproven.md).
+And at every level below what leaves: a pointer that may name such storage,
+handed, returned or stored where it leaves at a level the reader's type points
+at no `const`, is `SC0417` there, since the reader may write through it; and
+memory that arrives as a pointer to `const` at some level is taken to hold such
+pointers there, whatever it is cast to. A literal stored where it leaves and
+never written, `char *G; G = "ab";`, is doubted for it. See
+[ADR-0121](adr/0121-read-only-storage-is-asked-at-every-level-of-what-leaves-and-believed-at-every-level-of-what-arrives.md).
 
 At levels 1 to 4, a level says **which checks run**, and nothing else. It does
 not decide how

@@ -120,6 +120,19 @@ cases! {
         // (#1135). Mutation: keep the mark on a comparison in `built_from`;
         // `returned`, `through_a_local` and the call in `main` are `SC0417`.
         a_value_computed_from_a_pointer_to_const_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Read-only storage one level or more below what leaves, by a call,
+        // a `return` or a store into memory that leaves, is `SC0417` where
+        // the reader's type points at no `const` there; so is a write through
+        // what arrived as a pointer to `const` at that level, cast whole.
+        // Reading it, handing it to a reader whose type keeps the `const`,
+        // and a writable pointer leaving are not reported (#1134, ADR-0121).
+        // Mutations, each naming what goes silent: skip the levels below at
+        // a call, `handed_below`; at a `return`, `returned_block`; skip
+        // `stored_read_only`, `out_parameter` and `into_a_static`; leave a
+        // parameter's memory unmarked at entry, `cast_after_arrival`; a
+        // call's result's, `cast_after_a_result`; skip the mark on a pointer
+        // read through one, `three_levels_arrived`.
+        read_only_storage_below_what_leaves_or_arrives_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer holding a pointer to `const`'s bytes is still asked where
         // it leaves, returned or handed to a call declared without a
         // prototype, since the other side may read it as a pointer. Found by
