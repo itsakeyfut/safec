@@ -3100,7 +3100,8 @@ impl Lowering<'_> {
     ///
     /// A call to a `void` function, a `void` `?:` and a cast to `void` leave
     /// none, and a comma
-    /// leaves what its right operand leaves. Everything else leaves one,
+    /// leaves what its right operand leaves. An assignment whose value
+    /// [`Lowering::effect`] discards leaves none (#1137). Everything else leaves one,
     /// `void` included: `*p` of a `void *` is a read of a place, and a
     /// consumer that dropped it for its type would drop the read, which is
     /// what the memory and nullability checks ask about.
@@ -3910,7 +3911,7 @@ impl Lowering<'_> {
                 // clause: no value is pushed, which `effect` reads as `void`.
                 // See `Lowering::discarding`. Mutation: read it back anyway;
                 // `a_write_through_a_pointer_that_may_name_itself_is_asked_only_where_it_is_read_again`'s
-                // `after_an_out_parameter` reports `SC0413`.
+                // `self_no_read` and `after_an_out_parameter` report `SC0413`.
                 if self.discarding == Some(id) {
                     return Some(());
                 }

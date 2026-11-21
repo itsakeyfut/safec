@@ -143,7 +143,8 @@ cases! {
         // again, `self_then_read`. An assignment statement reads nothing back,
         // so `self_no_read` and `after_an_out_parameter` say nothing of it
         // (#1137). Mutation: read the value back in `Lowering` even where it
-        // is discarded; `after_an_out_parameter` is `SC0413`.
+        // is discarded; `self_no_read` and `after_an_out_parameter` are
+        // `SC0413`.
         a_write_through_a_pointer_that_may_name_itself_is_asked_only_where_it_is_read_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An integer holding a pointer to `const`'s bytes is still asked where
         // it leaves, returned or handed to a call declared without a
