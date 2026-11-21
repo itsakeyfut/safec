@@ -488,12 +488,6 @@ impl Emitter<'_> {
                 .expect("writing to a string cannot fail");
                 Ok(result)
             }
-            // A pointer whose `const` was dropped is the same address.
-            _ if matches!(self.unit.ty(from), Ty::Pointer(_))
-                && matches!(self.unit.ty(to), Ty::Pointer(_)) =>
-            {
-                Ok(value)
-            }
             _ => self.refuse(format!("`{source}` reinterpreted as `{wanted}`")),
         }
     }

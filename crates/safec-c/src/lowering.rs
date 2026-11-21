@@ -4343,12 +4343,14 @@ impl Lowering<'_> {
     /// - A null pointer constant to a pointer type is the null it is.
     /// - Between a pointer and an integer otherwise, [`Rvalue::Reinterpret`],
     ///   which the memory check reports unproven where it is written.
-    /// - Between two pointer types where what the result points at is not
-    ///   `const` and what the operand points at is, the same: a write
-    ///   through it to an object defined `const` is undefined (C17 6.7.3
-    ///   p6), and nothing here knows which objects those are. Mutation:
-    ///   lower it as `Rvalue::Use`; `a_cast_that_drops_const_is_unproven`
-    ///   goes silent.
+    ///
+    /// A cast between pointer types that drops `const` is a copy as any
+    /// other is: what may not be written is the object, and the memory check
+    /// follows that through every spelling of the pointer (ADR-0120). Made
+    /// a value nothing follows, a free through it was not followed and a use
+    /// after it went unreported (#1122). Mutation: lower it as
+    /// `Rvalue::Reinterpret`; `a_free_through_a_cast_that_drops_const_is_followed`
+    /// fails.
     fn cast(
         &mut self,
         builder: &mut Builder,
@@ -4375,7 +4377,6 @@ impl Lowering<'_> {
             pointer(self.types.of(operand), self.ast),
         );
         let rvalue = match (to, from, &value) {
-            (true, true, _) if self.drops_const(id, operand) => Rvalue::Reinterpret(value),
             (true, false, Operand::Constant(0)) | (true, true, _) | (false, false, _) => {
                 Rvalue::Use(value)
             }
@@ -4389,18 +4390,6 @@ impl Lowering<'_> {
         });
         values.push(Operand::Copy(Place::local(into)));
         Some(())
-    }
-
-    /// Whether the cast `id` of `operand`, both pointers, gives a pointer to
-    /// something not `const` from one to something that is.
-    fn drops_const(&self, id: ExprId, operand: ExprId) -> bool {
-        let pointee = |ty: Option<TypeId>| match ty.map(|ty| self.ast.ty(ty)) {
-            Some(Type::Pointer(pointee)) => Some(self.ast.is_const(*pointee)),
-            // An array operand points at its elements once it is read.
-            Some(Type::Array { element, .. }) => Some(self.ast.is_const(*element)),
-            _ => None,
-        };
-        pointee(self.types.of(operand)) == Some(true) && pointee(self.types.of(id)) == Some(false)
     }
 
     fn temporary(

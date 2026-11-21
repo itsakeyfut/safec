@@ -1,0 +1,10 @@
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_write_through_a_cast_that_drops_const_is_unproven.c:3:5 ]
+   │
+ 3 │     *(int *)&g = 2;
+   │     ───────┬──────  
+   │            ╰──────── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its rule for a cast that drops const superseded by ADR-0120)"
 date: 2026-11-21
 decision-makers: itsakeyfut
 ---

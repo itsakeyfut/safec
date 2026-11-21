@@ -604,12 +604,6 @@ fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, 
         // A pointer has no address here, only the object it names, so no
         // integer stands for one: C17 6.3.2.3 p5 and p6 leave the mapping
         // to the implementation, and this stops rather than inventing one.
-        // A pointer whose `const` was dropped is the same pointer.
-        Rvalue::Reinterpret(from)
-            if ty.is_none() && matches!(operand(frames, current, from)?, Value::Pointer(_)) =>
-        {
-            operand(frames, current, from)?
-        }
         Rvalue::Reinterpret(_) => {
             return Err(Trap::new(
                 "a conversion between a pointer and an integer, whose result is the implementation's",

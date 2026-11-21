@@ -1,0 +1,32 @@
+error[SC0402]: this uses `p` after it was freed
+   ╭─[ a_free_through_a_cast_that_drops_const_is_followed.c:9:5 ]
+   │
+ 4 │     const int *p = malloc(sizeof(int));
+   │                    ─────────┬─────────  
+   │                             ╰─────────── allocated here
+   │ 
+ 8 │     free((void *)p);
+   │     ───────┬───────  
+   │            ╰───────── freed here
+ 9 │     return *p;
+   │     ─────┬────  
+   │          ╰────── used here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0401]: this frees a value that was freed already
+    ╭─[ a_free_through_a_cast_that_drops_const_is_followed.c:17:5 ]
+    │
+ 12 │     const int *p = malloc(sizeof(int));
+    │                    ─────────┬─────────  
+    │                             ╰─────────── allocated here
+    │ 
+ 16 │     free((void *)p);
+    │     ───────┬───────  
+    │            ╰───────── freed here
+ 17 │     free((void *)p);
+    │     ───────┬───────  
+    │            ╰───────── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

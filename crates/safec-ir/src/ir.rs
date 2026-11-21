@@ -688,11 +688,10 @@ pub enum Rvalue {
     /// to storage no function owns. See ADR-0115.
     Static(StaticId),
     /// The operand's bits as the type the operation is written into, where
-    /// one of the two is an integer and the other a pointer (C17 6.3.2.3 p5
-    /// and p6), or both are pointers and the result drops a `const` from
-    /// what it points at (6.3.2.3 p2). What the result points at is nothing
-    /// an analysis follows from the operand, so the memory check reports
-    /// every one as unproven where it is written. See ADR-0117.
+    /// one of the two is an integer and the other a pointer: C17 6.3.2.3 p5
+    /// and p6, a cast in either direction. What the result points at is
+    /// nothing an analysis can follow from the operand, so the memory check
+    /// reports every one as unproven where it is written. See ADR-0117.
     Reinterpret(Operand),
 }
 

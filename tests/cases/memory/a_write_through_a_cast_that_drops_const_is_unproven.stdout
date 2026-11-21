@@ -1,0 +1,41 @@
+Target "x86_64-pc-windows-msvc"
+Static "g" "int" external 1
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:3:14 generated
+      Destination "_1"
+      Static "g"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:3:6 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:3:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 2
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:3:5 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:3:5 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:4:12 generated
+      Destination "_4"
+      Static "g"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:4:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:4:12 generated
+    Return
