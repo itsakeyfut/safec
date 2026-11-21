@@ -1,0 +1,90 @@
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:13:5 ]
+    │
+ 13 │     set2(&c);
+    │     ────┬───  
+    │         ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:20:5 ]
+    │
+ 20 │     return b;
+    │     ────┬────  
+    │         ╰────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:24:9 ]
+    │
+ 24 │         *out = (int *)&k;
+    │         ────────┬───────  
+    │                 ╰───────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:29:5 ]
+    │
+ 29 │     G = "ab";
+    │     ────┬───  
+    │         ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:36:13 ]
+    │
+ 36 │             *p = 2;
+    │             ───┬──  
+    │                ╰──── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:47:17 ]
+    │
+ 47 │                 *s = 'x';
+    │                 ────┬───  
+    │                     ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:77:13 ]
+    │
+ 77 │             *p = 2;
+    │             ───┬──  
+    │                ╰──── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:95:5 ]
+    │
+ 95 │     return b;
+    │     ────┬────  
+    │         ╰────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:101:9 ]
+     │
+ 101 │         memcpy(out, &c, sizeof c);
+     │         ────────────┬────────────  
+     │                     ╰────────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

@@ -332,6 +332,7 @@ pub fn lower(
         block_statics: HashMap::new(),
         internal: HashSet::new(),
         strings: HashMap::new(),
+        static_levels: HashMap::new(),
         pending: HashMap::new(),
         top_level: false,
         root: None,
@@ -440,6 +441,10 @@ struct Lowering<'a> {
     /// many times the expression is evaluated (C17 6.4.5 p6 gives it static
     /// storage duration). See [`Lowering::string`].
     strings: HashMap<ExprId, StaticId>,
+    /// Per static, the levels at which a value stored in it points at
+    /// `const`, so that the temporary [`Lowering::reach_static`] reaches it
+    /// through carries them. A string literal holds no pointer and has none.
+    static_levels: HashMap<StaticId, u32>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -759,6 +764,9 @@ struct FileObject {
     /// Whether the program may not modify it, read off its first declaration.
     /// See [`Lowering::read_only`].
     read_only: bool,
+    /// The levels at which a value stored in it points at `const`, read off
+    /// its first declaration. See [`Lowering::const_levels`].
+    const_levels: u32,
     /// Whether a declaration defines it, tentatively or not.
     defined: bool,
     init: StaticInit,
@@ -855,6 +863,7 @@ impl Lowering<'_> {
                 init: object.init,
                 read_only: object.read_only,
             });
+            self.static_levels.insert(id, object.const_levels);
             self.file_statics.insert(object.name, id);
             for span in object.declared {
                 self.statics.insert(span, id);
@@ -916,6 +925,7 @@ impl Lowering<'_> {
                         name: spelled.to_owned(),
                         ty,
                         read_only: self.read_only(declaration.ty),
+                        const_levels: self.const_levels(declaration.ty),
                         internal: storage == Some(Storage::Static),
                         defined: false,
                         init: StaticInit::Zero,
@@ -1049,6 +1059,15 @@ impl Lowering<'_> {
         let ty = self.unit.static_object(object).ty;
         let pointer = self.unit.push_type(Ty::Pointer(ty));
         let address = builder.function.push_local(pointer);
+        // **As a pointer to it would be declared**: `const` at its first
+        // level where the static is, and below where what it holds is, so a
+        // store of a literal into `const char *G` is no write the static's
+        // readers may make. Found by the review of #1134. See ADR-0121.
+        // Mutation: mark nothing; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+        // `into_a_const_static` is reported.
+        let levels = self.static_levels.get(&object).copied().unwrap_or(0) << 1
+            | u32::from(self.unit.static_object(object).read_only);
+        builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
             place: Place::local(address),
             value: Rvalue::Static(object),
@@ -1094,13 +1113,16 @@ impl Lowering<'_> {
                     n => format!("{base}.{n}"),
                 };
                 *count += 1;
-                self.unit.push_static(Static {
+                let id = self.unit.push_static(Static {
                     name: unique,
                     ty,
                     linkage: Linkage::Internal,
                     init,
                     read_only: self.read_only(declaration.ty),
-                })
+                });
+                self.static_levels
+                    .insert(id, self.const_levels(declaration.ty));
+                id
             }
             Storage::Extern => {
                 let id = match self.file_statics.get(&spelled) {
@@ -1113,6 +1135,8 @@ impl Lowering<'_> {
                             init: StaticInit::Zero,
                             read_only: self.read_only(declaration.ty),
                         });
+                        self.static_levels
+                            .insert(id, self.const_levels(declaration.ty));
                         self.file_statics.insert(spelled.clone(), id);
                         id
                     }
@@ -1226,6 +1250,16 @@ impl Lowering<'_> {
                 return;
             };
             let mut declared = Function::declaration_with_parameters(name, returns, lowered);
+            // **And at which levels each parameter points at `const`**, as a
+            // definition's are, so a call to a body this unit does not have
+            // asks what it hands below the first level by the same type
+            // (#1134). See ADR-0121.
+            if let Parameters::Prototype(written) = &parameters {
+                let locals: Vec<_> = declared.parameters().collect();
+                for (parameter, local) in written.iter().zip(locals) {
+                    declared.mark_const_levels(local, self.const_levels(parameter.ty));
+                }
+            }
             // A written promise is believed of a function this unit does not
             // define, since nobody here can ask its body: the boundary
             // ADR-0050 accepts, as ADR-0037 accepts it of a parameter.
@@ -1748,11 +1782,14 @@ impl Lowering<'_> {
         let (returns, parameters) = (*returns, parameters.clone());
         let returns_reads_only =
             matches!(self.ast.ty(returns), Type::Pointer(pointee) if self.read_only(*pointee));
+        let returns_const_levels = self.const_levels(returns);
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
         let mut function = Function::with_parameters(name, returns, lowered);
         if returns_reads_only {
             function.mark_returns_reads_only();
         }
+        let return_place = function.return_place();
+        function.mark_const_levels(return_place, returns_const_levels);
         if let Parameters::Prototype(declared) = &parameters {
             for (parameter, local) in declared
                 .iter()
@@ -1761,9 +1798,7 @@ impl Lowering<'_> {
                 if self.read_only(parameter.ty) {
                     function.mark_read_only(local);
                 }
-                if self.points_at_const(parameter.ty) {
-                    function.mark_points_at_const(local);
-                }
+                function.mark_const_levels(local, self.const_levels(parameter.ty));
             }
         }
         if hatch {
@@ -2228,15 +2263,13 @@ impl Lowering<'_> {
                     // left alone until something assigns to it.
                     if let Some(name) = name {
                         let read_only = self.read_only(ty);
-                        let points_at_const = self.points_at_const(ty);
+                        let const_levels = self.const_levels(ty);
                         let ty = self.ty(span, ty, diagnostics)?;
                         let local = builder.function.push_named_local(ty, name);
                         if read_only {
                             builder.function.mark_read_only(local);
                         }
-                        if points_at_const {
-                            builder.function.mark_points_at_const(local);
-                        }
+                        builder.function.mark_const_levels(local, const_levels);
                         self.locals.insert(name, local);
 
                         // Only a scope narrower than the function's own body. The
@@ -4396,12 +4429,9 @@ impl Lowering<'_> {
         // was what asked such a pointer, and followed it asked nothing.
         // Mutation: leave the result unmarked; `a_write_through_a_cast_that_drops_const_is_unproven`'s
         // `through_a_global`, cast as it is read out of memory, goes silent.
-        if self
-            .types
-            .of(operand)
-            .is_some_and(|ty| self.points_at_const(ty))
-        {
-            builder.function.mark_points_at_const(into);
+        if let Some(ty) = self.types.of(operand) {
+            let levels = self.const_levels(ty);
+            builder.function.mark_const_levels(into, levels);
         }
         builder.push(Operation {
             place: Place::local(into),
@@ -4420,17 +4450,30 @@ impl Lowering<'_> {
     ) -> Option<LocalId> {
         let ty = self.ty_of(id, diagnostics)?;
         let local = builder.function.push_local(ty);
-        if self.types.of(id).is_some_and(|ty| self.points_at_const(ty)) {
-            builder.function.mark_points_at_const(local);
+        if let Some(ty) = self.types.of(id) {
+            let levels = self.const_levels(ty);
+            builder.function.mark_const_levels(local, levels);
         }
         Some(local)
     }
 
-    /// Whether `ty` is a pointer to `const` at its pointee's innermost
-    /// element, so a value of it may name an object defined `const`.
-    /// See ADR-0120.
-    fn points_at_const(&self, ty: TypeId) -> bool {
-        matches!(self.ast.ty(ty), Type::Pointer(pointee) if self.read_only(*pointee))
+    /// The levels at which `ty` points at `const`, bit `k` where what `k`
+    /// dereferences of a value of it read points at an object whose type is
+    /// `const` at its innermost element: `const int **` is bit `1`, `int
+    /// *const *` bit `0`. See ADR-0121.
+    fn const_levels(&self, ty: TypeId) -> u32 {
+        let mut levels = 0;
+        let mut ty = ty;
+        for level in 0..u32::BITS {
+            let Type::Pointer(pointee) = self.ast.ty(ty) else {
+                break;
+            };
+            if self.read_only(*pointee) {
+                levels |= 1 << level;
+            }
+            ty = *pointee;
+        }
+        levels
     }
 
     /// A temporary of the type an operation is performed at.

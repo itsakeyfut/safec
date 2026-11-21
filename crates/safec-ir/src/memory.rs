@@ -1126,13 +1126,36 @@ fn findings_within(
                     &known,
                     func,
                 );
-                read_only::returned_read_only(&mut findings, function, element, &known, func);
+                read_only::stored_read_only(
+                    &mut findings,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                    func,
+                );
+                read_only::returned_read_only(
+                    &mut findings,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                    func,
+                );
                 analysis.element(function, element, &mut known);
             }
 
             // Before the call runs, as every question about what it is
             // handed is. See ADR-0120.
             read_only::handed_read_only(
+                &mut findings,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
+                func,
+            );
+            read_only::copied_read_only(
                 &mut findings,
                 &analysis,
                 function,

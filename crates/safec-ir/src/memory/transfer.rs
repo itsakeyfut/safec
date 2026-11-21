@@ -2796,6 +2796,16 @@ impl Analysis for Allocations<'_> {
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
             known.points_to[parameter].set_contents(&contents);
+            // **And what it holds below may name read-only storage where its
+            // type says `const` there**, whatever it is cast to: `(int **)pp`
+            // with `pp` a `const int **` reads a pointer to `const`. Below the
+            // first level the union `Known::read_only_on_the_way` takes
+            // carries it on. See ADR-0121. Mutation: skip this;
+            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `cast_after_arrival` goes silent.
+            if function.const_levels(parameter) >> 1 != 0 {
+                known.contents[Site::of(LocalIdx::of(parameter))].arrives_holding_read_only();
+            }
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -2884,7 +2894,38 @@ impl Analysis for Allocations<'_> {
     }
 
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
+        // **A pointer read through one that may name read-only storage may
+        // name it too**, the way `Known::read_only_on_the_way` reads every
+        // level of one chain as one: `r = *q; s = *r;` with `q` a `const
+        // char ***` cast whole reaches the `const` level `**q` does, which a
+        // chain split into locals lost (#1134). Asked before the transfer,
+        // which may assign the pointer read through. Only into a pointer, so
+        // a character read through a pointer to `const` is no pointer to
+        // storage. See ADR-0121. Mutation: skip this;
+        // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+        // `three_levels_arrived` goes silent.
+        let read_through_read_only = match element {
+            Element::Assign(crate::ir::Operation {
+                place,
+                value: Rvalue::Use(Operand::Copy(source)),
+                origin: _,
+            }) if place.steps().is_empty()
+                && (match source.shape() {
+                    Shape::Deref(_) => true,
+                    Shape::Local | Shape::Indexed => false,
+                })
+                && matches!(self.unit.ty(function.local(place.local)), Ty::Pointer(_)) =>
+            {
+                value.points_to[source.local]
+                    .read_only
+                    .then_some(place.local)
+            }
+            _ => None,
+        };
         self.element_transfer(function, element, value);
+        if let Some(local) = read_through_read_only {
+            value.points_to[local].read_only = true;
+        }
         // **A local declared as a pointer to `const` may name an object
         // defined `const`, whatever was assigned to it**: a call's result,
         // a load, a cast of one. After the transfer, so no arm's early
