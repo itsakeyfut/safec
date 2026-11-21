@@ -2783,8 +2783,9 @@ impl Analysis for Allocations<'_> {
                     // pass none (#931).
                     may_be_null: function.nonnull(parameter).is_none(),
                     vouched: false,
-                    // A parameter's memory is the caller's; nothing certain.
-                    read_only: false,
+                    // **Declared as a pointer to `const`, it may name an object
+                    // defined `const`** the caller handed. See ADR-0120.
+                    read_only: function.points_at_const(parameter),
                     alone: None,
                 },
             );
@@ -2883,6 +2884,64 @@ impl Analysis for Allocations<'_> {
     }
 
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
+        self.element_transfer(function, element, value);
+        // **A local declared as a pointer to `const` may name an object
+        // defined `const`, whatever was assigned to it**: a call's result,
+        // a load, a cast of one. After the transfer, so no arm's early
+        // return skips it. See ADR-0120. Mutation: skip this;
+        // `a_write_through_a_cast_that_drops_const_is_unproven`'s
+        // `through_a_const_result` goes silent.
+        if let Element::Assign(operation) = element {
+            let local = operation.place.local;
+            if operation.place.steps().is_empty() && function.points_at_const(local) {
+                value.points_to[local].read_only = true;
+            }
+        }
+    }
+
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+        // Before the `let ... else` below, which returns for every terminator
+        // that is not a call. A `Terminator::Branch` reads its condition and a
+        // condition that is exactly a place never becomes an element, so
+        // leaving it to the arm that handles calls would be silent about
+        // `(*p ? 1 : 0) + (free(p), 0)`.
+        value.met(dereferenced_in_terminator(terminator));
+
+        let Terminator::Call {
+            callee,
+            arguments,
+            destination,
+            then,
+            origin,
+        } = terminator
+        else {
+            // Nothing else moves an allocation. Written out rather than `_`,
+            // so that a terminator added later has to be answered for here.
+            match terminator {
+                Terminator::Goto(_)
+                | Terminator::Branch { .. }
+                | Terminator::Return
+                | Terminator::Abnormal { .. } => return,
+                Terminator::Call { .. } => unreachable!("the let above took it"),
+            }
+        };
+
+        self.call(
+            function,
+            callee,
+            arguments,
+            destination,
+            then,
+            origin,
+            terminator,
+            value,
+        );
+    }
+}
+
+impl Allocations<'_> {
+    /// [`Analysis::element`] before a declared pointer to `const` is marked.
+    fn element_transfer(&self, function: &Function, element: &Element, value: &mut Known) {
         // What is read here is read where this element runs, against what held
         // before it, which is the same question `findings` asks one line
         // earlier and has to get the same answer to.
@@ -3933,45 +3992,6 @@ impl Analysis for Allocations<'_> {
             Element::StorageLive { local, origin: _ } => value.storage_live(*local),
             Element::StorageDead { origin: _, local } => value.clear(*local),
         }
-    }
-
-    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value) {
-        // Before the `let ... else` below, which returns for every terminator
-        // that is not a call. A `Terminator::Branch` reads its condition and a
-        // condition that is exactly a place never becomes an element, so
-        // leaving it to the arm that handles calls would be silent about
-        // `(*p ? 1 : 0) + (free(p), 0)`.
-        value.met(dereferenced_in_terminator(terminator));
-
-        let Terminator::Call {
-            callee,
-            arguments,
-            destination,
-            then,
-            origin,
-        } = terminator
-        else {
-            // Nothing else moves an allocation. Written out rather than `_`,
-            // so that a terminator added later has to be answered for here.
-            match terminator {
-                Terminator::Goto(_)
-                | Terminator::Branch { .. }
-                | Terminator::Return
-                | Terminator::Abnormal { .. } => return,
-                Terminator::Call { .. } => unreachable!("the let above took it"),
-            }
-        };
-
-        self.call(
-            function,
-            callee,
-            arguments,
-            destination,
-            then,
-            origin,
-            terminator,
-            value,
-        );
     }
 }
 

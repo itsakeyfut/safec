@@ -1279,6 +1279,10 @@ pub struct Function {
     /// Whether what it returns is a pointer to `const`, so that a caller
     /// cannot write through it: [`Parameter::reads_only`] for the result.
     returns_reads_only: bool,
+    /// The locals declared as a pointer to `const`, whatever value they
+    /// hold: such a pointer may name an object defined `const`, so what is
+    /// written through it once the `const` is dropped is asked. See ADR-0120.
+    points_at_const: Vec<LocalId>,
     body: Body,
 }
 
@@ -1329,6 +1333,7 @@ impl Function {
             return_promise: None,
             read_only: Vec::new(),
             returns_reads_only: false,
+            points_at_const: Vec::new(),
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1481,6 +1486,16 @@ impl Function {
     /// argument has no parameter to say so. See ADR-0120.
     pub fn reads_only_through(&self, index: usize) -> bool {
         self.reads_only.get(index).copied().unwrap_or(false)
+    }
+
+    /// Say that `local` is declared as a pointer to `const`. See ADR-0120.
+    pub fn mark_points_at_const(&mut self, local: LocalId) {
+        self.points_at_const.push(local);
+    }
+
+    /// Whether `local` is declared as a pointer to `const`.
+    pub fn points_at_const(&self, local: LocalId) -> bool {
+        self.points_at_const.contains(&local)
     }
 
     /// Say that what this returns is a pointer to `const`. See ADR-0120.

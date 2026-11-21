@@ -348,7 +348,8 @@ pointer, or a call handed one for a parameter that is no pointer to `const`,
 that may land in a static or a local defined `const`, or in a string literal,
 is `SC0417`, `Unknown` where it is written (C17 6.7.3 p6, 6.4.5 p7). The
 object is followed rather than the cast that reached it, so every spelling of
-the pointer is asked. See
+the pointer is asked; a pointer declared to point at `const`, a parameter or a
+call's result among them, is taken to name such storage, since it may. See
 [ADR-0120](adr/0120-a-write-that-may-reach-storage-the-program-may-not-modify-is-unproven.md).
 
 At levels 1 to 4, a level says **which checks run**, and nothing else. It does

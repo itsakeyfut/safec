@@ -1761,6 +1761,9 @@ impl Lowering<'_> {
                 if self.read_only(parameter.ty) {
                     function.mark_read_only(local);
                 }
+                if self.points_at_const(parameter.ty) {
+                    function.mark_points_at_const(local);
+                }
             }
         }
         if hatch {
@@ -2225,10 +2228,14 @@ impl Lowering<'_> {
                     // left alone until something assigns to it.
                     if let Some(name) = name {
                         let read_only = self.read_only(ty);
+                        let points_at_const = self.points_at_const(ty);
                         let ty = self.ty(span, ty, diagnostics)?;
                         let local = builder.function.push_named_local(ty, name);
                         if read_only {
                             builder.function.mark_read_only(local);
+                        }
+                        if points_at_const {
+                            builder.function.mark_points_at_const(local);
                         }
                         self.locals.insert(name, local);
 
@@ -4383,6 +4390,19 @@ impl Lowering<'_> {
             (true, false, _) | (false, true, _) => Rvalue::Reinterpret(value),
         };
         let into = self.temporary(builder, id, diagnostics)?;
+        // **What a pointer to `const` held, it still may**, `const` dropped
+        // or not: `(int *)p` with `p` a parameter may name an object defined
+        // `const` the caller handed. Found by the review of #1122: the cast
+        // was what asked such a pointer, and followed it asked nothing.
+        // Mutation: leave the result unmarked; `a_write_through_a_cast_that_drops_const_is_unproven`'s
+        // `through_a_global`, cast as it is read out of memory, goes silent.
+        if self
+            .types
+            .of(operand)
+            .is_some_and(|ty| self.points_at_const(ty))
+        {
+            builder.function.mark_points_at_const(into);
+        }
         builder.push(Operation {
             place: Place::local(into),
             value: rvalue,
@@ -4399,7 +4419,18 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<LocalId> {
         let ty = self.ty_of(id, diagnostics)?;
-        Some(builder.function.push_local(ty))
+        let local = builder.function.push_local(ty);
+        if self.types.of(id).is_some_and(|ty| self.points_at_const(ty)) {
+            builder.function.mark_points_at_const(local);
+        }
+        Some(local)
+    }
+
+    /// Whether `ty` is a pointer to `const` at its pointee's innermost
+    /// element, so a value of it may name an object defined `const`.
+    /// See ADR-0120.
+    fn points_at_const(&self, ty: TypeId) -> bool {
+        matches!(self.ast.ty(ty), Type::Pointer(pointee) if self.read_only(*pointee))
     }
 
     /// A temporary of the type an operation is performed at.

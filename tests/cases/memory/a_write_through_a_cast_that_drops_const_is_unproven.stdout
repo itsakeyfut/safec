@@ -1,5 +1,6 @@
 Target "x86_64-pc-windows-msvc"
 Static "g" "int" external 1
+Static "gp" "int *" external zero
 Function a_write_through_a_cast_that_drops_const_is_unproven.c:2:5 "main"
   Local "_0" "int" return
   Local "_1" "int *"
@@ -38,4 +39,185 @@ Function a_write_through_a_cast_that_drops_const_is_unproven.c:2:5 "main"
         Copy "_4"
           Deref
     Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:4:12 generated
+    Return
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:6:6 "through_a_parameter"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:7:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_write_through_a_cast_that_drops_const_is_unproven.c:7:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:7:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:7:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:10:6 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:10:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 2
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:10:5 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:10:5 generated
+    Return
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:12:12 "get"
+  Local "_0" "int *" return
+  Local "_1" "int *"
+  Block "bb0" entry
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:13:13 generated
+      Destination "_1"
+      Static "g"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:13:12 generated
+    Return
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:15:5 "through_a_const_result"
+  Local "_0" "int" return
+  Local "_1" "int *" "q"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_write_through_a_cast_that_drops_const_is_unproven.c:16:21 generated
+    Call a_write_through_a_cast_that_drops_const_is_unproven.c:16:21 written "get" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:16:14 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:16:10 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:16:14 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:17:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_write_through_a_cast_that_drops_const_is_unproven.c:17:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:17:9 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:18:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:18:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:17:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:20:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 2
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:20:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:20:5 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:21:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:21:12 generated
+    Return
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:23:5 "only_read"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:24:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_write_through_a_cast_that_drops_const_is_unproven.c:24:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:24:9 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:25:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:25:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:24:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:27:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:27:12 generated
+    Return
+Function a_write_through_a_cast_that_drops_const_is_unproven.c:30:6 "through_a_global"
+  Local "_0" "void" return
+  Local "_1" "int *" "q"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:31:21 generated
+      Destination "_2"
+      Static "gp"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:31:14 written
+      Destination "_3"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:31:10 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:31:14 generated
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:32:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_1"
+    Branch a_write_through_a_cast_that_drops_const_is_unproven.c:32:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:32:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:32:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:35:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_write_through_a_cast_that_drops_const_is_unproven.c:35:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_write_through_a_cast_that_drops_const_is_unproven.c:35:5 generated
     Return
