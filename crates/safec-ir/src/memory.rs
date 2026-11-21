@@ -1126,7 +1126,14 @@ fn findings_within(
                     &known,
                     func,
                 );
-                read_only::returned_read_only(&mut findings, function, element, &known, func);
+                read_only::returned_read_only(
+                    &mut findings,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
+                    func,
+                );
                 analysis.element(function, element, &mut known);
             }
 
