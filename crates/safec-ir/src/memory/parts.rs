@@ -30,6 +30,8 @@ impl ReadOnly {
     pub(super) const NONE: Self = ReadOnly(0);
     /// The pointer itself, and nothing below.
     pub(super) const HERE: Self = ReadOnly(1);
+    /// How many levels a mask has: a level past these is never read-only.
+    pub(super) const LEVELS: usize = u32::BITS as usize;
 
     /// From a mask, bit `k` the level `k`: a local's `const` levels.
     pub(super) fn levels(levels: u32) -> Self {

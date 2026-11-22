@@ -142,7 +142,12 @@ cases! {
         // is asked at its own declared levels and not at what a cast carried
         // to it, `handed_unprototyped_through_a_cast` (#1158, ADR-0123).
         // Mutation: read `Function::held_levels` past the last parameter in
-        // `handed_read_only`; it goes silent. Mutations, each silencing
+        // `handed_read_only`; it goes silent.
+        // Past a reader's type the walk goes on while a level names anything,
+        // so a literal chained through `void *` slots deeper than any pointer
+        // declared is asked, `chained_through_void_slots` (#1159, ADR-0123).
+        // Mutation: stop at `Allocations::deepest_pointer` in
+        // `below_read_only`; it goes silent. Mutations, each silencing
         // the function named: skip a result's inheritance of what it was
         // handed in `Allocations::call`, `found_in_a_literal`; take only the
         // argument's own level, `found_one_load_down`; skip the result's memory mark,

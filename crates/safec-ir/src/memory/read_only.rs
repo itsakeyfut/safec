@@ -101,8 +101,8 @@ fn pointer_levels(analysis: &Allocations<'_>, ty: TyId) -> usize {
 /// `int *c = (int *)&k; set2(&c);` with `set2` taking `int **` hands `k` one
 /// level below. See ADR-0121.
 ///
-/// **Past the levels `receiver` has, where `beyond`**, to the deepest pointer
-/// the unit declares: a reader handed a `void *` or a `char *` may convert it
+/// **Past the levels `receiver` has, where `beyond`**, while anything is
+/// named there: a reader handed a `void *` or a `char *` may convert it
 /// back and write at a level its type never said, and nothing says `const`
 /// there. Asked only to the receiver's depth, `void *f(void)` returning a
 /// block that holds `(int *)&k` was believed (#1134 review). A library
@@ -124,10 +124,25 @@ fn below_read_only(
     };
     let typed = pointer_levels(analysis, receiver);
     // Only past a pointer: an integer's reader reads no level below it.
+    // **Bounded by what is named, not by a declared type**: `void *` slots
+    // chain a literal as deep as the program likes, and stopped at the
+    // deepest pointer the function declares, `x[0] = y; y[0] = "ab";
+    // take(x);` was believed (#1159). A chain of distinct storages is no
+    // longer than there are storages, twice the locals, nor deeper than a
+    // [`ReadOnly`](super::parts::ReadOnly) mask has levels, and the walk stops
+    // where a level names nothing. See ADR-0123. Mutation: stop at
+    // `analysis.deepest_pointer`; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `chained_through_void_slots` goes silent.
     let last = if beyond && typed > 0 {
-        typed.max(analysis.deepest_pointer)
+        typed.max((2 * analysis.locals + 1).min(super::parts::ReadOnly::LEVELS))
     } else {
         typed
+    };
+    let named_at = |level: usize| {
+        level < typed || level == 0 || {
+            let (sites, locals) = known.levels_below(place.local, depth + level - 1);
+            !sites.is_empty() || !locals.is_empty()
+        }
     };
     // A level past `typed` has no bit set, so it is asked as writable. **Of
     // what the value certainly reaches where the reader keeps `const` at its
@@ -145,14 +160,20 @@ fn below_read_only(
     // `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`'s
     // `handed_as_void_beside_a_literal_kept` goes silent.
     let keeps_const = typed > 0 && levels >> (typed - 1) & 1 != 0;
-    (from..last).any(|level| {
-        levels >> level & 1 == 0
-            && if level < typed || !keeps_const {
-                read_only_exactly_at(place.local, depth + level, read_only, known)
-            } else {
-                read_only_certainly_at(place.local, depth + level, read_only, known)
-            }
-    })
+    (from..last)
+        .take_while(|&level| named_at(level))
+        .any(|level| {
+            levels
+                .checked_shr(u32::try_from(level).unwrap_or(u32::MAX))
+                .unwrap_or(0)
+                & 1
+                == 0
+                && if level < typed || !keeps_const {
+                    read_only_exactly_at(place.local, depth + level, read_only, known)
+                } else {
+                    read_only_certainly_at(place.local, depth + level, read_only, known)
+                }
+        })
 }
 
 /// [`read_only_exactly_at`] of what the value read `depth` down certainly

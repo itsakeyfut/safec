@@ -196,3 +196,11 @@ void handed_unprototyped_through_a_cast(void) {
     const char *c = "ab";
     unp((char **)&c);
 }
+void take_any(void *a);
+void chained_through_void_slots(void) {
+    void *y[1];
+    void *x[1];
+    y[0] = "ab";
+    x[0] = y;
+    take_any(x);
+}
