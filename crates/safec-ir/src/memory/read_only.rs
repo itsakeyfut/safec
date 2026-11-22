@@ -128,16 +128,25 @@ fn below_read_only(
     } else {
         typed
     };
-    // A level past `typed` has no bit set, so it is asked as writable, and
-    // only of what the value certainly reaches: through a pointer read out
-    // of a global, every escaped block stood for the `char` a `const char *`
-    // reader reaches, `*out = G;` was reported (#1145). See ADR-0122.
+    // A level past `typed` has no bit set, so it is asked as writable. **Of
+    // what the value certainly reaches where the reader keeps `const` at its
+    // last level**: through a pointer read out of a global, every escaped
+    // block stood for the `char` a `const char *` reader reaches, `*out =
+    // G;` was reported (#1145). **And of everything it may reach where the
+    // reader does not**, a `void *` or a `char *`, which may convert back
+    // and write: asked of what it certainly reaches alone, a call's result
+    // handed as `void *` lost every block it may return, and a literal kept
+    // behind one was believed (#1163 review). See ADR-0122 and ADR-0123.
     // Mutation: ask past `typed` as within it;
     // `a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write`'s
-    // `stored_beside_a_table_handed_on` is reported.
+    // `stored_beside_a_table_handed_on` is reported. Mutation: ask every
+    // reader of what is certain alone;
+    // `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`'s
+    // `handed_as_void_beside_a_literal_kept` goes silent.
+    let keeps_const = typed > 0 && levels >> (typed - 1) & 1 != 0;
     (from..last).any(|level| {
         levels >> level & 1 == 0
-            && if level < typed {
+            && if level < typed || !keeps_const {
                 read_only_exactly_at(place.local, depth + level, read_only, known)
             } else {
                 read_only_certainly_at(place.local, depth + level, read_only, known)

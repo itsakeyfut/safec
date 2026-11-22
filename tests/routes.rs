@@ -663,6 +663,16 @@ const HELD_FIELDS: &[(&str, Field, Start)] = &[
         ),
     ),
     (
+        "guessed",
+        Field::Exempt {
+            why: "which names a call this check cannot read is only assumed to return; read by the walk past a reader's type alone, so no belief's row reads it (ADR-0123)",
+            held_by: &["a_call_result_names_what_it_was_shown_apart_from_what_it_may_return"],
+        },
+        Start::Fact(
+            "a value is guessed to name nothing until a call this check cannot read returns it",
+        ),
+    ),
+    (
         "freed",
         Field::Belief(&[Belief::Stale, Belief::StoredFreed]),
         Start::Fact("no free has acted on the value at its start"),

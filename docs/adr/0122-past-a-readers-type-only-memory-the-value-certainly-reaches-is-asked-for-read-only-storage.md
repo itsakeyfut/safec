@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (narrowed by ADR-0123 to readers whose last level is const)"
 date: 2026-11-22
 decision-makers: itsakeyfut
 ---

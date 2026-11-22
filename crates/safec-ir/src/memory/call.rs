@@ -2283,7 +2283,7 @@ impl Allocations<'_> {
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {
-                    value.points_to[result].hold(other, At::Unknown);
+                    value.points_to[result].hold_guessed(other, At::Unknown);
                 }
                 // **And any escaped local's address**, for the same reason
                 // and with the same reach: `id(&x)` may return `&x`, and
@@ -2296,7 +2296,11 @@ impl Allocations<'_> {
                     .indices()
                     .filter(|&local| value.escaped[local])
                 {
-                    value.points_to[result].name_local(local);
+                    // **Held by nothing, measured**: filed as shown, no case
+                    // moves, since a local reaches read-only storage past a
+                    // reader's type only through a static, which is no
+                    // referent until #1162.
+                    value.points_to[result].name_local_guessed(local);
                 }
                 if was_exposed {
                     value.state[site] = SiteState::Unknown;

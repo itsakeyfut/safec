@@ -1328,11 +1328,30 @@ impl Known {
         local: LocalId,
         depth: usize,
     ) -> (BTreeSet<Site>, BTreeSet<LocalIdx>) {
-        let Some((mut sites, mut locals)) = self.level_zero(local) else {
+        // **Only what the program showed**, not what a call this check
+        // cannot read is guessed to return (`Held::guessed`). Through those
+        // guesses a call's result reached the memory a parameter arrived
+        // pointing at, a level past its reader's type (#1145, #1163). See
+        // ADR-0123. Mutation: walk every name; `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`
+        // reports.
+        let held = &self.points_to[local];
+        if held.beyond().lost() {
             return (BTreeSet::new(), BTreeSet::new());
-        };
+        }
+        let mut sites: BTreeSet<Site> = held.shown_sites().collect();
+        let mut locals: BTreeSet<LocalIdx> = held.shown_locals().collect();
         for _ in 0..depth {
-            (sites, locals) = self.level_below(&sites, &locals);
+            let mut next_sites = BTreeSet::new();
+            let mut next_locals = BTreeSet::new();
+            for &container in &sites {
+                next_sites.extend(self.contents[container].sites());
+                next_locals.extend(self.contents[container].locals());
+            }
+            for &holder in &locals {
+                next_sites.extend(self.points_to[holder].shown_sites());
+                next_locals.extend(self.points_to[holder].shown_locals());
+            }
+            (sites, locals) = (next_sites, next_locals);
         }
         (sites, locals)
     }

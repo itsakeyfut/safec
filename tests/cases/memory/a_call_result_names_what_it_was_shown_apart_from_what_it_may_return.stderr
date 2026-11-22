@@ -1,0 +1,140 @@
+error[SC0402]: this uses `out`, which may have been freed
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:17:9 ]
+    │
+ 17 │         *out = get();
+    │         ──────┬─────  
+    │               ╰─────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this stores a pointer that may point to a freed allocation where code outside this function may read it
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:17:9 ]
+    │
+ 17 │         *out = get();
+    │         ──────┬─────  
+    │               ╰─────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:17:9 ]
+    │
+ 17 │         *out = get();
+    │         ──────┬─────  
+    │               ╰─────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0402]: this uses `r`, which may have been freed
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:28:14 ]
+    │
+ 28 │     if (r && *r) {
+    │              ─┬  
+    │               ╰── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `r`, which may have been freed
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:29:9 ]
+    │
+ 29 │         **r = 'x';
+    │         ────┬────  
+    │             ╰────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:29:9 ]
+    │
+ 29 │         **r = 'x';
+    │         ────┬────  
+    │             ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:29:9 ]
+    │
+ 29 │         **r = 'x';
+    │         ────┬────  
+    │             ╰────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:43:5 ]
+    │
+ 43 │     take(r);
+    │     ───┬───  
+    │        ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0413]: this lets `r` leave, which may not point at the start of an object
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:43:5 ]
+    │
+ 43 │     take(r);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave as a `void *` only at the start of an object
+error[SC0407]: this passes `r`, which may point to a freed allocation
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:43:5 ]
+    │
+ 43 │     take(r);
+    │     ───┬───  
+    │        ╰───── passed here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `out`, which may have been freed
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:49:9 ]
+    │
+ 49 │         *out = get();
+    │         ──────┬─────  
+    │               ╰─────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0414]: this stores a pointer that may point to a freed allocation where code outside this function may read it
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:49:9 ]
+    │
+ 49 │         *out = get();
+    │         ──────┬─────  
+    │               ╰─────── stored here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:56:5 ]
+    │
+ 56 │     sink(r);
+    │     ───┬───  
+    │        ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_call_result_names_what_it_was_shown_apart_from_what_it_may_return.c:29:9 ]
+    │
+ 29 │         **r = 'x';
+    │         ────┬────  
+    │             ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

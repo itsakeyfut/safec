@@ -288,6 +288,7 @@ fails where this table and that file differ.
 | Known | `part_before` | entry fact | 2 tests named in its row |
 | Known | `handed_untyped` | entry fact | beliefs `Width` |
 | Held | `names` | entry fact | beliefs `Lost`, `Stale`, `Reborn`, `Caller` |
+| Held | `guessed` | entry fact | 1 test named in its row |
 | Held | `freed` | entry fact | beliefs `Stale`, `StoredFreed` |
 | Held | `writes_elsewhere` | in doubt | 2 tests named in its row |
 | Held | `position` | entry fact | beliefs `Width` |
