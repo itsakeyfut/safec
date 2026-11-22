@@ -250,7 +250,11 @@ cases! {
         // and `strdup` of one, and through a local, fit; a parameter's
         // string is still `SC0412`, `of_a_parameter` (#1179). So is one past
         // its start, `past_its_start`: a pointer moved by arithmetic is not
-        // one this check certainly places (`Held::alone`).
+        // one this check certainly places (`Held::alone`). A row with a
+        // length it cannot read is not a string row, and a literal handed to
+        // one is still doubted, `copied_for_a_length_not_read` (#1179
+        // review). Mutation: answer every row from `string_ends_inside`; it
+        // loses that `SC0412`.
         // Mutation: answer `false` from `string_ends_inside`; the literal
         // calls are `SC0412`.
         a_literal_read_as_a_string_by_a_library_row_fits: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

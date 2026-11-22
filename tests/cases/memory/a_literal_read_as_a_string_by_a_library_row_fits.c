@@ -1,3 +1,4 @@
+void *memcpy(void *d, const void *s, unsigned long long n);
 void free(void *p);
 unsigned long long strlen(const char *s);
 char *strdup(const char *s);
@@ -17,4 +18,9 @@ int past_its_start(void) {
 }
 int of_a_parameter(const char *q) {
     return q ? (int)strlen(q) : 0;
+}
+void copied_for_a_length_not_read(char *buf, unsigned long long n) {
+    if (buf) {
+        memcpy(buf, "abc", n);
+    }
 }

@@ -1156,9 +1156,18 @@ pub(super) fn reached_by_library(
         } {
             match width {
                 Some(width) => fits_as_bytes(analysis, function, local, width, known, true),
-                // **Where the string's end is seen**, a literal or a `const`
-                // array of `char` this check reads the bytes of, it fits.
-                None if string_ends_inside(analysis, known, local) => Some(Fit::Inside),
+                // **Where a string row sees the string's end**, a literal
+                // this check reads the bytes of, it fits. **A string row's
+                // alone**: a length this check could not read is no width
+                // either, and a zero in the literal bounds nothing `memcpy`
+                // reads, so `memcpy(buf, "abc", n)` was believed (#1179
+                // review). Mutation: ask every row; the case's
+                // `copied_for_a_length_not_read` loses its `SC0412`.
+                None if matches!(reach, Reach::String)
+                    && string_ends_inside(analysis, known, local) =>
+                {
+                    Some(Fit::Inside)
+                }
                 // Anything else that holds something is unknown here.
                 None => fits(analysis, function, local, 0, known, true).map(|_| Fit::Unknown),
             }
