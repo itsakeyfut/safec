@@ -2940,7 +2940,7 @@ impl Analysis for Allocations<'_> {
             // **At every level its type says**, not only its first (#1152).
             if operation.place.steps().is_empty() {
                 value.points_to[local].read_only |=
-                    super::parts::ReadOnly::levels(function.const_levels(local));
+                    super::parts::ReadOnly::levels(function.held_levels(local));
             }
         }
     }

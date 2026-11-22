@@ -138,7 +138,11 @@ cases! {
         // writable at every level. Where arrival is not shown it is doubted
         // (#1164, ADR-0123): `found_in_a_literal`, `copied_by_realloc`,
         // `read_through_a_global_alias`, `written_through_a_const_argument`
-        // and `found_one_load_down` are `SC0417`. Mutations, each silencing
+        // and `found_one_load_down` are `SC0417`. An unprototyped argument
+        // is asked at its own declared levels and not at what a cast carried
+        // to it, `handed_unprototyped_through_a_cast` (#1158, ADR-0123).
+        // Mutation: read `Function::held_levels` past the last parameter in
+        // `handed_read_only`; it goes silent. Mutations, each silencing
         // the function named: skip a result's inheritance of what it was
         // handed in `Allocations::call`, `found_in_a_literal`; take only the
         // argument's own level, `found_one_load_down`; skip the result's memory mark,

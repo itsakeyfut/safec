@@ -2028,14 +2028,14 @@ impl Allocations<'_> {
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `implicit_conversion_of_a_result` goes silent.
             value.points_to[result].read_only |=
-                super::parts::ReadOnly::levels(function.const_levels(place.local));
+                super::parts::ReadOnly::levels(function.held_levels(place.local));
             // **And its memory by its type**, as a parameter's: `realloc`
             // copies that memory without a load through the result, and a
             // copy read back found nothing (#1156). See ADR-0123. Mutation:
             // skip this; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `copied_by_realloc` goes silent.
             value.contents[site].arrives_holding_read_only(
-                super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
+                super::parts::ReadOnly::levels(function.held_levels(place.local)).below(1),
             );
             // **And whatever it was handed may be what it returns**, or any
             // pointer that reaches: `find("ab")` may return the literal, and

@@ -192,3 +192,7 @@ int found_one_load_down(void) {
     }
     return 0;
 }
+void handed_unprototyped_through_a_cast(void) {
+    const char *c = "ab";
+    unp((char **)&c);
+}

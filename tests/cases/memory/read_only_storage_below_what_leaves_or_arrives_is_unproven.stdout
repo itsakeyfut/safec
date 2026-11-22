@@ -19,6 +19,7 @@ Static ".str.7" "char[3]" internal bytes 97 98 0
 Static ".str.8" "char[3]" internal bytes 99 100 0
 Static ".str.9" "char[3]" internal bytes 97 98 0
 Static ".str.10" "char[3]" internal bytes 97 98 0
+Static ".str.11" "char[3]" internal bytes 97 98 0
 Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:1:7 "malloc" declared
   Local "_0" "void *" return
   Local "_1" "unsigned long long" parameter "n"
@@ -1185,4 +1186,38 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:187:5 "fou
       Use
         Constant 0
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:193:12 generated
+    Return
+Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:195:6 "handed_unprototyped_through_a_cast"
+  Local "_0" "void" return
+  Local "_1" "char *" "c"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "char **"
+  Local "_5" "char **"
+  Block "bb0" entry
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:196:21 generated
+      Destination "_2"
+      Static ".str.11"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:196:21 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:196:17 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:196:21 generated
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:197:18 written
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:197:9 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:197:5 generated
+    Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:197:5 written "unp" "bb1"
+      Copy "_5"
+  Block "bb1"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:197:5 generated
     Return

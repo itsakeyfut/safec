@@ -1286,6 +1286,13 @@ pub struct Function {
     /// not is a level a write through it is believed to be allowed at. See
     /// ADR-0120 and ADR-0121.
     const_levels: Vec<(LocalId, u32)>,
+    /// Per temporary, the levels at which the value it was given points at
+    /// `const`, where its own type says less: what a cast that drops `const`
+    /// converted, a pointer moved by arithmetic, an array decayed. **Kept
+    /// apart from [`Self::const_levels`]**, which say what a reader declared:
+    /// read as one, `unp((char **)&c)` asked the cast's reader at the
+    /// operand's levels and was believed (#1158). See ADR-0123.
+    carried_levels: Vec<(LocalId, u32)>,
     body: Body,
 }
 
@@ -1337,6 +1344,7 @@ impl Function {
             read_only: Vec::new(),
             returns_reads_only: false,
             const_levels: Vec::new(),
+            carried_levels: Vec::new(),
             body: Body::Defined(Vec::new()),
         }
     }
@@ -1515,6 +1523,40 @@ impl Function {
             .iter()
             .find(|(each, _)| *each == local)
             .map_or(0, |(_, levels)| *levels)
+    }
+
+    /// Add `levels` to what the value `local` was given points at `const`
+    /// at, apart from its declared levels. See [`Self::carried_levels`].
+    pub fn mark_carried_levels(&mut self, local: LocalId, levels: u32) {
+        if levels == 0 {
+            return;
+        }
+        match self
+            .carried_levels
+            .iter_mut()
+            .find(|(each, _)| *each == local)
+        {
+            Some((_, marked)) => *marked |= levels,
+            None => self.carried_levels.push((local, levels)),
+        }
+    }
+
+    /// The levels at which the value `local` was given points at `const`
+    /// beyond what its type declares: a cast's operand's, a moved pointer's,
+    /// a decayed array's. **Never a reader's question**, which reads
+    /// [`Self::const_levels`] alone. See ADR-0123.
+    pub fn carried_levels(&self, local: LocalId) -> u32 {
+        self.carried_levels
+            .iter()
+            .find(|(each, _)| *each == local)
+            .map_or(0, |(_, levels)| *levels)
+    }
+
+    /// Every level at which what `local` holds may point at `const`: what
+    /// its type declares and what its value carried. What the memory check
+    /// marks a value with, never what it asks a reader. See ADR-0123.
+    pub fn held_levels(&self, local: LocalId) -> u32 {
+        self.const_levels(local) | self.carried_levels(local)
     }
 
     /// Whether `local` is declared as a pointer to `const`. See ADR-0120.
