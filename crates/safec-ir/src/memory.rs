@@ -85,8 +85,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, LocalId, Place, Rvalue, Terminator,
-    TranslationUnit,
+    Between, BlockId, Element, FuncId, Function, LocalId, Operation, Place, Rvalue, StaticId,
+    Terminator, TranslationUnit,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -147,6 +147,11 @@ pub enum Kind {
     /// pointer into an allocation this check followed, and `free(17)` or a
     /// free of a local's address is not reported under it. See ADR-0036.
     InteriorFree,
+    /// `free(&g)`: storage with static duration handed to `free` or to
+    /// `realloc`, which no allocation function returned (C17 7.22.3.3 p2).
+    /// The same clause and code as [`Kind::InteriorFree`], about a pointer
+    /// to no allocation at all. See ADR-0123.
+    StaticFree,
     /// `free(p); return p;`
     ///
     /// One of the two reads of a pointer without a dereference this check asks
@@ -806,6 +811,22 @@ fn analysis<'a>(
         unit,
         function: func,
         locals: function.locals().len(),
+        statics: {
+            let mut statics: Vec<StaticId> = function
+                .blocks()
+                .flat_map(|block| &block.elements)
+                .filter_map(|element| match element {
+                    Element::Assign(Operation {
+                        value: Rvalue::Static(id),
+                        ..
+                    }) => Some(*id),
+                    _ => None,
+                })
+                .collect();
+            statics.sort_unstable();
+            statics.dedup();
+            statics
+        },
         deepest_pointer: deepest_pointer(unit, function),
         parameters: function.parameters().collect(),
         exposed_parameters: function

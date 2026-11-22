@@ -140,7 +140,7 @@ pub(super) fn built_from(
     // Every mark said, as a door does (#939): what each operand holds is
     // folded in by `accumulated`, whose union starts from this.
     let mut reached = Held::from_marks(
-        value.points_to.len(),
+        value.referents(),
         Marks {
             lost: false,
             freed: None,
@@ -259,12 +259,16 @@ pub(super) fn built_from(
     // anything through it. Asked by type at the doors instead, an integer
     // holding a pointer's bytes handed where a pointer is read went silent
     // (#1135). Mutation: keep the mark; `a_value_computed_from_a_pointer_to_const_is_not_a_write`
-    // reports.
+    // reports. **Nor a static it compared**, which is asked by name
+    // (ADR-0123): it stays what this check does not model, as every reader
+    // that has not asked for a static reads one. Mutation: keep the static;
+    // the same case's `through_a_local` reports.
     if matches!(
         op,
         Some(BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne)
     ) {
         reached.read_only = super::parts::ReadOnly::NONE;
+        reached.statics_as_loaded();
     }
 
     reached
@@ -543,6 +547,6 @@ pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: Local
 pub(super) fn named(reached: &[Reached]) -> impl Iterator<Item = Site> + '_ {
     reached.iter().filter_map(|reached| match reached {
         Reached::Site(site) => Some(*site),
-        Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial => None,
+        Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial | Reached::Static => None,
     })
 }

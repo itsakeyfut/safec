@@ -5516,14 +5516,26 @@ cases! {
         // `Lowering::reach_static`; the store no longer escapes and the
         // report changes.
         a_pointer_kept_in_a_global_and_freed_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static's storage handed to `free` or `realloc` is `SC0404`:
+        // proved where nothing else is reached, `freed_by_address` and
+        // `reallocated`, and doubted where another path reaches an
+        // allocation or a null, `freed_on_one_path` and `freed_or_null`, or
+        // a pointer converted from an integer, which may be an allocation,
+        // `freed_on_one_path_or_converted` (#1162 review, ADR-0123). Mutation:
+        // ask only that nothing else is reached in `report::reported`;
+        // `freed_on_one_path_or_converted` is proved. Mutation: skip the static in
+        // `Allocations::touching`; `freed_by_address` says it stopped
+        // following.
+        freeing_static_storage_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And any call may free what a global holds, so `p` is doubted after
         // `drop` frees it through `kept`. Mutation: the same; `p` never
         // escapes, and the report changes.
         a_pointer_kept_in_a_global_may_be_freed_by_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A literal is a static, not an allocation, so freeing one is doubted.
-        // Mutation: answer `Rvalue::Static` as a null in the memory check's
-        // transfer; `free` of it is believed to do nothing, and this builds.
-        a_string_literal_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A literal is a static, not an allocation, so freeing one is
+        // `SC0404`, proved (#1162, ADR-0123). Mutation: answer
+        // `Rvalue::Static` as a null in the memory check's transfer; `free`
+        // of it is believed to do nothing, and this builds.
+        a_string_literal_freed_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

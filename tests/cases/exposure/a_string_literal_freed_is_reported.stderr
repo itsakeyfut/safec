@@ -1,0 +1,9 @@
+error[SC0404]: this frees static storage, which no allocation function returned
+   ╭─[ a_string_literal_freed_is_reported.c:3:5 ]
+   │
+ 3 │     free("hi");
+   │     ─────┬────  
+   │          ╰────── static storage, not an allocation
+───╯
+  = note: this check belongs to safety level 1
+  = help: free only what an allocation function returned

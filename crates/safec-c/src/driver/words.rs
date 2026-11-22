@@ -808,6 +808,42 @@ pub(super) fn memory_finding(
             "this offset may not be zero",
             "free the pointer the allocation was made with if this offset can be non-zero",
         ),
+        // **The same clause as an interior free, about no allocation at
+        // all**: static storage was never returned by an allocation function,
+        // so `free` and `realloc` must not be handed it (C17 7.22.3.3 p2,
+        // 7.22.3.5 p3). Doubted where another path reaches something else,
+        // as `if (c) p = &g; else p = malloc(4);`. See ADR-0123.
+        (Kind::StaticFree, Conclusion::Unsafe, _) => (
+            INTERIOR_FREE,
+            said(
+                name,
+                "this frees static storage, which no allocation function returned",
+                |name| format!("this frees `{name}`, which points at static storage"),
+            ),
+            "static storage, not an allocation",
+            "free only what an allocation function returned",
+        ),
+        (
+            Kind::StaticFree,
+            Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement
+                | Unproven::Offset
+                | Unproven::Extent
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced,
+            )
+            | None,
+        ) => (
+            INTERIOR_FREE,
+            said(
+                name,
+                "this may free static storage, which no allocation function returned",
+                |name| format!("this frees `{name}`, which may point at static storage"),
+            ),
+            "this may be static storage",
+            "free only what an allocation function returned, on every path that reaches here",
+        ),
         (
             Kind::UnsequencedAccess {
                 written,

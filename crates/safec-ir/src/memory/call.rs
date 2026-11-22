@@ -26,6 +26,16 @@ use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Makes};
 
 impl Allocations<'_> {
+    /// Where `id` is among the statics this function takes the address of,
+    /// which `analysis` numbered from every `Rvalue::Static` in the body.
+    pub(super) fn static_slot(&self, id: crate::ir::StaticId) -> super::index::StaticSlot {
+        let at = self
+            .statics
+            .binary_search(&id)
+            .expect("every static this function takes the address of is numbered");
+        super::index::Idx::at(at)
+    }
+
     /// A fill of bytes no write made a pointer, landing as `landing`: each
     /// block and local it may land in may now hold them, as `Why::Forged`,
     /// beside what it held. The caller has decided the bytes are not all
@@ -42,7 +52,7 @@ impl Allocations<'_> {
     /// `land_contents` pours into blocks alone.
     fn fill_lands_forged(&self, landing: &Landing, value: &mut Known) {
         let forged = Held::from_marks(
-            value.points_to.len(),
+            value.referents(),
             Marks {
                 lost: false,
                 freed: None,
@@ -73,7 +83,8 @@ impl Allocations<'_> {
             },
         );
         let poured = Cell::poured(
-            value.points_to.len(),
+            value.referents(),
+            value.read_only_of(&forged),
             std::iter::empty(),
             std::iter::empty(),
             &Levels::new(vec![Width::Unbounded]),
@@ -702,6 +713,8 @@ impl Allocations<'_> {
                     // Through `Known::expose`: what the call is handed, as at
                     // any call of this family.
                     exposed: _,
+                    // The unit's, the same at every point and on every path.
+                    read_only_statics: _,
                     // Keeps no address; see `Known::exposed`.
                     certainly_exposed: _,
                     // Through `Known::pour` and the walk: what the
@@ -1138,8 +1151,13 @@ impl Allocations<'_> {
                             };
                             let recorded =
                                 self.recorded_where_it_lands(first, &copied_bound.below(1));
+                            // As a store's (ADR-0123). **Held by nothing,
+                            // measured**: what a copy reads out of memory names
+                            // no static, and a copy of a local naming one is
+                            // reported without it.
                             let poured = Cell::poured(
-                                value.points_to.len(),
+                                value.referents(),
+                                value.read_only_of(&read),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
                                 &recorded,
@@ -1352,8 +1370,8 @@ impl Allocations<'_> {
                 value.expose_locals(handed_locals);
                 let may_write: Table<LocalIdx, bool> = Table::from_vec(
                     value
-                        .exposed
-                        .locals()
+                        .points_to
+                        .indices()
                         .map(|local| value.exposed[local])
                         .collect(),
                 );
@@ -1743,7 +1761,7 @@ impl Allocations<'_> {
                 value.replace(
                     at,
                     Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1810,7 +1828,7 @@ impl Allocations<'_> {
                     // measured. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1863,7 +1881,7 @@ impl Allocations<'_> {
                         held
                     }
                     Some(_) | None => Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1930,7 +1948,7 @@ impl Allocations<'_> {
         value.replace(
             at,
             Held::from_marks(
-                value.points_to.len(),
+                value.referents(),
                 Marks {
                     lost: false,
                     freed: None,
@@ -2190,6 +2208,8 @@ impl Allocations<'_> {
                     // The new block's is cleared by `Known::reborn`, and
                     // nothing is carried from the old.
                     exposed: _,
+                    // The unit's, the same at every point and on every path.
+                    read_only_statics: _,
                     // Keeps no address; see `Known::exposed`.
                     certainly_exposed: _,
                     // The new block holds what the old held, by `Known::pour`
@@ -2341,8 +2361,8 @@ impl Allocations<'_> {
                     value.points_to[result].lost_its_allocation();
                 }
                 let exposed: Vec<Site> = value
-                    .exposed
-                    .sites()
+                    .state
+                    .indices()
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {
@@ -2380,8 +2400,8 @@ impl Allocations<'_> {
                 let answered = value.written.clone();
                 value.expose(self.sources, [site], Some(origin.span()));
                 let others: Vec<Site> = value
-                    .exposed
-                    .sites()
+                    .state
+                    .indices()
                     .filter(|&other| other != site)
                     .collect();
                 for other in others {

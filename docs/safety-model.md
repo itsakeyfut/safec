@@ -268,6 +268,7 @@ fails where this table and that file differ.
 | Known | `escaped` | entry fact | beliefs `Width`, `Unreplaced`, `LeftBehind`, `PartLocal` |
 | Known | `handed_away` | entry fact | 1 test named in its row |
 | Known | `exposed` | in doubt | 2 tests named in its row |
+| Known | `read_only_statics` | entry fact | 1 test named in its row |
 | Known | `certainly_exposed` | in doubt | 2 tests named in its row |
 | Known | `contents` | in doubt | beliefs `Width`, `Lost`, `Stale`, `Caller` |
 | Known | `realloced` | entry fact | 2 tests named in its row |

@@ -510,7 +510,12 @@ freeing anything but what an allocation function returned undefined, and
 double free is a mistake about ownership, a use after free one about lifetime,
 and this is a mistake about which value was handed over. One call can carry
 both it and `SC0401` at one caret, the second in `free(p); free(p + 1);`,
-because the two are different questions about the same call.
+because the two are different questions about the same call. A pointer to
+static storage, a global's address or a string literal, is the same clause
+about no allocation at all, so `free(&g)` and `realloc(&g, n)` are `SC0404`
+too, proved where nothing else may be freed there and doubted where another
+path hands an allocation or a null
+([ADR-0123](adr/0123-read-only-storage-is-carried-by-what-a-pointer-names-and-by-grants-not-by-marks-that-move.md)).
 [ADR-0036](adr/0036-a-pointer-carries-where-in-its-allocation-it-points.md)
 records what is proved and what is left unproven.
 

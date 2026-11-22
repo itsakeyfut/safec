@@ -12,7 +12,7 @@ use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
-use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
+use super::index::{LocalIdx, Referent, Site, StaticSlot, Storage, Table, Why};
 use super::{Carried, LostReason};
 
 /// Per level, whether a pointer read that many dereferences down may name
@@ -1123,6 +1123,10 @@ pub(super) enum Reached {
     /// such a set, but a set of live sites says nothing either, and a
     /// dereference of a live load is not a report. See ADR-0045.
     Partial,
+    /// An object with static storage duration, which no allocation function
+    /// returned and nothing frees: a free or a `realloc` of it is `SC0404`,
+    /// and it is never a freed block. See ADR-0123.
+    Static,
 }
 
 /// Where in what a value names it points: the byte position, [`At`], and
@@ -1525,11 +1529,13 @@ pub(super) struct Held {
     /// for takes it away. See ADR-0100.
     pub(super) vouched: bool,
     /// **Whether it may name storage the program may not modify**, a static
-    /// defined `const` or a string literal (C17 6.7.3 p6, 6.4.5 p7): set by
-    /// [`crate::ir::Rvalue::Static`] of a read-only static, kept by a union at
-    /// every join and carried wherever the value is, so that a write through
-    /// it is asked whatever spelling reached it. A local is not marked here,
-    /// being named. Per level, [`ReadOnly`]. See ADR-0120.
+    /// defined `const` or a string literal (C17 6.7.3 p6, 6.4.5 p7), at each
+    /// level a load or a call's type gave it, kept by a union at every join
+    /// and carried wherever the value is, so that a write through it is asked
+    /// whatever spelling reached it. **Not level `0` of a static it names**,
+    /// which is asked of the static by name, as a local is
+    /// (`Known::read_only_of`, ADR-0123). Per level, [`ReadOnly`]. See
+    /// ADR-0120.
     pub(super) read_only: ReadOnly,
     /// **The one place it certainly names**, where that is shown: taking the
     /// address of a whole local or of a one-level array's start, and an
@@ -1875,13 +1881,59 @@ impl Held {
 
     /// Whether this value may name what this check does not model for
     /// `why`: what each mark was before it was a member of the set.
+    ///
+    /// **A static is [`Why::Loaded`] to every reader that has not asked
+    /// for it by name**: a static's address was built as a loaded pointer
+    /// until it was a referent, so a reader that forgets the new kind
+    /// doubts it as before, a false report, rather than taking it for
+    /// nothing at all. See ADR-0123. Mutation: answer `false` for a static
+    /// here; `memset_past_a_global_array_is_doubted` fails, among eight cases.
     pub(super) fn may_name(&self, why: Why) -> bool {
+        self.names.get(Referent::Unknown(why)) || why == Why::Loaded && self.names_a_static()
+    }
+
+    /// Whether this value may name what this check does not model for
+    /// `why`, a static left out: for a reader that asks for statics by
+    /// name. See ADR-0123.
+    pub(super) fn may_name_apart_from_statics(&self, why: Why) -> bool {
         self.names.get(Referent::Unknown(why))
+    }
+
+    /// Whether this value may name an object with static storage duration.
+    pub(super) fn names_a_static(&self) -> bool {
+        self.statics().next().is_some()
+    }
+
+    /// The objects with static storage duration this value may name.
+    pub(super) fn statics(&self) -> impl Iterator<Item = StaticSlot> + '_ {
+        self.names.ones().filter_map(|referent| match referent {
+            Referent::Static(id) => Some(id),
+            Referent::Heap(_) | Referent::Local(_) | Referent::Unknown(_) => None,
+        })
     }
 
     /// Name what this check does not model for `why`.
     pub(super) fn name_unknown(&mut self, why: Why) {
         self.names.set(Referent::Unknown(why));
+    }
+
+    /// Name no static, and [`Why::Loaded`] where one was named, which is how
+    /// every reader that has not asked for a static reads it: for a value
+    /// that names no storage of its own, a comparison's. See ADR-0123.
+    pub(super) fn statics_as_loaded(&mut self) {
+        let statics: Vec<StaticSlot> = self.statics().collect();
+        if !statics.is_empty() {
+            self.name_unknown(Why::Loaded);
+        }
+        for id in statics {
+            self.names.remove(Referent::Static(id));
+        }
+    }
+
+    /// Name the object with static storage duration `id`: its address was
+    /// taken. See ADR-0123.
+    pub(super) fn name_static(&mut self, id: StaticSlot) {
+        self.names.set(Referent::Static(id));
     }
 
     // **The marks are set by event, not by name**: each method below sets
@@ -2006,23 +2058,23 @@ impl Held {
     /// Mutation: leave its level 0 `Nothing`; `a_load_on_one_arm_and_a_null_on_the_other_stored_in_memory_is_bounded_at_what_the_load_believed`
     /// fails, among eight cases, and so does the route matrix's
     /// `width_memcpy_d0_one`.
-    pub(super) fn null(sites: usize) -> Self {
-        let mut null = Held::none(sites);
+    pub(super) fn null(referents: usize) -> Self {
+        let mut null = Held::none(referents);
         null.may_be_null = true;
         null.widths.set_first(Width::Unbounded);
         null
     }
 
-    /// A local holding nothing, in a function with this many sites, and a
+    /// A local holding nothing, in a function with this many referents, and a
     /// block nothing was stored in, which is [`Cell::absorb`]'s identity.
     ///
     /// **Private to this file**: a door outside it builds its value through
     /// [`Held::from_marks`], naming every mark, so that a mark added to
     /// [`Marks`] is `error[E0063]` at that door rather than this function's
     /// answer taken in silence (#939).
-    fn none(sites: usize) -> Self {
+    fn none(referents: usize) -> Self {
         Held::from_marks(
-            sites,
+            referents,
             Marks {
                 lost: false,
                 freed: None,
@@ -2064,7 +2116,7 @@ impl Held {
     /// door that builds a value starts from, so that it says each mark it
     /// gives, `false` included where a reviewer reads it. A mark added to
     /// [`Marks`] is `error[E0063]` at every door until it answers (#732).
-    pub(super) fn from_marks(sites: usize, marks: Marks) -> Self {
+    pub(super) fn from_marks(referents: usize, marks: Marks) -> Self {
         let Marks {
             lost,
             freed,
@@ -2092,12 +2144,14 @@ impl Held {
             alone,
         } = marks;
         let mut held = Held {
-            names: Bits::new(Referent::count(sites)),
-            guessed: Bits::new(Referent::count(sites)),
+            names: Bits::new(referents),
+            guessed: Bits::new(referents),
             freed,
             writes_elsewhere,
             position,
-            named_at_read: Bits::new(sites),
+            // Kept as long as a set of referents, which is longer than the
+            // locals it is indexed by, so that one count builds a value.
+            named_at_read: Bits::new(referents),
             returned_by,
             fresh_read,
             widths,
@@ -2832,12 +2886,12 @@ pub(super) struct Cell {
 
 impl Cell {
     /// A block nothing was stored in, which is [`Cell::absorb`]'s identity.
-    pub(super) fn none(locals: usize) -> Self {
+    pub(super) fn none(referents: usize) -> Self {
         // **Nothing stored bounds nothing**, at every level, level 0 too,
         // where a value's own [`Held::none`] believes nothing.
         Cell {
             widths: Levels::default(),
-            names: Bits::new(Referent::count(locals)),
+            names: Bits::new(referents),
             position: None,
             may_hold_null: false,
             may_hold_read_only: ReadOnly::NONE,
@@ -3048,13 +3102,14 @@ impl Cell {
     /// alone where the store kept `lost` as well; one rule now, the store's,
     /// which moved no case in the corpus or the route matrix, measured.
     pub(super) fn poured(
-        locals: usize,
+        referents: usize,
+        read_only: ReadOnly,
         sites: impl IntoIterator<Item = Site>,
         named: impl IntoIterator<Item = LocalIdx>,
         stored: &Levels,
         from: &Held,
     ) -> Cell {
-        let mut poured = Cell::none(locals);
+        let mut poured = Cell::none(referents);
         for site in sites {
             poured.name_site(site);
         }
@@ -3142,7 +3197,7 @@ impl Cell {
         // slot holding no address: kept, so that a load out of it is
         // possibly null (#1038).
         poured.may_hold_null = from.may_be_null || from.names.ones().next().is_none();
-        poured.may_hold_read_only = from.read_only;
+        poured.may_hold_read_only = read_only;
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
             (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),
@@ -3867,7 +3922,7 @@ mod tests {
     #[test]
     fn a_blocks_record_joins_the_positions_stored_and_widens_them_at_a_back_edge() {
         let stored = |at: At, names_a_site: bool| {
-            let mut cell = Cell::none(2);
+            let mut cell = Cell::none(Referent::count(2, 0));
             if names_a_site {
                 cell.name_site(Site::at(1));
             }
@@ -3886,8 +3941,14 @@ mod tests {
             Some(At::Within { least: 4, most: 8 })
         );
         assert_eq!(joined(&at_4, &at_8, true), Some(At::Moved));
-        assert_eq!(joined(&Cell::none(2), &at_8, false), Some(At::Bytes(8)));
-        assert_eq!(joined(&at_4, &Cell::none(2), false), Some(At::Bytes(4)));
+        assert_eq!(
+            joined(&Cell::none(Referent::count(2, 0)), &at_8, false),
+            Some(At::Bytes(8))
+        );
+        assert_eq!(
+            joined(&at_4, &Cell::none(Referent::count(2, 0)), false),
+            Some(At::Bytes(4))
+        );
         assert_eq!(
             joined(&at_4, &stored(At::Bytes(0), false), false),
             Some(At::Bytes(4))
@@ -4055,7 +4116,7 @@ mod tests {
     /// corpus cases of their own.
     #[test]
     fn clearing_a_local_leaves_it_no_site_and_no_edge() {
-        let mut held = Held::none(4);
+        let mut held = Held::none(Referent::count(4, 0));
         held.hold(Site::at(1), At::Bytes(0));
         held.name_local(LocalIdx::at(3));
         held.writes_elsewhere = false;
@@ -4094,7 +4155,7 @@ mod tests {
     /// measured in #1060's.
     #[test]
     fn clearing_a_local_drops_every_mark_it_had() {
-        let mut held = Held::none(4);
+        let mut held = Held::none(Referent::count(4, 0));
         held.may_be_null = true;
         held.fresh_read = true;
         held.widths = Levels::new(vec![Width::AtMost(4), Width::AtMost(8)]);
@@ -4111,7 +4172,7 @@ mod tests {
         held.name_unknown(Why::Lost);
         held.name_unknown(Why::Loaded);
         held.clear();
-        assert!(held == Held::none(4));
+        assert!(held == Held::none(Referent::count(4, 0)));
     }
 
     /// One edge that is all of where a write lands is one certain local, and
@@ -4123,7 +4184,7 @@ mod tests {
     /// Mutation: answer some local for no edge at all. The fourth fails.
     #[test]
     fn a_certain_target_is_one_edge_and_nothing_elsewhere() {
-        let mut one = Held::none(4);
+        let mut one = Held::none(Referent::count(4, 0));
         one.name_local(LocalIdx::at(2));
         one.writes_elsewhere = false;
         assert_eq!(one.certain_target(), Some(LocalIdx::at(2)));
@@ -4136,7 +4197,7 @@ mod tests {
         elsewhere.writes_elsewhere = true;
         assert_eq!(elsewhere.certain_target(), None);
 
-        let mut none = Held::none(4);
+        let mut none = Held::none(Referent::count(4, 0));
         none.writes_elsewhere = false;
         assert_eq!(none.certain_target(), None);
     }

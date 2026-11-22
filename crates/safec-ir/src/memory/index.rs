@@ -57,6 +57,24 @@ impl Idx for Site {
     }
 }
 
+/// An object with static storage duration whose address the function
+/// takes, numbered among those alone (`Allocations::statics`), not among the
+/// unit's: a set of referents is as long as the larger of its locals and
+/// these, and numbered by the unit's, every set in a unit of thousands of
+/// literals was thousands of bits long, a unit of 400 small functions read
+/// six times slower, measured (#1162 review).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(super) struct StaticSlot(usize);
+
+impl Idx for StaticSlot {
+    fn index(self) -> usize {
+        self.0
+    }
+    fn at(position: usize) -> Self {
+        StaticSlot(position)
+    }
+}
+
 /// Where bytes are kept: an allocation site or a local, which this check
 /// used to keep in two tables per question and answer twice (#779). **Not
 /// the IR's [`Place`](crate::ir::Place)**, which is a local with a
@@ -93,13 +111,20 @@ pub(super) enum Storage {
 /// stage 1). And what code this check cannot read may hold,
 /// `Known::exposed`, a lost value among it.
 ///
-/// `Unknown(why)` at `why`, then a [`Storage`] at its own index past them all.
+/// `Unknown(why)` at `why`, then, past them all, a site, a local and a
+/// static in turn, by position: `Heap(s)` at `3s`, `Local(l)` at `3l + 1`
+/// and `Static(g)` at `3g + 2`, so that no index needs a count to be
+/// computed, as [`Storage`]'s does not.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(super) enum Referent {
     /// An allocation site.
     Heap(Site),
     /// A local.
     Local(LocalIdx),
+    /// An object with static storage duration, which nothing here frees
+    /// and whose `const` the unit records. Its storage has no cell: what
+    /// it holds is not followed. See ADR-0123.
+    Static(StaticSlot),
     /// Something this check does not model.
     Unknown(Why),
 }
@@ -265,14 +290,14 @@ impl Referent {
     pub(super) fn site(self) -> Option<Site> {
         match self {
             Referent::Heap(site) => Some(site),
-            Referent::Local(_) | Referent::Unknown(_) => None,
+            Referent::Local(_) | Referent::Static(_) | Referent::Unknown(_) => None,
         }
     }
 
     /// The local this names, if it is one.
     pub(super) fn local(self) -> Option<LocalIdx> {
         match self {
-            Referent::Heap(_) | Referent::Unknown(_) => None,
+            Referent::Heap(_) | Referent::Static(_) | Referent::Unknown(_) => None,
             Referent::Local(local) => Some(local),
         }
     }
@@ -282,14 +307,16 @@ impl Referent {
         match self {
             Referent::Heap(site) => Some(Storage::Heap(site)),
             Referent::Local(local) => Some(Storage::Local(local)),
-            Referent::Unknown(_) => None,
+            Referent::Static(_) | Referent::Unknown(_) => None,
         }
     }
 
-    /// How many referents a function with `locals` locals has: one unknown
-    /// referent per [`Why`], then every [`Storage`].
-    pub(super) fn count(locals: usize) -> usize {
-        Why::ALL.len() + Storage::count(locals)
+    /// How many referents a function with `locals` locals has that takes
+    /// the address of `statics` objects of static storage duration: one unknown
+    /// referent per [`Why`], then three per position, as many positions as
+    /// the larger of the two. The slots past the smaller are never named.
+    pub(super) fn count(locals: usize, statics: usize) -> usize {
+        Why::ALL.len() + 3 * locals.max(statics)
     }
 }
 
@@ -306,13 +333,18 @@ impl Idx for Referent {
     fn index(self) -> usize {
         match self {
             Referent::Unknown(why) => why as usize,
-            Referent::Heap(site) => Why::ALL.len() + Storage::Heap(site).index(),
-            Referent::Local(local) => Why::ALL.len() + Storage::Local(local).index(),
+            Referent::Heap(site) => Why::ALL.len() + 3 * site.index(),
+            Referent::Local(local) => Why::ALL.len() + 3 * local.index() + 1,
+            Referent::Static(id) => Why::ALL.len() + 3 * id.index() + 2,
         }
     }
     fn at(position: usize) -> Self {
         match position.checked_sub(Why::ALL.len()) {
-            Some(position) => Referent::from(Storage::at(position)),
+            Some(position) => match position % 3 {
+                0 => Referent::Heap(Site::at(position / 3)),
+                1 => Referent::Local(LocalIdx::at(position / 3)),
+                _ => Referent::Static(StaticSlot::at(position / 3)),
+            },
             None => Referent::Unknown(Why::ALL[position]),
         }
     }
@@ -366,7 +398,9 @@ macro_rules! storage_of {
 }
 
 storage_of!(Storage);
-storage_of!(Referent);
+// Not `Referent`: a table of referents is as long as the larger of its
+// locals and the unit's statics (`Referent::count`), so its length does not
+// say how many sites there are. Read one by the sites another table has.
 
 impl<S: ByStorage, T> Index<Site> for Table<S, T> {
     type Output = T;
@@ -422,12 +456,13 @@ impl<S: ByStorage, T> IndexMut<&LocalId> for Table<S, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Idx, LocalIdx, Referent, Site, Why};
+    use super::{Idx, LocalIdx, Referent, Site, StaticSlot, Why};
 
     /// Every referent has an index of its own, and the round trip through it is
-    /// the identity: an unknown referent for each reason, then a site and a local
-    /// per local. Mutation: give `Referent::Unknown` an index of `why as usize + 1`;
-    /// this fails, as a reason sharing the first site's index once did.
+    /// the identity: an unknown referent for each reason, then a site, a local
+    /// and a static per position. Mutation: give `Referent::Unknown` an index of
+    /// `why as usize + 1`; this fails, as a reason sharing the first site's
+    /// index once did. Mutation: give `Referent::Static` `3g + 1`; this fails.
     #[test]
     fn every_referent_has_an_index_of_its_own() {
         let mut referents: Vec<Referent> =
@@ -435,6 +470,7 @@ mod tests {
         for at in 0..3 {
             referents.push(Referent::Heap(Site::at(at)));
             referents.push(Referent::Local(LocalIdx::at(at)));
+            referents.push(Referent::Static(StaticSlot::at(at)));
         }
         let indices: Vec<usize> = referents.iter().map(|&referent| referent.index()).collect();
         for (referent, &index) in referents.iter().zip(&indices) {
@@ -444,6 +480,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted.len(), indices.len(), "{indices:?}");
-        assert_eq!(Referent::count(3), indices.len());
+        assert_eq!(Referent::count(3, 2), indices.len());
+        assert_eq!(Referent::count(2, 3), indices.len());
     }
 }

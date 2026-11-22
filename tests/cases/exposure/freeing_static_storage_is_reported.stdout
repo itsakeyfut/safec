@@ -1,0 +1,165 @@
+Target "x86_64-pc-windows-msvc"
+Static "g" "int" external zero
+Function freeing_static_storage_is_reported.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function freeing_static_storage_is_reported.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "n"
+Function freeing_static_storage_is_reported.c:3:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "unsigned long long" parameter "n"
+Function freeing_static_storage_is_reported.c:5:6 "freed_by_address"
+  Local "_0" "void" return
+  Local "_1" "int *"
+  Block "bb0" entry
+    Operation freeing_static_storage_is_reported.c:6:11 generated
+      Destination "_1"
+      Static "g"
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:6:5 generated
+    Call freeing_static_storage_is_reported.c:6:5 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced freeing_static_storage_is_reported.c:6:5 generated
+    Return
+Function freeing_static_storage_is_reported.c:8:6 "freed_on_one_path"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Block "bb0" entry
+    Branch freeing_static_storage_is_reported.c:10:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced freeing_static_storage_is_reported.c:10:9 generated
+    Operation freeing_static_storage_is_reported.c:11:14 generated
+      Destination "_3"
+      Static "g"
+    Operation freeing_static_storage_is_reported.c:11:9 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced freeing_static_storage_is_reported.c:11:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced freeing_static_storage_is_reported.c:10:9 generated
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:13:13 generated
+    Call freeing_static_storage_is_reported.c:13:13 written "malloc" "bb4"
+      Destination "_4"
+      Constant 4
+  Block "bb3"
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:15:5 generated
+    Call freeing_static_storage_is_reported.c:15:5 written "free" "bb5"
+      Copy "_2"
+  Block "bb4"
+    Operation freeing_static_storage_is_reported.c:13:9 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Sequenced freeing_static_storage_is_reported.c:13:9 generated
+    Goto "bb3"
+  Block "bb5"
+    Sequenced freeing_static_storage_is_reported.c:15:5 generated
+    Return
+Function freeing_static_storage_is_reported.c:17:6 "reallocated"
+  Local "_0" "void" return
+  Local "_1" "void *" "q"
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Block "bb0" entry
+    Operation freeing_static_storage_is_reported.c:18:24 generated
+      Destination "_2"
+      Static "g"
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:18:15 generated
+    Call freeing_static_storage_is_reported.c:18:15 written "realloc" "bb1"
+      Destination "_3"
+      Copy "_2"
+      Constant 8
+  Block "bb1"
+    Operation freeing_static_storage_is_reported.c:18:11 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced freeing_static_storage_is_reported.c:18:15 generated
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:19:5 generated
+    Call freeing_static_storage_is_reported.c:19:5 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced freeing_static_storage_is_reported.c:19:5 generated
+    Return
+Function freeing_static_storage_is_reported.c:21:6 "freed_or_null"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation freeing_static_storage_is_reported.c:22:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced freeing_static_storage_is_reported.c:22:14 generated
+    Branch freeing_static_storage_is_reported.c:23:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced freeing_static_storage_is_reported.c:23:9 generated
+    Operation freeing_static_storage_is_reported.c:24:14 generated
+      Destination "_3"
+      Static "g"
+    Operation freeing_static_storage_is_reported.c:24:9 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced freeing_static_storage_is_reported.c:24:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced freeing_static_storage_is_reported.c:23:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:26:5 generated
+    Call freeing_static_storage_is_reported.c:26:5 written "free" "bb4"
+      Copy "_2"
+  Block "bb4"
+    Sequenced freeing_static_storage_is_reported.c:26:5 generated
+    Return
+Function freeing_static_storage_is_reported.c:28:6 "freed_on_one_path_or_converted"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "long long" parameter "n"
+  Local "_3" "int *" "p"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Branch freeing_static_storage_is_reported.c:30:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced freeing_static_storage_is_reported.c:30:9 generated
+    Operation freeing_static_storage_is_reported.c:31:14 generated
+      Destination "_4"
+      Static "g"
+    Operation freeing_static_storage_is_reported.c:31:9 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced freeing_static_storage_is_reported.c:31:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced freeing_static_storage_is_reported.c:30:9 generated
+    Operation freeing_static_storage_is_reported.c:33:13 written
+      Destination "_5"
+      Reinterpret
+        Copy "_2"
+    Operation freeing_static_storage_is_reported.c:33:9 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced freeing_static_storage_is_reported.c:33:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated freeing_static_storage_is_reported.c:35:5 generated
+    Call freeing_static_storage_is_reported.c:35:5 written "free" "bb4"
+      Copy "_3"
+  Block "bb4"
+    Sequenced freeing_static_storage_is_reported.c:35:5 generated
+    Return

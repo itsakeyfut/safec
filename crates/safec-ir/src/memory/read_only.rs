@@ -70,7 +70,8 @@ fn names_read_only_at(
 ) -> bool {
     if depth == 0 {
         let held = &known.points_to[local];
-        return held.read_only.here() || held.locals().any(|local| read_only.contains(&local));
+        return known.read_only_of(held).here()
+            || held.locals().any(|local| read_only.contains(&local));
     }
     // **And the locals it may point at, read as the value is**: `set(*pp)`
     // with `*pp` holding a `const` local's address was asked for a static
@@ -280,8 +281,8 @@ pub(super) fn written_read_only(
 /// destination. A parameter past the last, where nothing says the callee
 /// only reads, is asked as one that may write. **Not `free` or `realloc`**,
 /// which release what they are handed rather than write it: a literal
-/// freed is the free rules' (`SC0401`), and said as a write it was said
-/// wrongly. Mutation: ask them too; `a_string_literal_freed_is_doubted`
+/// freed is the free rules' (`SC0404`), and said as a write it was said
+/// wrongly. Mutation: ask them too; `a_string_literal_freed_is_reported`
 /// says `SC0417`.
 pub(super) fn handed_read_only(
     findings: &mut Vec<Finding>,

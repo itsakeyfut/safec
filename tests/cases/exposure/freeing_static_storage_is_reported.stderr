@@ -1,0 +1,58 @@
+error[SC0404]: this frees static storage, which no allocation function returned
+   ╭─[ freeing_static_storage_is_reported.c:6:5 ]
+   │
+ 6 │     free(&g);
+   │     ────┬───  
+   │         ╰───── static storage, not an allocation
+───╯
+  = note: this check belongs to safety level 1
+  = help: free only what an allocation function returned
+error[SC0404]: this frees `p`, which may point at static storage
+    ╭─[ freeing_static_storage_is_reported.c:15:5 ]
+    │
+ 15 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be static storage
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free only what an allocation function returned, on every path that reaches here
+error[SC0404]: this frees static storage, which no allocation function returned
+    ╭─[ freeing_static_storage_is_reported.c:18:15 ]
+    │
+ 18 │     void *q = realloc(&g, 8);
+    │               ───────┬──────  
+    │                      ╰──────── static storage, not an allocation
+────╯
+  = note: this check belongs to safety level 1
+  = help: free only what an allocation function returned
+error[SC0404]: this frees `p`, which may point at static storage
+    ╭─[ freeing_static_storage_is_reported.c:26:5 ]
+    │
+ 26 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be static storage
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free only what an allocation function returned, on every path that reaches here
+error[SC0416]: this converts between a pointer and an integer, which the memory check does not follow
+    ╭─[ freeing_static_storage_is_reported.c:33:13 ]
+    │
+ 33 │         p = (int *)n;
+    │             ────┬───  
+    │                 ╰───── nothing about what this points at is proved from here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the value a pointer, or a `void *` where its type has to change
+error[SC0404]: this frees `p`, which may point at static storage
+    ╭─[ freeing_static_storage_is_reported.c:35:5 ]
+    │
+ 35 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be static storage
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free only what an allocation function returned, on every path that reaches here

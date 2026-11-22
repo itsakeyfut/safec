@@ -102,6 +102,12 @@ pub(super) struct Known {
     /// it**, as it was until the memory model was rebuilt on #924: the two
     /// were joined, cleared and read by separate lines that said the same.
     pub(super) exposed: Table<Referent, bool>,
+    /// Per static the function takes the address of, by its
+    /// [`StaticSlot`](super::index::StaticSlot), whether the program may
+    /// not modify it: what a value naming it is asked, as a `const` local
+    /// is, rather than a mark the value carries. The same at every point,
+    /// so shared. See ADR-0123.
+    pub(super) read_only_statics: std::rc::Rc<[bool]>,
     /// **Per local, whether a call this check cannot read certainly holds
     /// its address**: a value it was handed certainly named it. Not a local
     /// such a local held: `keep(&h)` with `h = &m` holds `&h`, and reaches
@@ -582,6 +588,28 @@ pub(super) struct Known {
 }
 
 impl Known {
+    /// At which levels `held` names read-only storage: what it carries, and
+    /// the levels `0` of a read-only static it names. **Every reader of a
+    /// value's read-only levels reads them here**, so a static is asked by
+    /// name. See ADR-0123. Mutation: answer `false` for a static;
+    /// `a_write_to_a_string_literal_is_unproven` fails, among three cases.
+    pub(super) fn read_only_of(&self, held: &Held) -> ReadOnly {
+        if held
+            .statics()
+            .any(|slot| self.read_only_statics[super::index::Idx::index(slot)])
+        {
+            held.read_only | ReadOnly::HERE
+        } else {
+            held.read_only
+        }
+    }
+
+    /// How long every set of referents in this value is, which is how long
+    /// [`Self::exposed`] is: what a new value or cell is built with.
+    pub(super) fn referents(&self) -> usize {
+        self.exposed.len()
+    }
+
     /// Every site this local may point at.
     pub(super) fn sites_of(&self, local: LocalId) -> impl Iterator<Item = Site> + '_ {
         self.points_to[local].sites()
@@ -688,6 +716,8 @@ impl Known {
             // A local's is cleared where its next lifetime begins
             // (`Self::storage_live`); a site's lives as long as its block.
             exposed: _,
+            // The unit's, the same at every point and on every path.
+            read_only_statics: _,
             // Answered by `Self::storage_live`, which runs this first.
             certainly_exposed: _,
             contents: _,
@@ -748,6 +778,8 @@ impl Known {
             escaped: _,
             handed_away: _,
             exposed,
+            // The unit's, the same at every point and on every path.
+            read_only_statics: _,
             certainly_exposed,
             contents: _,
             realloced: _,
@@ -1360,7 +1392,7 @@ impl Known {
     /// walks: the levels a value read `depth` down may name read-only storage
     /// at, from what the value certainly reaches. See ADR-0122.
     pub(super) fn read_only_levels_named_at(&self, local: LocalId, depth: usize) -> ReadOnly {
-        let mut levels = self.points_to[local].read_only.below(depth);
+        let mut levels = self.read_only_of(&self.points_to[local]).below(depth);
         for level in 0..depth {
             let (sites, locals) = self.levels_named_below(local, level);
             let left = depth - 1 - level;
@@ -1368,7 +1400,7 @@ impl Known {
                 levels |= self.contents[site].may_hold_read_only().below(left);
             }
             for read_from in locals {
-                levels |= self.points_to[read_from].read_only.below(left);
+                levels |= self.read_only_of(&self.points_to[read_from]).below(left);
             }
         }
         levels
@@ -1613,8 +1645,8 @@ impl Known {
     /// told what became reachable, between calls.
     pub(super) fn reachable_now(&self) -> BTreeSet<Site> {
         self.closure(
-            self.exposed
-                .sites()
+            self.state
+                .indices()
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
@@ -1819,7 +1851,7 @@ impl Known {
     /// level by itself**, so a `const` two loads down is not read at one
     /// (#1152). See ADR-0121.
     pub(super) fn read_only_levels_at(&self, local: LocalId, depth: usize) -> ReadOnly {
-        let mut levels = self.points_to[local].read_only.below(depth);
+        let mut levels = self.read_only_of(&self.points_to[local]).below(depth);
         for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
             // What is stored at `level` is the value read `level + 1` down.
@@ -1828,7 +1860,7 @@ impl Known {
                 levels |= self.contents[site].may_hold_read_only().below(left);
             }
             for read_from in locals {
-                levels |= self.points_to[read_from].read_only.below(left);
+                levels |= self.read_only_of(&self.points_to[read_from]).below(left);
             }
         }
         levels
@@ -2122,7 +2154,11 @@ impl Known {
     /// `*box = m; fill_box(box);` left `m` unwritten.
     pub(super) fn expose_locals(&mut self, locals: Vec<LocalIdx>) {
         let mut seeds: BTreeSet<LocalIdx> = locals.into_iter().collect();
-        seeds.extend(self.exposed.locals().filter(|&local| self.exposed[local]));
+        seeds.extend(
+            self.points_to
+                .indices()
+                .filter(|&local| self.exposed[local]),
+        );
         for local in self.closed_from(self.reachable_now(), seeds).locals {
             self.exposed[local] = true;
         }
@@ -2204,7 +2240,10 @@ impl Known {
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
     fn unknown_code_reaches(&self) -> Closed {
-        let exposed = self.exposed.locals().filter(|&local| self.exposed[local]);
+        let exposed = self
+            .points_to
+            .indices()
+            .filter(|&local| self.exposed[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
 
@@ -2469,6 +2508,8 @@ impl Known {
             // A local's, as `escaped` is, and a site being reborn is not.
             handed_away: _,
             exposed,
+            // The unit's, the same at every point and on every path.
+            read_only_statics: _,
             // Of locals; a site made again has no address a call kept.
             certainly_exposed: _,
             contents,
@@ -2755,7 +2796,7 @@ impl Known {
                     Some(Referent::Heap(site)) => {
                         alone.insert(site);
                     }
-                    Some(Referent::Unknown(_)) | None => {}
+                    Some(Referent::Static(_) | Referent::Unknown(_)) | None => {}
                 }
             }
         }
@@ -2767,8 +2808,8 @@ impl Known {
         // Seeding a closure from the arguments missed every route it did
         // not name (#1077). See ADR-0111.
         let reached: Vec<Site> = self
-            .exposed
-            .sites()
+            .state
+            .indices()
             .filter(|&site| self.exposed[site] && !alone.contains(&site))
             .collect();
         for site in reached {
@@ -3102,7 +3143,7 @@ impl Known {
         // `realloc` remembered, so the fact goes too. See ADR-0039.
         let exposed = self.exposed.clone();
         self.forget_reallocs_touching(|site| exposed[site]);
-        for site in self.exposed.sites() {
+        for site in self.state.indices() {
             if self.exposed[site] {
                 self.state[site].doubted();
             }
