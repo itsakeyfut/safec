@@ -120,6 +120,10 @@ cases! {
         // (#1135). Mutation: keep the mark on a comparison in `built_from`;
         // `returned`, `through_a_local` and the call in `main` are `SC0417`.
         a_value_computed_from_a_pointer_to_const_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store into a `const` object that also leaves holding a literal is
+        // asked by two doors, and is one `SC0417` (#1177). Mutation: push
+        // directly in `stored_read_only`; this has two.
+        a_store_both_written_and_leaving_read_only_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Read-only storage one level or more below what leaves, by a call,
         // a `return` or a store into memory that leaves, is `SC0417` where
         // the reader's type points at no `const` there; so is a write through

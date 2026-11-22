@@ -61,6 +61,21 @@ fn depth_of(place: &Place) -> Option<usize> {
     }
 }
 
+/// Record a read-only write, **once per caret**: a store into a `const`
+/// object that also leaves holding a literal was asked by
+/// [`written_read_only`] and by [`stored_read_only`], and the same `SC0417`
+/// in the same words was reported twice (#1177). Every door pushes here.
+/// Mutation: push directly in `stored_read_only`;
+/// `a_store_both_written_and_leaving_read_only_is_reported_once` fails.
+fn report_once(findings: &mut Vec<Finding>, finding: Finding) {
+    if !findings
+        .iter()
+        .any(|found| found.kind == Kind::WritesReadOnly && found.at == finding.at)
+    {
+        findings.push(finding);
+    }
+}
+
 /// [`names_read_only`] of the value read `depth` dereferences below `local`.
 fn names_read_only_at(
     local: crate::ir::LocalId,
@@ -262,16 +277,19 @@ pub(super) fn returned_read_only(
         Operand::Constant(_) => false,
     };
     if below || (!returns_reads_only && names_read_only(operand, &read_only, known)) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: operation.origin.span(),
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: operation.origin.span(),
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -291,16 +309,19 @@ pub(super) fn written_read_only(
         return;
     };
     if may_land_read_only(landing, &read_only_locals(function), known) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: store.at,
-            local: Some(landing.pointer),
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: store.at,
+                local: Some(landing.pointer),
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -374,16 +395,19 @@ pub(super) fn handed_read_only(
         if below
             || (!called.reads_only_through(index) && names_read_only(argument, &read_only, known))
         {
-            findings.push(Finding {
-                function: func,
-                kind: Kind::WritesReadOnly,
-                conclusion: Conclusion::Unknown,
-                at: origin.span(),
-                local: Some(place.local),
-                freed: None,
-                made: None,
-                unproven: None,
-            });
+            report_once(
+                findings,
+                Finding {
+                    function: func,
+                    kind: Kind::WritesReadOnly,
+                    conclusion: Conclusion::Unknown,
+                    at: origin.span(),
+                    local: Some(place.local),
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                },
+            );
         }
     }
 }
@@ -476,16 +500,19 @@ pub(super) fn stored_read_only(
         &read_only_locals(function),
         known,
     ) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: operation.origin.span(),
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: operation.origin.span(),
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -545,15 +572,18 @@ pub(super) fn copied_read_only(
             known,
         )
     {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: store.at,
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: store.at,
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
