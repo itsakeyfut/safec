@@ -1477,7 +1477,12 @@ impl Allocations<'_> {
                         Shape::Deref(depth) => depth,
                         Shape::Indexed => continue,
                     };
-                    let levels = super::parts::ReadOnly::levels(function.const_levels(place.local))
+                    // **What the argument holds**, a cast's operand among it:
+                    // `get_v((void *)ca)` with `ca` a `const int **` was
+                    // written in silence once a cast's levels were carried
+                    // apart (#1165 review). Mutation: read `const_levels`;
+                    // `written_through_a_void_cast_argument` goes silent.
+                    let levels = super::parts::ReadOnly::levels(function.held_levels(place.local))
                         .below(depth)
                         .below(1);
                     if levels == super::parts::ReadOnly::NONE {

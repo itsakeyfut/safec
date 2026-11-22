@@ -128,13 +128,12 @@ fn below_read_only(
     // chain a literal as deep as the program likes, and stopped at the
     // deepest pointer the function declares, `x[0] = y; y[0] = "ab";
     // take(x);` was believed (#1159). A chain of distinct storages is no
-    // longer than there are storages, twice the locals, nor deeper than a
-    // [`ReadOnly`](super::parts::ReadOnly) mask has levels, and the walk stops
+    // longer than there are storages, twice the locals, and the walk stops
     // where a level names nothing. See ADR-0123. Mutation: stop at
     // `analysis.deepest_pointer`; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
     // `chained_through_void_slots` goes silent.
     let last = if beyond && typed > 0 {
-        typed.max((2 * analysis.locals + 1).min(super::parts::ReadOnly::LEVELS))
+        typed.max(2 * analysis.locals + 1)
     } else {
         typed
     };
@@ -391,14 +390,25 @@ pub(super) fn handed_read_only(
 
 /// At which levels the reader of the storage a store or a copy lands in
 /// keeps `const`: every recorded reader's levels where the landing reaches
-/// one, a level kept only where all keep it, and `declared` for a storage
-/// whose reader was not recorded and where nothing is placed. **One answer
-/// for every leaving door**, so that a store and a copy into the same
-/// storage cannot read different readers (#1147). See ADR-0123.
+/// one, a level kept only where all keep it, and `declared`, what the place
+/// written through says, for a storage whose reader was not recorded.
+/// **One answer for every leaving door**, so that a store and a copy into
+/// the same storage cannot read different readers (#1147). See ADR-0123.
+///
+/// **Only where the landing is placed**: through a pointer read out of a
+/// global, every exposed block stood for where it may land, a parameter's
+/// memory among them, and that one reader answered for all, so `q = GW; *q
+/// = "ab";` was believed beside an unrelated `const char **` parameter
+/// (#1165 review). Mutation: ask the records of an unplaced landing too;
+/// `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+/// `stored_through_a_global_beside_a_const_parameter` goes silent.
 fn reader_levels(known: &Known, landing: Option<&Landing>, declared: u32) -> u32 {
     let Some(landing) = landing else {
         return declared;
     };
+    if landing.through_unrecorded || known.points_to[landing.pointer].beyond().any_unknown() {
+        return declared;
+    }
     landing
         .containers
         .iter()
@@ -449,8 +459,12 @@ pub(super) fn stored_read_only(
     ) else {
         return;
     };
+    // **What the place written through holds**, a cast's operand among it:
+    // `*(char **)CG = "ab"` with `CG` a `const char *[2]` lands where every
+    // reader keeps `const`, and asked at the cast's type alone was reported
+    // (#1165 review). A reader recorded for the memory takes levels away.
     let declared = function
-        .const_levels(operation.place.local)
+        .held_levels(operation.place.local)
         .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
         .unwrap_or(0);
     let levels = reader_levels(known, store.landing.as_ref(), declared);
@@ -509,9 +523,16 @@ pub(super) fn copied_read_only(
     // `SC0417` where `*out = c;` was not. Where no reader was recorded the
     // bytes say nothing, so every level is asked. See ADR-0123. Mutation:
     // answer `0`; `copied_into_a_const_out_parameter` reports.
-    // Shifted up one, since the source is asked from its level `1`, which
-    // is what the destination's reader reads at its level `0`.
-    let levels = reader_levels(known, store.landing.as_ref(), 0)
+    // What the destination says, as a store's lvalue does, and shifted up
+    // one, since the source is asked from its level `1`, which is what the
+    // destination's reader reads at its level `0`.
+    let declared = depth_of(&store.into).map_or(0, |depth| {
+        function
+            .held_levels(store.into.local)
+            .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
+            .unwrap_or(0)
+    });
+    let levels = reader_levels(known, store.landing.as_ref(), declared)
         .checked_shl(1)
         .unwrap_or(0);
     if leaves

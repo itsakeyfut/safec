@@ -150,7 +150,17 @@ cases! {
         // `below_read_only`; it goes silent. It goes on where the value carries a
         // read-only level that names nothing, `arrived_three_deep_handed_as_void`
         // (#1165 review). Mutation: stop where nothing is named; it goes
-        // silent. A store and a copy into a
+        // silent. A reader recorded for a parameter's memory answers only
+        // where the store is placed:
+        // `stored_through_a_global_beside_a_const_parameter` is `SC0417`. A
+        // `const` argument cast to `void *` still marks what the callee may
+        // write, `written_through_a_void_cast_argument`, and a store through a
+        // cast into a `const` static is asked at what it holds,
+        // `stored_into_a_const_static_through_a_cast`, silent (#1165 review).
+        // Mutations: in `reader_levels`, ask the records of an unplaced
+        // landing too; the first goes silent. Read `const_levels` for a `const` argument in
+        // `Allocations::call`; the second goes silent. Read `const_levels` in
+        // `stored_read_only`; the third reports. A store and a copy into a
         // parameter's memory ask its reader, the parameter's type, and not
         // the type written through: `stored_through_a_const_lvalue_cast` is
         // `SC0417` and `copied_into_a_const_out_parameter` is not (#1147,
