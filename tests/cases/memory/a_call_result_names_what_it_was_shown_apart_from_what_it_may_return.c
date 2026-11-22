@@ -1,6 +1,11 @@
 void *malloc(unsigned long long n);
 void keep(const char **b);
+void keep_slot(const char **s);
+void take(void *v);
 const char **get(void);
+void *get_any(void);
+void sink(void *p);
+void keep_view(const char *const *p);
 char **get_writable(void);
 void stored_beside_a_table_handed_on(const char ***out) {
     const char **b = malloc(sizeof(const char *));
@@ -23,4 +28,30 @@ void written_through_what_a_result_may_be(void) {
     if (r && *r) {
         **r = 'x';
     }
+}
+void handed_where_one_path_showed_the_table(int c) {
+    const char **b = malloc(sizeof(const char *));
+    if (!b) {
+        return;
+    }
+    *b = "ab";
+    keep(b);
+    const char **r = b;
+    if (c) {
+        r = get();
+    }
+    take(r);
+}
+void stored_beside_a_local_handed_on(const char ***out) {
+    const char *s = "ab";
+    keep_slot(&s);
+    if (out) {
+        *out = get();
+    }
+}
+void handed_as_void_beside_a_literal_kept(void) {
+    const char *s = "ab";
+    keep_view(&s);
+    void *r = get_any();
+    sink(r);
 }

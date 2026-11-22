@@ -2296,6 +2296,10 @@ impl Allocations<'_> {
                     .indices()
                     .filter(|&local| value.escaped[local])
                 {
+                    // **Held by nothing, measured**: filed as shown, no case
+                    // moves, since a local reaches read-only storage past a
+                    // reader's type only through a static, which is no
+                    // referent until #1162.
                     value.points_to[result].name_local_guessed(local);
                 }
                 if was_exposed {

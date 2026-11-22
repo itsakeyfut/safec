@@ -1986,6 +1986,7 @@ impl Held {
     /// No longer be `local`'s address.
     pub(super) fn unname_local(&mut self, local: LocalIdx) {
         self.names.remove(Referent::Local(local));
+        self.guessed.remove(Referent::Local(local));
     }
 
     /// Whether this value holds `site`.
@@ -2393,7 +2394,9 @@ impl Held {
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
         // **Guessed only where no side showed it**: a name one path showed
         // is one the program may reach, whatever another path guessed. See
-        // ADR-0123.
+        // ADR-0123. **Held by nothing, measured**: the guesses are read only
+        // past a reader that keeps `const` at its last level, and no case
+        // joins a shown and a guessed name before one.
         let shown_here = names.difference(guessed);
         let shown_there = other.names.difference(&other.guessed);
         guessed.union_with(&other.guessed);
@@ -2524,7 +2527,9 @@ impl Held {
         // ADR-0019.
         // **Guessed only where no side showed it**: a name one path showed
         // is one the program may reach, whatever another path guessed. See
-        // ADR-0123.
+        // ADR-0123. **Held by nothing, measured**: the guesses are read only
+        // past a reader that keeps `const` at its last level, and no case
+        // joins a shown and a guessed name before one.
         let shown_here = names.difference(guessed);
         let shown_there = other.names.difference(&other.guessed);
         guessed.union_with(&other.guessed);
@@ -2564,6 +2569,7 @@ impl Held {
     pub(super) fn lose(&mut self, site: Site) {
         if self.has_site(site) {
             self.names.remove(Referent::Heap(site));
+            self.guessed.remove(Referent::Heap(site));
             self.name_unknown(Why::Lost);
         }
     }
