@@ -522,10 +522,14 @@ pub(super) fn copied_read_only(
     // asks: read as `0`, `memcpy(out, &c, 8)` through a `const char **` was
     // `SC0417` where `*out = c;` was not. Where no reader was recorded the
     // bytes say nothing, so every level is asked. See ADR-0123. Mutation:
-    // answer `0`; `copied_into_a_const_out_parameter` reports.
+    // ignore a recorded reader; `copied_into_a_const_out_parameter` reports.
     // **Not what the destination place says**, which a cast to `const`
     // raises: read so, `memcpy((const char **)&G, &s, 8)` into a static was
-    // believed (#1176). Shifted up one, since the source is asked from its
+    // believed (#1176). **This costs a false report** where the destination
+    // is declared `const` and no reader was recorded, `memcpy(&CG, &s, 8)`
+    // with `CG` a `const char *`, as main before #1165 had it: the IR does
+    // not tell a `const` the program declared from one a cast raised, and a
+    // copy believed wrongly is the worse failure. Shifted up one, since the source is asked from its
     // level `1`, which is what the destination's reader reads at its level
     // `0`. Mutation: fall back to the destination's `held_levels`;
     // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s

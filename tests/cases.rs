@@ -164,8 +164,10 @@ cases! {
         // `const` and whose reader was not recorded asks every level:
         // `copied_into_a_static_through_a_const_cast` and
         // `copied_below_a_parameter_through_a_const_cast` are `SC0417`
-        // (#1176). Mutation: fall back to the destination's `held_levels` in
-        // `copied_read_only`; both go silent. A store and a copy into a
+        // (#1176). A copy into storage declared `const` with no recorded
+        // reader is asked the same way and reported, a false report the
+        // IR's levels cannot tell from the cast. Mutation: fall back to the
+        // destination's `held_levels` in `copied_read_only`; both go silent. A store and a copy into a
         // parameter's memory ask its reader, the parameter's type, and not
         // the type written through: `stored_through_a_const_lvalue_cast` is
         // `SC0417` and `copied_into_a_const_out_parameter` is not (#1147,
