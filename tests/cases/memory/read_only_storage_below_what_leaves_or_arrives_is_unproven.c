@@ -101,3 +101,13 @@ void copied_out(char **out) {
         memcpy(out, &c, sizeof c);
     }
 }
+const char *CA[2];
+const char *CA2[2][2];
+void into_a_const_static_array(void) {
+    CA[0] = "ab";
+    CA2[1][0] = "ab";
+}
+char *WA[2];
+void into_a_writable_static_array(void) {
+    WA[0] = "ab";
+}
