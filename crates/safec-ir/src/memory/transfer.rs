@@ -2796,19 +2796,16 @@ impl Analysis for Allocations<'_> {
                 .type_levels(function.local(parameter))
                 .unwrap_or_default();
             known.points_to[parameter].set_contents(&contents);
-            // **And what it holds below may name read-only storage where its
-            // type says `const` there**, whatever it is cast to: `(int **)pp`
-            // with `pp` a `const int **` reads a pointer to `const`. Below the
-            // first level each level says its own (#1152). See ADR-0121.
-            // **Either this or the parameter's own levels, set above, answers
-            // a load through the parameter, measured** since #1152; this one
-            // also answers a pointer to the memory not read from the
-            // parameter. Mutation: skip both;
-            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // **What it holds below is read off the parameter's own levels**,
+            // set above, which every load through it shifts (#1152): `(int
+            // **)pp` with `pp` a `const int **` reads a pointer to `const`.
+            // Its memory is not marked as well. A pointer this check cannot
+            // follow, read out of a global or returned by a call, is
+            // recorded as possibly naming that memory, and found it marked a
+            // level past its reader's type: `*out = G;` was reported (#1145).
+            // See ADR-0121. Mutation: leave the parameter's levels unset
+            // above; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `arrival_through_void` goes silent.
-            known.contents[Site::of(LocalIdx::of(parameter))].arrives_holding_read_only(
-                super::parts::ReadOnly::levels(function.const_levels(parameter)).below(1),
-            );
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),

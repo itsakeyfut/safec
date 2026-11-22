@@ -136,7 +136,9 @@ cases! {
         // And the two the review found reported wrongly stay silent:
         // `into_a_const_static` where `reach_static` marks nothing, and
         // `handed_unprototyped` where an unprototyped argument is asked as
-        // writable at every level. `arrival_through_void` is `SC0417` while a
+        // writable at every level. `implicit_conversion_of_a_result` is
+        // `SC0417` while a call's result takes its type's levels (#1145
+        // review). `arrival_through_void` is `SC0417` while a
         // parameter's levels or its memory's mark is set at entry; skip both
         // and it goes silent (#1152). And `into_a_const_static_array` stays
         // silent beside `into_a_writable_static_array`'s report (#1144):
@@ -154,6 +156,15 @@ cases! {
         // `bottom_of_three` is still `SC0417` (#1152). Mutation: read a level
         // mask as any bit set in `ReadOnly::here`; both middles are reported.
         a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A const-correct store through an out-parameter of a pointer read
+        // out of a global, of a global's address, or of a call's result is
+        // not a write to read-only storage (#1145, ADR-0122), even beside a
+        // block of literals handed on, which `G` may point at.
+        // Mutation: ask past the reader's type as within it in
+        // `below_read_only`; `stored_beside_a_table_handed_on` is reported. Mutation:
+        // mark a parameter's memory by its type at entry again;
+        // `stored_a_call_result` is reported.
+        a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read
         // again, `self_then_read`. An assignment statement reads nothing back,

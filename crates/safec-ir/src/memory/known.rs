@@ -1317,6 +1317,44 @@ impl Known {
         (sites, locals)
     }
 
+    /// What a pointer read `depth` dereferences below `local` certainly may
+    /// be: [`Self::levels_below`]'s walk through what the points-to and the
+    /// cells record, without what memory this check cannot place may hold.
+    /// For a question past what a reader's type says, which is this check's
+    /// guess at a conversion back and asks only what the value is known to
+    /// reach (ADR-0122).
+    pub(super) fn levels_named_below(
+        &self,
+        local: LocalId,
+        depth: usize,
+    ) -> (BTreeSet<Site>, BTreeSet<LocalIdx>) {
+        let Some((mut sites, mut locals)) = self.level_zero(local) else {
+            return (BTreeSet::new(), BTreeSet::new());
+        };
+        for _ in 0..depth {
+            (sites, locals) = self.level_below(&sites, &locals);
+        }
+        (sites, locals)
+    }
+
+    /// [`Self::read_only_levels_at`] through what [`Self::levels_named_below`]
+    /// walks: the levels a value read `depth` down may name read-only storage
+    /// at, from what the value certainly reaches. See ADR-0122.
+    pub(super) fn read_only_levels_named_at(&self, local: LocalId, depth: usize) -> ReadOnly {
+        let mut levels = self.points_to[local].read_only.below(depth);
+        for level in 0..depth {
+            let (sites, locals) = self.levels_named_below(local, level);
+            let left = depth - 1 - level;
+            for site in sites {
+                levels |= self.contents[site].may_hold_read_only().below(left);
+            }
+            for read_from in locals {
+                levels |= self.points_to[read_from].read_only.below(left);
+            }
+        }
+        levels
+    }
+
     /// What a dereference of `local` may read beyond what was recorded: every
     /// exposed site, where `local` is itself a load or a pointer a call wrote,
     /// and so points into memory this check cannot place.

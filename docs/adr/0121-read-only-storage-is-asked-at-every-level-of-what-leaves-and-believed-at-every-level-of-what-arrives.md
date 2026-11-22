@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its rule for levels past the reader's type narrowed by ADR-0122)"
 date: 2026-11-21
 decision-makers: itsakeyfut
 ---
