@@ -140,7 +140,11 @@ cases! {
         // silent beside `into_a_writable_static_array`'s report (#1144):
         // mutations, answer `0` for an array in `Lowering::const_levels`,
         // leave a decayed pointer unmarked, or a moved pointer in
-        // `Lowering::moved_levels`; it is reported.
+        // `Lowering::moved_levels`; it is reported. And
+        // `handed_rows_of_const_pointers` is `SC0417`: the `char` its
+        // reader reaches below an array of `char *const` is writable.
+        // Mutation: count every array as a level in `Lowering::const_levels`;
+        // it goes silent.
         read_only_storage_below_what_leaves_or_arrives_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read

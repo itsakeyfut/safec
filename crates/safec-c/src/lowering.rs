@@ -1072,8 +1072,14 @@ impl Lowering<'_> {
         // readers may make. Found by the review of #1134. See ADR-0121.
         // Mutation: mark nothing; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
         // `into_a_const_static` is reported.
-        let levels = self.static_levels.get(&object).copied().unwrap_or(0) << 1
-            | u32::from(self.unit.static_object(object).read_only);
+        // A pointer to an array static is read as the pointer to its
+        // element is, which the static's own levels already are; to any
+        // other, one level above what the static holds.
+        let held = self.static_levels.get(&object).copied().unwrap_or(0);
+        let levels = match self.unit.ty(ty) {
+            Ty::Array { .. } => held,
+            _ => held << 1 | u32::from(self.unit.static_object(object).read_only),
+        };
         builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
             place: Place::local(address),
@@ -3659,7 +3665,10 @@ impl Lowering<'_> {
         // `into_a_const_static_array` is reported.
         let levels = match &value {
             Rvalue::Use(Operand::Copy(pointer)) => {
-                let below = 1 + pointer.steps().len();
+                // A pointer to the array and the pointer to its first
+                // element are read in as many loads, so only the steps
+                // reaching the pointer shift.
+                let below = pointer.steps().len();
                 builder
                     .function
                     .const_levels(pointer.local)
@@ -4532,27 +4541,45 @@ impl Lowering<'_> {
     /// *const *` bit `0`. See ADR-0121.
     ///
     /// **An array as the pointer it decays to**, a pointer to its element
-    /// (C17 6.3.2.1 p3), at whatever level it is read: `const char *GA[2]` is
-    /// read through `GA[0]` as a `const char **` is, and read as no pointer it gave no levels, so a
+    /// (C17 6.3.2.1 p3): `const char *GA[2]` is read through `GA[0]` as a
+    /// `const char **` is, and read as no pointer it gave no levels, so a
     /// store of a literal into its element was reported as a write (#1144).
     /// Mutation: answer `0` for an array; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
     /// `into_a_const_static_array` is reported.
+    ///
+    /// **Only the outermost array is a level.** An array a pointer points at
+    /// sits at the address the pointer holds, so `T (*)[N]` is read in as
+    /// many loads as `T *`, and its element is the next level's. Counted as
+    /// a level of its own, every bit past it moved one level down and
+    /// `char *const (*)[2]` said its `char` was `const` (#1144 review).
+    /// Mutation: count every array as a level;
+    /// `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    /// `handed_rows_of_const_pointers` goes silent.
     fn const_levels(&self, ty: TypeId) -> u32 {
         let mut levels = 0;
         let mut ty = ty;
         for level in 0..u32::BITS {
             let pointee = match self.ast.ty(ty) {
-                Type::Pointer(pointee) => pointee,
-                // At any level: an array read there decays as well.
-                Type::Array { element, .. } => element,
+                Type::Pointer(pointee) => *pointee,
+                Type::Array { element, .. } if level == 0 => *element,
                 _ => break,
             };
-            if self.read_only(*pointee) {
+            if self.read_only(pointee) {
                 levels |= 1 << level;
             }
-            ty = *pointee;
+            ty = self.innermost_element(pointee);
         }
         levels
+    }
+
+    /// `ty` with every array it is peeled off: the element an array of
+    /// arrays holds at the bottom, and `ty` itself where it is no array.
+    fn innermost_element(&self, ty: TypeId) -> TypeId {
+        let mut ty = ty;
+        while let Type::Array { element, .. } = self.ast.ty(ty) {
+            ty = *element;
+        }
+        ty
     }
 
     /// A temporary of the type an operation is performed at.
