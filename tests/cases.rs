@@ -136,7 +136,16 @@ cases! {
         // And the two the review found reported wrongly stay silent:
         // `into_a_const_static` where `reach_static` marks nothing, and
         // `handed_unprototyped` where an unprototyped argument is asked as
-        // writable at every level. `implicit_conversion_of_a_result` is
+        // writable at every level. Where arrival is not shown it is doubted
+        // (#1164, ADR-0123): `found_in_a_literal`, `copied_by_realloc`,
+        // `read_through_a_global_alias` and `written_through_a_const_argument`
+        // are `SC0417`. Mutations, each silencing the function named: skip a
+        // result's inheritance of what it was handed in `Allocations::call`,
+        // `found_in_a_literal`; skip the result's memory mark,
+        // `copied_by_realloc`; skip a parameter's memory mark at entry,
+        // `read_through_a_global_alias`; skip the write through a `const`
+        // argument, `written_through_a_const_argument`.
+        // `implicit_conversion_of_a_result` is
         // `SC0417` while a call's result takes its type's levels (#1145
         // review). `arrival_through_void` is `SC0417` while a
         // parameter's levels or its memory's mark is set at entry; skip both

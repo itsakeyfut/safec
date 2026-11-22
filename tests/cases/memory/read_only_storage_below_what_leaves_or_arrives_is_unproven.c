@@ -140,3 +140,46 @@ void implicit_conversion_of_a_result(void) {
         }
     }
 }
+char *find(const char *s);
+int found_in_a_literal(void) {
+    char *m = find("ab");
+    if (m) {
+        *m = 'x';
+    }
+    return 0;
+}
+void *realloc(void *p, unsigned long long n);
+const char **get_names(void);
+void copied_by_realloc(void) {
+    const char **pp = get_names();
+    if (!pp) {
+        return;
+    }
+    char **q = realloc(pp, 8);
+    if (!q) {
+        return;
+    }
+    char *r = *q;
+    if (r) {
+        *r = 'x';
+    }
+}
+char **GW;
+void read_through_a_global_alias(const char **pp) {
+    char **q = GW;
+    if (pp && q) {
+        char *s = *q;
+        if (s) {
+            *s = 'x';
+        }
+    }
+}
+void get_into(const int **out);
+void written_through_a_const_argument(void) {
+    int *a[1];
+    get_into((const int **)a);
+    int *p = a[0];
+    if (p) {
+        *p = 2;
+    }
+}
