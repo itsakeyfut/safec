@@ -136,7 +136,9 @@ cases! {
         // And the two the review found reported wrongly stay silent:
         // `into_a_const_static` where `reach_static` marks nothing, and
         // `handed_unprototyped` where an unprototyped argument is asked as
-        // writable at every level. `arrival_through_void` is `SC0417` while a
+        // writable at every level. `implicit_conversion_of_a_result` is
+        // `SC0417` while a call's result takes its type's levels (#1145
+        // review). `arrival_through_void` is `SC0417` while a
         // parameter's levels or its memory's mark is set at entry; skip both
         // and it goes silent (#1152). And `into_a_const_static_array` stays
         // silent beside `into_a_writable_static_array`'s report (#1144):

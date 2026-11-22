@@ -1971,13 +1971,18 @@ impl Allocations<'_> {
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
             value.points_to[result].set_contents(&contents);
-            // **Its memory is not marked read-only by the result's type**, as
-            // a parameter's is: a cast of the result takes its levels from the
-            // lowering and answers every load through it,
-            // `cast_after_a_result` among them. Marked, the result's own
-            // record, which may name every exposed block, named this memory
-            // again a level down, and `*out = get2();` with `out` a `const
-            // char ***` was reported (#1145). See ADR-0121.
+            // **And the levels its type says `const` at**, as a parameter
+            // gets at entry: every load through it, or through any copy of
+            // it, shifts them, a conversion the lowering does not mark among
+            // them, `void *v = result(); int **q = v;`. Its memory is not
+            // marked by its type: that answered nothing more, and a mark on a
+            // parameter's memory was found a level past a reader's type by a
+            // pointer recorded as naming it (#1145). Found by the review of
+            // #1145. See ADR-0121. Mutation: leave the levels unset;
+            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `implicit_conversion_of_a_result` goes silent.
+            value.points_to[result].read_only |=
+                super::parts::ReadOnly::levels(function.const_levels(place.local));
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as

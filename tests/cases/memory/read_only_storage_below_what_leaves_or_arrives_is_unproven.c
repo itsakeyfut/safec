@@ -130,3 +130,13 @@ void arrival_through_void(const int **pp) {
         }
     }
 }
+void implicit_conversion_of_a_result(void) {
+    void *v = result();
+    int **q = v;
+    if (q) {
+        int *p = *q;
+        if (p) {
+            *p = 2;
+        }
+    }
+}

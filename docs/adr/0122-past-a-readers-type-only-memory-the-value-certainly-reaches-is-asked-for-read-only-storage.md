@@ -30,7 +30,7 @@ Chosen option: the first, by the owner's decision on #615's fourth design run. T
 * Levels the reader's type has are asked as ADR-0121 says, with what unplaced memory may hold.
 * Levels past it are asked of what the value certainly names, level by level. Nothing a load through memory this check cannot place adds is counted there.
 * ADR-0121's rule for levels past the reader's type is narrowed by this.
-* **Memory a parameter or a call's result points at is no longer marked by its type.** Since #1152 the pointer's own levels carry its arrival, and every load through it shifts them. The marks on the memory answered nothing more. A pointer this check cannot follow is recorded as possibly naming that memory, and it found the mark there a level past its reader's type. ADR-0121's Confirmation names mutations of those two marks; what they guarded is held by the parameter's levels and by the lowering's levels on a cast of the result.
+* **Memory a parameter or a call's result points at is no longer marked by its type.** The pointer itself takes its type's levels instead: a parameter at entry, as #1152 made it, and a call's result where the call writes it, which the review of #1145 found was needed for a result converted to `void *` without a cast. Every load through either pointer shifts them. The mark on a parameter's memory was found a level past a reader's type, by a pointer recorded as possibly naming that memory. ADR-0121's Confirmation names mutations of those two marks; what they guarded is held by these levels now.
 * ADR-0121's other rules stand.
 
 The cost is a laundering route whose value was read out of memory this check cannot place. A literal's address held in a global, read back and handed on as a `void *` to a function that converts it back and writes, is believed (row 6). The value certainly reaches nothing there.
@@ -41,7 +41,7 @@ The cost is a laundering route whose value was read out of memory this check can
 * `stored_beside_a_table_handed_on` is reported where the walk past the reader's type counts what unplaced memory may hold;
 * `stored_a_call_result` is reported where a parameter's memory is marked by its type at entry again.
 
-`read_only_storage_below_what_leaves_or_arrives_is_unproven`'s `returned_as_void`, `copied_out` and `arrival_through_void` stay `SC0417`.
+`read_only_storage_below_what_leaves_or_arrives_is_unproven`'s `returned_as_void`, `copied_out`, `arrival_through_void` and `implicit_conversion_of_a_result` stay `SC0417`; the last goes silent where a call's result is not given its type's levels.
 
 ### Consequences
 
