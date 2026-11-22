@@ -101,3 +101,22 @@ void copied_out(char **out) {
         memcpy(out, &c, sizeof c);
     }
 }
+const char *CA[2];
+const char *CA2[2][2];
+void into_a_const_static_array(void) {
+    CA[0] = "ab";
+    CA2[1][0] = "ab";
+}
+char *WA[2];
+void into_a_writable_static_array(void) {
+    WA[0] = "ab";
+}
+void rows(char *const (*a)[2]);
+void handed_rows_of_const_pointers(void) {
+    char **b = malloc(2 * sizeof(char *));
+    if (b) {
+        b[0] = "ab";
+        b[1] = "cd";
+        rows((char *const (*)[2])b);
+    }
+}

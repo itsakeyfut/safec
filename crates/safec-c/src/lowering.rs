@@ -1072,8 +1072,14 @@ impl Lowering<'_> {
         // readers may make. Found by the review of #1134. See ADR-0121.
         // Mutation: mark nothing; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
         // `into_a_const_static` is reported.
-        let levels = self.static_levels.get(&object).copied().unwrap_or(0) << 1
-            | u32::from(self.unit.static_object(object).read_only);
+        // A pointer to an array static is read as the pointer to its
+        // element is, which the static's own levels already are; to any
+        // other, one level above what the static holds.
+        let held = self.static_levels.get(&object).copied().unwrap_or(0);
+        let levels = match self.unit.ty(ty) {
+            Ty::Array { .. } => held,
+            _ => held << 1 | u32::from(self.unit.static_object(object).read_only),
+        };
         builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
             place: Place::local(address),
@@ -3650,6 +3656,28 @@ impl Lowering<'_> {
                 }
             },
         };
+        // **And the `const` levels of the element it points at**: the array's
+        // own, read as its decayed pointer, or, reached through a pointer to
+        // it, that pointer's below its first level. Left unmarked, `GA[0] =
+        // "ab"` with `const char *GA[2]` stored through a pointer that said no
+        // `const` (#1144). See ADR-0121. Mutation: leave `first` unmarked;
+        // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+        // `into_a_const_static_array` is reported.
+        let levels = match &value {
+            Rvalue::Use(Operand::Copy(pointer)) => {
+                // A pointer to the array and the pointer to its first
+                // element are read in as many loads, so only the steps
+                // reaching the pointer shift.
+                let below = pointer.steps().len();
+                builder
+                    .function
+                    .const_levels(pointer.local)
+                    .checked_shr(u32::try_from(below).unwrap_or(u32::MAX))
+                    .unwrap_or(0)
+            }
+            _ => builder.function.const_levels(place.local),
+        };
+        builder.function.mark_const_levels(first, levels);
         builder.push(Operation {
             place: Place::local(first),
             value,
@@ -3854,6 +3882,13 @@ impl Lowering<'_> {
                             None => ty,
                         };
                         let into = builder.function.push_local(at);
+                        // **A pointer moved keeps the `const` levels of the
+                        // one it moved**; a comparison or an integer is no
+                        // pointer and takes none. See `Lowering::moved_levels`.
+                        if matches!(self.unit.ty(at), Ty::Pointer(_)) {
+                            let levels = Self::moved_levels(&builder.function, [&lhs, &rhs]);
+                            builder.function.mark_const_levels(into, levels);
+                        }
                         builder.push(Operation {
                             place: Place::local(into),
                             value: Rvalue::Binary { op, lhs, rhs },
@@ -4051,6 +4086,8 @@ impl Lowering<'_> {
                     }
                     None => {
                         let addressed = builder.function.push_local(addressed);
+                        let levels = Self::moved_levels(&builder.function, [&pointer, &offset]);
+                        builder.function.mark_const_levels(addressed, levels);
                         builder.push(Operation {
                             place: Place::local(addressed),
                             value: Rvalue::Binary {
@@ -4477,23 +4514,72 @@ impl Lowering<'_> {
         Some(local)
     }
 
+    /// The `const` levels a pointer moved by arithmetic keeps: those of the
+    /// local it was moved from, `G2 + 1` reading the rows of `const char
+    /// *G2[2][2]` as `G2` does. The other operand is an integer and has none.
+    /// Left unmarked, `G2[1][0] = "ab"` was reported as a write (#1144).
+    /// Mutation: answer `0`; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    /// `into_a_const_static_array` reports its row.
+    fn moved_levels<'o>(
+        function: &Function,
+        operands: impl IntoIterator<Item = &'o Operand>,
+    ) -> u32 {
+        operands
+            .into_iter()
+            .filter_map(|operand| match operand {
+                Operand::Copy(place) if place.steps().is_empty() => {
+                    Some(function.const_levels(place.local))
+                }
+                _ => None,
+            })
+            .fold(0, |levels, each| levels | each)
+    }
+
     /// The levels at which `ty` points at `const`, bit `k` where what `k`
     /// dereferences of a value of it read points at an object whose type is
     /// `const` at its innermost element: `const int **` is bit `1`, `int
     /// *const *` bit `0`. See ADR-0121.
+    ///
+    /// **An array as the pointer it decays to**, a pointer to its element
+    /// (C17 6.3.2.1 p3): `const char *GA[2]` is read through `GA[0]` as a
+    /// `const char **` is, and read as no pointer it gave no levels, so a
+    /// store of a literal into its element was reported as a write (#1144).
+    /// Mutation: answer `0` for an array; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    /// `into_a_const_static_array` is reported.
+    ///
+    /// **Only the outermost array is a level.** An array a pointer points at
+    /// sits at the address the pointer holds, so `T (*)[N]` is read in as
+    /// many loads as `T *`, and its element is the next level's. Counted as
+    /// a level of its own, every bit past it moved one level down and
+    /// `char *const (*)[2]` said its `char` was `const` (#1144 review).
+    /// Mutation: count every array as a level;
+    /// `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    /// `handed_rows_of_const_pointers` goes silent.
     fn const_levels(&self, ty: TypeId) -> u32 {
         let mut levels = 0;
         let mut ty = ty;
         for level in 0..u32::BITS {
-            let Type::Pointer(pointee) = self.ast.ty(ty) else {
-                break;
+            let pointee = match self.ast.ty(ty) {
+                Type::Pointer(pointee) => *pointee,
+                Type::Array { element, .. } if level == 0 => *element,
+                _ => break,
             };
-            if self.read_only(*pointee) {
+            if self.read_only(pointee) {
                 levels |= 1 << level;
             }
-            ty = *pointee;
+            ty = self.innermost_element(pointee);
         }
         levels
+    }
+
+    /// `ty` with every array it is peeled off: the element an array of
+    /// arrays holds at the bottom, and `ty` itself where it is no array.
+    fn innermost_element(&self, ty: TypeId) -> TypeId {
+        let mut ty = ty;
+        while let Type::Array { element, .. } = self.ast.ty(ty) {
+            ty = *element;
+        }
+        ty
     }
 
     /// A temporary of the type an operation is performed at.
