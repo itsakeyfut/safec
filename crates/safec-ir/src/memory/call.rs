@@ -749,6 +749,8 @@ impl Allocations<'_> {
                     // marking goes.
                     held_levels: _,
                     receiver_width: _,
+                    // Beside `receiver_width`, as it is.
+                    receiver_levels: _,
                     // Through `Known::note_part_written` and
                     // `Known::carry_part_written`: part of a pointer written,
                     // or carried (ADR-0087).
@@ -1475,7 +1477,12 @@ impl Allocations<'_> {
                         Shape::Deref(depth) => depth,
                         Shape::Indexed => continue,
                     };
-                    let levels = super::parts::ReadOnly::levels(function.const_levels(place.local))
+                    // **What the argument holds**, a cast's operand among it:
+                    // `get_v((void *)ca)` with `ca` a `const int **` was
+                    // written in silence once a cast's levels were carried
+                    // apart (#1165 review). Mutation: read `const_levels`;
+                    // `written_through_a_void_cast_argument` goes silent.
+                    let levels = super::parts::ReadOnly::levels(function.held_levels(place.local))
                         .below(depth)
                         .below(1);
                     if levels == super::parts::ReadOnly::NONE {
@@ -2028,14 +2035,14 @@ impl Allocations<'_> {
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `implicit_conversion_of_a_result` goes silent.
             value.points_to[result].read_only |=
-                super::parts::ReadOnly::levels(function.const_levels(place.local));
+                super::parts::ReadOnly::levels(function.held_levels(place.local));
             // **And its memory by its type**, as a parameter's: `realloc`
             // copies that memory without a load through the result, and a
             // copy read back found nothing (#1156). See ADR-0123. Mutation:
             // skip this; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `copied_by_realloc` goes silent.
             value.contents[site].arrives_holding_read_only(
-                super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
+                super::parts::ReadOnly::levels(function.held_levels(place.local)).below(1),
             );
             // **And whatever it was handed may be what it returns**, or any
             // pointer that reaches: `find("ab")` may return the literal, and
@@ -2241,6 +2248,8 @@ impl Allocations<'_> {
                     left_at: _,
                     held_levels: _,
                     receiver_width: _,
+                    // Beside `receiver_width`, as it is.
+                    receiver_levels: _,
                     // Carried from the old block, by
                     // `Known::carry_part_written` (ADR-0087).
                     part_written: _,

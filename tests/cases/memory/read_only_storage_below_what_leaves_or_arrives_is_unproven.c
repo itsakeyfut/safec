@@ -192,3 +192,51 @@ int found_one_load_down(void) {
     }
     return 0;
 }
+void handed_unprototyped_through_a_cast(void) {
+    const char *c = "ab";
+    unp((char **)&c);
+}
+void take_any(void *a);
+void chained_through_void_slots(void) {
+    void *y[1];
+    void *x[1];
+    y[0] = "ab";
+    x[0] = y;
+    take_any(x);
+}
+void stored_through_a_const_lvalue_cast(char **out) {
+    if (out) {
+        *(const char **)out = "ab";
+    }
+}
+void copied_into_a_const_out_parameter(const char **out) {
+    const char *c = "ab";
+    if (out) {
+        memcpy(out, &c, sizeof c);
+    }
+}
+void arrived_three_deep_handed_as_void(const char ***pp) {
+    take_any(pp);
+}
+char **GW2;
+void stored_through_a_global_beside_a_const_parameter(const char **unused) {
+    char **q = GW2;
+    if (q) {
+        *q = "ab";
+    }
+}
+void get_v(void *out);
+void written_through_a_void_cast_argument(void) {
+    int *a[1];
+    a[0] = 0;
+    const int **ca = (const int **)a;
+    get_v((void *)ca);
+    int *p = a[0];
+    if (p) {
+        *p = 2;
+    }
+}
+const char *CG2[2];
+void stored_into_a_const_static_through_a_cast(void) {
+    *(char **)CG2 = "ab";
+}

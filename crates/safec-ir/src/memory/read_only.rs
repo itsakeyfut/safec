@@ -8,7 +8,7 @@ use crate::ir::{Element, FuncId, Function, Operand, Place, Rvalue, Shape, Termin
 use crate::library::Callee;
 
 use super::allocations::Allocations;
-use super::index::LocalIdx;
+use super::index::{LocalIdx, Storage};
 use super::known::Known;
 use super::store::{Landing, StoreKind, Written};
 use super::{Finding, Kind};
@@ -101,8 +101,8 @@ fn pointer_levels(analysis: &Allocations<'_>, ty: TyId) -> usize {
 /// `int *c = (int *)&k; set2(&c);` with `set2` taking `int **` hands `k` one
 /// level below. See ADR-0121.
 ///
-/// **Past the levels `receiver` has, where `beyond`**, to the deepest pointer
-/// the unit declares: a reader handed a `void *` or a `char *` may convert it
+/// **Past the levels `receiver` has, where `beyond`**, while anything is
+/// named there: a reader handed a `void *` or a `char *` may convert it
 /// back and write at a level its type never said, and nothing says `const`
 /// there. Asked only to the receiver's depth, `void *f(void)` returning a
 /// block that holds `(int *)&k` was believed (#1134 review). A library
@@ -124,10 +124,33 @@ fn below_read_only(
     };
     let typed = pointer_levels(analysis, receiver);
     // Only past a pointer: an integer's reader reads no level below it.
+    // **Bounded by what is named, not by a declared type**: `void *` slots
+    // chain a literal as deep as the program likes, and stopped at the
+    // deepest pointer the function declares, `x[0] = y; y[0] = "ab";
+    // take(x);` was believed (#1159). A chain of distinct storages is no
+    // longer than there are storages, twice the locals, and the walk stops
+    // where a level names nothing. See ADR-0123. Mutation: stop at
+    // `analysis.deepest_pointer`; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `chained_through_void_slots` goes silent.
     let last = if beyond && typed > 0 {
-        typed.max(analysis.deepest_pointer)
+        typed.max(2 * analysis.locals + 1)
     } else {
         typed
+    };
+    // **Or where the value carries a read-only level there**, which names
+    // nothing: a `const char ***` parameter's memory holds no name a level
+    // down, and stopped there, `take_any(pp)` was believed where main
+    // reported it (#1165 review). Mutation: ask only what is named;
+    // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `arrived_three_deep_handed_as_void` goes silent.
+    let named_at = |level: usize| {
+        level < typed
+            || level == 0
+            || known.read_only_levels_at(place.local, depth + level) != super::parts::ReadOnly::NONE
+            || {
+                let (sites, locals) = known.levels_below(place.local, depth + level - 1);
+                !sites.is_empty() || !locals.is_empty()
+            }
     };
     // A level past `typed` has no bit set, so it is asked as writable. **Of
     // what the value certainly reaches where the reader keeps `const` at its
@@ -145,14 +168,20 @@ fn below_read_only(
     // `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`'s
     // `handed_as_void_beside_a_literal_kept` goes silent.
     let keeps_const = typed > 0 && levels >> (typed - 1) & 1 != 0;
-    (from..last).any(|level| {
-        levels >> level & 1 == 0
-            && if level < typed || !keeps_const {
-                read_only_exactly_at(place.local, depth + level, read_only, known)
-            } else {
-                read_only_certainly_at(place.local, depth + level, read_only, known)
-            }
-    })
+    (from..last)
+        .take_while(|&level| named_at(level))
+        .any(|level| {
+            levels
+                .checked_shr(u32::try_from(level).unwrap_or(u32::MAX))
+                .unwrap_or(0)
+                & 1
+                == 0
+                && if level < typed || !keeps_const {
+                    read_only_exactly_at(place.local, depth + level, read_only, known)
+                } else {
+                    read_only_certainly_at(place.local, depth + level, read_only, known)
+                }
+        })
 }
 
 /// [`read_only_exactly_at`] of what the value read `depth` down certainly
@@ -359,6 +388,37 @@ pub(super) fn handed_read_only(
     }
 }
 
+/// At which levels the reader of the storage a store or a copy lands in
+/// keeps `const`: every recorded reader's levels where the landing reaches
+/// one, a level kept only where all keep it, and `declared`, what the place
+/// written through says, for a storage whose reader was not recorded.
+/// **One answer for every leaving door**, so that a store and a copy into
+/// the same storage cannot read different readers (#1147). See ADR-0123.
+///
+/// **Only where the landing is placed**: through a pointer read out of a
+/// global, every exposed block stood for where it may land, a parameter's
+/// memory among them, and that one reader answered for all, so `q = GW; *q
+/// = "ab";` was believed beside an unrelated `const char **` parameter
+/// (#1165 review). Mutation: ask the records of an unplaced landing too;
+/// `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+/// `stored_through_a_global_beside_a_const_parameter` goes silent.
+fn reader_levels(known: &Known, landing: Option<&Landing>, declared: u32) -> u32 {
+    let Some(landing) = landing else {
+        return declared;
+    };
+    if landing.through_unrecorded || known.points_to[landing.pointer].beyond().any_unknown() {
+        return declared;
+    }
+    landing
+        .containers
+        .iter()
+        .map(|&site| Storage::Heap(site))
+        .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
+        .map(|place| known.receiver_levels[place].map_or(declared, |levels| levels.mask()))
+        .reduce(|here, there| here & there)
+        .unwrap_or(declared)
+}
+
 /// Report a store, into memory that leaves this function, of a pointer that
 /// may name read-only storage at a level the memory's reader believes it may
 /// write: `*out = "ab";` through an out-parameter, `G = "ab";` into a static,
@@ -399,10 +459,15 @@ pub(super) fn stored_read_only(
     ) else {
         return;
     };
-    let levels = function
-        .const_levels(operation.place.local)
+    // **What the place written through holds**, a cast's operand among it:
+    // `*(char **)CG = "ab"` with `CG` a `const char *[2]` lands where every
+    // reader keeps `const`, and asked at the cast's type alone was reported
+    // (#1165 review). A reader recorded for the memory takes levels away.
+    let declared = function
+        .held_levels(operation.place.local)
         .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
         .unwrap_or(0);
+    let levels = reader_levels(known, store.landing.as_ref(), declared);
     if below_read_only(
         analysis,
         value,
@@ -453,11 +518,28 @@ pub(super) fn copied_read_only(
     let Some(receiver) = analysis.unit.place_ty(function, source) else {
         return;
     };
+    // **What the destination's reader keeps `const` at**, as a store into it
+    // asks: read as `0`, `memcpy(out, &c, 8)` through a `const char **` was
+    // `SC0417` where `*out = c;` was not. Where no reader was recorded the
+    // bytes say nothing, so every level is asked. See ADR-0123. Mutation:
+    // answer `0`; `copied_into_a_const_out_parameter` reports.
+    // What the destination says, as a store's lvalue does, and shifted up
+    // one, since the source is asked from its level `1`, which is what the
+    // destination's reader reads at its level `0`.
+    let declared = depth_of(&store.into).map_or(0, |depth| {
+        function
+            .held_levels(store.into.local)
+            .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
+            .unwrap_or(0)
+    });
+    let levels = reader_levels(known, store.landing.as_ref(), declared)
+        .checked_shl(1)
+        .unwrap_or(0);
     if leaves
         && below_read_only(
             analysis,
             source,
-            (receiver, 0),
+            (receiver, levels),
             (1, true),
             &read_only_locals(function),
             known,

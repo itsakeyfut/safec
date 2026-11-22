@@ -503,6 +503,17 @@ pub(super) struct Known {
     /// made again, as `held_levels` is. Read by
     /// [`Self::receiver_width_of`]. See ADR-0112.
     pub(super) receiver_width: Table<Storage, u64>,
+    /// Per block or local, the levels at which a reader outside this
+    /// function reads what is stored there as pointing at `const`, where a
+    /// reader's type was recorded: a pointer parameter's memory, by the
+    /// parameter's type below its first level. **The reader, not the
+    /// lvalue**: a store asked at the type it was written through, `*(const
+    /// char **)out = "ab"` with `out` a `char **`, was believed, while the
+    /// caller reads `*out` as writable (#1147). Beside
+    /// [`Self::receiver_width`], for the same reason, and joined so that a
+    /// level is kept only where every path's reader keeps it. Read by
+    /// `read_only::reader_levels`. See ADR-0123.
+    pub(super) receiver_levels: Table<Storage, Option<ReadOnly>>,
     /// Per site, the earliest library copy that may have written part of a
     /// pointer into it: one whose length is shorter than a pointer, or ends
     /// part way through one (`Allocations::copied_pointers`), whatever either
@@ -745,6 +756,8 @@ impl Known {
             left_at: _,
             held_levels: _,
             receiver_width: _,
+            // Beside `receiver_width`, as it is.
+            receiver_levels: _,
             part_written,
             other_written,
             part_before,
@@ -798,6 +811,8 @@ impl Known {
             left_at: _,
             held_levels: _,
             receiver_width: _,
+            // Beside `receiver_width`, as it is.
+            receiver_levels: _,
             // Cleared by `Self::clear` above.
             part_written: _,
             other_written: _,
@@ -2550,6 +2565,8 @@ impl Known {
             // Kept too: a reader holding the older allocation reads it so.
             // See `Known::receiver_width`.
             receiver_width: _,
+            // Beside `receiver_width`, as it is.
+            receiver_levels: _,
             // **Since it was made, cleared; ever, kept**, for the reason
             // `left_at` is: the new allocation has had nothing copied into
             // it, and the caller may hold the old one. See

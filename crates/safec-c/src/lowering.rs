@@ -3663,21 +3663,27 @@ impl Lowering<'_> {
         // `const` (#1144). See ADR-0121. Mutation: leave `first` unmarked;
         // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
         // `into_a_const_static_array` is reported.
-        let levels = match &value {
+        // **Declared and carried apart**, each from its own: the array's
+        // type is what `first` declares, and what a cast gave the pointer it
+        // was reached through stays carried (ADR-0123).
+        let levels = |of: fn(&Function, LocalId) -> u32| match &value {
             Rvalue::Use(Operand::Copy(pointer)) => {
                 // A pointer to the array and the pointer to its first
                 // element are read in as many loads, so only the steps
                 // reaching the pointer shift.
                 let below = pointer.steps().len();
-                builder
-                    .function
-                    .const_levels(pointer.local)
+                of(&builder.function, pointer.local)
                     .checked_shr(u32::try_from(below).unwrap_or(u32::MAX))
                     .unwrap_or(0)
             }
-            _ => builder.function.const_levels(place.local),
+            _ => of(&builder.function, place.local),
         };
-        builder.function.mark_const_levels(first, levels);
+        let (declared, carried) = (
+            levels(Function::const_levels),
+            levels(Function::carried_levels),
+        );
+        builder.function.mark_const_levels(first, declared);
+        builder.function.mark_carried_levels(first, carried);
         builder.push(Operation {
             place: Place::local(first),
             value,
@@ -3886,8 +3892,18 @@ impl Lowering<'_> {
                         // one it moved**; a comparison or an integer is no
                         // pointer and takes none. See `Lowering::moved_levels`.
                         if matches!(self.unit.ty(at), Ty::Pointer(_)) {
-                            let levels = Self::moved_levels(&builder.function, [&lhs, &rhs]);
-                            builder.function.mark_const_levels(into, levels);
+                            let declared = Self::moved_levels(
+                                &builder.function,
+                                Function::const_levels,
+                                [&lhs, &rhs],
+                            );
+                            let carried = Self::moved_levels(
+                                &builder.function,
+                                Function::carried_levels,
+                                [&lhs, &rhs],
+                            );
+                            builder.function.mark_const_levels(into, declared);
+                            builder.function.mark_carried_levels(into, carried);
                         }
                         builder.push(Operation {
                             place: Place::local(into),
@@ -4086,8 +4102,18 @@ impl Lowering<'_> {
                     }
                     None => {
                         let addressed = builder.function.push_local(addressed);
-                        let levels = Self::moved_levels(&builder.function, [&pointer, &offset]);
-                        builder.function.mark_const_levels(addressed, levels);
+                        let declared = Self::moved_levels(
+                            &builder.function,
+                            Function::const_levels,
+                            [&pointer, &offset],
+                        );
+                        let carried = Self::moved_levels(
+                            &builder.function,
+                            Function::carried_levels,
+                            [&pointer, &offset],
+                        );
+                        builder.function.mark_const_levels(addressed, declared);
+                        builder.function.mark_carried_levels(addressed, carried);
                         builder.push(Operation {
                             place: Place::local(addressed),
                             value: Rvalue::Binary {
@@ -4486,9 +4512,12 @@ impl Lowering<'_> {
         // was what asked such a pointer, and followed it asked nothing.
         // Mutation: leave the result unmarked; `a_write_through_a_cast_that_drops_const_is_unproven`'s
         // `through_a_global`, cast as it is read out of memory, goes silent.
+        // **Carried, not declared**: the cast's own type is what a reader of
+        // it declared, and asked at the operand's levels instead,
+        // `unp((char **)&c)` was believed (#1158). See ADR-0123.
         if let Some(ty) = self.types.of(operand) {
             let levels = self.const_levels(ty);
-            builder.function.mark_const_levels(into, levels);
+            builder.function.mark_carried_levels(into, levels);
         }
         builder.push(Operation {
             place: Place::local(into),
@@ -4522,14 +4551,13 @@ impl Lowering<'_> {
     /// `into_a_const_static_array` reports its row.
     fn moved_levels<'o>(
         function: &Function,
+        of: fn(&Function, LocalId) -> u32,
         operands: impl IntoIterator<Item = &'o Operand>,
     ) -> u32 {
         operands
             .into_iter()
             .filter_map(|operand| match operand {
-                Operand::Copy(place) if place.steps().is_empty() => {
-                    Some(function.const_levels(place.local))
-                }
+                Operand::Copy(place) if place.steps().is_empty() => Some(of(function, place.local)),
                 _ => None,
             })
             .fold(0, |levels, each| levels | each)
