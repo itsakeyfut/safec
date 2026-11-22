@@ -463,6 +463,15 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
         },
         Start::Doubt,
     ),
+    // Which statics the program may not modify, the unit's (ADR-0123).
+    (
+        "read_only_statics",
+        Field::Exempt {
+            why: "the unit's record of which objects with static storage duration are `const` or literals, the same at every point and on every path; a value naming one is asked here, as a `const` local is asked by its type",
+            held_by: &["a_write_to_a_string_literal_is_unproven"],
+        },
+        Start::Fact("what the unit declares, before any door gives the value anything"),
+    ),
     (
         "certainly_exposed",
         Field::Exempt {

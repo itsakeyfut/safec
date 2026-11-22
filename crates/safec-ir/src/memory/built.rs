@@ -259,12 +259,16 @@ pub(super) fn built_from(
     // anything through it. Asked by type at the doors instead, an integer
     // holding a pointer's bytes handed where a pointer is read went silent
     // (#1135). Mutation: keep the mark; `a_value_computed_from_a_pointer_to_const_is_not_a_write`
-    // reports.
+    // reports. **Nor a static it compared**, which is asked by name
+    // (ADR-0123): it stays what this check does not model, as every reader
+    // that has not asked for a static reads one. Mutation: keep the static;
+    // the same case's `through_a_local` reports.
     if matches!(
         op,
         Some(BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne)
     ) {
         reached.read_only = super::parts::ReadOnly::NONE;
+        reached.statics_as_loaded();
     }
 
     reached

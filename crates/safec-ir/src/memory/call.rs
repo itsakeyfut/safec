@@ -74,6 +74,7 @@ impl Allocations<'_> {
         );
         let poured = Cell::poured(
             value.referents(),
+            value.read_only_of(&forged),
             std::iter::empty(),
             std::iter::empty(),
             &Levels::new(vec![Width::Unbounded]),
@@ -702,6 +703,8 @@ impl Allocations<'_> {
                     // Through `Known::expose`: what the call is handed, as at
                     // any call of this family.
                     exposed: _,
+                    // The unit's, the same at every point and on every path.
+                    read_only_statics: _,
                     // Keeps no address; see `Known::exposed`.
                     certainly_exposed: _,
                     // Through `Known::pour` and the walk: what the
@@ -1138,8 +1141,13 @@ impl Allocations<'_> {
                             };
                             let recorded =
                                 self.recorded_where_it_lands(first, &copied_bound.below(1));
+                            // As a store's (ADR-0123). **Held by nothing,
+                            // measured**: what a copy reads out of memory names
+                            // no static, and a copy of a local naming one is
+                            // reported without it.
                             let poured = Cell::poured(
                                 value.referents(),
+                                value.read_only_of(&read),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
                                 &recorded,
@@ -2190,6 +2198,8 @@ impl Allocations<'_> {
                     // The new block's is cleared by `Known::reborn`, and
                     // nothing is carried from the old.
                     exposed: _,
+                    // The unit's, the same at every point and on every path.
+                    read_only_statics: _,
                     // Keeps no address; see `Known::exposed`.
                     certainly_exposed: _,
                     // The new block holds what the old held, by `Known::pour`

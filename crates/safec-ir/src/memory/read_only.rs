@@ -70,7 +70,8 @@ fn names_read_only_at(
 ) -> bool {
     if depth == 0 {
         let held = &known.points_to[local];
-        return held.read_only.here() || held.locals().any(|local| read_only.contains(&local));
+        return known.read_only_of(held).here()
+            || held.locals().any(|local| read_only.contains(&local));
     }
     // **And the locals it may point at, read as the value is**: `set(*pp)`
     // with `*pp` holding a `const` local's address was asked for a static

@@ -1529,11 +1529,13 @@ pub(super) struct Held {
     /// for takes it away. See ADR-0100.
     pub(super) vouched: bool,
     /// **Whether it may name storage the program may not modify**, a static
-    /// defined `const` or a string literal (C17 6.7.3 p6, 6.4.5 p7): set by
-    /// [`crate::ir::Rvalue::Static`] of a read-only static, kept by a union at
-    /// every join and carried wherever the value is, so that a write through
-    /// it is asked whatever spelling reached it. A local is not marked here,
-    /// being named. Per level, [`ReadOnly`]. See ADR-0120.
+    /// defined `const` or a string literal (C17 6.7.3 p6, 6.4.5 p7), at each
+    /// level a load or a call's type gave it, kept by a union at every join
+    /// and carried wherever the value is, so that a write through it is asked
+    /// whatever spelling reached it. **Not level `0` of a static it names**,
+    /// which is asked of the static by name, as a local is
+    /// (`Known::read_only_of`, ADR-0123). Per level, [`ReadOnly`]. See
+    /// ADR-0120.
     pub(super) read_only: ReadOnly,
     /// **The one place it certainly names**, where that is shown: taking the
     /// address of a whole local or of a one-level array's start, and an
@@ -1913,6 +1915,19 @@ impl Held {
     /// Name what this check does not model for `why`.
     pub(super) fn name_unknown(&mut self, why: Why) {
         self.names.set(Referent::Unknown(why));
+    }
+
+    /// Name no static, and [`Why::Loaded`] where one was named, which is how
+    /// every reader that has not asked for a static reads it: for a value
+    /// that names no storage of its own, a comparison's. See ADR-0123.
+    pub(super) fn statics_as_loaded(&mut self) {
+        let statics: Vec<StaticId> = self.statics().collect();
+        if !statics.is_empty() {
+            self.name_unknown(Why::Loaded);
+        }
+        for id in statics {
+            self.names.remove(Referent::Static(id));
+        }
     }
 
     /// Name the object with static storage duration `id`: its address was
@@ -3088,6 +3103,7 @@ impl Cell {
     /// which moved no case in the corpus or the route matrix, measured.
     pub(super) fn poured(
         referents: usize,
+        read_only: ReadOnly,
         sites: impl IntoIterator<Item = Site>,
         named: impl IntoIterator<Item = LocalIdx>,
         stored: &Levels,
@@ -3181,7 +3197,7 @@ impl Cell {
         // slot holding no address: kept, so that a load out of it is
         // possibly null (#1038).
         poured.may_hold_null = from.may_be_null || from.names.ones().next().is_none();
-        poured.may_hold_read_only = from.read_only;
+        poured.may_hold_read_only = read_only;
         for (marked, why) in [
             (from.may_name(Why::StaleRead), Why::StaleRead),
             (from.may_name(Why::UnreplacedRead), Why::UnreplacedRead),

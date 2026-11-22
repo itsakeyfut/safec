@@ -1365,6 +1365,8 @@ impl Allocations<'_> {
             // Read: what code this check cannot read may name, for
             // `Held::named_at_read`.
             exposed: _,
+            // The unit's, the same at every point and on every path.
+            read_only_statics: _,
             certainly_exposed: _,
             // Read: what memory holds where it is read, by
             // `Known::load_into`.
@@ -2142,6 +2144,8 @@ impl Allocations<'_> {
             escaped,
             handed_away,
             exposed,
+            // The unit's, the same at every point and on every path.
+            read_only_statics: _,
             certainly_exposed,
             contents,
             written,
@@ -2698,6 +2702,11 @@ impl Analysis for Allocations<'_> {
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, referents),
+            read_only_statics: self
+                .unit
+                .statics()
+                .map(|id| self.unit.static_object(id).read_only)
+                .collect(),
             certainly_exposed: Table::filled(false, self.locals),
             contents: Table::filled(Cell::none(referents), self.locals),
             realloced: Table::filled(None, self.locals),
@@ -3094,6 +3103,8 @@ impl Allocations<'_> {
                     // in may contain, and what an unplaced store exposes.
                     contents: _,
                     exposed: _,
+                    // The unit's, the same at every point and on every path.
+                    read_only_statics: _,
                     // A store keeps no address for code this check cannot read.
                     certainly_exposed: _,
                     // Through `Known::noticed`, where what it stores reaches
@@ -3563,8 +3574,15 @@ impl Allocations<'_> {
                     // value can find it (#503, ADR-0045); and a pointer read
                     // out of caller memory keeps that fact where it is stored
                     // (ADR-0040).
+                    // **What it stores names read-only storage as the value
+                    // is asked**, a static it names among it, since a block
+                    // keeps no static by name. See ADR-0123. Mutation: take
+                    // `written.read_only` alone;
+                    // `read_only_storage_below_what_leaves_or_arrives_is_unproven`
+                    // fails.
                     let poured = Cell::poured(
                         value.referents(),
+                        value.read_only_of(&written),
                         carried.iter().copied(),
                         written.locals(),
                         &stored,
@@ -3873,12 +3891,10 @@ impl Allocations<'_> {
                                 stored_through: false,
                                 may_be_null: false,
                                 vouched: true,
-                                // Nothing this check follows. See ADR-0105.
-                                read_only: if self.unit.static_object(*id).read_only {
-                                    super::parts::ReadOnly::HERE
-                                } else {
-                                    super::parts::ReadOnly::NONE
-                                },
+                                // **Asked of the static it names**, not
+                                // carried: `Known::read_only_of`. See
+                                // ADR-0123.
+                                read_only: super::parts::ReadOnly::NONE,
                                 alone: None,
                             },
                         );
