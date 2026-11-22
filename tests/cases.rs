@@ -233,7 +233,11 @@ cases! {
         // the guesses, since it may convert back and write:
         // `handed_as_void_beside_a_literal_kept` is `SC0417` (#1163 review).
         // Mutation: ask every reader of what is certain alone in
-        // `below_read_only`; it goes silent.
+        // `below_read_only`; it goes silent. A `const void *` reader keeps no `const`
+        // past its type either, since it may convert back and write a level
+        // down: `handed_as_const_void_beside_a_literal_kept` is `SC0417`
+        // (#1178). Mutation: answer `false` from `ends_in_void`; it goes
+        // silent.
         a_call_result_names_what_it_was_shown_apart_from_what_it_may_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `strdup` and `strndup` return a new allocation and `strpbrk` a
         // pointer into its first argument, so a write through what they

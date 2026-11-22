@@ -3,6 +3,9 @@ void keep(const char **b);
 void keep_slot(const char **s);
 void take(void *v);
 const char **get(void);
+char **get_writable(void);
+void keep_const(const char **p);
+void read_const_void(const void *p);
 void *get_any(void);
 void sink(void *p);
 void keep_view(const char *const *p);
@@ -54,4 +57,10 @@ void handed_as_void_beside_a_literal_kept(void) {
     keep_view(&s);
     void *r = get_any();
     sink(r);
+}
+void handed_as_const_void_beside_a_literal_kept(void) {
+    const char *s = 0;
+    keep_const(&s);
+    s = "ab";
+    read_const_void(get_writable());
 }

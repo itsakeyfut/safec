@@ -125,6 +125,16 @@ fn names_read_only_at(
             .any(|local| read_only.contains(local))
 }
 
+/// Whether what `ty`'s last pointer level points at is `void`: a reader
+/// whose type says nothing of what lies below it.
+fn ends_in_void(analysis: &Allocations<'_>, ty: TyId) -> bool {
+    let mut ty = ty;
+    while let Ty::Pointer(pointee) = analysis.unit.ty(ty) {
+        ty = pointee;
+    }
+    matches!(analysis.unit.ty(ty), Ty::Void)
+}
+
 /// How many levels of pointer `ty` has: `int **` two.
 fn pointer_levels(analysis: &Allocations<'_>, ty: TyId) -> usize {
     let mut levels = 0;
@@ -208,7 +218,14 @@ fn below_read_only(
     // reader of what is certain alone;
     // `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`'s
     // `handed_as_void_beside_a_literal_kept` goes silent.
-    let keeps_const = typed > 0 && levels >> (typed - 1) & 1 != 0;
+    // **Not a reader whose `const` is on `void`**: a `const void *` may be
+    // converted to `char *const *` and written a level down with no cast,
+    // so its `const` keeps nothing past its type, and leaving guesses out
+    // there believed `use_c(get())` (#1178). Mutation: answer `false` from
+    // `ends_in_void`; `a_call_result_names_what_it_was_shown_apart_from_what_it_may_return`'s
+    // `handed_as_const_void_beside_a_literal_kept` goes silent.
+    let keeps_const =
+        typed > 0 && levels >> (typed - 1) & 1 != 0 && !ends_in_void(analysis, receiver);
     (from..last)
         .take_while(|&level| named_at(level))
         .any(|level| {
