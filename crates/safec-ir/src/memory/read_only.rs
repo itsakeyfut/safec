@@ -61,6 +61,47 @@ fn depth_of(place: &Place) -> Option<usize> {
     }
 }
 
+/// Record a read-only write, **once per caret**: a store into a `const`
+/// object that also leaves holding a literal was asked by
+/// [`written_read_only`] and by [`stored_read_only`], and the same `SC0417`
+/// in the same words was reported twice (#1177). Every door pushes here.
+/// Mutation: push directly in `stored_read_only`;
+/// `a_store_both_written_and_leaving_read_only_is_reported_once` fails.
+///
+/// **The same report, not only the same caret**: the same function, kind
+/// and span, and the same local where both name one, so two arguments of
+/// one call handed read-only storage stay two reports, and a caret in one
+/// function never answers for another. A finding that names no local says
+/// the same words as one that does at that caret, and gives way to it.
+fn report_once(findings: &mut Vec<Finding>, finding: Finding) {
+    let same_caret = |found: &Finding| {
+        found.function == finding.function && found.kind == finding.kind && found.at == finding.at
+    };
+    match finding.local {
+        // **Any report at the caret answers for one that names no local**,
+        // whose words are the same.
+        None if findings.iter().any(same_caret) => {}
+        None => findings.push(finding),
+        // **One that names a local is dropped only for the same local**, and
+        // takes the place of one that named none, so the outcome does not
+        // turn on which door ran first: two arguments stay two either way.
+        Some(_)
+            if findings
+                .iter()
+                .any(|found| same_caret(found) && found.local == finding.local) => {}
+        Some(_) => {
+            if let Some(unnamed) = findings
+                .iter_mut()
+                .find(|found| same_caret(found) && found.local.is_none())
+            {
+                *unnamed = finding;
+            } else {
+                findings.push(finding);
+            }
+        }
+    }
+}
+
 /// [`names_read_only`] of the value read `depth` dereferences below `local`.
 fn names_read_only_at(
     local: crate::ir::LocalId,
@@ -262,16 +303,19 @@ pub(super) fn returned_read_only(
         Operand::Constant(_) => false,
     };
     if below || (!returns_reads_only && names_read_only(operand, &read_only, known)) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: operation.origin.span(),
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: operation.origin.span(),
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -291,16 +335,19 @@ pub(super) fn written_read_only(
         return;
     };
     if may_land_read_only(landing, &read_only_locals(function), known) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: store.at,
-            local: Some(landing.pointer),
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: store.at,
+                local: Some(landing.pointer),
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -374,16 +421,19 @@ pub(super) fn handed_read_only(
         if below
             || (!called.reads_only_through(index) && names_read_only(argument, &read_only, known))
         {
-            findings.push(Finding {
-                function: func,
-                kind: Kind::WritesReadOnly,
-                conclusion: Conclusion::Unknown,
-                at: origin.span(),
-                local: Some(place.local),
-                freed: None,
-                made: None,
-                unproven: None,
-            });
+            report_once(
+                findings,
+                Finding {
+                    function: func,
+                    kind: Kind::WritesReadOnly,
+                    conclusion: Conclusion::Unknown,
+                    at: origin.span(),
+                    local: Some(place.local),
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                },
+            );
         }
     }
 }
@@ -476,16 +526,19 @@ pub(super) fn stored_read_only(
         &read_only_locals(function),
         known,
     ) {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: operation.origin.span(),
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: operation.origin.span(),
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }
 
@@ -547,15 +600,18 @@ pub(super) fn copied_read_only(
             known,
         )
     {
-        findings.push(Finding {
-            function: func,
-            kind: Kind::WritesReadOnly,
-            conclusion: Conclusion::Unknown,
-            at: store.at,
-            local: None,
-            freed: None,
-            made: None,
-            unproven: None,
-        });
+        report_once(
+            findings,
+            Finding {
+                function: func,
+                kind: Kind::WritesReadOnly,
+                conclusion: Conclusion::Unknown,
+                at: store.at,
+                local: None,
+                freed: None,
+                made: None,
+                unproven: None,
+            },
+        );
     }
 }

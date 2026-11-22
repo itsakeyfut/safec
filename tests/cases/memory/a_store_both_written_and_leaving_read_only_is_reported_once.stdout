@@ -1,0 +1,108 @@
+Target "x86_64-pc-windows-msvc"
+Static ".str.0" "char[3]" internal bytes 97 98 0
+Static ".str.1" "char[3]" internal bytes 97 98 0
+Static ".str.2" "char[3]" internal bytes 99 100 0
+Function a_store_both_written_and_leaving_read_only_is_reported_once.c:1:6 "f"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "pp"
+  Local "_2" "char **" "q"
+  Local "_3" "char **"
+  Local "_4" "char (*)[3]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:2:22 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:2:18 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:2:22 generated
+    Branch a_store_both_written_and_leaving_read_only_is_reported_once.c:3:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:3:9 generated
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:4:14 generated
+      Destination "_4"
+      Static ".str.0"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:4:14 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:4:9 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:4:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+Function a_store_both_written_and_leaving_read_only_is_reported_once.c:7:6 "set2" declared
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "a"
+  Local "_2" "char **" parameter "b"
+Function a_store_both_written_and_leaving_read_only_is_reported_once.c:8:6 "two_arguments_each_handed_read_only"
+  Local "_0" "void" return
+  Local "_1" "char *" "x"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "char *" "y"
+  Local "_5" "char (*)[3]"
+  Local "_6" "char *"
+  Local "_7" "char **"
+  Local "_8" "char **"
+  Local "_9" "char **"
+  Local "_10" "char **"
+  Block "bb0" entry
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:9:21 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:9:21 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:9:17 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:9:21 generated
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:10:21 generated
+      Destination "_5"
+      Static ".str.2"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:10:21 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:10:17 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:10:21 generated
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:11:19 written
+      Destination "_7"
+      Address
+        Place "_1"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:11:10 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:11:32 written
+      Destination "_9"
+      Address
+        Place "_4"
+    Operation a_store_both_written_and_leaving_read_only_is_reported_once.c:11:23 written
+      Destination "_10"
+      Use
+        Copy "_9"
+    ArgumentsEvaluated a_store_both_written_and_leaving_read_only_is_reported_once.c:11:5 generated
+    Call a_store_both_written_and_leaving_read_only_is_reported_once.c:11:5 written "set2" "bb1"
+      Copy "_8"
+      Copy "_10"
+  Block "bb1"
+    Sequenced a_store_both_written_and_leaving_read_only_is_reported_once.c:11:5 generated
+    Return
