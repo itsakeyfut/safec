@@ -15,6 +15,8 @@ void f(int (*q)[2]);
 void f(int (*q)[3]);
 void e(int q[2][3]);
 void e(int q[2][4]);
+void d(int q[2][3]);
+void d(int (*q)[4]);
 int n[2];
 int main(void) {
     extern int n[3];

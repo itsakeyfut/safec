@@ -1099,9 +1099,12 @@ impl Checker<'_> {
                         // compares: `void f(int a[2]); void f(int a[3]);`
                         // both take an `int *`, and compared as written they
                         // were refused (#1136). An inner length survives the
-                        // adjustment and is still compared. Mutation: compare
-                        // `written`; `array_parameters_of_different_lengths_declare_one_function`
-                        // is refused.
+                        // adjustment and is still compared, against a pointer
+                        // to an array too, which as written was never reached.
+                        // Mutation: compare `written`;
+                        // `array_parameters_of_different_lengths_declare_one_function`
+                        // is refused, and `an_array_redeclared_with_another_length_is_refused`'s
+                        // `d` accepted.
                         work.extend(l.iter().zip(r).map(|(l, r)| (l.ty, r.ty)));
                     }
                 }

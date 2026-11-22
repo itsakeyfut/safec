@@ -8400,8 +8400,11 @@ cases! {
         // `extern`, conflict (C17 6.7.6.2 p6); a length left out, or one
         // written differently with the same value, does not. An array
         // parameter's inner length, `e`, survives its adjustment and is
-        // still compared. Mutation: skip
-        // `Checker::check_redeclared_lengths`; all seven are accepted.
+        // still compared, against a pointer to an array too, `d`. Mutation:
+        // skip `Checker::check_redeclared_lengths`; all eight are accepted.
+        // Mutation: compare parameters as written in
+        // `Checker::lengths_disagree`; `d` is accepted, an array against a
+        // pointer being compared no further (#1136 review).
         an_array_redeclared_with_another_length_is_refused: ["--emit", "ast"],
         // Array parameters whose outermost lengths differ declare one
         // function, since each is adjusted to a pointer (C17 6.7.6.3 p7 and
