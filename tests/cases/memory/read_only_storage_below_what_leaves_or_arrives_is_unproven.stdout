@@ -10,6 +10,7 @@ Static "WA" "char *[2]" external zero
 Static "GW" "char **" external zero
 Static "GW2" "char **" external zero
 Static "CG2" "char *[2]" external zero
+Static "GC" "char *" external zero
 Static ".str.0" "char[3]" internal bytes 97 98 0
 Static ".str.1" "char[3]" internal bytes 97 98 0
 Static ".str.2" "char[3]" internal bytes 97 98 0
@@ -27,6 +28,8 @@ Static ".str.13" "char[3]" internal bytes 97 98 0
 Static ".str.14" "char[3]" internal bytes 97 98 0
 Static ".str.15" "char[3]" internal bytes 97 98 0
 Static ".str.16" "char[3]" internal bytes 97 98 0
+Static ".str.17" "char[3]" internal bytes 97 98 0
+Static ".str.18" "char[3]" internal bytes 97 98 0
 Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:1:7 "malloc" declared
   Local "_0" "void *" return
   Local "_1" "unsigned long long" parameter "n"
@@ -1529,3 +1532,113 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:240:6 "sto
         Copy "_5"
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:241:5 generated
     Return
+Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:244:6 "copied_into_a_static_through_a_const_cast"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Local "_4" "char **"
+  Local "_5" "char **"
+  Local "_6" "char **"
+  Local "_7" "void *"
+  Block "bb0" entry
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:245:21 generated
+      Destination "_2"
+      Static ".str.17"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:245:21 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:245:17 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:245:21 generated
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:28 generated
+      Destination "_4"
+      Static "GC"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:12 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:32 written
+      Destination "_6"
+      Address
+        Place "_1"
+    ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:5 generated
+    Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:5 written "memcpy" "bb1"
+      Destination "_7"
+      Copy "_5"
+      Copy "_6"
+      Constant 8
+  Block "bb1"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:246:5 generated
+    Return
+Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:248:6 "copied_below_a_parameter_through_a_const_cast"
+  Local "_0" "void" return
+  Local "_1" "char ***" parameter "out"
+  Local "_2" "char **" "r"
+  Local "_3" "char *" "s"
+  Local "_4" "char (*)[3]"
+  Local "_5" "char *"
+  Local "_6" "char **"
+  Local "_7" "char **"
+  Local "_8" "void *"
+  Block "bb0" entry
+    Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:249:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:249:9 generated
+    StorageLive read_only_storage_below_what_leaves_or_arrives_is_unproven.c:250:9 generated "_2"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:250:16 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:250:20 generated
+    Branch read_only_storage_below_what_leaves_or_arrives_is_unproven.c:251:13 written "bb4" "bb5"
+      Copy "_2"
+  Block "bb2"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:249:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:251:13 generated
+    StorageLive read_only_storage_below_what_leaves_or_arrives_is_unproven.c:252:13 generated "_3"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:252:29 generated
+      Destination "_4"
+      Static ".str.18"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:252:29 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:252:25 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:252:29 generated
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:253:20 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Operation read_only_storage_below_what_leaves_or_arrives_is_unproven.c:253:38 written
+      Destination "_7"
+      Address
+        Place "_3"
+    ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:253:13 generated
+    Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:253:13 written "memcpy" "bb7"
+      Destination "_8"
+      Copy "_6"
+      Copy "_7"
+      Constant 8
+  Block "bb5"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:251:13 generated
+    Goto "bb6"
+  Block "bb6"
+    StorageDead read_only_storage_below_what_leaves_or_arrives_is_unproven.c:255:5 generated "_2"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:253:13 generated
+    StorageDead read_only_storage_below_what_leaves_or_arrives_is_unproven.c:254:9 generated "_3"
+    Goto "bb6"

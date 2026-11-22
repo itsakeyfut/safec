@@ -240,3 +240,17 @@ const char *CG2[2];
 void stored_into_a_const_static_through_a_cast(void) {
     *(char **)CG2 = "ab";
 }
+char *GC;
+void copied_into_a_static_through_a_const_cast(void) {
+    const char *s = "ab";
+    memcpy((const char **)&GC, &s, sizeof s);
+}
+void copied_below_a_parameter_through_a_const_cast(char ***out) {
+    if (out) {
+        char **r = *out;
+        if (r) {
+            const char *s = "ab";
+            memcpy((const char **)r, &s, sizeof s);
+        }
+    }
+}
