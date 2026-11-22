@@ -147,7 +147,13 @@ cases! {
         // so a literal chained through `void *` slots deeper than any pointer
         // declared is asked, `chained_through_void_slots` (#1159, ADR-0123).
         // Mutation: stop at `Allocations::deepest_pointer` in
-        // `below_read_only`; it goes silent. Mutations, each silencing
+        // `below_read_only`; it goes silent. A store and a copy into a
+        // parameter's memory ask its reader, the parameter's type, and not
+        // the type written through: `stored_through_a_const_lvalue_cast` is
+        // `SC0417` and `copied_into_a_const_out_parameter` is not (#1147,
+        // ADR-0123). Mutation: skip the parameter's `receiver_levels`; the
+        // first goes silent. Mutation: answer `0` in `copied_read_only`; the
+        // second reports. Mutations, each silencing
         // the function named: skip a result's inheritance of what it was
         // handed in `Allocations::call`, `found_in_a_literal`; take only the
         // argument's own level, `found_one_load_down`; skip the result's memory mark,

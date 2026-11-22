@@ -620,6 +620,17 @@ const KNOWN_FIELDS: &[(&str, Field, Start)] = &[
             "set from the type a parameter arrives as, and no other block has a reader outside where the function starts",
         ),
     ),
+    // Beside `receiver_width`: the `const` levels that reader keeps (ADR-0123).
+    (
+        "receiver_levels",
+        Field::Exempt {
+            why: "the read-only doors' question, which no route row asks: what a parameter's reader keeps `const` at, read by a store and a copy into that memory alike",
+            held_by: &["read_only_storage_below_what_leaves_or_arrives_is_unproven"],
+        },
+        Start::Fact(
+            "set from the type a parameter arrives as, and no other block has a reader outside where the function starts",
+        ),
+    ),
     (
         "part_written",
         Field::Belief(&[Belief::PartPointer]),

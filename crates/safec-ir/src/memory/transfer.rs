@@ -20,6 +20,7 @@ use super::fit::{Fit, fits, pointee, slot_width};
 use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
+use super::parts::ReadOnly;
 use super::parts::{
     At, Cell, Earliest, Extent, Freeing, Held, Init, Inits, Levels, Marks, PendingRead, PlaceInit,
     Position, Reached, Row, SiteState, Whole, Width, earlier, joined_carried,
@@ -1395,6 +1396,8 @@ impl Allocations<'_> {
             left_at: _,
             held_levels: _,
             receiver_width: _,
+            // Beside `receiver_width`, as it is.
+            receiver_levels: _,
             part_written: _,
             other_written: _,
             part_before: _,
@@ -2161,6 +2164,7 @@ impl Allocations<'_> {
             left_at,
             held_levels,
             receiver_width,
+            receiver_levels,
             part_written,
             other_written,
             part_before,
@@ -2198,6 +2202,15 @@ impl Allocations<'_> {
         // `Known::receiver_width`.
         for (here, there) in receiver_width.iter_mut().zip(&from.receiver_width) {
             *here = (*here).max(*there);
+        }
+        // **A level kept only where both paths' readers keep it**, and a
+        // reader one path recorded where the other recorded none. See
+        // `Known::receiver_levels`.
+        for (here, there) in receiver_levels.iter_mut().zip(&from.receiver_levels) {
+            *here = match (*here, *there) {
+                (Some(here), Some(there)) => Some(ReadOnly::levels(here.mask() & there.mask())),
+                (here, there) => here.or(there),
+            };
         }
         // A may-fact too, keeping the earlier store where both paths let the
         // block leave. See `Known::left_at`.
@@ -2762,6 +2775,7 @@ impl Analysis for Allocations<'_> {
             left_at: Table::filled(None, self.locals),
             held_levels: Table::filled(0, self.locals),
             receiver_width: Table::filled(0, Storage::count(self.locals)),
+            receiver_levels: Table::filled(None, Storage::count(self.locals)),
             part_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             other_written: Table::filled(Earliest::none(), Storage::count(self.locals)),
             part_before: Table::filled(false, Storage::count(self.locals)),
@@ -2847,6 +2861,12 @@ impl Analysis for Allocations<'_> {
                 pointee(self, function.local(parameter))
                     .and_then(|read_as| slot_width(self, read_as))
                     .unwrap_or(0);
+            // **And at which levels it reads `const` there**, the parameter's
+            // own below its first. See `Known::receiver_levels`. Mutation:
+            // skip this; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `stored_through_a_const_lvalue_cast` goes silent.
+            known.receiver_levels[Storage::Heap(Site::of(LocalIdx::of(parameter)))] =
+                Some(ReadOnly::levels(function.const_levels(parameter)).below(1));
         }
 
         // **And exposed**, so that `release_all(); return *p;` is unproven:
@@ -3099,6 +3119,8 @@ impl Allocations<'_> {
                     // held as pointers.
                     held_levels: _,
                     receiver_width: _,
+                    // Beside `receiver_width`, as it is.
+                    receiver_levels: _,
                     // Through `Self::land_contents`: what the blocks it lands
                     // in may contain, and what an unplaced store exposes.
                     contents: _,

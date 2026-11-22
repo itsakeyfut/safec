@@ -204,3 +204,14 @@ void chained_through_void_slots(void) {
     x[0] = y;
     take_any(x);
 }
+void stored_through_a_const_lvalue_cast(char **out) {
+    if (out) {
+        *(const char **)out = "ab";
+    }
+}
+void copied_into_a_const_out_parameter(const char **out) {
+    const char *c = "ab";
+    if (out) {
+        memcpy(out, &c, sizeof c);
+    }
+}

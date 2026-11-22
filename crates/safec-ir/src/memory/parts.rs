@@ -38,6 +38,11 @@ impl ReadOnly {
         ReadOnly(levels)
     }
 
+    /// The mask, bit `k` the level `k`.
+    pub(super) fn mask(self) -> u32 {
+        self.0
+    }
+
     /// Whether the pointer itself may name read-only storage. Mutation:
     /// answer any bit set;
     /// `a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported`

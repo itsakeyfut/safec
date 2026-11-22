@@ -8,7 +8,7 @@ use crate::ir::{Element, FuncId, Function, Operand, Place, Rvalue, Shape, Termin
 use crate::library::Callee;
 
 use super::allocations::Allocations;
-use super::index::LocalIdx;
+use super::index::{LocalIdx, Storage};
 use super::known::Known;
 use super::store::{Landing, StoreKind, Written};
 use super::{Finding, Kind};
@@ -380,6 +380,26 @@ pub(super) fn handed_read_only(
     }
 }
 
+/// At which levels the reader of the storage a store or a copy lands in
+/// keeps `const`: every recorded reader's levels where the landing reaches
+/// one, a level kept only where all keep it, and `declared` for a storage
+/// whose reader was not recorded and where nothing is placed. **One answer
+/// for every leaving door**, so that a store and a copy into the same
+/// storage cannot read different readers (#1147). See ADR-0123.
+fn reader_levels(known: &Known, landing: Option<&Landing>, declared: u32) -> u32 {
+    let Some(landing) = landing else {
+        return declared;
+    };
+    landing
+        .containers
+        .iter()
+        .map(|&site| Storage::Heap(site))
+        .chain(landing.targets.iter().map(|&local| Storage::Local(local)))
+        .map(|place| known.receiver_levels[place].map_or(declared, |levels| levels.mask()))
+        .reduce(|here, there| here & there)
+        .unwrap_or(declared)
+}
+
 /// Report a store, into memory that leaves this function, of a pointer that
 /// may name read-only storage at a level the memory's reader believes it may
 /// write: `*out = "ab";` through an out-parameter, `G = "ab";` into a static,
@@ -420,10 +440,11 @@ pub(super) fn stored_read_only(
     ) else {
         return;
     };
-    let levels = function
+    let declared = function
         .const_levels(operation.place.local)
         .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
         .unwrap_or(0);
+    let levels = reader_levels(known, store.landing.as_ref(), declared);
     if below_read_only(
         analysis,
         value,
@@ -474,11 +495,21 @@ pub(super) fn copied_read_only(
     let Some(receiver) = analysis.unit.place_ty(function, source) else {
         return;
     };
+    // **What the destination's reader keeps `const` at**, as a store into it
+    // asks: read as `0`, `memcpy(out, &c, 8)` through a `const char **` was
+    // `SC0417` where `*out = c;` was not. Where no reader was recorded the
+    // bytes say nothing, so every level is asked. See ADR-0123. Mutation:
+    // answer `0`; `copied_into_a_const_out_parameter` reports.
+    // Shifted up one, since the source is asked from its level `1`, which
+    // is what the destination's reader reads at its level `0`.
+    let levels = reader_levels(known, store.landing.as_ref(), 0)
+        .checked_shl(1)
+        .unwrap_or(0);
     if leaves
         && below_read_only(
             analysis,
             source,
-            (receiver, 0),
+            (receiver, levels),
             (1, true),
             &read_only_locals(function),
             known,

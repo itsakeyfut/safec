@@ -284,6 +284,7 @@ fails where this table and that file differ.
 | Known | `left_at` | entry fact | 2 tests named in its row |
 | Known | `held_levels` | entry fact | 2 tests named in its row |
 | Known | `receiver_width` | entry fact | 2 tests named in its row |
+| Known | `receiver_levels` | entry fact | 1 test named in its row |
 | Known | `part_written` | entry fact | beliefs `PartPointer` |
 | Known | `other_written` | entry fact | 2 tests named in its row |
 | Known | `part_before` | entry fact | 2 tests named in its row |
