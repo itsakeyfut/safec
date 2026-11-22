@@ -8398,9 +8398,16 @@ cases! {
         // differ, at the top, inside, behind a pointer, against a later
         // declaration than the first, in a parameter, or by a block's
         // `extern`, conflict (C17 6.7.6.2 p6); a length left out, or one
-        // written differently with the same value, does not. Mutation: skip
-        // `Checker::check_redeclared_lengths`; all six are accepted.
+        // written differently with the same value, does not. An array
+        // parameter's inner length, `e`, survives its adjustment and is
+        // still compared. Mutation: skip
+        // `Checker::check_redeclared_lengths`; all seven are accepted.
         an_array_redeclared_with_another_length_is_refused: ["--emit", "ast"],
+        // Array parameters whose outermost lengths differ declare one
+        // function, since each is adjusted to a pointer (C17 6.7.6.3 p7 and
+        // p15) (#1136). Mutation: compare parameters as written in
+        // `Checker::lengths_disagree`; this is refused.
+        array_parameters_of_different_lengths_declare_one_function: ["--emit", "ast"],
         // A cast to a pointer gives no integer constant (C17 6.6 p6), so an
         // integer cast of one is no constant, and is said to be none rather
         // than to overflow. Mutation: let a pointer cast be constant in shape

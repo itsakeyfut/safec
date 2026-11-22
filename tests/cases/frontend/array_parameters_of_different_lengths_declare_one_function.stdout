@@ -1,0 +1,13 @@
+Declaration array_parameters_of_different_lengths_declare_one_function.c:1:1 "f" "void (int[2])"
+  Parameter array_parameters_of_different_lengths_declare_one_function.c:1:8 "a" "int[2]"
+Function array_parameters_of_different_lengths_declare_one_function.c:2:1 "f" "void (int[3])"
+  Parameter array_parameters_of_different_lengths_declare_one_function.c:2:8 "a" "int[3]"
+  Compound array_parameters_of_different_lengths_declare_one_function.c:2:18
+Declaration array_parameters_of_different_lengths_declare_one_function.c:4:1 "g" "void (int[2][3])"
+  Parameter array_parameters_of_different_lengths_declare_one_function.c:4:8 "a" "int[2][3]"
+Declaration array_parameters_of_different_lengths_declare_one_function.c:5:1 "g" "void (int[5][3])"
+  Parameter array_parameters_of_different_lengths_declare_one_function.c:5:8 "a" "int[5][3]"
+Function array_parameters_of_different_lengths_declare_one_function.c:6:1 "main" "int (void)"
+  Compound array_parameters_of_different_lengths_declare_one_function.c:6:16
+    Return array_parameters_of_different_lengths_declare_one_function.c:7:5
+      Number array_parameters_of_different_lengths_declare_one_function.c:7:12 "0"

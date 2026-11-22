@@ -15,9 +15,13 @@ Declaration an_array_redeclared_with_another_length_is_refused.c:14:1 "f" "void 
   Parameter an_array_redeclared_with_another_length_is_refused.c:14:8 "q" "int (*)[2]"
 Declaration an_array_redeclared_with_another_length_is_refused.c:15:1 "f" "void (int (*)[3])"
   Parameter an_array_redeclared_with_another_length_is_refused.c:15:8 "q" "int (*)[3]"
-Declaration an_array_redeclared_with_another_length_is_refused.c:16:1 "n" "int[2]"
-Function an_array_redeclared_with_another_length_is_refused.c:17:1 "main" "int (void)"
-  Compound an_array_redeclared_with_another_length_is_refused.c:17:16
-    Declaration an_array_redeclared_with_another_length_is_refused.c:18:5 extern "n" "int[3]"
-    Return an_array_redeclared_with_another_length_is_refused.c:19:5
-      Number an_array_redeclared_with_another_length_is_refused.c:19:12 "0"
+Declaration an_array_redeclared_with_another_length_is_refused.c:16:1 "e" "void (int[2][3])"
+  Parameter an_array_redeclared_with_another_length_is_refused.c:16:8 "q" "int[2][3]"
+Declaration an_array_redeclared_with_another_length_is_refused.c:17:1 "e" "void (int[2][4])"
+  Parameter an_array_redeclared_with_another_length_is_refused.c:17:8 "q" "int[2][4]"
+Declaration an_array_redeclared_with_another_length_is_refused.c:18:1 "n" "int[2]"
+Function an_array_redeclared_with_another_length_is_refused.c:19:1 "main" "int (void)"
+  Compound an_array_redeclared_with_another_length_is_refused.c:19:16
+    Declaration an_array_redeclared_with_another_length_is_refused.c:20:5 extern "n" "int[3]"
+    Return an_array_redeclared_with_another_length_is_refused.c:21:5
+      Number an_array_redeclared_with_another_length_is_refused.c:21:12 "0"

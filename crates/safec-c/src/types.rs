@@ -1095,7 +1095,14 @@ impl Checker<'_> {
                     if let (Parameters::Prototype(l), Parameters::Prototype(r)) =
                         (left_parameters, right_parameters)
                     {
-                        work.extend(l.iter().zip(r).map(|(l, r)| (l.written, r.written)));
+                        // **As adjusted**, which is what C17 6.7.6.3 p15
+                        // compares: `void f(int a[2]); void f(int a[3]);`
+                        // both take an `int *`, and compared as written they
+                        // were refused (#1136). An inner length survives the
+                        // adjustment and is still compared. Mutation: compare
+                        // `written`; `array_parameters_of_different_lengths_declare_one_function`
+                        // is refused.
+                        work.extend(l.iter().zip(r).map(|(l, r)| (l.ty, r.ty)));
                     }
                 }
                 _ => {}
