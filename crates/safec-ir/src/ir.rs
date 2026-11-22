@@ -597,6 +597,11 @@ impl StaticId {
     pub fn index(self) -> usize {
         self.0 as usize
     }
+
+    /// The id at `index` in the unit's table, for a set kept by position.
+    pub(crate) fn at(index: usize) -> StaticId {
+        StaticId(u32::try_from(index).expect("a static's index fits a `u32`"))
+    }
 }
 
 /// An object with static storage duration: C17 6.2.4 p3, an object declared

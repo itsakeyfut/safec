@@ -357,7 +357,7 @@ impl Allocations<'_> {
             // 0` left `h` naming nothing and not null, joined with the path
             // that held `&a` it named `a` alone, and a call handed `h` was
             // believed to write `a` (#1045).
-            Rvalue::Use(Operand::Constant(0)) => Held::null(value.points_to.len()),
+            Rvalue::Use(Operand::Constant(0)) => Held::null(value.referents()),
             // A constant, an address. Neither is a pointer this check
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
@@ -367,7 +367,7 @@ impl Allocations<'_> {
             | Rvalue::Static(_)
             | Rvalue::Reinterpret(_) => {
                 Held::from_marks(
-                    value.points_to.len(),
+                    value.referents(),
                     Marks {
                         lost: false,
                         freed: None,
@@ -1199,7 +1199,7 @@ impl Allocations<'_> {
                     // pour below leaves what this store carries alone
                     // (ADR-0094 rule 1, #656).
                     if let Some(site) = replaces.filter(|_| !elsewhere) {
-                        value.contents[site] = Cell::none(value.points_to.len());
+                        value.contents[site] = Cell::none(value.referents());
                     }
                     value.pour(containers, poured, in_part);
                     self.noticed_where_reachable(value, containers, carried, Some(span));
@@ -1226,7 +1226,7 @@ impl Allocations<'_> {
                 // What it replaces holds nothing else first, as a store's
                 // does (#927).
                 if let Some(site) = replaces.filter(|_| !elsewhere) {
-                    value.contents[site] = Cell::none(value.points_to.len());
+                    value.contents[site] = Cell::none(value.referents());
                 }
                 value.pour(containers, poured, in_part);
                 // **And copied into memory code this check cannot read already
@@ -1404,7 +1404,7 @@ impl Allocations<'_> {
         // mark added is answered here (#732); what it reads is
         // `Known::load_into`'s, and whether it is fresh is below.
         let mut held = Held::from_marks(
-            value.points_to.len(),
+            value.referents(),
             Marks {
                 lost: false,
                 freed: None,
@@ -2626,7 +2626,11 @@ impl Analysis for Allocations<'_> {
         // `Held::site_element`, goes from known to not once a local, which
         // the per-local slack above covers (#873).
         let elements = usize::try_from(2 * ELEMENTS_KEPT + 1).unwrap_or(usize::MAX);
+        // **A static a value or a cell may name** is one more referent per
+        // `Rvalue::Static`, each a position, so a local's set and a site's can
+        // each gain one per position: `2 * locals * positions` (#1162).
         locals * locals * 4
+            + 2 * locals * positions
             + locals * (locals + 26)
             + positions * (2 * locals + 3)
             + locals
@@ -2636,10 +2640,13 @@ impl Analysis for Allocations<'_> {
     }
 
     fn on_entry(&self) -> Self::Value {
+        // Every set of referents is this long: three per position, a site, a
+        // local and a static, as many positions as the larger count.
+        let referents = Referent::count(self.locals, self.unit.statics().count());
         let mut known = Known {
             points_to: Table::filled(
                 Held::from_marks(
-                    self.locals,
+                    referents,
                     Marks {
                         lost: false,
                         freed: None,
@@ -2678,9 +2685,9 @@ impl Analysis for Allocations<'_> {
             // parameter included: what a caller holds is its own local.
             escaped: Table::filled(false, self.locals),
             handed_away: Table::filled(false, self.locals),
-            exposed: Table::filled(false, Referent::count(self.locals)),
+            exposed: Table::filled(false, referents),
             certainly_exposed: Table::filled(false, self.locals),
-            contents: Table::filled(Cell::none(self.locals), self.locals),
+            contents: Table::filled(Cell::none(referents), self.locals),
             realloced: Table::filled(None, self.locals),
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -2755,7 +2762,7 @@ impl Analysis for Allocations<'_> {
         let function = self.unit.function(self.function);
         for &parameter in &self.parameters {
             known.points_to[parameter] = Held::from_marks(
-                self.locals,
+                referents,
                 Marks {
                     lost: false,
                     freed: None,
@@ -3545,7 +3552,7 @@ impl Allocations<'_> {
                     // out of caller memory keeps that fact where it is stored
                     // (ADR-0040).
                     let poured = Cell::poured(
-                        value.points_to.len(),
+                        value.referents(),
                         carried.iter().copied(),
                         written.locals(),
                         &stored,
@@ -3759,7 +3766,7 @@ impl Allocations<'_> {
                     // **And a `0` is a null**, which the value says (ADR-0093
                     // rule 3): a join keeps another path's belief beside it.
                     Rvalue::Use(Operand::Constant(0)) => {
-                        value.replace(at, Held::null(value.points_to.len()));
+                        value.replace(at, Held::null(value.referents()));
                     }
                     // A constant other than zero names nothing this check
                     // follows, and a write through it lands somewhere this
@@ -3771,7 +3778,7 @@ impl Allocations<'_> {
                         value.replace(
                             at,
                             Held::from_marks(
-                                value.points_to.len(),
+                                value.referents(),
                                 Marks {
                                     lost: false,
                                     freed: None,
@@ -3823,45 +3830,48 @@ impl Allocations<'_> {
                     // `SC0402`.
                     Rvalue::Static(id) => {
                         let size = self.unit.size_of(self.unit.static_object(*id).ty);
-                        value.replace(
-                            at,
-                            Held::from_marks(
-                                value.points_to.len(),
-                                Marks {
-                                    lost: false,
-                                    freed: None,
-                                    writes_elsewhere: true,
-                                    position: Position::START,
-                                    loaded: true,
-                                    foreign: false,
-                                    stale_read: false,
-                                    unreplaced_read: false,
-                                    lost_read: false,
-                                    from_caller: false,
-                                    forged: false,
-                                    returned_by: None,
-                                    fresh_read: false,
-                                    widths: Levels::new(vec![Width::of_belief(Some(
-                                        size.unwrap_or(0),
-                                    ))]),
-                                    arrived_holds_pointer: false,
-                                    inner_address: false,
-                                    element: None,
-                                    site_element: None,
-                                    array_edge: false,
-                                    stored_through: false,
-                                    may_be_null: false,
-                                    vouched: true,
-                                    // Nothing this check follows. See ADR-0105.
-                                    read_only: if self.unit.static_object(*id).read_only {
-                                        super::parts::ReadOnly::HERE
-                                    } else {
-                                        super::parts::ReadOnly::NONE
-                                    },
-                                    alone: None,
+                        let mut held = Held::from_marks(
+                            value.referents(),
+                            Marks {
+                                lost: false,
+                                freed: None,
+                                writes_elsewhere: true,
+                                position: Position::START,
+                                // **It names the static, which is not
+                                // recorded to every reader that has not
+                                // asked for it**, as the loaded pointer
+                                // it was built as before. See ADR-0123.
+                                loaded: false,
+                                foreign: false,
+                                stale_read: false,
+                                unreplaced_read: false,
+                                lost_read: false,
+                                from_caller: false,
+                                forged: false,
+                                returned_by: None,
+                                fresh_read: false,
+                                widths: Levels::new(vec![Width::of_belief(Some(
+                                    size.unwrap_or(0),
+                                ))]),
+                                arrived_holds_pointer: false,
+                                inner_address: false,
+                                element: None,
+                                site_element: None,
+                                array_edge: false,
+                                stored_through: false,
+                                may_be_null: false,
+                                vouched: true,
+                                // Nothing this check follows. See ADR-0105.
+                                read_only: if self.unit.static_object(*id).read_only {
+                                    super::parts::ReadOnly::HERE
+                                } else {
+                                    super::parts::ReadOnly::NONE
                                 },
-                            ),
+                                alone: None,
+                            },
                         );
+                        held.name_static(*id);
+                        value.replace(at, held);
                     }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
@@ -3888,7 +3898,7 @@ impl Allocations<'_> {
                         value.replace(
                             at,
                             Held::from_marks(
-                                value.points_to.len(),
+                                value.referents(),
                                 Marks {
                                     lost: false,
                                     freed: None,

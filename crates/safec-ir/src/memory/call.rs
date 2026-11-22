@@ -42,7 +42,7 @@ impl Allocations<'_> {
     /// `land_contents` pours into blocks alone.
     fn fill_lands_forged(&self, landing: &Landing, value: &mut Known) {
         let forged = Held::from_marks(
-            value.points_to.len(),
+            value.referents(),
             Marks {
                 lost: false,
                 freed: None,
@@ -73,7 +73,7 @@ impl Allocations<'_> {
             },
         );
         let poured = Cell::poured(
-            value.points_to.len(),
+            value.referents(),
             std::iter::empty(),
             std::iter::empty(),
             &Levels::new(vec![Width::Unbounded]),
@@ -1139,7 +1139,7 @@ impl Allocations<'_> {
                             let recorded =
                                 self.recorded_where_it_lands(first, &copied_bound.below(1));
                             let poured = Cell::poured(
-                                value.points_to.len(),
+                                value.referents(),
                                 copied.iter().copied(),
                                 copied_locals.iter().copied(),
                                 &recorded,
@@ -1352,8 +1352,8 @@ impl Allocations<'_> {
                 value.expose_locals(handed_locals);
                 let may_write: Table<LocalIdx, bool> = Table::from_vec(
                     value
-                        .exposed
-                        .locals()
+                        .points_to
+                        .indices()
                         .map(|local| value.exposed[local])
                         .collect(),
                 );
@@ -1743,7 +1743,7 @@ impl Allocations<'_> {
                 value.replace(
                     at,
                     Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1810,7 +1810,7 @@ impl Allocations<'_> {
                     // measured. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
                     Some(Operand::Constant(_)) | None => Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1863,7 +1863,7 @@ impl Allocations<'_> {
                         held
                     }
                     Some(_) | None => Held::from_marks(
-                        value.points_to.len(),
+                        value.referents(),
                         Marks {
                             lost: false,
                             freed: None,
@@ -1930,7 +1930,7 @@ impl Allocations<'_> {
         value.replace(
             at,
             Held::from_marks(
-                value.points_to.len(),
+                value.referents(),
                 Marks {
                     lost: false,
                     freed: None,
@@ -2341,8 +2341,8 @@ impl Allocations<'_> {
                     value.points_to[result].lost_its_allocation();
                 }
                 let exposed: Vec<Site> = value
-                    .exposed
-                    .sites()
+                    .state
+                    .indices()
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
                 for other in exposed {
@@ -2380,8 +2380,8 @@ impl Allocations<'_> {
                 let answered = value.written.clone();
                 value.expose(self.sources, [site], Some(origin.span()));
                 let others: Vec<Site> = value
-                    .exposed
-                    .sites()
+                    .state
+                    .indices()
                     .filter(|&other| other != site)
                     .collect();
                 for other in others {

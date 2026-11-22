@@ -140,7 +140,7 @@ pub(super) fn built_from(
     // Every mark said, as a door does (#939): what each operand holds is
     // folded in by `accumulated`, whose union starts from this.
     let mut reached = Held::from_marks(
-        value.points_to.len(),
+        value.referents(),
         Marks {
             lost: false,
             freed: None,

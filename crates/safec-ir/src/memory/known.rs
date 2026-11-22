@@ -582,6 +582,12 @@ pub(super) struct Known {
 }
 
 impl Known {
+    /// How long every set of referents in this value is, which is how long
+    /// [`Self::exposed`] is: what a new value or cell is built with.
+    pub(super) fn referents(&self) -> usize {
+        self.exposed.len()
+    }
+
     /// Every site this local may point at.
     pub(super) fn sites_of(&self, local: LocalId) -> impl Iterator<Item = Site> + '_ {
         self.points_to[local].sites()
@@ -1613,8 +1619,8 @@ impl Known {
     /// told what became reachable, between calls.
     pub(super) fn reachable_now(&self) -> BTreeSet<Site> {
         self.closure(
-            self.exposed
-                .sites()
+            self.state
+                .indices()
                 .filter(|&site| self.exposed[site])
                 .collect(),
         )
@@ -2122,7 +2128,11 @@ impl Known {
     /// `*box = m; fill_box(box);` left `m` unwritten.
     pub(super) fn expose_locals(&mut self, locals: Vec<LocalIdx>) {
         let mut seeds: BTreeSet<LocalIdx> = locals.into_iter().collect();
-        seeds.extend(self.exposed.locals().filter(|&local| self.exposed[local]));
+        seeds.extend(
+            self.points_to
+                .indices()
+                .filter(|&local| self.exposed[local]),
+        );
         for local in self.closed_from(self.reachable_now(), seeds).locals {
             self.exposed[local] = true;
         }
@@ -2204,7 +2214,10 @@ impl Known {
     /// every exposed local, so the sites and the locals cannot come from two
     /// different walks.
     fn unknown_code_reaches(&self) -> Closed {
-        let exposed = self.exposed.locals().filter(|&local| self.exposed[local]);
+        let exposed = self
+            .points_to
+            .indices()
+            .filter(|&local| self.exposed[local]);
         self.closed_from(self.reachable_now(), exposed.collect())
     }
 
@@ -2755,7 +2768,7 @@ impl Known {
                     Some(Referent::Heap(site)) => {
                         alone.insert(site);
                     }
-                    Some(Referent::Unknown(_)) | None => {}
+                    Some(Referent::Static(_) | Referent::Unknown(_)) | None => {}
                 }
             }
         }
@@ -2767,8 +2780,8 @@ impl Known {
         // Seeding a closure from the arguments missed every route it did
         // not name (#1077). See ADR-0111.
         let reached: Vec<Site> = self
-            .exposed
-            .sites()
+            .state
+            .indices()
             .filter(|&site| self.exposed[site] && !alone.contains(&site))
             .collect();
         for site in reached {
@@ -3102,7 +3115,7 @@ impl Known {
         // `realloc` remembered, so the fact goes too. See ADR-0039.
         let exposed = self.exposed.clone();
         self.forget_reallocs_touching(|site| exposed[site]);
-        for site in self.exposed.sites() {
+        for site in self.state.indices() {
             if self.exposed[site] {
                 self.state[site].doubted();
             }
