@@ -1086,6 +1086,28 @@ fn say_fit(
     }
 }
 
+/// Whether a string `local` points at certainly ends inside its object: it
+/// certainly names a static the program may not modify whose bytes the
+/// unit holds, at an exact position, and a zero lies at or past it. **Not a
+/// static that may be written**, whose zero may be gone, and not a position
+/// this check only bounds. Without it, `strlen("abc")` and `strdup("abc")`
+/// were `SC0412` (#1179). Mutation: answer `false`;
+/// `a_literal_read_as_a_string_by_a_library_row_fits` reports.
+fn string_ends_inside(analysis: &Allocations<'_>, known: &Known, local: LocalId) -> bool {
+    let held = &known.points_to[local];
+    let (Some(Referent::Static(slot)), At::Bytes(offset)) = (held.certain(), held.position.at)
+    else {
+        return false;
+    };
+    let object = analysis.unit.static_object(analysis.statics[slot.index()]);
+    let Ok(offset) = usize::try_from(offset) else {
+        return false;
+    };
+    object.read_only
+        && matches!(&object.init, crate::ir::StaticInit::Bytes(bytes)
+            if bytes.iter().skip(offset).any(|&byte| byte == 0))
+}
+
 /// Report every library call at this terminator that reads or writes through
 /// a pointer it is handed further than this check can show fits.
 ///
@@ -1134,7 +1156,10 @@ pub(super) fn reached_by_library(
         } {
             match width {
                 Some(width) => fits_as_bytes(analysis, function, local, width, known, true),
-                // Anything that holds something is unknown here.
+                // **Where the string's end is seen**, a literal or a `const`
+                // array of `char` this check reads the bytes of, it fits.
+                None if string_ends_inside(analysis, known, local) => Some(Fit::Inside),
+                // Anything else that holds something is unknown here.
                 None => fits(analysis, function, local, 0, known, true).map(|_| Fit::Unknown),
             }
         } else {

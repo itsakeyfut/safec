@@ -1,0 +1,20 @@
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:16:17 ]
+    │
+ 16 │     return (int)strlen("abc" + 1);
+    │                 ────────┬────────  
+    │                         ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:19:21 ]
+    │
+ 19 │     return q ? (int)strlen(q) : 0;
+    │                     ────┬────  
+    │                         ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

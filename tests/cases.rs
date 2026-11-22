@@ -240,12 +240,20 @@ cases! {
         // return is not doubted for a literal they were handed, as an unread
         // call's result is (#1164's review): only `a_literal_searched_is_written`
         // is `SC0417`. The `SC0412`s are the string reach such a row asks of
-        // a literal or a parameter, and the width of a parameter's buffer, as
-        // `strstr`'s are. Mutation: drop the
+        // a parameter, and the width of a parameter's buffer, as `strstr`'s
+        // are; a literal's end is seen, so it fits (#1179). Mutation: drop the
         // `strdup` row in `LIBRARY`; `a_copy_of_a_literal_is_written` is
         // `SC0417`. Mutation: drop the `strpbrk` row;
         // `a_buffer_searched_with_a_literal_is_written` is.
         a_string_function_read_by_name_returns_what_its_clause_says: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A string row reading a literal sees where it ends, so `strlen`
+        // and `strdup` of one, and through a local, fit; a parameter's
+        // string is still `SC0412`, `of_a_parameter` (#1179). So is one past
+        // its start, `past_its_start`: a pointer moved by arithmetic is not
+        // one this check certainly places (`Held::alone`).
+        // Mutation: answer `false` from `string_ends_inside`; the literal
+        // calls are `SC0412`.
+        a_literal_read_as_a_string_by_a_library_row_fits: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read
         // again, `self_then_read`. An assignment statement reads nothing back,
