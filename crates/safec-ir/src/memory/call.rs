@@ -2005,11 +2005,8 @@ impl Allocations<'_> {
             // **And the levels its type says `const` at**, as a parameter
             // gets at entry: every load through it, or through any copy of
             // it, shifts them, a conversion the lowering does not mark among
-            // them, `void *v = result(); int **q = v;`. Its memory is not
-            // marked by its type: that answered nothing more, and a mark on a
-            // parameter's memory was found a level past a reader's type by a
-            // pointer recorded as naming it (#1145). Found by the review of
-            // #1145. See ADR-0121. Mutation: leave the levels unset;
+            // them, `void *v = result(); int **q = v;`. Found by the review
+            // of #1145. See ADR-0123. Mutation: leave the levels unset;
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `implicit_conversion_of_a_result` goes silent.
             value.points_to[result].read_only |=
@@ -2022,8 +2019,11 @@ impl Allocations<'_> {
             value.contents[site].arrives_holding_read_only(
                 super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
             );
-            // **And whatever it was handed may be what it returns**: `find("ab")`
-            // may return the literal, at any level the argument named it.
+            // **And whatever it was handed may be what it returns**, or any
+            // pointer that reaches: `find("ab")` may return the literal, and
+            // `pick(&p)` may return `p`, a literal one load down. Taken at the
+            // argument's own level alone, the second was believed (#1164
+            // review).
             // Believed an allocation, its result was written through in
             // silence (#1150). See ADR-0123. Mutation: skip this;
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
@@ -2040,7 +2040,9 @@ impl Allocations<'_> {
                     Shape::Indexed => None,
                 })
                 .fold(super::parts::ReadOnly::NONE, |levels, (local, depth)| {
-                    levels | value.read_only_levels_at(local, depth)
+                    (0..=self.deepest_pointer).fold(levels, |levels, below| {
+                        levels | value.read_only_levels_at(local, depth + below)
+                    })
                 });
             value.points_to[result].read_only |= handed;
             value.contents[site].arrives_holding_read_only(handed.below(1));
@@ -2436,6 +2438,8 @@ impl Allocations<'_> {
             | Callee::Ends => {}
         }
         let asked = match self.library(callee).and_then(|row| row.makes) {
+            // The string's length is not read, so at least its null.
+            Some(Makes::StringCopy) => return Extent::AtLeast(1),
             Some(Makes::Argument(index)) => constant(index),
             Some(Makes::Product(m, n)) => constant(m)
                 .zip(constant(n))

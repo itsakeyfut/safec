@@ -183,3 +183,12 @@ void written_through_a_const_argument(void) {
         *p = 2;
     }
 }
+char *pick(const char **pp);
+int found_one_load_down(void) {
+    const char *p = "ab";
+    char *m = pick(&p);
+    if (m) {
+        *m = 'x';
+    }
+    return 0;
+}

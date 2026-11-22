@@ -1,0 +1,80 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:6:15 ]
+   │
+ 6 │     char *s = strdup("abc");
+   │               ──────┬──────  
+   │                     ╰──────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:13:15 ]
+    │
+ 13 │     char *s = strndup("abc", 2);
+    │               ────────┬────────  
+    │                       ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `buf` points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:23:15 ]
+    │
+ 23 │     char *p = strpbrk(buf, " ");
+    │               ────────┬────────  
+    │                       ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:23:15 ]
+    │
+ 23 │     char *p = strpbrk(buf, " ");
+    │               ────────┬────────  
+    │                       ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `p` points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:25:9 ]
+    │
+ 25 │         *p = 0;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:29:15 ]
+    │
+ 29 │     char *p = strpbrk("a b", " ");
+    │               ─────────┬─────────  
+    │                        ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:29:15 ]
+    │
+ 29 │     char *p = strpbrk("a b", " ");
+    │               ─────────┬─────────  
+    │                        ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_string_function_read_by_name_returns_what_its_clause_says.c:31:9 ]
+    │
+ 31 │         *p = 0;
+    │         ───┬──  
+    │            ╰──── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

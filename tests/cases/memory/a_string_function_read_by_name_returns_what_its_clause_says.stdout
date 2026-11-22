@@ -1,0 +1,217 @@
+Target "x86_64-pc-windows-msvc"
+Static ".str.0" "char[4]" internal bytes 97 98 99 0
+Static ".str.1" "char[4]" internal bytes 97 98 99 0
+Static ".str.2" "char[2]" internal bytes 32 0
+Static ".str.3" "char[4]" internal bytes 97 32 98 0
+Static ".str.4" "char[2]" internal bytes 32 0
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:2:7 "strdup" declared
+  Local "_0" "char *" return
+  Local "_1" "char *" parameter "s"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:3:7 "strndup" declared
+  Local "_0" "char *" return
+  Local "_1" "char *" parameter "s"
+  Local "_2" "unsigned long long" parameter "n"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:4:7 "strpbrk" declared
+  Local "_0" "char *" return
+  Local "_1" "char *" parameter "s"
+  Local "_2" "char *" parameter "accept"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:5:6 "a_copy_of_a_literal_is_written"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "char (*)[4]"
+  Local "_3" "char *"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:6:22 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:6:22 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:6:15 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:6:15 written "strdup" "bb1"
+      Destination "_4"
+      Copy "_3"
+  Block "bb1"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:6:11 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:6:15 generated
+    Branch a_string_function_read_by_name_returns_what_its_clause_says.c:7:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:7:9 generated
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:8:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 120
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:8:9 generated
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:9:9 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:9:9 written "free" "bb5"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:9:9 generated
+    Goto "bb4"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:12:6 "a_bounded_copy_of_a_literal_is_written"
+  Local "_0" "void" return
+  Local "_1" "char *" "s"
+  Local "_2" "char (*)[4]"
+  Local "_3" "char *"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:13:23 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:13:23 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:13:15 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:13:15 written "strndup" "bb1"
+      Destination "_4"
+      Copy "_3"
+      Constant 2
+  Block "bb1"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:13:11 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:13:15 generated
+    Branch a_string_function_read_by_name_returns_what_its_clause_says.c:14:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:14:9 generated
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:15:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 120
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:15:9 generated
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:16:9 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:16:9 written "free" "bb5"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:14:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
+  Block "bb5"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:16:9 generated
+    Goto "bb4"
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:19:6 "a_buffer_searched_with_a_literal_is_written"
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "buf"
+  Local "_2" "int"
+  Local "_3" "char *" "p"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:20:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_string_function_read_by_name_returns_what_its_clause_says.c:20:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:20:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:20:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:23:28 generated
+      Destination "_4"
+      Static ".str.2"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:23:28 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:23:15 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:23:15 written "strpbrk" "bb4"
+      Destination "_6"
+      Copy "_1"
+      Copy "_5"
+  Block "bb4"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:23:11 written
+      Destination "_3"
+      Use
+        Copy "_6"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:23:15 generated
+    Branch a_string_function_read_by_name_returns_what_its_clause_says.c:24:9 written "bb5" "bb6"
+      Copy "_3"
+  Block "bb5"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:24:9 generated
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:25:9 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:25:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:24:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Return
+Function a_string_function_read_by_name_returns_what_its_clause_says.c:28:6 "a_literal_searched_is_written"
+  Local "_0" "void" return
+  Local "_1" "char *" "p"
+  Local "_2" "char (*)[4]"
+  Local "_3" "char *"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:29:23 generated
+      Destination "_2"
+      Static ".str.3"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:29:23 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:29:30 generated
+      Destination "_4"
+      Static ".str.4"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:29:30 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    ArgumentsEvaluated a_string_function_read_by_name_returns_what_its_clause_says.c:29:15 generated
+    Call a_string_function_read_by_name_returns_what_its_clause_says.c:29:15 written "strpbrk" "bb1"
+      Destination "_6"
+      Copy "_3"
+      Copy "_5"
+  Block "bb1"
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:29:11 written
+      Destination "_1"
+      Use
+        Copy "_6"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:29:15 generated
+    Branch a_string_function_read_by_name_returns_what_its_clause_says.c:30:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:30:9 generated
+    Operation a_string_function_read_by_name_returns_what_its_clause_says.c:31:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:31:9 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_string_function_read_by_name_returns_what_its_clause_says.c:30:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Return
