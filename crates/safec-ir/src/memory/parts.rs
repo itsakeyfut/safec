@@ -8,11 +8,11 @@
 
 use std::collections::BTreeSet;
 
-use crate::ir::{Place, StaticId};
+use crate::ir::Place;
 use crate::source::{SourceMap, Span};
 
 use super::bits::Bits;
-use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
+use super::index::{LocalIdx, Referent, Site, StaticSlot, Storage, Table, Why};
 use super::{Carried, LostReason};
 
 /// Per level, whether a pointer read that many dereferences down may name
@@ -1887,7 +1887,7 @@ impl Held {
     /// until it was a referent, so a reader that forgets the new kind
     /// doubts it as before, a false report, rather than taking it for
     /// nothing at all. See ADR-0123. Mutation: answer `false` for a static
-    /// here; `a_string_literal_freed_is_doubted` fails, among nine cases.
+    /// here; `memset_past_a_global_array_is_doubted` fails, among eight cases.
     pub(super) fn may_name(&self, why: Why) -> bool {
         self.names.get(Referent::Unknown(why)) || why == Why::Loaded && self.names_a_static()
     }
@@ -1905,7 +1905,7 @@ impl Held {
     }
 
     /// The objects with static storage duration this value may name.
-    pub(super) fn statics(&self) -> impl Iterator<Item = StaticId> + '_ {
+    pub(super) fn statics(&self) -> impl Iterator<Item = StaticSlot> + '_ {
         self.names.ones().filter_map(|referent| match referent {
             Referent::Static(id) => Some(id),
             Referent::Heap(_) | Referent::Local(_) | Referent::Unknown(_) => None,
@@ -1921,7 +1921,7 @@ impl Held {
     /// every reader that has not asked for a static reads it: for a value
     /// that names no storage of its own, a comparison's. See ADR-0123.
     pub(super) fn statics_as_loaded(&mut self) {
-        let statics: Vec<StaticId> = self.statics().collect();
+        let statics: Vec<StaticSlot> = self.statics().collect();
         if !statics.is_empty() {
             self.name_unknown(Why::Loaded);
         }
@@ -1932,7 +1932,7 @@ impl Held {
 
     /// Name the object with static storage duration `id`: its address was
     /// taken. See ADR-0123.
-    pub(super) fn name_static(&mut self, id: StaticId) {
+    pub(super) fn name_static(&mut self, id: StaticSlot) {
         self.names.set(Referent::Static(id));
     }
 

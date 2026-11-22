@@ -26,6 +26,16 @@ use super::{Carried, Carrier};
 use crate::library::{Callee, Leaves, Makes};
 
 impl Allocations<'_> {
+    /// Where `id` is among the statics this function takes the address of,
+    /// which `analysis` numbered from every `Rvalue::Static` in the body.
+    pub(super) fn static_slot(&self, id: crate::ir::StaticId) -> super::index::StaticSlot {
+        let at = self
+            .statics
+            .binary_search(&id)
+            .expect("every static this function takes the address of is numbered");
+        super::index::Idx::at(at)
+    }
+
     /// A fill of bytes no write made a pointer, landing as `landing`: each
     /// block and local it may land in may now hold them, as `Why::Forged`,
     /// beside what it held. The caller has decided the bytes are not all

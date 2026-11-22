@@ -102,10 +102,11 @@ pub(super) struct Known {
     /// it**, as it was until the memory model was rebuilt on #924: the two
     /// were joined, cleared and read by separate lines that said the same.
     pub(super) exposed: Table<Referent, bool>,
-    /// Per object with static storage duration, whether the program may
+    /// Per static the function takes the address of, by its
+    /// [`StaticSlot`](super::index::StaticSlot), whether the program may
     /// not modify it: what a value naming it is asked, as a `const` local
-    /// is, rather than a mark the value carries. The unit's, the same at
-    /// every point, so shared. See ADR-0123.
+    /// is, rather than a mark the value carries. The same at every point,
+    /// so shared. See ADR-0123.
     pub(super) read_only_statics: std::rc::Rc<[bool]>,
     /// **Per local, whether a call this check cannot read certainly holds
     /// its address**: a value it was handed certainly named it. Not a local
@@ -593,7 +594,10 @@ impl Known {
     /// name. See ADR-0123. Mutation: answer `false` for a static;
     /// `a_write_to_a_string_literal_is_unproven` fails, among three cases.
     pub(super) fn read_only_of(&self, held: &Held) -> ReadOnly {
-        if held.statics().any(|id| self.read_only_statics[id.index()]) {
+        if held
+            .statics()
+            .any(|slot| self.read_only_statics[super::index::Idx::index(slot)])
+        {
             held.read_only | ReadOnly::HERE
         } else {
             held.read_only

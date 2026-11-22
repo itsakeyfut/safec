@@ -26,7 +26,7 @@
 
 use std::ops::{Index, IndexMut};
 
-use crate::ir::{LocalId, StaticId};
+use crate::ir::LocalId;
 
 pub(super) use crate::index::{Idx, LocalIdx, Table};
 
@@ -54,6 +54,24 @@ impl Idx for Site {
     }
     fn at(position: usize) -> Self {
         Site(position)
+    }
+}
+
+/// An object with static storage duration whose address the function
+/// takes, numbered among those alone (`Allocations::statics`), not among the
+/// unit's: a set of referents is as long as the larger of its locals and
+/// these, and numbered by the unit's, every set in a unit of thousands of
+/// literals was thousands of bits long, a unit of 400 small functions read
+/// six times slower, measured (#1162 review).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(super) struct StaticSlot(usize);
+
+impl Idx for StaticSlot {
+    fn index(self) -> usize {
+        self.0
+    }
+    fn at(position: usize) -> Self {
+        StaticSlot(position)
     }
 }
 
@@ -106,7 +124,7 @@ pub(super) enum Referent {
     /// An object with static storage duration, which nothing here frees
     /// and whose `const` the unit records. Its storage has no cell: what
     /// it holds is not followed. See ADR-0123.
-    Static(StaticId),
+    Static(StaticSlot),
     /// Something this check does not model.
     Unknown(Why),
 }
@@ -293,8 +311,8 @@ impl Referent {
         }
     }
 
-    /// How many referents a function with `locals` locals has in a unit
-    /// with `statics` objects of static storage duration: one unknown
+    /// How many referents a function with `locals` locals has that takes
+    /// the address of `statics` objects of static storage duration: one unknown
     /// referent per [`Why`], then three per position, as many positions as
     /// the larger of the two. The slots past the smaller are never named.
     pub(super) fn count(locals: usize, statics: usize) -> usize {
@@ -325,7 +343,7 @@ impl Idx for Referent {
             Some(position) => match position % 3 {
                 0 => Referent::Heap(Site::at(position / 3)),
                 1 => Referent::Local(LocalIdx::at(position / 3)),
-                _ => Referent::Static(StaticId::at(position / 3)),
+                _ => Referent::Static(StaticSlot::at(position / 3)),
             },
             None => Referent::Unknown(Why::ALL[position]),
         }
@@ -438,7 +456,7 @@ impl<S: ByStorage, T> IndexMut<&LocalId> for Table<S, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Idx, LocalIdx, Referent, Site, StaticId, Why};
+    use super::{Idx, LocalIdx, Referent, Site, StaticSlot, Why};
 
     /// Every referent has an index of its own, and the round trip through it is
     /// the identity: an unknown referent for each reason, then a site, a local
@@ -452,7 +470,7 @@ mod tests {
         for at in 0..3 {
             referents.push(Referent::Heap(Site::at(at)));
             referents.push(Referent::Local(LocalIdx::at(at)));
-            referents.push(Referent::Static(StaticId::at(at)));
+            referents.push(Referent::Static(StaticSlot::at(at)));
         }
         let indices: Vec<usize> = referents.iter().map(|&referent| referent.index()).collect();
         for (referent, &index) in referents.iter().zip(&indices) {

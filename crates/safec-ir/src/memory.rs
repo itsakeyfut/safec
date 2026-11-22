@@ -85,8 +85,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, LocalId, Place, Rvalue, Terminator,
-    TranslationUnit,
+    Between, BlockId, Element, FuncId, Function, LocalId, Operation, Place, Rvalue, StaticId,
+    Terminator, TranslationUnit,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -811,6 +811,22 @@ fn analysis<'a>(
         unit,
         function: func,
         locals: function.locals().len(),
+        statics: {
+            let mut statics: Vec<StaticId> = function
+                .blocks()
+                .flat_map(|block| &block.elements)
+                .filter_map(|element| match element {
+                    Element::Assign(Operation {
+                        value: Rvalue::Static(id),
+                        ..
+                    }) => Some(*id),
+                    _ => None,
+                })
+                .collect();
+            statics.sort_unstable();
+            statics.dedup();
+            statics
+        },
         deepest_pointer: deepest_pointer(unit, function),
         parameters: function.parameters().collect(),
         exposed_parameters: function

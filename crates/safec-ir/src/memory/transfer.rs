@@ -2658,7 +2658,7 @@ impl Analysis for Allocations<'_> {
     fn on_entry(&self) -> Self::Value {
         // Every set of referents is this long: three per position, a site, a
         // local and a static, as many positions as the larger count.
-        let referents = Referent::count(self.locals, self.unit.statics().count());
+        let referents = Referent::count(self.locals, self.statics.len());
         let mut known = Known {
             points_to: Table::filled(
                 Held::from_marks(
@@ -2703,9 +2703,9 @@ impl Analysis for Allocations<'_> {
             handed_away: Table::filled(false, self.locals),
             exposed: Table::filled(false, referents),
             read_only_statics: self
-                .unit
-                .statics()
-                .map(|id| self.unit.static_object(id).read_only)
+                .statics
+                .iter()
+                .map(|&id| self.unit.static_object(id).read_only)
                 .collect(),
             certainly_exposed: Table::filled(false, self.locals),
             contents: Table::filled(Cell::none(referents), self.locals),
@@ -3900,10 +3900,10 @@ impl Allocations<'_> {
                                 // which a free of it proves from. Every other
                                 // reader of `Held::certain` asks for a site
                                 // or a local and reads a static as nothing.
-                                alone: Some(Referent::Static(*id)),
+                                alone: Some(Referent::Static(self.static_slot(*id))),
                             },
                         );
-                        held.name_static(*id);
+                        held.name_static(self.static_slot(*id));
                         value.replace(at, held);
                     }
                     // The address of a place is not an allocation this check

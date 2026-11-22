@@ -21,6 +21,9 @@ pub(super) struct Allocations<'a> {
     pub(super) function: FuncId,
     /// How many locals the function has, which is how many sites there can be.
     pub(super) locals: usize,
+    /// The objects with static storage duration whose address the function
+    /// takes, in order, each named by its place here, a [`StaticSlot`](super::index::StaticSlot).
+    pub(super) statics: Vec<crate::ir::StaticId>,
     /// How deep the deepest pointer type among the function's locals is,
     /// counted in `*`s, which is as long as a [`Levels`](super::parts::Levels) here gets.
     ///
