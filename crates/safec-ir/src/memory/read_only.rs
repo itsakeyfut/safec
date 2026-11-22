@@ -523,16 +523,14 @@ pub(super) fn copied_read_only(
     // `SC0417` where `*out = c;` was not. Where no reader was recorded the
     // bytes say nothing, so every level is asked. See ADR-0123. Mutation:
     // answer `0`; `copied_into_a_const_out_parameter` reports.
-    // What the destination says, as a store's lvalue does, and shifted up
-    // one, since the source is asked from its level `1`, which is what the
-    // destination's reader reads at its level `0`.
-    let declared = depth_of(&store.into).map_or(0, |depth| {
-        function
-            .held_levels(store.into.local)
-            .checked_shr(u32::try_from(depth).unwrap_or(u32::MAX))
-            .unwrap_or(0)
-    });
-    let levels = reader_levels(known, store.landing.as_ref(), declared)
+    // **Not what the destination place says**, which a cast to `const`
+    // raises: read so, `memcpy((const char **)&G, &s, 8)` into a static was
+    // believed (#1176). Shifted up one, since the source is asked from its
+    // level `1`, which is what the destination's reader reads at its level
+    // `0`. Mutation: fall back to the destination's `held_levels`;
+    // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `copied_into_a_static_through_a_const_cast` goes silent.
+    let levels = reader_levels(known, store.landing.as_ref(), 0)
         .checked_shl(1)
         .unwrap_or(0);
     if leaves

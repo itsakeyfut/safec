@@ -160,7 +160,12 @@ cases! {
         // Mutations: in `reader_levels`, ask the records of an unplaced
         // landing too; the first goes silent. Read `const_levels` for a `const` argument in
         // `Allocations::call`; the second goes silent. Read `const_levels` in
-        // `stored_read_only`; the third reports. A store and a copy into a
+        // `stored_read_only`; the third reports. A copy whose destination is cast to
+        // `const` and whose reader was not recorded asks every level:
+        // `copied_into_a_static_through_a_const_cast` and
+        // `copied_below_a_parameter_through_a_const_cast` are `SC0417`
+        // (#1176). Mutation: fall back to the destination's `held_levels` in
+        // `copied_read_only`; both go silent. A store and a copy into a
         // parameter's memory ask its reader, the parameter's type, and not
         // the type written through: `stored_through_a_const_lvalue_cast` is
         // `SC0417` and `copied_into_a_const_out_parameter` is not (#1147,
