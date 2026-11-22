@@ -72,15 +72,33 @@ fn depth_of(place: &Place) -> Option<usize> {
 /// and span, and the same local where both name one, so two arguments of
 /// one call handed read-only storage stay two reports, and a caret in one
 /// function never answers for another. A finding that names no local says
-/// the same words as one that does at that caret.
+/// the same words as one that does at that caret, and gives way to it.
 fn report_once(findings: &mut Vec<Finding>, finding: Finding) {
-    if !findings.iter().any(|found| {
-        found.function == finding.function
-            && found.kind == finding.kind
-            && found.at == finding.at
-            && (found.local == finding.local || found.local.is_none() || finding.local.is_none())
-    }) {
-        findings.push(finding);
+    let same_caret = |found: &Finding| {
+        found.function == finding.function && found.kind == finding.kind && found.at == finding.at
+    };
+    match finding.local {
+        // **Any report at the caret answers for one that names no local**,
+        // whose words are the same.
+        None if findings.iter().any(same_caret) => {}
+        None => findings.push(finding),
+        // **One that names a local is dropped only for the same local**, and
+        // takes the place of one that named none, so the outcome does not
+        // turn on which door ran first: two arguments stay two either way.
+        Some(_)
+            if findings
+                .iter()
+                .any(|found| same_caret(found) && found.local == finding.local) => {}
+        Some(_) => {
+            if let Some(unnamed) = findings
+                .iter_mut()
+                .find(|found| same_caret(found) && found.local.is_none())
+            {
+                *unnamed = finding;
+            } else {
+                findings.push(finding);
+            }
+        }
     }
 }
 
