@@ -165,7 +165,7 @@ pub(super) fn built_from(
             may_be_null: false,
             vouched: false,
             // Arithmetic names nothing for certain. See ADR-0105.
-            read_only: false,
+            read_only: super::parts::ReadOnly::NONE,
             alone: None,
         },
     );
@@ -264,7 +264,7 @@ pub(super) fn built_from(
         op,
         Some(BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne)
     ) {
-        reached.read_only = false;
+        reached.read_only = super::parts::ReadOnly::NONE;
     }
 
     reached

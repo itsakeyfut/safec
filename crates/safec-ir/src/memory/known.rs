@@ -13,7 +13,7 @@ use crate::source::{SourceMap, Span};
 use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
 use super::parts::{
     At, Cell, Earliest, Extent, Held, Init, Kept, Levels, PendingRead, PlaceInit, Position,
-    Reached, Read, ReadKey, Realloced, SiteState, Whole, Width, read_key,
+    Reached, Read, ReadKey, ReadOnly, Realloced, SiteState, Whole, Width, read_key,
 };
 use super::store::{Certain, Landing, Strong, WrittenLocal};
 use super::{LostReason, named};
@@ -1753,21 +1753,28 @@ impl Known {
         !held.may_be_a_locals_address() && held.beyond().is_nothing()
     }
 
-    /// Whether a value read `depth` dereferences through `local` may name
-    /// storage the program may not modify: a block on the way may hold such a
-    /// pointer (`Cell::may_hold_read_only`), or a local on the way holds one.
-    /// What a load takes, and what a write through a loaded pointer asks.
-    /// See ADR-0120.
-    pub(super) fn read_only_on_the_way(&self, local: LocalId, depth: usize) -> bool {
-        (0..depth).any(|level| {
+    /// At which levels a value read `depth` dereferences through `local`
+    /// may name storage the program may not modify: what `local` itself says
+    /// of that level, and what every block and local on the way says of it,
+    /// each moved up by the loads left between it and the value
+    /// (`Cell::may_hold_read_only`, `Held::read_only`). What a load takes,
+    /// and what a write through a loaded pointer asks of bit `0`. **Each
+    /// level by itself**, so a `const` two loads down is not read at one
+    /// (#1152). See ADR-0121.
+    pub(super) fn read_only_levels_at(&self, local: LocalId, depth: usize) -> ReadOnly {
+        let mut levels = self.points_to[local].read_only.below(depth);
+        for level in 0..depth {
             let (sites, locals) = self.levels_below(local, level);
-            sites
-                .iter()
-                .any(|&site| self.contents[site].may_hold_read_only())
-                || locals
-                    .iter()
-                    .any(|&read_from| self.points_to[read_from].read_only)
-        })
+            // What is stored at `level` is the value read `level + 1` down.
+            let left = depth - 1 - level;
+            for site in sites {
+                levels |= self.contents[site].may_hold_read_only().below(left);
+            }
+            for read_from in locals {
+                levels |= self.points_to[read_from].read_only.below(left);
+            }
+        }
+        levels
     }
 
     /// Whether a load `depth` dereferences through `local` may read a null,
@@ -1917,7 +1924,7 @@ impl Known {
         }
         // **A pointer to read-only storage read back is still one**, out of
         // a block or a local alike: `*(int **)&c` with `c` holding `&k`.
-        held.read_only = held.read_only || self.read_only_on_the_way(local, depth);
+        held.read_only |= self.read_only_levels_at(local, depth);
         // **And the locals whose address it may be**, as edges, so a write
         // through it lands there: `m = *t3; *m = r;` with `*t3 = &slot`. Not
         // all of them, since the set is a lower bound. See ADR-0045.

@@ -28,11 +28,9 @@ fn read_only_locals(function: &Function) -> Vec<LocalIdx> {
 /// The value written through is the pointer's own one dereference down,
 /// and what was read out of memory the levels above it deeper.
 fn may_land_read_only(landing: &Landing, read_only: &[LocalIdx], known: &Known) -> bool {
-    let marked = if landing.deep == 1 {
-        known.points_to[landing.pointer].read_only
-    } else {
-        known.read_only_on_the_way(landing.pointer, landing.deep - 1)
-    };
+    let marked = known
+        .read_only_levels_at(landing.pointer, landing.deep - 1)
+        .here();
     marked
         || landing
             .targets
@@ -72,12 +70,12 @@ fn names_read_only_at(
 ) -> bool {
     if depth == 0 {
         let held = &known.points_to[local];
-        return held.read_only || held.locals().any(|local| read_only.contains(&local));
+        return held.read_only.here() || held.locals().any(|local| read_only.contains(&local));
     }
     // **And the locals it may point at, read as the value is**: `set(*pp)`
     // with `*pp` holding a `const` local's address was asked for a static
     // alone. Found by review.
-    known.read_only_on_the_way(local, depth)
+    known.read_only_levels_at(local, depth).here()
         || known
             .levels_below(local, depth)
             .1
@@ -149,21 +147,8 @@ fn read_only_exactly_at(
     read_only: &[LocalIdx],
     known: &Known,
 ) -> bool {
-    if depth == 0 {
-        return names_read_only_at(local, 0, read_only, known);
-    }
-    let (sites, locals) = known.levels_below(local, depth - 1);
-    sites
-        .iter()
-        .any(|&site| known.contents[site].may_hold_read_only())
-        || locals
-            .iter()
-            .any(|&read_from| known.points_to[read_from].read_only)
-        || known
-            .levels_below(local, depth)
-            .1
-            .iter()
-            .any(|local| read_only.contains(local))
+    // Exact now that each level is read by itself (#1152).
+    names_read_only_at(local, depth, read_only, known)
 }
 
 /// Report a `return` of a pointer that may name read-only storage from a

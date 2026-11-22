@@ -120,3 +120,13 @@ void handed_rows_of_const_pointers(void) {
         rows((char *const (*)[2])b);
     }
 }
+void arrival_through_void(const int **pp) {
+    if (pp) {
+        void *v = pp;
+        int **q = v;
+        int *p = *q;
+        if (p) {
+            *p = 2;
+        }
+    }
+}

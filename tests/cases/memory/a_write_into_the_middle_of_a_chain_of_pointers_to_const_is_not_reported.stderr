@@ -1,0 +1,30 @@
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported.c:18:17 ]
+    │
+ 18 │                 *s = 'x';
+    │                 ────┬───  
+    │                     ╰───── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported.c:3:9 ]
+   │
+ 3 │         **ppp = "ab";
+   │         ──────┬─────  
+   │               ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported.c:8:9 ]
+   │
+ 8 │         (**pp)[0] = "ab";
+   │         ────────┬───────  
+   │                 ╰───────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
