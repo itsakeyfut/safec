@@ -3895,7 +3895,12 @@ impl Allocations<'_> {
                                 // carried: `Known::read_only_of`. See
                                 // ADR-0123.
                                 read_only: super::parts::ReadOnly::NONE,
-                                alone: None,
+                                // **The one place it certainly names**, a
+                                // grant as a local's address is (ADR-0105),
+                                // which a free of it proves from. Every other
+                                // reader of `Held::certain` asks for a site
+                                // or a local and reads a static as nothing.
+                                alone: Some(Referent::Static(*id)),
                             },
                         );
                         held.name_static(*id);

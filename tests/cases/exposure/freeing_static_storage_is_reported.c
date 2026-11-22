@@ -25,3 +25,12 @@ void freed_or_null(int c) {
     }
     free(p);
 }
+void freed_on_one_path_or_converted(int c, long long n) {
+    int *p;
+    if (c) {
+        p = &g;
+    } else {
+        p = (int *)n;
+    }
+    free(p);
+}

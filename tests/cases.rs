@@ -5519,8 +5519,11 @@ cases! {
         // A static's storage handed to `free` or `realloc` is `SC0404`:
         // proved where nothing else is reached, `freed_by_address` and
         // `reallocated`, and doubted where another path reaches an
-        // allocation or a null, `freed_on_one_path` and `freed_or_null`
-        // (#1162, ADR-0123). Mutation: skip the static in
+        // allocation or a null, `freed_on_one_path` and `freed_or_null`, or
+        // a pointer converted from an integer, which may be an allocation,
+        // `freed_on_one_path_or_converted` (#1162 review, ADR-0123). Mutation:
+        // ask only that nothing else is reached in `report::reported`;
+        // `freed_on_one_path_or_converted` is proved. Mutation: skip the static in
         // `Allocations::touching`; `freed_by_address` says it stopped
         // following.
         freeing_static_storage_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

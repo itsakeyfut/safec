@@ -20,7 +20,7 @@ use super::fit::{
     Fit, carried_width, fits, fits_as_bytes, folded, only_if_certain, pointee, pointee_width,
     read_from_locals, slot_width, slots_leaving, through_locals,
 };
-use super::index::{Idx, LocalIdx, Site, Storage};
+use super::index::{Idx, LocalIdx, Referent, Site, Storage};
 use super::known::Known;
 use super::parts::{At, Extent, Freeing, Levels, Reached, Read, SiteState, Width, earlier, same};
 use super::store::{StoreKind, Written};
@@ -381,8 +381,12 @@ pub(super) fn reported(
     let reached = Allocations::touching(asked(arguments, null, block), known);
 
     // **Whether what is freed is static storage**, on every path or on some.
-    // Certain only where nothing else is reached and the pointer cannot be
-    // null, which `free` takes. See ADR-0123.
+    // Certain only where the argument certainly names the static
+    // (`Held::certain`, ADR-0105): a join with a pointer that names nothing,
+    // `(int *)n` or one never written, names the static alone and was proved,
+    // where `n` may be an allocation (#1162 review). See ADR-0123. Mutation:
+    // ask only that nothing else is reached; `freeing_static_storage_is_reported`'s
+    // `freed_on_one_path_or_converted` is proved.
     let static_free = reached
         .iter()
         .any(|reached| matches!(reached, Reached::Static))
@@ -391,7 +395,10 @@ pub(super) fn reported(
                 .iter()
                 .all(|reached| matches!(reached, Reached::Static))
                 && asked(arguments, null, block).all(|argument| match argument {
-                    Operand::Copy(place) => !known.points_to[place.local].may_be_null,
+                    Operand::Copy(place) => matches!(
+                        known.points_to[place.local].certain(),
+                        Some(Referent::Static(_))
+                    ),
                     Operand::Constant(_) => false,
                 });
             if only {
