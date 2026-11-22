@@ -1123,6 +1123,10 @@ pub(super) enum Reached {
     /// such a set, but a set of live sites says nothing either, and a
     /// dereference of a live load is not a report. See ADR-0045.
     Partial,
+    /// An object with static storage duration, which no allocation function
+    /// returned and nothing frees: a free or a `realloc` of it is `SC0404`,
+    /// and it is never a freed block. See ADR-0123.
+    Static,
 }
 
 /// Where in what a value names it points: the byte position, [`At`], and
@@ -1884,6 +1888,13 @@ impl Held {
     /// here; `a_string_literal_freed_is_doubted` fails, among nine cases.
     pub(super) fn may_name(&self, why: Why) -> bool {
         self.names.get(Referent::Unknown(why)) || why == Why::Loaded && self.names_a_static()
+    }
+
+    /// Whether this value may name what this check does not model for
+    /// `why`, a static left out: for a reader that asks for statics by
+    /// name. See ADR-0123.
+    pub(super) fn may_name_apart_from_statics(&self, why: Why) -> bool {
+        self.names.get(Referent::Unknown(why))
     }
 
     /// Whether this value may name an object with static storage duration.

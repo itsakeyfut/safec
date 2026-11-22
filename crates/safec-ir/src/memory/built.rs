@@ -543,6 +543,6 @@ pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: Local
 pub(super) fn named(reached: &[Reached]) -> impl Iterator<Item = Site> + '_ {
     reached.iter().filter_map(|reached| match reached {
         Reached::Site(site) => Some(*site),
-        Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial => None,
+        Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial | Reached::Static => None,
     })
 }

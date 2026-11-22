@@ -17,7 +17,7 @@ use super::LostReason;
 use super::allocations::{Allocations, innermost_element, stored_pointer};
 use super::built::{built_from, named};
 use super::fit::{Fit, fits, pointee, slot_width};
-use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table};
+use super::index::{Idx, LocalIdx, Referent, Site, Storage, Table, Why};
 use super::init::Wrote;
 use super::known::{ELEMENTS_KEPT, Known};
 use super::parts::{
@@ -1903,12 +1903,24 @@ impl Allocations<'_> {
             // where it names a site, so that the first row's words stand for
             // an output parameter alone. See ADR-0044.
             let held = &known.points_to[place.local];
+            // **A static is reached by name**, which no allocation function
+            // returned: `free(&g)` is `SC0404`, where it was a pointer this
+            // check stopped following. So it is not read as a load below, as
+            // a reader that has not asked for it reads it. See ADR-0123.
+            // Mutation: skip this; `freeing_static_storage_is_reported` says
+            // it stopped following.
+            if held.names_a_static() {
+                reached.push(Reached::Static);
+            }
             // Which of the four it is, as far as this can tell: one alone
             // names its reason, and more than one is `Other` unless one is
             // `MayBeALocal`, which `LostReason::joined` keeps (#213).
             let reasons = [
                 (reached.len() == before, LostReason::NoSiteKnown),
-                (held.beyond().loaded(), LostReason::ReadOutOfMemory),
+                (
+                    held.may_name_apart_from_statics(Why::Loaded),
+                    LostReason::ReadOutOfMemory,
+                ),
                 (held.may_be_a_locals_address(), LostReason::MayBeALocal),
                 (
                     held.beyond().foreign() && reached.len() > before,

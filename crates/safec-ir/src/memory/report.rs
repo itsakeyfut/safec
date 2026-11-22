@@ -153,6 +153,12 @@ fn verdict(
                 partial = true;
                 continue;
             }
+            // **Live, since nothing frees it**: whether freeing it is wrong
+            // is `Kind::StaticFree`'s question, not a double free's.
+            Reached::Static => {
+                live = true;
+                continue;
+            }
         };
 
         match known.state[site] {
@@ -202,6 +208,9 @@ fn verdict(
         // all. `true` because a pointer that is not the start of an
         // allocation is the wrong thing to hand `free` whatever ran first.
         Kind::InteriorFree => true,
+        // Never asked either: storage nothing frees is the wrong thing to
+        // hand `free` whatever ran first.
+        Kind::StaticFree => true,
         // A `return` leaves the function after its whole expression, so a free
         // anywhere in it has run by then, and what leaves is freed in every
         // order C allows. See ADR-0041.
@@ -370,6 +379,27 @@ pub(super) fn reported(
     // drift apart. The offset is read beside it from the same `asked`, so an
     // argument established null is left out of both or of neither.
     let reached = Allocations::touching(asked(arguments, null, block), known);
+
+    // **Whether what is freed is static storage**, on every path or on some.
+    // Certain only where nothing else is reached and the pointer cannot be
+    // null, which `free` takes. See ADR-0123.
+    let static_free = reached
+        .iter()
+        .any(|reached| matches!(reached, Reached::Static))
+        .then(|| {
+            let only = reached
+                .iter()
+                .all(|reached| matches!(reached, Reached::Static))
+                && asked(arguments, null, block).all(|argument| match argument {
+                    Operand::Copy(place) => !known.points_to[place.local].may_be_null,
+                    Operand::Constant(_) => false,
+                });
+            if only {
+                (Conclusion::Unsafe, None)
+            } else {
+                (Conclusion::Unknown, Some(Unproven::Disagreement))
+            }
+        });
     let offset = asked(arguments, null, block)
         .filter_map(|argument| match argument {
             Operand::Copy(place)
@@ -464,6 +494,18 @@ pub(super) fn reported(
     if let Some(verdict) = inside {
         found.push(finding(Kind::InteriorFree, verdict));
     }
+    if let Some((conclusion, unproven)) = static_free {
+        found.push(Finding {
+            function: analysis.function,
+            kind: Kind::StaticFree,
+            conclusion,
+            at: origin.span(),
+            local,
+            freed: None,
+            made: None,
+            unproven,
+        });
+    }
     found
 }
 
@@ -527,6 +569,8 @@ fn interior(reached: &[Reached], offset: At, vouched: bool, known: &Known) -> Op
             // `LostReason::MayBeALocal`, which the arm below answers. A
             // change to that join reaches here. See ADR-0100.
             Reached::Lost(LostReason::ReadOutOfMemory) | Reached::Partial if vouched => {}
+            // No allocation to be inside of: `Kind::StaticFree` answers it.
+            Reached::Static => {}
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says
             // the same. The doc comment above says what holds the pair.
@@ -2958,7 +3002,7 @@ impl Below {
                     SiteState::Freed { .. } | SiteState::Unknown
                 ),
                 Reached::SetFreed(_) | Reached::Lost(_) => true,
-                Reached::Partial => false,
+                Reached::Partial | Reached::Static => false,
             },
         }
     }

@@ -147,6 +147,11 @@ pub enum Kind {
     /// pointer into an allocation this check followed, and `free(17)` or a
     /// free of a local's address is not reported under it. See ADR-0036.
     InteriorFree,
+    /// `free(&g)`: storage with static duration handed to `free` or to
+    /// `realloc`, which no allocation function returned (C17 7.22.3.3 p2).
+    /// The same clause and code as [`Kind::InteriorFree`], about a pointer
+    /// to no allocation at all. See ADR-0123.
+    StaticFree,
     /// `free(p); return p;`
     ///
     /// One of the two reads of a pointer without a dereference this check asks
