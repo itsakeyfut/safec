@@ -1245,6 +1245,15 @@ pub(super) struct Held {
     /// cannot read, whose result may be any local whose address escaped. See
     /// ADR-0039.
     pub(super) names: Bits<Referent>,
+    /// **Which of [`Self::names`] are guessed**: a call this check cannot
+    /// read may return any exposed block or escaped local's address, and
+    /// those are names it is assumed to hold, not ones the program showed.
+    /// Every may-question reads `names` whole; what the value certainly
+    /// reaches past a reader's type (ADR-0122) reads `names` without these.
+    /// Kept apart so that question has a type rather than a comment, which
+    /// is why #1145's false report could otherwise only be stopped by moving
+    /// a mark (#1163). See ADR-0123.
+    pub(super) guessed: Bits<Referent>,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
     ///
@@ -1971,6 +1980,7 @@ impl Held {
     /// Also be `local`'s address.
     pub(super) fn name_local(&mut self, local: LocalIdx) {
         self.names.set(Referent::Local(local));
+        self.guessed.remove(Referent::Local(local));
     }
 
     /// No longer be `local`'s address.
@@ -2082,6 +2092,7 @@ impl Held {
         } = marks;
         let mut held = Held {
             names: Bits::new(Referent::count(sites)),
+            guessed: Bits::new(Referent::count(sites)),
             freed,
             writes_elsewhere,
             position,
@@ -2134,7 +2145,50 @@ impl Held {
     /// the answer that cannot claim more than both said.
     pub(super) fn hold(&mut self, site: Site, offset: At) {
         self.names.set(Referent::Heap(site));
+        self.guessed.remove(Referent::Heap(site));
         self.position.at = self.position.at.joined(offset, false);
+    }
+
+    /// [`Self::hold`] a site a call this check cannot read is only assumed
+    /// to return, so a question about what the value certainly reaches
+    /// leaves it out ([`Self::shown_sites`]). A site already shown stays
+    /// shown. See ADR-0123.
+    pub(super) fn hold_guessed(&mut self, site: Site, offset: At) {
+        if !self.names.get(Referent::Heap(site)) {
+            self.guessed.set(Referent::Heap(site));
+        }
+        self.hold_keeping_guess(site, offset);
+    }
+
+    /// [`Self::hold`] without deciding whether the name is guessed.
+    fn hold_keeping_guess(&mut self, site: Site, offset: At) {
+        self.names.set(Referent::Heap(site));
+        self.position.at = self.position.at.joined(offset, false);
+    }
+
+    /// [`Self::name_local`] for a local a call this check cannot read is only
+    /// assumed to return the address of. See [`Self::hold_guessed`].
+    pub(super) fn name_local_guessed(&mut self, local: LocalIdx) {
+        if !self.names.get(Referent::Local(local)) {
+            self.guessed.set(Referent::Local(local));
+        }
+        self.names.set(Referent::Local(local));
+    }
+
+    /// The sites this value holds that the program showed, not guessed.
+    pub(super) fn shown_sites(&self) -> impl Iterator<Item = Site> + '_ {
+        self.names
+            .ones()
+            .filter(|named| !self.guessed.get(*named))
+            .filter_map(Referent::site)
+    }
+
+    /// The locals whose address the program showed this value to be.
+    pub(super) fn shown_locals(&self) -> impl Iterator<Item = LocalIdx> + '_ {
+        self.names
+            .ones()
+            .filter(|named| !self.guessed.get(*named))
+            .filter_map(Referent::local)
     }
 
     /// The one local this is certainly the address of: one address edge, and
@@ -2210,6 +2264,7 @@ impl Held {
         // past an exhaustive match, one type over.
         let Held {
             names,
+            guessed,
             freed,
             writes_elsewhere,
             position,
@@ -2233,6 +2288,7 @@ impl Held {
         *read_only = ReadOnly::NONE;
         *alone = None;
         names.clear_all();
+        guessed.clear_all();
         *fresh_read = false;
         *widths = Levels::new(vec![Width::Nothing]);
         *arrived_holds_pointer = false;
@@ -2284,6 +2340,7 @@ impl Held {
         let joined_position = self.position_joined(other, widen);
         let Held {
             names,
+            guessed,
             freed,
             writes_elsewhere,
             position,
@@ -2334,6 +2391,14 @@ impl Held {
         // union below leaves one target and only this says the set is not
         // all of it. See ADR-0028.
         *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
+        // **Guessed only where no side showed it**: a name one path showed
+        // is one the program may reach, whatever another path guessed. See
+        // ADR-0123.
+        let shown_here = names.difference(guessed);
+        let shown_there = other.names.difference(&other.guessed);
+        guessed.union_with(&other.guessed);
+        guessed.subtract(&shown_here);
+        guessed.subtract(&shown_there);
         let here_has_edge = names.ones().any(|referent| referent.local().is_some());
         let here_has_site = names.ones().any(|referent| referent.site().is_some());
         names.union_with(&other.names);
@@ -2382,6 +2447,7 @@ impl Held {
     pub(super) fn accumulated(&mut self, other: &Held) {
         let Held {
             names,
+            guessed,
             freed,
             writes_elsewhere,
             position,
@@ -2456,6 +2522,14 @@ impl Held {
         // flag beside it are decided again by both callers that build a value
         // out of operands, through [`Held::moved_by_arithmetic`]. See
         // ADR-0019.
+        // **Guessed only where no side showed it**: a name one path showed
+        // is one the program may reach, whatever another path guessed. See
+        // ADR-0123.
+        let shown_here = names.difference(guessed);
+        let shown_there = other.names.difference(&other.guessed);
+        guessed.union_with(&other.guessed);
+        guessed.subtract(&shown_here);
+        guessed.subtract(&shown_there);
         let here_has_edge = names.ones().any(|referent| referent.local().is_some());
         let here_has_site = names.ones().any(|referent| referent.site().is_some());
         names.union_with(&other.names);
@@ -3015,6 +3089,11 @@ impl Cell {
             // What it names and how wide, given apart by the door, which
             // knows what the write carried; the reasons it may name what
             // this check does not model are poured below.
+            // **Not kept in memory**: what is stored is what the program
+            // stored, and a load out of it reads it as shown. A guessed name
+            // stored and read back is then a name a question past a reader's
+            // type may follow, which over-asks (row 4). See ADR-0123.
+            guessed: _,
             names: _,
             widths: _,
             // Not recorded in memory: a load takes it from the type it is

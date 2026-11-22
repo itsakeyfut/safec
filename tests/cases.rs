@@ -165,6 +165,17 @@ cases! {
         // mark a parameter's memory by its type at entry again;
         // `stored_a_call_result` is reported.
         a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call this check cannot read is only guessed to return the blocks
+        // code it cannot read may reach. Past a reader's type, where only
+        // what the value certainly reaches is asked (ADR-0122), those guesses
+        // are not followed: `stored_beside_a_table_handed_on` stores the
+        // result through a `const char ***` and is not `SC0417`. A write
+        // through what the result may be still follows them:
+        // `written_through_what_a_result_may_be` is (#1163, ADR-0123).
+        // Mutation: walk every name in `Known::levels_named_below`;
+        // `stored_beside_a_table_handed_on` is `SC0417`. Mutation: file the
+        // guesses as shown in `Allocations::call`; the same.
+        a_call_result_names_what_it_was_shown_apart_from_what_it_may_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read
         // again, `self_then_read`. An assignment statement reads nothing back,

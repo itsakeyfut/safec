@@ -67,6 +67,20 @@ impl<I: Idx> Bits<I> {
     }
 
     /// Put every index of `other` in the set, and say whether that added any.
+    /// The bits set here and not in `other`.
+    pub(crate) fn difference(&self, other: &Bits<I>) -> Bits<I> {
+        let mut out = self.clone();
+        out.subtract(other);
+        out
+    }
+
+    /// Clear every bit `other` sets.
+    pub(crate) fn subtract(&mut self, other: &Bits<I>) {
+        for (word, theirs) in self.words.iter_mut().zip(&other.words) {
+            *word &= !theirs;
+        }
+    }
+
     pub(crate) fn union_with(&mut self, other: &Bits<I>) -> bool {
         assert_eq!(self.len, other.len, "a union of sets of two lengths");
         let mut grew = false;
