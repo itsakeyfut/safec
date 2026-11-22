@@ -1086,6 +1086,28 @@ fn say_fit(
     }
 }
 
+/// Whether a string `local` points at certainly ends inside its object: it
+/// certainly names a static the program may not modify whose bytes the
+/// unit holds, at an exact position, and a zero lies at or past it. **Not a
+/// static that may be written**, whose zero may be gone, and not a position
+/// this check only bounds. Without it, `strlen("abc")` and `strdup("abc")`
+/// were `SC0412` (#1179). Mutation: answer `false`;
+/// `a_literal_read_as_a_string_by_a_library_row_fits` reports.
+fn string_ends_inside(analysis: &Allocations<'_>, known: &Known, local: LocalId) -> bool {
+    let held = &known.points_to[local];
+    let (Some(Referent::Static(slot)), At::Bytes(offset)) = (held.certain(), held.position.at)
+    else {
+        return false;
+    };
+    let object = analysis.unit.static_object(analysis.statics[slot.index()]);
+    let Ok(offset) = usize::try_from(offset) else {
+        return false;
+    };
+    object.read_only
+        && matches!(&object.init, crate::ir::StaticInit::Bytes(bytes)
+            if bytes.iter().skip(offset).any(|&byte| byte == 0))
+}
+
 /// Report every library call at this terminator that reads or writes through
 /// a pointer it is handed further than this check can show fits.
 ///
@@ -1118,6 +1140,17 @@ pub(super) fn reached_by_library(
     };
     let at = origin.span();
     for &(index, reach) in row.reaches {
+        // **Only an argument the row reads and does not write**: how far
+        // `strcpy`, `strcat` or `strncat` writes their first argument is set
+        // by the source, so where its own zero sits proves nothing, and a
+        // literal destination declared `const` was believed (#1179 review).
+        // Mutation: answer every argument; the case's
+        // `appended_to_a_literal_declared_const` goes silent.
+        let reads_only = !(index == 0
+            && matches!(
+                analysis.callee(*callee),
+                Callee::Copies | Callee::ReturnsFirst
+            ));
         let Some(Operand::Copy(place)) = arguments.get(index) else {
             continue;
         };
@@ -1134,7 +1167,20 @@ pub(super) fn reached_by_library(
         } {
             match width {
                 Some(width) => fits_as_bytes(analysis, function, local, width, known, true),
-                // Anything that holds something is unknown here.
+                // **Where a string row sees the string's end**, a literal
+                // this check reads the bytes of, it fits. **A string row's
+                // alone**: a length this check could not read is no width
+                // either, and a zero in the literal bounds nothing `memcpy`
+                // reads, so `memcpy(buf, "abc", n)` was believed (#1179
+                // review). Mutation: ask every row; the case's
+                // `copied_for_a_length_not_read` loses its `SC0412`.
+                None if matches!(reach, Reach::String)
+                    && reads_only
+                    && string_ends_inside(analysis, known, local) =>
+                {
+                    Some(Fit::Inside)
+                }
+                // Anything else that holds something is unknown here.
                 None => fits(analysis, function, local, 0, known, true).map(|_| Fit::Unknown),
             }
         } else {
