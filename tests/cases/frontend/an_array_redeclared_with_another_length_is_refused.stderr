@@ -53,14 +53,36 @@ error[SC0313]: conflicting types for `f`
     │      ╰── declared here as `void (int (*)[3])`
 ────╯
   = note: C17 6.7 p4 and 6.7.6.2 p6
-error[SC0313]: conflicting types for `n`
-    ╭─[ an_array_redeclared_with_another_length_is_refused.c:18:16 ]
+error[SC0313]: conflicting types for `e`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:17:6 ]
     │
- 16 │ int n[2];
+ 16 │ void e(int q[2][3]);
+    │      ┬  
+    │      ╰── previously declared as `void (int[2][3])`
+ 17 │ void e(int q[2][4]);
+    │      ┬  
+    │      ╰── declared here as `void (int[2][4])`
+────╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `d`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:19:6 ]
+    │
+ 18 │ void d(int q[2][3]);
+    │      ┬  
+    │      ╰── previously declared as `void (int[2][3])`
+ 19 │ void d(int (*q)[4]);
+    │      ┬  
+    │      ╰── declared here as `void (int (*)[4])`
+────╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6
+error[SC0313]: conflicting types for `n`
+    ╭─[ an_array_redeclared_with_another_length_is_refused.c:22:16 ]
+    │
+ 20 │ int n[2];
     │     ┬  
     │     ╰── previously declared as `int[2]`
     │ 
- 18 │     extern int n[3];
+ 22 │     extern int n[3];
     │                ┬  
     │                ╰── declared here as `int[3]`
 ────╯
