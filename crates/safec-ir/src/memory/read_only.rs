@@ -128,11 +128,37 @@ fn below_read_only(
     } else {
         typed
     };
-    // A level past `typed` has no bit set, so it is asked as writable.
+    // A level past `typed` has no bit set, so it is asked as writable, and
+    // only of what the value certainly reaches: through a pointer read out
+    // of a global, every escaped block stood for the `char` a `const char *`
+    // reader reaches, `*out = G;` was reported (#1145). See ADR-0122.
+    // Mutation: ask past `typed` as within it;
+    // `a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write`'s
+    // `stored_beside_a_table_handed_on` is reported.
     (from..last).any(|level| {
         levels >> level & 1 == 0
-            && read_only_exactly_at(place.local, depth + level, read_only, known)
+            && if level < typed {
+                read_only_exactly_at(place.local, depth + level, read_only, known)
+            } else {
+                read_only_certainly_at(place.local, depth + level, read_only, known)
+            }
     })
+}
+
+/// [`read_only_exactly_at`] of what the value read `depth` down certainly
+/// reaches, for a level past its reader's type. See ADR-0122.
+fn read_only_certainly_at(
+    local: crate::ir::LocalId,
+    depth: usize,
+    read_only: &[LocalIdx],
+    known: &Known,
+) -> bool {
+    known.read_only_levels_named_at(local, depth).here()
+        || known
+            .levels_named_below(local, depth)
+            .1
+            .iter()
+            .any(|local| read_only.contains(local))
 }
 
 /// Whether the value read `depth` dereferences below `local` may name

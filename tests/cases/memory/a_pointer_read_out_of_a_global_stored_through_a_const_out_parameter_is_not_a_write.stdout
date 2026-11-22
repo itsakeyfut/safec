@@ -1,0 +1,151 @@
+Target "x86_64-pc-windows-msvc"
+Static "G" "char *" external zero
+Static ".str.0" "char[3]" internal bytes 97 98 0
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:2:14 "get2" declared
+  Local "_0" "char **" return
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:3:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "n"
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:4:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "b"
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:5:6 "stored_from_a_global"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "out"
+  Local "_2" "char **"
+  Block "bb0" entry
+    Branch a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:6:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:6:9 generated
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:7:16 generated
+      Destination "_2"
+      Static "G"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:7:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:7:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:10:6 "stored_beside_a_table_handed_on"
+  Local "_0" "void" return
+  Local "_1" "char **" parameter "out"
+  Local "_2" "char **" "b"
+  Local "_3" "void *"
+  Local "_4" "char (*)[3]"
+  Local "_5" "char *"
+  Local "_6" "char **"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:11:22 generated
+    Call a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:11:22 written "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:11:18 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:11:22 generated
+    Branch a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:12:9 written "bb2" "bb3"
+      Copy "_2"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:12:9 generated
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:13:14 generated
+      Destination "_4"
+      Static ".str.0"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:13:14 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:13:9 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:13:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:14:9 generated
+    Call a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:14:9 written "keep" "bb5"
+      Copy "_2"
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:12:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Branch a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:16:9 written "bb6" "bb7"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:14:9 generated
+    Goto "bb4"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:16:9 generated
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:17:16 generated
+      Destination "_6"
+      Static "G"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:17:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:17:9 generated
+    Goto "bb8"
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:16:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Return
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:20:6 "stored_address_of_a_global"
+  Local "_0" "void" return
+  Local "_1" "char ***" parameter "out"
+  Local "_2" "char **"
+  Block "bb0" entry
+    Branch a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:21:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:21:9 generated
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:22:17 generated
+      Destination "_2"
+      Static "G"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:22:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:22:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:21:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+Function a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:25:6 "stored_a_call_result"
+  Local "_0" "void" return
+  Local "_1" "char ***" parameter "out"
+  Local "_2" "char **"
+  Block "bb0" entry
+    Branch a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:26:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:26:9 generated
+    ArgumentsEvaluated a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:27:16 generated
+    Call a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:27:16 written "get2" "bb4"
+      Destination "_2"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:26:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
+  Block "bb4"
+    Operation a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:27:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_out_of_a_global_stored_through_a_const_out_parameter_is_not_a_write.c:27:9 generated
+    Goto "bb3"

@@ -1971,15 +1971,13 @@ impl Allocations<'_> {
                 .and_then(|ty| self.type_levels(ty))
                 .unwrap_or_default();
             value.points_to[result].set_contents(&contents);
-            // And what it holds below may name read-only storage where its
-            // type says `const` there, as a parameter's. See ADR-0121.
-            // **Held by nothing since #1152, measured**: a cast of the result
-            // takes its levels from the lowering and answers every load
-            // through it, `cast_after_a_result` among them. Kept for a pointer
-            // to this memory that is not read from the result.
-            value.contents[site].arrives_holding_read_only(
-                super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
-            );
+            // **Its memory is not marked read-only by the result's type**, as
+            // a parameter's is: a cast of the result takes its levels from the
+            // lowering and answers every load through it,
+            // `cast_after_a_result` among them. Marked, the result's own
+            // record, which may name every exposed block, named this memory
+            // again a level down, and `*out = get2();` with `out` a `const
+            // char ***` was reported (#1145). See ADR-0121.
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as
