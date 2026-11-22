@@ -228,6 +228,10 @@ pub(crate) enum Makes {
     Argument(usize),
     /// The product of the two arguments at these indices, as `calloc`'s.
     Product(usize, usize),
+    /// A copy of the string its first argument points at, its terminating
+    /// null included, as `strdup`'s: at least one byte, and how many more is
+    /// the string's length, which this check does not read.
+    StringCopy,
 }
 
 /// What an allocation function leaves in the object it makes.
@@ -525,6 +529,42 @@ pub(crate) const LIBRARY: &[Library] = &[
         reaches: &[(0, Reach::String), (1, Reach::String)],
         fills: false,
         makes: None,
+        leaves: None,
+    },
+    // C17 7.24.5.4: a pointer into its first argument, or null, as `strstr`.
+    // Read by name, its result is that argument and not whatever the call
+    // was handed, which an unread call's result takes (#1164's review:
+    // `strpbrk(buf, " ")` was doubted for the literal of delimiters).
+    Library {
+        name: "strpbrk",
+        parameters: &[Shape::Pointer, Shape::Pointer],
+        callee: Callee::Reads,
+        reaches: &[(0, Reach::String), (1, Reach::String)],
+        fills: false,
+        makes: None,
+        leaves: None,
+    },
+    // C23 7.26.2.6 and 7.26.2.7 (POSIX before it): a new allocation holding
+    // a copy of the string, freed with `free`. Read by name, its result is
+    // an allocation and not whatever the call was handed, so `strdup("abc")`
+    // written is not doubted for the literal (#1164's review). A body this
+    // unit defines under the name is read as any function.
+    Library {
+        name: "strdup",
+        parameters: &[Shape::Pointer],
+        callee: Callee::Allocates,
+        reaches: &[(0, Reach::String)],
+        fills: false,
+        makes: Some(Makes::StringCopy),
+        leaves: None,
+    },
+    Library {
+        name: "strndup",
+        parameters: &[Shape::Pointer, Shape::Integer],
+        callee: Callee::Allocates,
+        reaches: &[(0, Reach::String)],
+        fills: false,
+        makes: Some(Makes::StringCopy),
         leaves: None,
     },
 ];

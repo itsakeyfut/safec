@@ -129,14 +129,24 @@ cases! {
         // Mutations, each naming what goes silent: skip the levels below at
         // a call, `handed_below`; at a `return`, `returned_block`; skip
         // `stored_read_only`, `out_parameter` and `into_a_static`; leave a
-        // parameter's memory unmarked at entry, `cast_after_arrival`; a
-        // call's result's, `cast_after_a_result`; skip the mark on a pointer
-        // read through one, `three_levels_arrived`; stop at the reader's own
+        // load's levels unshifted in `ReadOnly::below`, `cast_after_arrival`,
+        // `three_levels_arrived` and `cast_after_a_result`; stop at the reader's own
         // depth, `returned_as_void`; skip `copied_read_only`, `copied_out`.
         // And the two the review found reported wrongly stay silent:
         // `into_a_const_static` where `reach_static` marks nothing, and
         // `handed_unprototyped` where an unprototyped argument is asked as
-        // writable at every level. `implicit_conversion_of_a_result` is
+        // writable at every level. Where arrival is not shown it is doubted
+        // (#1164, ADR-0123): `found_in_a_literal`, `copied_by_realloc`,
+        // `read_through_a_global_alias`, `written_through_a_const_argument`
+        // and `found_one_load_down` are `SC0417`. Mutations, each silencing
+        // the function named: skip a result's inheritance of what it was
+        // handed in `Allocations::call`, `found_in_a_literal`; take only the
+        // argument's own level, `found_one_load_down`; skip the result's memory mark,
+        // `copied_by_realloc`; skip a parameter's memory mark at entry,
+        // `read_through_a_global_alias` (and, with the parameter's own levels
+        // unset too, `arrival_through_void`); skip the write through a `const`
+        // argument, `written_through_a_const_argument`.
+        // `implicit_conversion_of_a_result` is
         // `SC0417` while a call's result takes its type's levels (#1145
         // review). `arrival_through_void` is `SC0417` while a
         // parameter's levels or its memory's mark is set at entry; skip both
@@ -183,6 +193,17 @@ cases! {
         // Mutation: ask every reader of what is certain alone in
         // `below_read_only`; it goes silent.
         a_call_result_names_what_it_was_shown_apart_from_what_it_may_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `strdup` and `strndup` return a new allocation and `strpbrk` a
+        // pointer into its first argument, so a write through what they
+        // return is not doubted for a literal they were handed, as an unread
+        // call's result is (#1164's review): only `a_literal_searched_is_written`
+        // is `SC0417`. The `SC0412`s are the string reach such a row asks of
+        // a literal or a parameter, and the width of a parameter's buffer, as
+        // `strstr`'s are. Mutation: drop the
+        // `strdup` row in `LIBRARY`; `a_copy_of_a_literal_is_written` is
+        // `SC0417`. Mutation: drop the `strpbrk` row;
+        // `a_buffer_searched_with_a_literal_is_written` is.
+        a_string_function_read_by_name_returns_what_its_clause_says: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read
         // again, `self_then_read`. An assignment statement reads nothing back,

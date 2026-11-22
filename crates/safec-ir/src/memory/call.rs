@@ -1440,6 +1440,37 @@ impl Allocations<'_> {
                 // Believed whole, as what such code writes is (#940's
                 // decision).
                 value.array_writes_after(pending, Whole::Pointer);
+                // **What it may write through an argument whose type says
+                // `const` below its first level** is a pointer to `const`:
+                // `get((const int **)a)` may store `&k` in `a[0]`, which the
+                // caller then reads as an `int *` (#1148). So the memory the
+                // argument points at may hold read-only storage at those
+                // levels. See ADR-0123. Mutation: skip this;
+                // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+                // `written_through_a_const_argument` goes silent.
+                for argument in handed {
+                    let Operand::Copy(place) = argument else {
+                        continue;
+                    };
+                    let depth = match place.shape() {
+                        Shape::Local => 0,
+                        Shape::Deref(depth) => depth,
+                        Shape::Indexed => continue,
+                    };
+                    let levels = super::parts::ReadOnly::levels(function.const_levels(place.local))
+                        .below(depth)
+                        .below(1);
+                    if levels == super::parts::ReadOnly::NONE {
+                        continue;
+                    }
+                    let (sites, locals) = value.levels_below(place.local, depth);
+                    for site in sites {
+                        value.contents[site].arrives_holding_read_only(levels);
+                    }
+                    for local in locals {
+                        value.points_to[local].read_only |= levels;
+                    }
+                }
                 // **And as what each local it reaches was handed**, which is
                 // the most its body can be asked to have written there: a
                 // local reached as a `void *` takes a `void *` store, asked
@@ -1974,15 +2005,47 @@ impl Allocations<'_> {
             // **And the levels its type says `const` at**, as a parameter
             // gets at entry: every load through it, or through any copy of
             // it, shifts them, a conversion the lowering does not mark among
-            // them, `void *v = result(); int **q = v;`. Its memory is not
-            // marked by its type: that answered nothing more, and a mark on a
-            // parameter's memory was found a level past a reader's type by a
-            // pointer recorded as naming it (#1145). Found by the review of
-            // #1145. See ADR-0121. Mutation: leave the levels unset;
+            // them, `void *v = result(); int **q = v;`. Found by the review
+            // of #1145. See ADR-0123. Mutation: leave the levels unset;
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
             // `implicit_conversion_of_a_result` goes silent.
             value.points_to[result].read_only |=
                 super::parts::ReadOnly::levels(function.const_levels(place.local));
+            // **And its memory by its type**, as a parameter's: `realloc`
+            // copies that memory without a load through the result, and a
+            // copy read back found nothing (#1156). See ADR-0123. Mutation:
+            // skip this; `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `copied_by_realloc` goes silent.
+            value.contents[site].arrives_holding_read_only(
+                super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
+            );
+            // **And whatever it was handed may be what it returns**, or any
+            // pointer that reaches: `find("ab")` may return the literal, and
+            // `pick(&p)` may return `p`, a literal one load down. Taken at the
+            // argument's own level alone, the second was believed (#1164
+            // review).
+            // Believed an allocation, its result was written through in
+            // silence (#1150). See ADR-0123. Mutation: skip this;
+            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+            // `found_in_a_literal` goes silent.
+            let handed = arguments
+                .iter()
+                .filter_map(|argument| match argument {
+                    Operand::Copy(place) => Some(place),
+                    Operand::Constant(_) => None,
+                })
+                .filter_map(|place| match place.shape() {
+                    Shape::Local => Some((place.local, 0)),
+                    Shape::Deref(depth) => Some((place.local, depth)),
+                    Shape::Indexed => None,
+                })
+                .fold(super::parts::ReadOnly::NONE, |levels, (local, depth)| {
+                    (0..=self.deepest_pointer).fold(levels, |levels, below| {
+                        levels | value.read_only_levels_at(local, depth + below)
+                    })
+                });
+            value.points_to[result].read_only |= handed;
+            value.contents[site].arrives_holding_read_only(handed.below(1));
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as
@@ -2375,6 +2438,8 @@ impl Allocations<'_> {
             | Callee::Ends => {}
         }
         let asked = match self.library(callee).and_then(|row| row.makes) {
+            // The string's length is not read, so at least its null.
+            Some(Makes::StringCopy) => return Extent::AtLeast(1),
             Some(Makes::Argument(index)) => constant(index),
             Some(Makes::Product(m, n)) => constant(m)
                 .zip(constant(n))

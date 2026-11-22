@@ -138,3 +138,63 @@ error[SC0417]: this may write storage the program may not modify
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:147:9 ]
+     │
+ 147 │         *m = 'x';
+     │         ────┬───  
+     │             ╰───── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:164:9 ]
+     │
+ 164 │         *r = 'x';
+     │         ────┬───  
+     │             ╰───── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this may reach outside the object `q` points at
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:171:15 ]
+     │
+ 171 │         char *s = *q;
+     │               ───┬──  
+     │                  ╰──── this check cannot say this is inside its object
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:173:13 ]
+     │
+ 173 │             *s = 'x';
+     │             ────┬───  
+     │                 ╰───── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:183:9 ]
+     │
+ 183 │         *p = 2;
+     │         ───┬──  
+     │            ╰──── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:191:9 ]
+     │
+ 191 │         *m = 'x';
+     │         ────┬───  
+     │             ╰───── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

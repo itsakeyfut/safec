@@ -2871,6 +2871,15 @@ impl Cell {
         self.may_hold_read_only
     }
 
+    /// Say that pointers to read-only storage may be stored here, at
+    /// `levels`: memory that arrived as its type says, a parameter's or a
+    /// call's result's, or that a call may have written through an
+    /// argument whose type says `const` below its first level. See
+    /// ADR-0123.
+    pub(super) fn arrives_holding_read_only(&mut self, levels: ReadOnly) {
+        self.may_hold_read_only |= levels;
+    }
+
     /// Whether everything a pointer stored there may name is storage this
     /// check models: a site or a local, and no referent it does not model.
     pub(super) fn names_only_modelled(&self) -> bool {
