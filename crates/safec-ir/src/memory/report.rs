@@ -1140,6 +1140,17 @@ pub(super) fn reached_by_library(
     };
     let at = origin.span();
     for &(index, reach) in row.reaches {
+        // **Only an argument the row reads and does not write**: how far
+        // `strcpy`, `strcat` or `strncat` writes their first argument is set
+        // by the source, so where its own zero sits proves nothing, and a
+        // literal destination declared `const` was believed (#1179 review).
+        // Mutation: answer every argument; the case's
+        // `appended_to_a_literal_declared_const` goes silent.
+        let reads_only = !(index == 0
+            && matches!(
+                analysis.callee(*callee),
+                Callee::Copies | Callee::ReturnsFirst
+            ));
         let Some(Operand::Copy(place)) = arguments.get(index) else {
             continue;
         };
@@ -1164,6 +1175,7 @@ pub(super) fn reached_by_library(
                 // review). Mutation: ask every row; the case's
                 // `copied_for_a_length_not_read` loses its `SC0412`.
                 None if matches!(reach, Reach::String)
+                    && reads_only
                     && string_ends_inside(analysis, known, local) =>
                 {
                     Some(Fit::Inside)

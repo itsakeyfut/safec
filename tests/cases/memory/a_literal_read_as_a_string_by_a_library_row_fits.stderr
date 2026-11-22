@@ -1,7 +1,7 @@
 error[SC0412]: this may reach outside the object it points at
-    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:17:17 ]
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:18:17 ]
     │
- 17 │     return (int)strlen("abc" + 1);
+ 18 │     return (int)strlen("abc" + 1);
     │                 ────────┬────────  
     │                         ╰────────── this check cannot say this is inside its object
 ────╯
@@ -9,9 +9,9 @@ error[SC0412]: this may reach outside the object it points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0412]: this may reach outside the object `q` points at
-    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:20:21 ]
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:21:21 ]
     │
- 20 │     return q ? (int)strlen(q) : 0;
+ 21 │     return q ? (int)strlen(q) : 0;
     │                     ────┬────  
     │                         ╰────── this check cannot say this is inside its object
 ────╯
@@ -19,9 +19,9 @@ error[SC0412]: this may reach outside the object `q` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0412]: this may reach outside the object `buf` points at
-    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:24:9 ]
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:25:9 ]
     │
- 24 │         memcpy(buf, "abc", n);
+ 25 │         memcpy(buf, "abc", n);
     │         ──────────┬──────────  
     │                   ╰──────────── this check cannot say this is inside its object
 ────╯
@@ -29,11 +29,21 @@ error[SC0412]: this may reach outside the object `buf` points at
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
 error[SC0412]: this may reach outside the object it points at
-    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:24:9 ]
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:25:9 ]
     │
- 24 │         memcpy(buf, "abc", n);
+ 25 │         memcpy(buf, "abc", n);
     │         ──────────┬──────────  
     │                   ╰──────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_literal_read_as_a_string_by_a_library_row_fits.c:29:5 ]
+    │
+ 29 │     strcat("ab", "abcdefgh");
+    │     ────────────┬───────────  
+    │                 ╰───────────── this check cannot say this is inside its object
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

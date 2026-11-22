@@ -1,4 +1,5 @@
 void *memcpy(void *d, const void *s, unsigned long long n);
+char *strcat(const char *d, const char *s);
 void free(void *p);
 unsigned long long strlen(const char *s);
 char *strdup(const char *s);
@@ -23,4 +24,7 @@ void copied_for_a_length_not_read(char *buf, unsigned long long n) {
     if (buf) {
         memcpy(buf, "abc", n);
     }
+}
+void appended_to_a_literal_declared_const(void) {
+    strcat("ab", "abcdefgh");
 }

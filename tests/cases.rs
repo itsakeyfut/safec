@@ -254,7 +254,10 @@ cases! {
         // length it cannot read is not a string row, and a literal handed to
         // one is still doubted, `copied_for_a_length_not_read` (#1179
         // review). Mutation: answer every row from `string_ends_inside`; it
-        // loses that `SC0412`.
+        // loses that `SC0412`. Nor is an argument a row writes: a literal destination of
+        // `strcat`, declared `const`, is still doubted,
+        // `appended_to_a_literal_declared_const`. Mutation: answer written
+        // arguments too; it goes silent.
         // Mutation: answer `false` from `string_ends_inside`; the literal
         // calls are `SC0412`.
         a_literal_read_as_a_string_by_a_library_row_fits: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
