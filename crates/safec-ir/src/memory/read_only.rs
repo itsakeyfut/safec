@@ -138,11 +138,20 @@ fn below_read_only(
     } else {
         typed
     };
+    // **Or where the value carries a read-only level there**, which names
+    // nothing: a `const char ***` parameter's memory holds no name a level
+    // down, and stopped there, `take_any(pp)` was believed where main
+    // reported it (#1165 review). Mutation: ask only what is named;
+    // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
+    // `arrived_three_deep_handed_as_void` goes silent.
     let named_at = |level: usize| {
-        level < typed || level == 0 || {
-            let (sites, locals) = known.levels_below(place.local, depth + level - 1);
-            !sites.is_empty() || !locals.is_empty()
-        }
+        level < typed
+            || level == 0
+            || known.read_only_levels_at(place.local, depth + level) != super::parts::ReadOnly::NONE
+            || {
+                let (sites, locals) = known.levels_below(place.local, depth + level - 1);
+                !sites.is_empty() || !locals.is_empty()
+            }
     };
     // A level past `typed` has no bit set, so it is asked as writable. **Of
     // what the value certainly reaches where the reader keeps `const` at its

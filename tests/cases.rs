@@ -147,7 +147,10 @@ cases! {
         // so a literal chained through `void *` slots deeper than any pointer
         // declared is asked, `chained_through_void_slots` (#1159, ADR-0123).
         // Mutation: stop at `Allocations::deepest_pointer` in
-        // `below_read_only`; it goes silent. A store and a copy into a
+        // `below_read_only`; it goes silent. It goes on where the value carries a
+        // read-only level that names nothing, `arrived_three_deep_handed_as_void`
+        // (#1165 review). Mutation: stop where nothing is named; it goes
+        // silent. A store and a copy into a
         // parameter's memory ask its reader, the parameter's type, and not
         // the type written through: `stored_through_a_const_lvalue_cast` is
         // `SC0417` and `copied_into_a_const_out_parameter` is not (#1147,

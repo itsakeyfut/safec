@@ -1364,3 +1364,13 @@ Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:212:6 "cop
   Block "bb4"
     Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:215:9 generated
     Goto "bb3"
+Function read_only_storage_below_what_leaves_or_arrives_is_unproven.c:218:6 "arrived_three_deep_handed_as_void"
+  Local "_0" "void" return
+  Local "_1" "char ***" parameter "pp"
+  Block "bb0" entry
+    ArgumentsEvaluated read_only_storage_below_what_leaves_or_arrives_is_unproven.c:219:5 generated
+    Call read_only_storage_below_what_leaves_or_arrives_is_unproven.c:219:5 written "take_any" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced read_only_storage_below_what_leaves_or_arrives_is_unproven.c:219:5 generated
+    Return

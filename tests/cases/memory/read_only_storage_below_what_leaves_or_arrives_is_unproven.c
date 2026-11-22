@@ -215,3 +215,6 @@ void copied_into_a_const_out_parameter(const char **out) {
         memcpy(out, &c, sizeof c);
     }
 }
+void arrived_three_deep_handed_as_void(const char ***pp) {
+    take_any(pp);
+}
