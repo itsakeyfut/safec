@@ -68,7 +68,7 @@ impl Allocations<'_> {
                 may_be_null: false,
                 vouched: false,
                 // No place for certain. See ADR-0105.
-                read_only: false,
+                read_only: super::parts::ReadOnly::NONE,
                 alone: None,
             },
         );
@@ -1737,7 +1737,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
-                            read_only: false,
+                            read_only: super::parts::ReadOnly::NONE,
                             alone: None,
                         },
                     ),
@@ -1804,7 +1804,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
-                            read_only: false,
+                            read_only: super::parts::ReadOnly::NONE,
                             alone: None,
                         },
                     ),
@@ -1857,7 +1857,7 @@ impl Allocations<'_> {
                             may_be_null: false,
                             vouched: false,
                             // No place for certain. See ADR-0105.
-                            read_only: false,
+                            read_only: super::parts::ReadOnly::NONE,
                             alone: None,
                         },
                     ),
@@ -1932,7 +1932,7 @@ impl Allocations<'_> {
                     vouched: false,
                     // **An allocation's result is certainly its one block**, where its
                     // site stands for one; nothing else a call returns is. See ADR-0105.
-                    read_only: false,
+                    read_only: super::parts::ReadOnly::NONE,
                     alone: (matches!(kind, Callee::Allocates) && self.made_once[site.local()])
                         .then_some(Referent::Heap(site)),
                 },
@@ -1973,12 +1973,13 @@ impl Allocations<'_> {
             value.points_to[result].set_contents(&contents);
             // And what it holds below may name read-only storage where its
             // type says `const` there, as a parameter's. See ADR-0121.
-            // Mutation: skip this;
-            // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
-            // `cast_after_a_result` goes silent.
-            if function.const_levels(place.local) >> 1 != 0 {
-                value.contents[site].arrives_holding_read_only();
-            }
+            // **Held by nothing since #1152, measured**: a cast of the result
+            // takes its levels from the lowering and answers every load
+            // through it, `cast_after_a_result` among them. Kept for a pointer
+            // to this memory that is not read from the result.
+            value.contents[site].arrives_holding_read_only(
+                super::parts::ReadOnly::levels(function.const_levels(place.local)).below(1),
+            );
         }
         // **Its contents are indeterminate** where its row says so, and for
         // `realloc` where it was handed a pointer that is certainly null, as

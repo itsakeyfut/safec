@@ -136,7 +136,9 @@ cases! {
         // And the two the review found reported wrongly stay silent:
         // `into_a_const_static` where `reach_static` marks nothing, and
         // `handed_unprototyped` where an unprototyped argument is asked as
-        // writable at every level. And `into_a_const_static_array` stays
+        // writable at every level. `arrival_through_void` is `SC0417` while a
+        // parameter's levels or its memory's mark is set at entry; skip both
+        // and it goes silent (#1152). And `into_a_const_static_array` stays
         // silent beside `into_a_writable_static_array`'s report (#1144):
         // mutations, answer `0` for an array in `Lowering::const_levels`,
         // leave a decayed pointer unmarked, or a moved pointer in
@@ -146,6 +148,12 @@ cases! {
         // Mutation: count every array as a level in `Lowering::const_levels`;
         // it goes silent.
         read_only_storage_below_what_leaves_or_arrives_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A write into a level of a chain of pointers that keeps `const` only
+        // further down writes nothing read-only: `middle_of_three` and
+        // `middle_of_a_row` say nothing, and the write two loads down in
+        // `bottom_of_three` is still `SC0417` (#1152). Mutation: read a level
+        // mask as any bit set in `ReadOnly::here`; both middles are reported.
+        a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` written through a pointer that may name itself may leave
         // it half written, and is `SC0413` only where the pointer is read
         // again, `self_then_read`. An assignment statement reads nothing back,

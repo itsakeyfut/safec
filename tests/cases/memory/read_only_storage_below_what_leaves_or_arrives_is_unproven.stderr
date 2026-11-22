@@ -118,3 +118,13 @@ error[SC0417]: this may write storage the program may not modify
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ read_only_storage_below_what_leaves_or_arrives_is_unproven.c:129:13 ]
+     │
+ 129 │             *p = 2;
+     │             ───┬──  
+     │                ╰──── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

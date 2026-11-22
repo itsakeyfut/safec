@@ -15,6 +15,60 @@ use super::bits::Bits;
 use super::index::{LocalIdx, Referent, Site, Storage, Table, Why};
 use super::{Carried, LostReason};
 
+/// Per level, whether a pointer read that many dereferences down may name
+/// storage the program may not modify: bit `0` the pointer itself, bit `k`
+/// one read `k` dereferences through it. **A level and not a flag**, since
+/// `const char ***` says `const` two loads down and nowhere above: one bit
+/// for "somewhere below" took the `const char *` slot in between for
+/// read-only storage, and `**ppp = "ab"` was reported (#1152). A union at
+/// every join; a load takes it shifted by the levels it reads. See ADR-0121.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct ReadOnly(u32);
+
+impl ReadOnly {
+    /// Nothing at any level.
+    pub(super) const NONE: Self = ReadOnly(0);
+    /// The pointer itself, and nothing below.
+    pub(super) const HERE: Self = ReadOnly(1);
+
+    /// From a mask, bit `k` the level `k`: a local's `const` levels.
+    pub(super) fn levels(levels: u32) -> Self {
+        ReadOnly(levels)
+    }
+
+    /// Whether the pointer itself may name read-only storage. Mutation:
+    /// answer any bit set;
+    /// `a_write_into_the_middle_of_a_chain_of_pointers_to_const_is_not_reported`
+    /// reports both middles.
+    pub(super) fn here(self) -> bool {
+        self.0 & 1 != 0
+    }
+
+    /// What a pointer read `levels` dereferences down holds: these levels,
+    /// moved up by that many.
+    pub(super) fn below(self, levels: usize) -> Self {
+        ReadOnly(
+            u32::try_from(levels)
+                .ok()
+                .and_then(|levels| self.0.checked_shr(levels))
+                .unwrap_or(0),
+        )
+    }
+}
+
+impl std::ops::BitOr for ReadOnly {
+    type Output = Self;
+    fn bitor(self, other: Self) -> Self {
+        ReadOnly(self.0 | other.0)
+    }
+}
+
+impl std::ops::BitOrAssign for ReadOnly {
+    fn bitor_assign(&mut self, other: Self) {
+        self.0 |= other.0;
+    }
+}
+
 /// A free, and whether C has ordered it before what comes after it.
 ///
 /// **The two halves travel together or the second is forgotten.** A span alone
@@ -1466,8 +1520,8 @@ pub(super) struct Held {
     /// [`crate::ir::Rvalue::Static`] of a read-only static, kept by a union at
     /// every join and carried wherever the value is, so that a write through
     /// it is asked whatever spelling reached it. A local is not marked here,
-    /// being named. See ADR-0120.
-    pub(super) read_only: bool,
+    /// being named. Per level, [`ReadOnly`]. See ADR-0120.
+    pub(super) read_only: ReadOnly,
     /// **The one place it certainly names**, where that is shown: taking the
     /// address of a whole local or of a one-level array's start, and an
     /// allocation whose site stands for one block, are the only grants, and
@@ -1989,7 +2043,7 @@ impl Held {
                 may_be_null: false,
                 vouched: false,
                 // Nothing is named.
-                read_only: false,
+                read_only: ReadOnly::NONE,
                 alone: None,
             },
         )
@@ -2176,7 +2230,7 @@ impl Held {
         } = self;
         *may_be_null = false;
         *vouched = false;
-        *read_only = false;
+        *read_only = ReadOnly::NONE;
         *alone = None;
         names.clear_all();
         *fresh_read = false;
@@ -2252,7 +2306,7 @@ impl Held {
         // A may-fact, so a union: null on either path is null on one.
         *may_be_null = *may_be_null || other.may_be_null;
         // A may-fact too: read-only storage on either path may be written.
-        *read_only = *read_only || other.read_only;
+        *read_only |= other.read_only;
         // Vouched for only where every path read it so (ADR-0100).
         *vouched = *vouched && other.vouched;
         // A must-fact: kept only where both paths agree.
@@ -2350,7 +2404,7 @@ impl Held {
         } = self;
         // A may-write may leave what either side names, read-only storage
         // among it.
-        *read_only = *read_only || other.read_only;
+        *read_only |= other.read_only;
         // A may-write keeps a must-fact only where both agree.
         if *alone != other.alone {
             *alone = None;
@@ -2690,10 +2744,10 @@ pub(super) struct Cell {
     may_hold_null: bool,
     /// **Whether a pointer stored there may name storage the program may not
     /// modify**, [`Held::read_only`] poured in. A union at a join, and taken
-    /// by every load through the block (`Known::read_only_on_the_way`), so a
+    /// by every load through the block (`Known::read_only_levels_at`), so a
     /// pointer to a `const` object read back out of memory is still one. See
     /// ADR-0120.
-    may_hold_read_only: bool,
+    may_hold_read_only: ReadOnly,
 }
 
 impl Cell {
@@ -2706,7 +2760,7 @@ impl Cell {
             names: Bits::new(Referent::count(locals)),
             position: None,
             may_hold_null: false,
-            may_hold_read_only: false,
+            may_hold_read_only: ReadOnly::NONE,
         }
     }
 
@@ -2733,15 +2787,15 @@ impl Cell {
 
     /// Whether a pointer to read-only storage may have been stored there.
     /// See ADR-0120.
-    pub(super) fn may_hold_read_only(&self) -> bool {
+    pub(super) fn may_hold_read_only(&self) -> ReadOnly {
         self.may_hold_read_only
     }
 
     /// Say that a pointer to read-only storage may be stored there: memory
     /// that arrived, a parameter's or a call's result's, whose type says
     /// `const` below its first level. See ADR-0121.
-    pub(super) fn arrives_holding_read_only(&mut self) {
-        self.may_hold_read_only = true;
+    pub(super) fn arrives_holding_read_only(&mut self, levels: ReadOnly) {
+        self.may_hold_read_only |= levels;
     }
 
     /// Whether everything a pointer stored there may name is storage this
@@ -2874,7 +2928,7 @@ impl Cell {
             position: _,
             // Not taken: a load is possibly null whatever memory holds.
             may_hold_null: _,
-            // Taken by `Known::load_into` through `Known::read_only_on_the_way`,
+            // Taken by `Known::load_into` through `Known::read_only_levels_at`,
             // which asks every block and local on the way, once.
             may_hold_read_only: _,
         } = self;
@@ -3048,7 +3102,7 @@ impl Cell {
         } = other;
         // A may-fact, so a union, as the names are.
         self.may_hold_null = self.may_hold_null || *may_hold_null;
-        self.may_hold_read_only = self.may_hold_read_only || *may_hold_read_only;
+        self.may_hold_read_only |= *may_hold_read_only;
         // **Joined as a value's is**, each side's names saying whether it
         // names storage, so a null stored takes no part, and widened at a
         // loop's back edge (ADR-0099); nothing stored is the identity.
@@ -3100,7 +3154,7 @@ pub(super) struct Marks {
     /// See [`Held::vouched`].
     pub(super) vouched: bool,
     /// See [`Held::read_only`].
-    pub(super) read_only: bool,
+    pub(super) read_only: ReadOnly,
     /// See [`Held::alone`].
     pub(super) alone: Option<Referent>,
 }

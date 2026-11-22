@@ -392,7 +392,7 @@ impl Allocations<'_> {
                         may_be_null: false,
                         vouched: false,
                         // A constant or an address carried by a store is no grant. See ADR-0105.
-                        read_only: false,
+                        read_only: super::parts::ReadOnly::NONE,
                         alone: None,
                     },
                 )
@@ -1485,7 +1485,7 @@ impl Allocations<'_> {
                 may_be_null: true,
                 vouched: false,
                 // A load names nothing for certain: a block's record keeps no such fact.
-                read_only: false,
+                read_only: super::parts::ReadOnly::NONE,
                 alone: None,
             },
         );
@@ -2664,7 +2664,7 @@ impl Analysis for Allocations<'_> {
                         may_be_null: false,
                         vouched: false,
                         // Nothing is certain at entry.
-                        read_only: false,
+                        read_only: super::parts::ReadOnly::NONE,
                         alone: None,
                     },
                 ),
@@ -2785,7 +2785,7 @@ impl Analysis for Allocations<'_> {
                     vouched: false,
                     // **Declared as a pointer to `const`, it may name an object
                     // defined `const`** the caller handed. See ADR-0120.
-                    read_only: function.points_at_const(parameter),
+                    read_only: super::parts::ReadOnly::levels(function.const_levels(parameter)),
                     alone: None,
                 },
             );
@@ -2799,13 +2799,16 @@ impl Analysis for Allocations<'_> {
             // **And what it holds below may name read-only storage where its
             // type says `const` there**, whatever it is cast to: `(int **)pp`
             // with `pp` a `const int **` reads a pointer to `const`. Below the
-            // first level the union `Known::read_only_on_the_way` takes
-            // carries it on. See ADR-0121. Mutation: skip this;
+            // first level each level says its own (#1152). See ADR-0121.
+            // **Either this or the parameter's own levels, set above, answers
+            // a load through the parameter, measured** since #1152; this one
+            // also answers a pointer to the memory not read from the
+            // parameter. Mutation: skip both;
             // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
-            // `cast_after_arrival` goes silent.
-            if function.const_levels(parameter) >> 1 != 0 {
-                known.contents[Site::of(LocalIdx::of(parameter))].arrives_holding_read_only();
-            }
+            // `arrival_through_void` goes silent.
+            known.contents[Site::of(LocalIdx::of(parameter))].arrives_holding_read_only(
+                super::parts::ReadOnly::levels(function.const_levels(parameter)).below(1),
+            );
             known.extent[Site::of(LocalIdx::of(parameter))] = Some(Extent::AtLeast(
                 self.pointee_size(function, &Place::local(parameter))
                     .unwrap_or(0),
@@ -2894,38 +2897,11 @@ impl Analysis for Allocations<'_> {
     }
 
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
-        // **A pointer read through one that may name read-only storage may
-        // name it too**, the way `Known::read_only_on_the_way` reads every
-        // level of one chain as one: `r = *q; s = *r;` with `q` a `const
-        // char ***` cast whole reaches the `const` level `**q` does, which a
-        // chain split into locals lost (#1134). Asked before the transfer,
-        // which may assign the pointer read through. Only into a pointer, so
-        // a character read through a pointer to `const` is no pointer to
-        // storage. See ADR-0121. Mutation: skip this;
-        // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
-        // `three_levels_arrived` goes silent.
-        let read_through_read_only = match element {
-            Element::Assign(crate::ir::Operation {
-                place,
-                value: Rvalue::Use(Operand::Copy(source)),
-                origin: _,
-            }) if place.steps().is_empty()
-                && (match source.shape() {
-                    Shape::Deref(_) => true,
-                    Shape::Local | Shape::Indexed => false,
-                })
-                && matches!(self.unit.ty(function.local(place.local)), Ty::Pointer(_)) =>
-            {
-                value.points_to[source.local]
-                    .read_only
-                    .then_some(place.local)
-            }
-            _ => None,
-        };
+        // A pointer read through one takes the levels below what it read,
+        // `Known::read_only_levels_at`, which `Known::load_into` asks: `r =
+        // *q; s = *r;` with `q` a `const char ***` cast whole reaches the
+        // `const` level `**q` does (#1134, #1152).
         self.element_transfer(function, element, value);
-        if let Some(local) = read_through_read_only {
-            value.points_to[local].read_only = true;
-        }
         // **A local declared as a pointer to `const` may name an object
         // defined `const`, whatever was assigned to it**: a call's result,
         // a load, a cast of one. After the transfer, so no arm's early
@@ -2934,8 +2910,10 @@ impl Analysis for Allocations<'_> {
         // `through_a_const_result` goes silent.
         if let Element::Assign(operation) = element {
             let local = operation.place.local;
-            if operation.place.steps().is_empty() && function.points_at_const(local) {
-                value.points_to[local].read_only = true;
+            // **At every level its type says**, not only its first (#1152).
+            if operation.place.steps().is_empty() {
+                value.points_to[local].read_only |=
+                    super::parts::ReadOnly::levels(function.const_levels(local));
             }
         }
     }
@@ -3819,7 +3797,7 @@ impl Allocations<'_> {
                                     may_be_null: false,
                                     vouched: false,
                                     // A constant names nothing. See ADR-0105.
-                                    read_only: false,
+                                    read_only: super::parts::ReadOnly::NONE,
                                     alone: None,
                                 },
                             ),
@@ -3876,7 +3854,11 @@ impl Allocations<'_> {
                                     may_be_null: false,
                                     vouched: true,
                                     // Nothing this check follows. See ADR-0105.
-                                    read_only: self.unit.static_object(*id).read_only,
+                                    read_only: if self.unit.static_object(*id).read_only {
+                                        super::parts::ReadOnly::HERE
+                                    } else {
+                                        super::parts::ReadOnly::NONE
+                                    },
                                     alone: None,
                                 },
                             ),
@@ -3963,7 +3945,7 @@ impl Allocations<'_> {
                                     // **Certainly the local**, where what was taken is the whole of it or
                                     // a one-level array's start: the one grant of the fact besides an
                                     // allocation. `&arr[k]` and `&m[0][0]` grant nothing. See ADR-0105.
-                                    read_only: false,
+                                    read_only: super::parts::ReadOnly::NONE,
                                     alone: ((match taken.shape() {
                                         Shape::Local => true,
                                         Shape::Deref(_) | Shape::Indexed => false,
