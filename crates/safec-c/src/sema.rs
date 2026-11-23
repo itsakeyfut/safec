@@ -106,6 +106,15 @@ const MISDECLARED_LIBRARY: Code = Code::new("SC0320");
 /// and `field 'f' declared as a function`.
 const INCOMPLETE_MEMBER: Code = Code::new("SC0314");
 
+/// The tag kind a structure type was written as: `union` or `struct`.
+fn struct_kind(union: bool) -> TagKind {
+    if union {
+        TagKind::Union
+    } else {
+        TagKind::Struct
+    }
+}
+
 /// One declared name, addressed by [`BindingId`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BindingId(u32);
@@ -121,6 +130,10 @@ pub struct TagId(u32);
 pub enum TagKind {
     /// `struct`.
     Struct,
+    /// `union`, whose tags share the name space too (C17 6.2.3 p1), so
+    /// `struct S` and `union S` in one scope are the conflict 6.7.2.3 p2
+    /// forbids.
+    Union,
     /// `enum`.
     Enum,
 }
@@ -130,6 +143,7 @@ impl TagKind {
     fn keyword(self) -> &'static str {
         match self {
             Self::Struct => "struct",
+            Self::Union => "union",
             Self::Enum => "enum",
         }
     }
@@ -868,17 +882,19 @@ impl Resolver<'_> {
             // an outer one, rather than using whatever `S` is visible, which
             // is the only thing that tells it from `struct S *p;`.
             if let Type::Struct {
+                union,
                 tag: Some(tag),
                 members: None,
             } = self.ast.ty(specified)
             {
+                let kind = struct_kind(*union);
                 let found = self.tag_here(*tag);
                 let id = match found {
                     Some(id) => {
-                        self.same_kind(id, TagKind::Struct, *tag, diagnostics);
+                        self.same_kind(id, kind, *tag, diagnostics);
                         id
                     }
-                    None => self.declare_tag(TagKind::Struct, Some(*tag), None),
+                    None => self.declare_tag(kind, Some(*tag), None),
                 };
                 self.resolution.tag_of.insert(specified, id);
             }
@@ -1047,9 +1063,14 @@ impl Resolver<'_> {
                 // bound before its members are walked, because C17 6.2.1 p7
                 // starts a tag's scope just after it appears: `struct L {
                 // struct L *next; }` is one type.
-                Type::Struct { tag, members } => {
+                Type::Struct {
+                    union,
+                    tag,
+                    members,
+                } => {
                     if !self.resolution.tag_of.contains_key(&ty) {
-                        self.bind_tag(ty, *tag, members.is_some(), diagnostics);
+                        let kind = struct_kind(*union);
+                        self.bind_tag(ty, kind, *tag, members.is_some(), diagnostics);
                     }
                     if let Some(members) = members {
                         if self.walked.insert(ty) {
@@ -1099,11 +1120,12 @@ impl Resolver<'_> {
     fn close_definition(&mut self, definition: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         if let Type::Struct {
+            union,
             members: Some(members),
             ..
         } = ast.ty(definition)
         {
-            self.check_members(members, diagnostics);
+            self.check_members(members, *union, diagnostics);
         }
         let tag = self.resolution.tag(definition);
         self.completed.insert(tag);
@@ -1128,7 +1150,19 @@ impl Resolver<'_> {
     /// array member: its element is held to 6.7.6.2 p1 like any array's. A
     /// struct with a flexible array member is no member of another, which is
     /// p3's second sentence.
-    fn check_members(&mut self, members: &[Declaration], diagnostics: &mut DiagnosticSink) {
+    ///
+    /// **Both rules are a structure's, and not a union's** (#1203): p18
+    /// gives a flexible array member to "a structure" alone, so one in a
+    /// union is an incomplete member, and p3 keeps a struct that has one out
+    /// of a structure, so it is a member of a union like any other.
+    /// Mutation: ask neither of `union`; `a_union_is_a_structure_of_its_own`
+    /// accepts `Flexible` and refuses `Holder`.
+    fn check_members(
+        &mut self,
+        members: &[Declaration],
+        union: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let ast = self.ast;
         let mut names: HashMap<&str, Span> = HashMap::new();
         for (index, member) in members.iter().enumerate() {
@@ -1149,7 +1183,8 @@ impl Resolver<'_> {
                 }
             }
 
-            let flexible = index + 1 == members.len()
+            let flexible = !union
+                && index + 1 == members.len()
                 && matches!(ast.ty(member.ty), Type::Array { length: None, element, .. }
                     if self.resolution.complete(ast, *element))
                 && members[..index]
@@ -1168,7 +1203,7 @@ impl Resolver<'_> {
                     at,
                     format!("has incomplete type `{spelled}`"),
                 ));
-            } else if self.resolution.has_flexible_array_member(ast, member.ty) {
+            } else if !union && self.resolution.has_flexible_array_member(ast, member.ty) {
                 let spelled = spell_type(self.sources, ast, member.ty);
                 diagnostics.report(unfit_member(
                     self.sources,
@@ -1435,24 +1470,25 @@ impl Resolver<'_> {
     fn bind_tag(
         &mut self,
         ty: TypeId,
+        kind: TagKind,
         tag: Option<Span>,
         defines: bool,
         diagnostics: &mut DiagnosticSink,
     ) {
         let Some(tag) = tag else {
-            let id = self.declare_tag(TagKind::Struct, None, None);
+            let id = self.declare_tag(kind, None, None);
             self.resolution.tag_of.insert(ty, id);
             return;
         };
 
         let id = if defines {
             match self.tag_here(tag) {
-                Some(id) if !self.same_kind(id, TagKind::Struct, tag, diagnostics) => {
-                    self.declare_tag(TagKind::Struct, None, Some(tag))
+                Some(id) if !self.same_kind(id, kind, tag, diagnostics) => {
+                    self.declare_tag(kind, None, Some(tag))
                 }
                 Some(id) => {
                     if let Some(first) = self.resolution.tags[id.0 as usize].defined {
-                        let what = format!("struct {}", self.sources.snippet(tag));
+                        let what = format!("{} {}", kind.keyword(), self.sources.snippet(tag));
                         diagnostics.report(redefined(
                             &what,
                             tag,
@@ -1465,15 +1501,15 @@ impl Resolver<'_> {
                     }
                     id
                 }
-                None => self.declare_tag(TagKind::Struct, Some(tag), Some(tag)),
+                None => self.declare_tag(kind, Some(tag), Some(tag)),
             }
         } else {
             match self.tag_visible(tag) {
-                Some(id) if !self.same_kind(id, TagKind::Struct, tag, diagnostics) => {
-                    self.declare_tag(TagKind::Struct, None, None)
+                Some(id) if !self.same_kind(id, kind, tag, diagnostics) => {
+                    self.declare_tag(kind, None, None)
                 }
                 Some(id) => id,
-                None => self.declare_tag(TagKind::Struct, Some(tag), None),
+                None => self.declare_tag(kind, Some(tag), None),
             }
         };
         self.resolution.tag_of.insert(ty, id);

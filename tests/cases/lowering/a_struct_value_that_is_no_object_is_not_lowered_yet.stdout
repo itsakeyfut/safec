@@ -52,6 +52,12 @@ Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:25:5 "member" dec
   Local "_0" "int" return
   Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
   Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:34:6 "discarded" declared
+  Local "_0" "void" return
+  Local "_1" "union #1 *" parameter _Nonnull made struct-copy "u"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:38:6 "read_through" declared
+  Local "_0" "void" return
+  Local "_1" "union #1 *" parameter "p"
 Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:5:24 "memcpy" declared
   Local "_0" "void *" return
   Local "_1" "void *" parameter

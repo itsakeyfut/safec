@@ -100,9 +100,14 @@ to point into one object, against not asked and named as a silence.
   bytes as memory, and `a_struct_by_value_meets_clangs_abi` fails on
   Windows; drop System V's count of free registers, and
   `a_struct_that_does_not_fit_the_registers_left_goes_in_memory` fails.
-* Still unguarded, because unions and comparing pointers are not lowered
-  yet: a corpus case for the comparison's code, which its sub-issue of #614
-  adds as it lands.
+* **A union is laid out as `clang` lays it out** (#1203), every member at
+  offset 0 and the whole its largest member rounded to the strictest
+  alignment: `the_layout_of_every_struct_shape_is_clangs` holds union shapes
+  beside the structs on every target. Mutation: size a union as its first
+  member in `lay_out_union`; it fails.
+* Still unguarded, because comparing pointers is not lowered yet: a corpus
+  case for the comparison's code, which its sub-issue of #614 adds as it
+  lands.
 
 ### Consequences
 

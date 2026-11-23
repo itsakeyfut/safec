@@ -42,7 +42,7 @@
 //! [ADR-0010]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0010-give-the-graph-an-edge-no-statement-produced.md
 //! [ADR-0012]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0012-say-a-local-s-storage-began-and-ended-in-the-block.md
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::source::{SourceMap, Span};
 use crate::target::{Integer, Target};
@@ -226,6 +226,33 @@ pub fn lay_out(members: impl IntoIterator<Item = (u64, u64)>) -> Option<(Vec<u64
     Some((offsets, end.checked_next_multiple_of(align)?, align))
 }
 
+/// A layout rule, [`lay_out`] or [`lay_out_union`]: each member's size and
+/// alignment in, each one's offset and the whole's size and alignment out.
+type LayoutRule = fn(Vec<(u64, u64)>) -> Option<(Vec<u64>, u64, u64)>;
+
+/// Where each member of a union goes, given each one's size and alignment
+/// in bytes, in order: every offset 0, and the whole the largest member
+/// rounded up to the strictest alignment (C17 6.7.2.1 p6 and p16). `None`
+/// where the size overflows a `u64`.
+///
+/// **The one rule for a union's layout**, asked by
+/// [`TranslationUnit::push_union`] and by the type check for `sizeof`, as
+/// [`lay_out`] is for a struct. Mutation: place each member after the one
+/// before it; `the_layout_of_every_struct_shape_is_clangs` fails.
+pub fn lay_out_union(
+    members: impl IntoIterator<Item = (u64, u64)>,
+) -> Option<(Vec<u64>, u64, u64)> {
+    let mut offsets = Vec::new();
+    let mut largest: u64 = 0;
+    let mut align: u64 = 1;
+    for (size, member_align) in members {
+        offsets.push(0);
+        largest = largest.max(size);
+        align = align.max(member_align);
+    }
+    Some((offsets, largest.checked_next_multiple_of(align)?, align))
+}
+
 /// One member of a [`StructLayout`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MemberLayout {
@@ -325,7 +352,15 @@ pub enum Ty {
         /// How many elements there are, which the lowering never makes zero.
         length: u64,
     },
-    /// A struct, laid out in [`TranslationUnit::struct_layout`].
+    /// A struct, laid out in [`TranslationUnit::struct_layout`], or a union.
+    ///
+    /// **A union is this too** (#1203), told apart by
+    /// [`TranslationUnit::is_union`] and nowhere else: everything a struct
+    /// is to every reader, a union is, its members' offsets aside, and those
+    /// are in its layout. A second variant made every reader answer for both,
+    /// and one that forgot, in an `if let`, compiled and passed: the memory
+    /// check lost a report about a union holding a pointer and no test saw
+    /// it.
     ///
     /// **Never a value yet**, as an array is not: no operation reads or
     /// writes one whole, which is assignment's, and a call's and a return's
@@ -1994,6 +2029,8 @@ pub struct TranslationUnit {
     /// and not completed: a struct nothing in this unit defines, reached
     /// only through pointers, and one whose members are being laid out.
     structs: Vec<Option<StructLayout>>,
+    /// Which of [`Self::structs`] are unions. See [`Ty::Struct`].
+    unions: HashSet<StructId>,
 }
 
 impl TranslationUnit {
@@ -2006,6 +2043,7 @@ impl TranslationUnit {
             types: Vec::new(),
             interned: HashMap::new(),
             structs: Vec::new(),
+            unions: HashSet::new(),
         }
     }
 
@@ -2019,6 +2057,29 @@ impl TranslationUnit {
         Some(id)
     }
 
+    /// Lay out a union of these members, and say which it is: as
+    /// [`Self::push_struct`], by [`lay_out_union`].
+    pub fn push_union(&mut self, members: &[TyId]) -> Option<StructId> {
+        let id = self.declare_union();
+        self.complete_struct(id, members)?;
+        Some(id)
+    }
+
+    /// A union with no members yet: as [`Self::declare_struct`], and laid
+    /// out by [`lay_out_union`] when [`Self::complete_struct`] gives it
+    /// members.
+    pub fn declare_union(&mut self) -> StructId {
+        let id = self.declare_struct();
+        self.unions.insert(id);
+        id
+    }
+
+    /// Whether `id` is a union: every member at offset 0, and spelled
+    /// `union` where it is printed. See [`Ty::Struct`].
+    pub fn is_union(&self, id: StructId) -> bool {
+        self.unions.contains(&id)
+    }
+
     /// A struct with no members yet, so that a pointer to it can be a type
     /// before its members are laid out: `struct L { struct L *next; }` is a
     /// pointer to `L` inside `L` (C17 6.7.2.3 p8), and one nothing in this
@@ -2030,14 +2091,20 @@ impl TranslationUnit {
         id
     }
 
-    /// Lay out the declared struct `id` with these members, in order. `None`
-    /// where a member has no size or alignment this unit can give, the
+    /// Lay out the declared struct `id` with these members, in order, by
+    /// [`lay_out`], or by [`lay_out_union`] where it was declared a union.
+    /// `None` where a member has no size or alignment this unit can give, the
     /// struct staying incomplete.
     ///
     /// # Panics
     ///
     /// If `id` already has members: one struct is laid out once.
     pub fn complete_struct(&mut self, id: StructId, members: &[TyId]) -> Option<()> {
+        let rule: LayoutRule = if self.is_union(id) {
+            lay_out_union
+        } else {
+            lay_out
+        };
         assert!(
             self.structs[id.0 as usize].is_none(),
             "struct {} is already laid out",
@@ -2047,7 +2114,7 @@ impl TranslationUnit {
             .iter()
             .map(|&ty| Some((self.size_of(ty)?, self.align_of(ty)?)))
             .collect::<Option<Vec<_>>>()?;
-        let (offsets, size, align) = lay_out(sized)?;
+        let (offsets, size, align) = rule(sized)?;
         self.structs[id.0 as usize] = Some(StructLayout {
             members: members
                 .iter()

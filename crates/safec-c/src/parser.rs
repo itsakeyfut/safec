@@ -4,8 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is `union`, a bit-field, an anonymous member, casts,
+//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
 //! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -540,6 +540,7 @@ fn begins_specifiers(kind: TokenKind) -> bool {
             kind,
             TokenKind::Keyword(
                 Keyword::Struct
+                    | Keyword::Union
                     | Keyword::Enum
                     | Keyword::Const
                     | Keyword::Static
@@ -616,7 +617,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Double => ("`double`", "6.7.2", SPECIFIER),
         Keyword::Bool => ("`_Bool`", "6.7.2", SPECIFIER),
         Keyword::Complex => ("`_Complex`", "6.7.2", SPECIFIER),
-        Keyword::Union => ("`union`", "6.7.2.1", SPECIFIER),
         Keyword::Inline => ("`inline`", "6.7.4", STORAGE),
         Keyword::Noreturn => ("`_Noreturn`", "6.7.4", STORAGE),
         Keyword::Alignas => (
@@ -1518,15 +1518,21 @@ impl Parser<'_> {
         // limit overflowed the stack rather than being refused, measured.
         self.enumerated = false;
         let tagged = if self.check(TokenKind::Keyword(Keyword::Struct)) {
-            Some((self.struct_specifier(diagnostics)?, "struct"))
+            Some((self.struct_specifier(false, diagnostics)?, "struct"))
+        } else if self.check(TokenKind::Keyword(Keyword::Union)) {
+            Some((self.struct_specifier(true, diagnostics)?, "union"))
         } else if self.check(TokenKind::Keyword(Keyword::Enum)) {
             Some((self.enum_specifier(diagnostics)?, "enum"))
         } else {
             None
         };
         let enumerated = std::mem::take(&mut self.enumerated);
-        let tagged_keyword =
-            |next: TokenKind| matches!(next, TokenKind::Keyword(Keyword::Struct | Keyword::Enum));
+        let tagged_keyword = |next: TokenKind| {
+            matches!(
+                next,
+                TokenKind::Keyword(Keyword::Struct | Keyword::Union | Keyword::Enum)
+            )
+        };
         // **A typedef name is a type specifier only where no other is
         // written** (C17 6.7.2 p2): in `T x;` the `T` is the type, and in
         // `int T;` it is the declarator, which hides the typedef name.
@@ -1559,10 +1565,10 @@ impl Parser<'_> {
                 continue;
             }
             if tagged_keyword(next) {
-                let keyword = if next == TokenKind::Keyword(Keyword::Struct) {
-                    "struct"
-                } else {
-                    "enum"
+                let keyword = match next {
+                    TokenKind::Keyword(Keyword::Struct) => "struct",
+                    TokenKind::Keyword(Keyword::Union) => "union",
+                    _ => "enum",
                 };
                 return self.refuse_specifier(
                     match tagged {
@@ -1939,7 +1945,11 @@ impl Parser<'_> {
     /// into [`Parser::specifiers`] its frame was paid at every level, which
     /// overflowed the stack before the nesting limit was reached.
     #[inline(never)]
-    fn struct_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+    fn struct_specifier(
+        &mut self,
+        union: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
         self.advance();
 
         let tag = if self.check(TokenKind::Identifier) {
@@ -1968,7 +1978,11 @@ impl Parser<'_> {
             return None;
         }
 
-        Some(self.ast.push_type(Type::Struct { tag, members }))
+        Some(self.ast.push_type(Type::Struct {
+            union,
+            tag,
+            members,
+        }))
     }
 
     /// The member declarations of a struct through its `}`.
@@ -2053,17 +2067,21 @@ impl Parser<'_> {
     /// `at` is where the member declaration began, which is where both reports
     /// point: the parser is standing on its `;` by now.
     fn member_with_no_name(&mut self, at: Span, base: TypeId, diagnostics: &mut DiagnosticSink) {
-        let anonymous = matches!(
-            self.ast.ty(base),
+        let anonymous = match self.ast.ty(base) {
             Type::Struct {
+                union,
                 tag: None,
                 members: Some(_),
-            }
-        );
-        if anonymous {
+            } => Some(if *union { "union" } else { "struct" }),
+            _ => None,
+        };
+        if let Some(keyword) = anonymous {
             let built = Diagnostic::error("an anonymous member is not read yet")
                 .with_code(UNREAD)
-                .with_label(Label::primary(at, "a struct with no name of its own"))
+                .with_label(Label::primary(
+                    at,
+                    format!("a {keyword} with no name of its own"),
+                ))
                 .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
             self.report_built(at, built, diagnostics);
             return;

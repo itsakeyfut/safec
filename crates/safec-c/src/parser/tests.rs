@@ -637,7 +637,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ("double x;\n", "`double`", "6.7.2"),
         ("_Bool x;\n", "`_Bool`", "6.7.2"),
         ("_Complex double x;\n", "`_Complex`", "6.7.2"),
-        ("union U { int a; };\n", "`union`", "6.7.2.1"),
         ("inline int f(void);\n", "`inline`", "6.7.4"),
         ("_Noreturn void f(void);\n", "`_Noreturn`", "6.7.4"),
         ("_Alignas(4) int x;\n", "`_Alignas`", "6.7.5"),
@@ -904,7 +903,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
         ("double", "6.7.2", SPECIFIER),
         ("_Bool", "6.7.2", SPECIFIER),
         ("_Complex", "6.7.2", SPECIFIER),
-        ("union", "6.7.2.1", SPECIFIER),
         ("inline", "6.7.4", &[FileScope, BlockScope]),
         ("_Noreturn", "6.7.4", &[FileScope, BlockScope]),
         (

@@ -1,0 +1,466 @@
+Target "x86_64-pc-windows-msvc"
+Function a_union_holds_its_members_at_one_place.c:7:5 "same_member"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "union #0" "s"
+  Local "_3" "union #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "union #0 *"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:8:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_union_holds_its_members_at_one_place.c:8:13 generated
+    Operation a_union_holds_its_members_at_one_place.c:10:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:10:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:10:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:10:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_union_holds_its_members_at_one_place.c:10:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:11:13 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:11:13 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:11:12 written
+      Destination "_8"
+      Binary "Sub"
+        Copy "_7"
+          Deref
+            Deref
+        Constant 1
+    Operation a_union_holds_its_members_at_one_place.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_union_holds_its_members_at_one_place.c:11:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:14:5 "pointer_read_as_number"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "union #0" "s"
+  Local "_3" "union #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *" "back"
+  Local "_7" "union #0 *"
+  Local "_8" "long long *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:15:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_union_holds_its_members_at_one_place.c:15:13 generated
+    Operation a_union_holds_its_members_at_one_place.c:17:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:17:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:17:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:17:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_union_holds_its_members_at_one_place.c:17:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:18:24 generated
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:18:24 written
+      Destination "_8"
+      Address
+        Place "_7"
+          Deref
+            Field
+              Member 1
+    Operation a_union_holds_its_members_at_one_place.c:18:17 written
+      Destination "_9"
+      Reinterpret
+        Copy "_8"
+          Deref
+    Operation a_union_holds_its_members_at_one_place.c:18:10 written
+      Destination "_6"
+      Use
+        Copy "_9"
+    Sequenced a_union_holds_its_members_at_one_place.c:18:17 generated
+    Operation a_union_holds_its_members_at_one_place.c:19:12 written
+      Destination "_10"
+      Binary "Sub"
+        Copy "_6"
+          Deref
+        Constant 1
+    Operation a_union_holds_its_members_at_one_place.c:19:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_union_holds_its_members_at_one_place.c:19:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:22:5 "number_read_as_pointer"
+  Local "_0" "int" return
+  Local "_1" "union #0" "s"
+  Local "_2" "union #0 *"
+  Local "_3" "long long *"
+  Local "_4" "union #0 *"
+  Local "_5" "int **"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:24:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:24:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_union_holds_its_members_at_one_place.c:24:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 42
+    Sequenced a_union_holds_its_members_at_one_place.c:24:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:25:13 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:25:13 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:25:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+            Deref
+    Sequenced a_union_holds_its_members_at_one_place.c:25:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:28:5 "pointer_cut_short"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "union #0" "s"
+  Local "_3" "union #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "union #0 *"
+  Local "_7" "int *"
+  Local "_8" "union #0 *"
+  Local "_9" "int **"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:29:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_union_holds_its_members_at_one_place.c:29:13 generated
+    Operation a_union_holds_its_members_at_one_place.c:31:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:31:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:31:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:31:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_union_holds_its_members_at_one_place.c:31:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:32:5 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:32:5 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 2
+    Operation a_union_holds_its_members_at_one_place.c:32:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_union_holds_its_members_at_one_place.c:32:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:33:13 generated
+      Destination "_8"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:33:13 written
+      Destination "_9"
+      Address
+        Place "_8"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:33:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+          Deref
+            Deref
+    Sequenced a_union_holds_its_members_at_one_place.c:33:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:36:5 "element_number_read_as_pointer"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "union #0[2]" "table"
+  Local "_3" "union #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "union #0 *"
+  Local "_7" "long long *"
+  Local "_8" "union #0 *"
+  Local "_9" "int **"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:37:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_union_holds_its_members_at_one_place.c:37:13 generated
+    Operation a_union_holds_its_members_at_one_place.c:39:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_union_holds_its_members_at_one_place.c:39:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:39:24 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:39:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_union_holds_its_members_at_one_place.c:39:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:40:5 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_union_holds_its_members_at_one_place.c:40:5 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 1
+    Operation a_union_holds_its_members_at_one_place.c:40:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 5
+    Sequenced a_union_holds_its_members_at_one_place.c:40:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:41:13 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_union_holds_its_members_at_one_place.c:41:13 written
+      Destination "_9"
+      Address
+        Place "_8"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:41:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+          Deref
+            Deref
+    Sequenced a_union_holds_its_members_at_one_place.c:41:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:44:6 "fill" declared
+  Local "_0" "void" return
+  Local "_1" "union #0 *" parameter _Nonnull "slot"
+Function a_union_holds_its_members_at_one_place.c:45:5 "take" declared
+  Local "_0" "int" return
+  Local "_1" "union #0 *" parameter _Nonnull "slot"
+Function a_union_holds_its_members_at_one_place.c:47:5 "handed_on"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "union #0" "s"
+  Local "_3" "union #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "union #0 *"
+  Local "_7" "union #0 *"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:48:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_union_holds_its_members_at_one_place.c:48:13 generated
+    Operation a_union_holds_its_members_at_one_place.c:50:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_union_holds_its_members_at_one_place.c:50:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_union_holds_its_members_at_one_place.c:50:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_union_holds_its_members_at_one_place.c:50:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_union_holds_its_members_at_one_place.c:50:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:51:10 written
+      Destination "_6"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_union_holds_its_members_at_one_place.c:51:5 generated
+    Call a_union_holds_its_members_at_one_place.c:51:5 written "fill" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_union_holds_its_members_at_one_place.c:51:5 generated
+    Operation a_union_holds_its_members_at_one_place.c:52:17 written
+      Destination "_7"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_union_holds_its_members_at_one_place.c:52:12 generated
+    Call a_union_holds_its_members_at_one_place.c:52:12 written "take" "bb2"
+      Destination "_8"
+      Copy "_7"
+  Block "bb2"
+    Operation a_union_holds_its_members_at_one_place.c:52:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_union_holds_its_members_at_one_place.c:52:12 generated
+    Return
+Function a_union_holds_its_members_at_one_place.c:55:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_union_holds_its_members_at_one_place.c:55:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_union_holds_its_members_at_one_place.c:56:12 written "same_member" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_union_holds_its_members_at_one_place.c:56:28 written "pointer_read_as_number" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_union_holds_its_members_at_one_place.c:56:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Call a_union_holds_its_members_at_one_place.c:56:55 written "number_read_as_pointer" "bb3"
+      Destination "_4"
+  Block "bb3"
+    Operation a_union_holds_its_members_at_one_place.c:56:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Call a_union_holds_its_members_at_one_place.c:56:82 written "pointer_cut_short" "bb4"
+      Destination "_6"
+  Block "bb4"
+    Operation a_union_holds_its_members_at_one_place.c:56:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Call a_union_holds_its_members_at_one_place.c:57:11 written "element_number_read_as_pointer" "bb5"
+      Destination "_8"
+  Block "bb5"
+    Operation a_union_holds_its_members_at_one_place.c:56:12 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_7"
+        Copy "_8"
+    Call a_union_holds_its_members_at_one_place.c:57:46 written "handed_on" "bb6"
+      Destination "_10"
+  Block "bb6"
+    Operation a_union_holds_its_members_at_one_place.c:56:12 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_9"
+        Copy "_10"
+    Operation a_union_holds_its_members_at_one_place.c:56:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_union_holds_its_members_at_one_place.c:56:12 generated
+    Return

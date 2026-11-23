@@ -1,0 +1,52 @@
+error[SC0313]: use of `S` with tag type that does not match previous declaration
+    ╭─[ a_union_is_a_structure_of_its_own.c:12:7 ]
+    │
+  8 │ struct S {
+    │        ┬  
+    │        ╰── declared `struct S` here
+    │ 
+ 12 │ union S {
+    │       ┬  
+    │       ╰── written `union S` here
+────╯
+  = note: C17 6.7.2.3 p2
+error[SC0312]: redefinition of `union U`
+    ╭─[ a_union_is_a_structure_of_its_own.c:20:7 ]
+    │
+  1 │ union U {
+    │       ┬  
+    │       ╰── previously defined here
+    │ 
+ 20 │ union U {
+    │       ┬  
+    │       ╰── defined again here
+────╯
+  = note: C17 6.7.2.3 p1
+error[SC0313]: use of `V` with tag type that does not match previous declaration
+    ╭─[ a_union_is_a_structure_of_its_own.c:28:7 ]
+    │
+ 24 │ struct V {
+    │        ┬  
+    │        ╰── declared `struct V` here
+    │ 
+ 28 │ union V;
+    │       ┬  
+    │       ╰── written `union V` here
+────╯
+  = note: C17 6.7.2.3 p2
+error[SC0314]: member `rest` has incomplete type `int[]`
+    ╭─[ a_union_is_a_structure_of_its_own.c:32:9 ]
+    │
+ 32 │     int rest[];
+    │         ──┬─  
+    │           ╰─── declared here
+────╯
+  = note: C17 6.7.2.1 p3
+error[SC0306]: `sizeof` cannot be applied to a union not complete here, which is incomplete
+    ╭─[ a_union_is_a_structure_of_its_own.c:47:12 ]
+    │
+ 47 │     return sizeof(union Later);
+    │            ─────────┬─────────  
+    │                     ╰─────────── this is `union Later`
+────╯
+  = note: C17 6.5.3.4 p1

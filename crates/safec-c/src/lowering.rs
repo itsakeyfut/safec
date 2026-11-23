@@ -1636,11 +1636,17 @@ impl Lowering<'_> {
     /// backend have no meaning for: the backend refused it as `SC0801`, and
     /// the check read it as nothing anybody decided. Refused here, under the
     /// code for what this compiler does not do yet.
-    fn struct_value_not_yet(&self, at: Span, diagnostics: &mut DiagnosticSink) {
+    ///
+    /// Said of a union as a union (#1203), the expression `id` saying which.
+    fn struct_value_not_yet(&self, id: ExprId, at: Span, diagnostics: &mut DiagnosticSink) {
+        let keyword = match self.types.of(id).map(|ty| self.ast.ty(ty)) {
+            Some(Type::Struct { union: true, .. }) => "union",
+            _ => "struct",
+        };
         diagnostics.report(
-            Diagnostic::error("cannot compile a struct used as a value yet")
+            Diagnostic::error(format!("cannot compile a {keyword} used as a value yet"))
                 .with_code(LOWERING)
-                .with_label(Label::primary(at, "a struct, whole"))
+                .with_label(Label::primary(at, format!("a {keyword}, whole")))
                 .with_note("a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet"),
         );
     }
@@ -2277,7 +2283,13 @@ impl Lowering<'_> {
         let id = match self.structs.get(&tag) {
             Some(&id) => id,
             None => {
-                let id = self.unit.declare_struct();
+                // **A union is a struct declared a union** (#1203), and laid
+                // out by its rule. See `Ty::Struct`.
+                let id = if matches!(self.ast.ty(ty), Type::Struct { union: true, .. }) {
+                    self.unit.declare_union()
+                } else {
+                    self.unit.declare_struct()
+                };
                 self.structs.insert(tag, id);
                 id
             }
@@ -2344,6 +2356,8 @@ impl Lowering<'_> {
             }
         }
         self.laying_out.remove(&tag);
+        // Only where nothing was refused: a layout of the members lowered
+        // before a refused one would be a struct laid out short.
         if !refused && self.unit.complete_struct(id, &lowered).is_none() {
             not_yet(
                 diagnostics,
@@ -4098,7 +4112,7 @@ impl Lowering<'_> {
                 // here. Mutation: drop this; `a_struct_value_that_is_no_object_is_not_lowered_yet`
                 // says the program names no place.
                 if self.is_struct(id) {
-                    self.struct_value_not_yet(self.ast.expr(id).span(), diagnostics);
+                    self.struct_value_not_yet(id, self.ast.expr(id).span(), diagnostics);
                     return None;
                 }
                 diagnostics.report(
@@ -4255,7 +4269,7 @@ impl Lowering<'_> {
                     .place_ty(&builder.function, &place)
                     .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
                 {
-                    self.struct_value_not_yet(self.ast.expr(id).span(), diagnostics);
+                    self.struct_value_not_yet(id, self.ast.expr(id).span(), diagnostics);
                     return None;
                 }
                 let span = self.ast.expr(id).span();
@@ -4292,7 +4306,7 @@ impl Lowering<'_> {
                             .place_ty(&builder.function, &place)
                             .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
                         {
-                            self.struct_value_not_yet(span, diagnostics);
+                            self.struct_value_not_yet(id, span, diagnostics);
                             return None;
                         }
                         values.push(self.decayed(builder, place, span));
@@ -4493,7 +4507,7 @@ impl Lowering<'_> {
                 if self.discarding == Some(id) {
                     return Some(());
                 }
-                self.struct_value_not_yet(span, diagnostics);
+                self.struct_value_not_yet(id, span, diagnostics);
                 return None;
             }
             Expr::Assign { op, span, .. } => {
