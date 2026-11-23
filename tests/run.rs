@@ -94,4 +94,10 @@ programs! {
     /// name space of its own (#1205 review). Mutation: declare a name after
     /// its initializer in `Parser::init_declarator_list`; this exits 1.
     a_typedef_in_a_block_is_scoped_as_c_says,
+    /// An enumeration's constants with values implicit, written, and counted
+    /// on from a written one, negative, in a `switch`, an array length and
+    /// `sizeof`, one in a block that hides a file's and an object that hides
+    /// one (#1204). Mutation: count the first of a list from `1` in
+    /// `Checker::enumerator_value`; this exits 1.
+    an_enum_gives_each_enumerator_its_value,
 }

@@ -211,6 +211,14 @@ a declaration where `T` is a typedef name and an expression where it is not
 reads one. A typedef declares no object, so its declaration reaches the type
 check with no declarators, and nothing after the parser sees a typedef.
 
+**An enumeration constant is resolved by the parser and valued by the type
+check** (#1204). The parser knows which identifiers name one, in the same
+scope table as typedef names, and reads a use as `Expr::Enumerator` rather
+than as an identifier, since a constant is no object. Its value is the type
+check's, which evaluates the value written for it, or counts on from the one
+before (C17 6.7.2.2 p3). An enumerated type is `int` from the parser on,
+which `clang` makes every enumeration whose constants `int` holds.
+
 None is a gap the lexer left, which is why they are a table of their own:
 the first three rows are about what a token is, and these are about what a
 sequence of them is allowed to be.

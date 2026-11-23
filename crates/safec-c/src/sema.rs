@@ -24,8 +24,8 @@ use safec_ir::ir::Rank;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Storage, Type, TypeId, spell_type,
+    Ast, Attribute, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Item,
+    Parameters, Stmt, StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
@@ -644,10 +644,12 @@ impl Resolver<'_> {
             Item::Declaration {
                 declarators,
                 specified,
+                enumerators,
                 storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
+                self.enumerators(enumerators, diagnostics);
                 self.declarators(declarators, diagnostics);
                 self.defined_objects(declarators, diagnostics);
                 for declarator in declarators {
@@ -1126,10 +1128,12 @@ impl Resolver<'_> {
             Stmt::Declaration {
                 declarators,
                 specified,
+                enumerators,
                 storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
+                self.enumerators(enumerators, diagnostics);
                 if *storage == Some(Storage::Extern) {
                     self.linking = Some(self.scopes.len() - 1);
                 }
@@ -1246,6 +1250,19 @@ impl Resolver<'_> {
                 self.stmt(*body, diagnostics);
             }
             Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Error { .. } => {}
+        }
+    }
+
+    /// Walk the value written for each enumeration constant a declaration
+    /// declares, in the scope the declaration is in, as any expression is:
+    /// a type name in one binds its struct to the tag in scope there. The
+    /// constants themselves are not looked up, since the parser resolved
+    /// each use of one to the constant it names.
+    fn enumerators(&mut self, enumerators: &[EnumeratorId], diagnostics: &mut DiagnosticSink) {
+        for &id in enumerators {
+            if let Some(written) = self.ast.enumerator(id).written {
+                self.expr(written, diagnostics);
+            }
         }
     }
 

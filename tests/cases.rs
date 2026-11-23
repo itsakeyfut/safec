@@ -54,6 +54,9 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // An enumeration constant is a value the memory check reads as the
+        // constant it is: `a[LENGTH]` is one past `a`, proven (#1204).
+        an_enumeration_constant_is_a_value_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A typedef name stands for its type before the type check, so the
         // memory check reads a program written through one as it reads the
         // type itself: the read after the free is `SC0402` (#1205).
@@ -8472,6 +8475,24 @@ cases! {
         // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
         // this declares `T` and reports nothing.
         a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
+        // An enumeration's constants in the tree: each under the declaration
+        // that declares it, a use of one as an `Enumerator` rather than an
+        // `Identifier`, and the value written for one under it (#1204).
+        // Mutation: read an enumeration constant as an identifier in
+        // `Parser::primary`; this reports `C` undeclared.
+        an_enumeration_s_constants_are_read_where_they_are_declared: ["--emit", "ast"],
+        // A value written for an enumeration constant is an integer constant
+        // expression, and every constant's value is one `int` holds, so
+        // `PAST` is refused and `AFTER_PAST`, which counts on from it, is not
+        // reported again (C17 6.7.2.2 p2). Mutation: report nothing in
+        // `Checker::check_enumerators`; both are accepted.
+        an_enumerator_value_c_does_not_allow_is_refused: ["--emit", "ast"],
+        // `enum E` before `E`'s list (C17 6.7.2.3 p3), an enumeration defined
+        // twice in one scope, and an enumeration constant declared again as
+        // an object (6.7 p3). Mutation: accept a tag nothing declared in
+        // `Parser::enum_specifier`; `later` is declared and the first report
+        // is the second.
+        an_enumeration_used_before_its_list_or_declared_twice_is_refused: ["--emit", "ast"],
         // A name declared as a typedef and as an object in one scope, or as a
         // typedef of two types, is `SC0313` (C17 6.7 p3); the same type twice
         // is not (#1205 review). Mutation: insert into the scope without the

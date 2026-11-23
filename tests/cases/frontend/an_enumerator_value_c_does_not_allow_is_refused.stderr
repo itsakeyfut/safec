@@ -1,0 +1,16 @@
+error[SC0317]: expression is not an integer constant expression
+   ╭─[ an_enumerator_value_c_does_not_allow_is_refused.c:2:23 ]
+   │
+ 2 │ enum { NOT_CONSTANT = x };
+   │                       ┬  
+   │                       ╰── an enumeration constant's value is one
+───╯
+  = note: C17 6.7.2.2 p2
+error[SC0322]: enumerator value is not representable in `int`
+   ╭─[ an_enumerator_value_c_does_not_allow_is_refused.c:3:26 ]
+   │
+ 3 │ enum { BIG = 2147483647, PAST, AFTER_PAST };
+   │                          ──┬─  
+   │                            ╰─── outside `int`
+───╯
+  = note: C17 6.7.2.2 p2

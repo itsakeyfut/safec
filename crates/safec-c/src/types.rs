@@ -24,8 +24,8 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, BinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Storage, Type, TypeId, UnOp, spell_type,
+    Ast, BinOp, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Item,
+    Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -235,6 +235,11 @@ const NO_MEMBER: Code = Code::new("SC0316");
 /// which names neither what the operand is nor, under `&`, what was wanted.
 const UNWRITABLE: Code = Code::new("SC0318");
 
+/// An enumeration constant whose value `int` does not hold, C17 6.7.2.2 p2:
+/// `enum { A = 2147483647, B };` gives `B` one more than `int` holds. The
+/// wording is clang's.
+const ENUMERATOR_RANGE: Code = Code::new("SC0322");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -401,6 +406,7 @@ pub fn check(
     checker.check_static_initializers(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
     checker.check_switches(ast, diagnostics);
+    checker.check_enumerators(ast, diagnostics);
 
     Types {
         of: checker.types,
@@ -440,6 +446,10 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
         }
         | Expr::Length { value: _, span: _ }
         | Expr::Identifier { span: _ }
+        | Expr::Enumerator {
+            enumerator: _,
+            span: _,
+        }
         | Expr::SizeofType { ty: _, span: _ }
         | Expr::Error { span: _ } => Vec::new(),
         Expr::Unary {
@@ -672,6 +682,7 @@ impl Checker<'_> {
                 Item::Declaration {
                     declarators,
                     specified,
+                    enumerators: _,
                     storage: _,
                     span,
                 } => push(
@@ -688,6 +699,7 @@ impl Checker<'_> {
             if let Stmt::Declaration {
                 declarators,
                 specified,
+                enumerators: _,
                 storage: _,
                 span,
             } = ast.stmt(id)
@@ -1197,6 +1209,7 @@ impl Checker<'_> {
                         | Expr::Number { .. }
                         | Expr::Character { .. }
                         | Expr::Identifier { .. }
+                        | Expr::Enumerator { .. }
                         | Expr::Unary { .. }
                         | Expr::Binary { .. }
                         | Expr::Assign { .. }
@@ -1259,6 +1272,7 @@ impl Checker<'_> {
             let Stmt::Declaration {
                 declarators,
                 specified,
+                enumerators: _,
                 storage,
                 span,
             } = ast.stmt(*declaration)
@@ -1918,6 +1932,8 @@ impl Checker<'_> {
             | Expr::String { .. }
             | Expr::Length { .. }
             | Expr::Identifier { .. }
+            // Its value is known or it has none, as a constant's is.
+            | Expr::Enumerator { .. }
             | Expr::Assign { .. }
             | Expr::Comma { .. }
             | Expr::Subscript { .. }
@@ -2288,6 +2304,9 @@ impl Checker<'_> {
                 self.values[id.index()] = Some(i128::from(value));
                 Some(self.int)
             }
+            // C17 6.7.2.2 p3: an enumeration constant has type `int`. Its
+            // value is `evaluate`'s, from the enumerator's.
+            Expr::Enumerator { .. } => Some(self.int),
             Expr::Identifier { .. } => {
                 // A function is typed by its standing declaration, not the
                 // one the use resolved to: see `Resolution::standing`. An
@@ -3567,6 +3586,7 @@ impl Checker<'_> {
             Expr::Unary { .. }
             | Expr::Number { span: _ }
             | Expr::Length { value: _, span: _ }
+            | Expr::Enumerator { .. }
             | Expr::Character { span: _ }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -4719,6 +4739,7 @@ impl Checker<'_> {
             }
             // Counted, and so known.
             Expr::Length { value, .. } => Some(i128::from(value)),
+            Expr::Enumerator { enumerator, .. } => self.enumerator_value(ast, enumerator),
             // To an integer type, the operand's value converted to it (6.3.1.3);
             // a pointer has no value here, and `(int *)0` is lowered as the
             // null it is.
@@ -4738,6 +4759,98 @@ impl Checker<'_> {
             | Expr::Member { .. }
             | Expr::Call { .. }
             | Expr::Error { .. } => None,
+        }
+    }
+
+    /// The value of an enumeration constant, C17 6.7.2.2 p3: the value
+    /// written for it, or the one before it plus one, or `0` for the first
+    /// of its list. `None` where the value it counts from has none, or where
+    /// the result is outside `int`, which p2 forbids and
+    /// [`Checker::check_enumerators`] reports.
+    ///
+    /// Counted back to the nearest value written, rather than stored per
+    /// enumerator, since every value it reads is an expression's this pass
+    /// already holds: the parser pushed each written value before any use of
+    /// the constants it gives, so the arena order this pass types in has
+    /// worked it out first.
+    ///
+    /// Mutation: count the first of a list from `1`;
+    /// `an_enum_gives_each_enumerator_its_value` exits 1.
+    fn enumerator_value(&self, ast: &Ast, enumerator: EnumeratorId) -> Option<i128> {
+        let mut enumerator = enumerator;
+        let mut after: i128 = 0;
+        let base = loop {
+            let at = ast.enumerator(enumerator);
+            match (at.written, at.previous) {
+                (Some(written), _) => {
+                    integer_of(ast, self.types[written.index()]?)?;
+                    break self.values[written.index()]?;
+                }
+                (None, Some(previous)) => {
+                    after += 1;
+                    enumerator = previous;
+                }
+                (None, None) => break 0,
+            }
+        };
+        let value = base + after;
+        self.target
+            .integer(Rank::Int, Sign::Signed)
+            .holds(value)
+            .then_some(value)
+    }
+
+    /// C17 6.7.2.2 p2: the value written for an enumeration constant is an
+    /// integer constant expression, and every constant's value is one `int`
+    /// holds.
+    ///
+    /// Reported once per enumerator, at what is wrong: the value written,
+    /// where it is not a constant, or the constant's name, where the value it
+    /// is given does not fit. A value with a fault already reported inside it
+    /// is not reported again.
+    ///
+    /// Mutation: report nothing here; `an_enumerator_value_c_does_not_allow_is_refused`
+    /// accepts both.
+    fn check_enumerators(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for id in ast.enumerator_ids() {
+            let enumerator = ast.enumerator(id);
+            if let Some(written) = enumerator.written {
+                if self.reported_within[written.index()] {
+                    continue;
+                }
+                let integer = self.types[written.index()]
+                    .and_then(|ty| integer_of(ast, ty))
+                    .is_some();
+                if !integer || self.values[written.index()].is_none() {
+                    let span = ast.expr(written).span();
+                    diagnostics.report(
+                        Diagnostic::error("expression is not an integer constant expression")
+                            .with_code(NOT_CONSTANT)
+                            .with_label(Label::primary(
+                                span,
+                                "an enumeration constant's value is one",
+                            ))
+                            .with_note("C17 6.7.2.2 p2"),
+                    );
+                    continue;
+                }
+            }
+            if self.enumerator_value(ast, id).is_none() {
+                let previous_failed = enumerator.written.is_none()
+                    && enumerator
+                        .previous
+                        .is_some_and(|previous| self.enumerator_value(ast, previous).is_none());
+                // One that counts on from a constant already reported is not.
+                if previous_failed {
+                    continue;
+                }
+                diagnostics.report(
+                    Diagnostic::error("enumerator value is not representable in `int`")
+                        .with_code(ENUMERATOR_RANGE)
+                        .with_label(Label::primary(enumerator.name, "outside `int`"))
+                        .with_note("C17 6.7.2.2 p2"),
+                );
+            }
         }
     }
 

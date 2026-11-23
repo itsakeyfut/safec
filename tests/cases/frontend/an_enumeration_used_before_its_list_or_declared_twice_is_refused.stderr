@@ -1,0 +1,21 @@
+error[SC0301]: `enum Later` names no enumeration declared before it
+   ╭─[ an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:1:6 ]
+   │
+ 1 │ enum Later later;
+   │      ──┬──  
+   │        ╰──── C17 6.7.2.3 p3 asks for its list first
+───╯
+error[SC0313]: redefinition of `enum Twice`
+   ╭─[ an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:3:6 ]
+   │
+ 3 │ enum Twice { B };
+   │      ──┬──  
+   │        ╰──── defined in this scope already
+───╯
+error[SC0313]: redefinition of `C` as a different kind of name
+   ╭─[ an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:5:5 ]
+   │
+ 5 │ int C;
+   │     ┬  
+   │     ╰── declared in this scope already
+───╯

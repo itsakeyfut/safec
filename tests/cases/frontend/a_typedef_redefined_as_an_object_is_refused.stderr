@@ -3,5 +3,5 @@ error[SC0313]: redefinition of `T` as a different kind of name
    │
  2 │ T T;
    │   ┬  
-   │   ╰── declared in this scope already as the other kind
+   │   ╰── declared in this scope already
 ───╯

@@ -58,6 +58,36 @@ pub struct ItemId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TypeId(u32);
 
+/// Where an enumeration constant is in [`Ast`], in the order the source
+/// declares them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EnumeratorId(u32);
+
+impl EnumeratorId {
+    /// The index this handle refers to, for a side table with a slot per
+    /// enumerator, as [`ExprId::index`] is.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// One enumeration constant, C17 6.7.2.2: its name, and how its value is
+/// given.
+///
+/// **Its value is the type checker's**, since a written value is an integer
+/// constant expression only the type checker evaluates. The parser records
+/// how to reach it: from the value written, or from the one before plus one
+/// (6.7.2.2 p3), with `0` for the first of a list.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Enumerator {
+    /// Where the name is written.
+    pub name: Span,
+    /// The value written after `=`, if one was.
+    pub written: Option<ExprId>,
+    /// The enumerator written before this one in the same list, if any.
+    pub previous: Option<EnumeratorId>,
+}
+
 impl Type {
     /// `int`.
     pub const INT: Type = Type::Integer {
@@ -506,6 +536,20 @@ pub enum Expr {
         /// Where the name is written.
         span: Span,
     },
+    /// An identifier the parser found to name an enumeration constant, C17
+    /// 6.4.4.3: a constant of type `int` (6.7.2.2 p3), not an object.
+    ///
+    /// **A variant of its own and not an [`Expr::Identifier`]**, because
+    /// every rule that reads an identifier takes it to designate an object or
+    /// a function, and an enumeration constant is neither: it is no lvalue,
+    /// has no address and is assigned nothing. As its own variant, every
+    /// match that has to answer for it fails to compile until it does.
+    Enumerator {
+        /// Which constant.
+        enumerator: EnumeratorId,
+        /// Where its name is written.
+        span: Span,
+    },
     /// One operand with an operator on one side of it. C17 6.5.3 and 6.5.2.
     Unary {
         /// Which operator, and which side it was written on.
@@ -675,23 +719,27 @@ pub enum Stmt {
     Declaration {
         /// C17 6.7's `init-declarator-list`, in the order it was written.
         ///
-        /// Never empty. C17 6.7 marks the list optional, but 6.7 p2 then
-        /// requires a declaration to declare a declarator, a tag, or an
-        /// enumeration's members, so `int;` is a constraint violation rather
-        /// than the empty case: `clang -std=c17 -pedantic-errors` reports it,
-        /// and without `-pedantic-errors` it warns and accepts it as an
-        /// extension. What is valid and
-        /// empty here is `struct S { int x; };`, which declares a tag, and
-        /// a declaration with no declarator is valid where it declares a tag,
-        /// `struct S;` and `struct S { int x; };`, and only there: the parser
-        /// refuses `int;` and `struct { int x; };` under `SC0206`. So the list
-        /// is empty exactly when [`Stmt::Declaration::specified`] is a
-        /// `Type::Struct` with a tag.
+        /// C17 6.7 marks the list optional, but 6.7 p2 then requires a
+        /// declaration to declare a declarator, a tag, or an enumeration's
+        /// members, so `int;` is a constraint violation rather than the empty
+        /// case: `clang -std=c17 -pedantic-errors` reports it, and without
+        /// `-pedantic-errors` it warns and accepts it as an extension. The
+        /// parser refuses `int;` and `struct { int x; };` under `SC0206`.
+        ///
+        /// So the list is empty exactly where the declaration declares a tag,
+        /// `struct S;` and `struct S { int x; };`, or an enumeration's
+        /// members, `enum { A };`, or is a typedef, which declares no object
+        /// and whose names the parser has already resolved.
         declarators: Vec<InitDeclarator>,
         /// What the specifiers named, before any declarator derived from it.
         /// The only type a declaration with no declarator has, and what the
         /// type checker asks of one.
         specified: TypeId,
+        /// The enumeration constants this declaration declares, wherever in it
+        /// they are written: in its specifiers, a member's, or a type name in
+        /// an initializer. Here so that a pass that walks in scope order meets
+        /// each written value where it is in scope.
+        enumerators: Vec<EnumeratorId>,
         /// The storage-class specifier written, if one was.
         storage: Option<Storage>,
         /// The specifiers through the `;`.
@@ -903,6 +951,8 @@ pub enum Item {
         declarators: Vec<InitDeclarator>,
         /// What the specifiers named, as [`Stmt::Declaration::specified`].
         specified: TypeId,
+        /// As [`Stmt::Declaration::enumerators`].
+        enumerators: Vec<EnumeratorId>,
         /// The storage-class specifier written, if one was.
         storage: Option<Storage>,
         /// The specifiers through the `;`.
@@ -928,6 +978,7 @@ impl Expr {
             Self::String { .. } => "String",
             Self::Length { .. } => "Length",
             Self::Identifier { .. } => "Identifier",
+            Self::Enumerator { .. } => "Enumerator",
             Self::Unary { .. } => "Unary",
             Self::Binary { .. } => "Binary",
             Self::Assign { .. } => "Assign",
@@ -951,6 +1002,7 @@ impl Expr {
             | Self::String { span, .. }
             | Self::Length { span, .. }
             | Self::Identifier { span, .. }
+            | Self::Enumerator { span, .. }
             | Self::Unary { span, .. }
             | Self::Binary { span, .. }
             | Self::Assign { span, .. }
@@ -1009,6 +1061,7 @@ impl Expr {
             | Self::String { .. }
             | Self::Length { .. }
             | Self::Identifier { .. }
+            | Self::Enumerator { .. }
             | Self::SizeofType { .. }
             | Self::Error { .. } => {}
             // `sizeof`'s operand is a child for the walks that resolve and
@@ -1118,6 +1171,8 @@ pub struct Ast {
     types: Vec<Type>,
     /// Which types are `const`-qualified, by id. See [`Ast::push_const`].
     consts: std::collections::HashSet<TypeId>,
+    /// Every enumeration constant, in the order declared.
+    enumerators: Vec<Enumerator>,
 }
 
 impl Ast {
@@ -1176,6 +1231,35 @@ impl Ast {
         let id = TypeId(self.types.len() as u32);
         self.types.push(ty);
         id
+    }
+
+    /// Add an enumeration constant and return where it went.
+    pub fn push_enumerator(&mut self, enumerator: Enumerator) -> EnumeratorId {
+        let id = EnumeratorId(self.enumerators.len() as u32);
+        self.enumerators.push(enumerator);
+        id
+    }
+
+    /// The enumeration constant an id names.
+    pub fn enumerator(&self, id: EnumeratorId) -> &Enumerator {
+        &self.enumerators[id.0 as usize]
+    }
+
+    /// How many enumeration constants have been declared.
+    pub fn enumerator_count(&self) -> usize {
+        self.enumerators.len()
+    }
+
+    /// The ids of the enumeration constants declared after the first `count`.
+    pub fn enumerators_since(&self, count: usize) -> Vec<EnumeratorId> {
+        (count as u32..self.enumerators.len() as u32)
+            .map(EnumeratorId)
+            .collect()
+    }
+
+    /// Every enumeration constant's id, in the order declared.
+    pub fn enumerator_ids(&self) -> impl Iterator<Item = EnumeratorId> {
+        (0..self.enumerators.len() as u32).map(EnumeratorId)
     }
 
     /// The expression an id names.
