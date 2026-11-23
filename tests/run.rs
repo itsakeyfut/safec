@@ -100,4 +100,9 @@ programs! {
     /// one (#1204). Mutation: count the first of a list from `1` in
     /// `Checker::decide_enumerations`; this exits 1.
     an_enum_gives_each_enumerator_its_value,
+    /// `static`, `const` and `restrict` in a parameter's brackets, in each
+    /// order C17 6.7.6.2 p1 allows, and on the outer array of an array of
+    /// arrays (#1210). Mutation: refuse them again in `Parser::suffixes`;
+    /// this does not build.
+    a_static_length_in_an_array_parameter_is_read,
 }

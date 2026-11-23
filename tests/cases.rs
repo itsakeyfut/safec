@@ -54,6 +54,10 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // `static 2` says the argument has at least two elements, and the
+        // memory check does not believe it: the parameter is the pointer it
+        // is adjusted to, so `a[5]` is doubted, not proved within (#1210).
+        a_static_length_promises_nothing_the_memory_check_believes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An enumeration constant is a value the memory check reads as the
         // constant it is: `a[LENGTH]` is one past `a`, proven (#1204).
         an_enumeration_constant_is_a_value_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8475,6 +8479,15 @@ cases! {
         // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
         // this declares `T` and reports nothing.
         a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
+        // C17 6.7.6.3 p7: the qualifiers in a parameter's brackets are the
+        // pointer's it is adjusted to, so `int a[const 2]` is an
+        // `int *const a` and `a = 0` is refused (#1210). Mutation: drop them
+        // in `Parser::parameter_items`; it is accepted.
+        a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s: ["--emit", "ast"],
+        // `static` in a parameter's brackets promises a length, so one with
+        // none is not C (C17 6.7.6.2 p1). Mutation: drop the check in
+        // `Parser::bracket_qualifiers`; `[static]` is read as `[]`.
+        static_in_an_array_parameter_s_brackets_needs_a_length: ["--emit", "ast"],
         // An enumeration's constants in the tree: each under the declaration
         // that declares it, a use of one as an `Enumerator` rather than an
         // `Identifier`, and the value written for one under it (#1204).

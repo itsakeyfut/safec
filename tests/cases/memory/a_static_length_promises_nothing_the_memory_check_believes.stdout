@@ -1,0 +1,77 @@
+Target "x86_64-pc-windows-msvc"
+Function a_static_length_promises_nothing_the_memory_check_believes.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "a"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:2:12 written
+      Destination "_2"
+      Binary "Add"
+        Copy "_1"
+        Constant 5
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_static_length_promises_nothing_the_memory_check_believes.c:2:12 generated
+    Return
+Function a_static_length_promises_nothing_the_memory_check_believes.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:6:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:6:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_static_length_promises_nothing_the_memory_check_believes.c:6:5 generated
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:7:5 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:7:5 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:7:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_static_length_promises_nothing_the_memory_check_believes.c:7:5 generated
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:8:14 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_static_length_promises_nothing_the_memory_check_believes.c:8:12 generated
+    Call a_static_length_promises_nothing_the_memory_check_believes.c:8:12 written "f" "bb1"
+      Destination "_6"
+      Copy "_5"
+  Block "bb1"
+    Operation a_static_length_promises_nothing_the_memory_check_believes.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_static_length_promises_nothing_the_memory_check_believes.c:8:12 generated
+    Return

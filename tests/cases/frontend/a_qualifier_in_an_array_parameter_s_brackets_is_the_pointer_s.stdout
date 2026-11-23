@@ -1,0 +1,13 @@
+Function a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:1:1 "f" "int (int[2])"
+  Parameter a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:1:7 "a" "int[2]"
+  Compound a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:1:23
+    Expression a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:2:5
+      Assign a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:2:5 "="
+        Identifier a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:2:5 "a"
+        Number a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:2:9 "0"
+    Return a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:3:5
+      Number a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:3:12 "0"
+Function a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:5:1 "main" "int (void)"
+  Compound a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:5:16
+    Return a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:5:18
+      Number a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s.c:5:25 "0"

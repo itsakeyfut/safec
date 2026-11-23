@@ -1,0 +1,5 @@
+Error static_in_an_array_parameter_s_brackets_needs_a_length.c:1:1
+Function static_in_an_array_parameter_s_brackets_needs_a_length.c:2:1 "main" "int (void)"
+  Compound static_in_an_array_parameter_s_brackets_needs_a_length.c:2:16
+    Return static_in_an_array_parameter_s_brackets_needs_a_length.c:2:18
+      Number static_in_an_array_parameter_s_brackets_needs_a_length.c:2:25 "0"

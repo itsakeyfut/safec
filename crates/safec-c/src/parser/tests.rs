@@ -623,17 +623,12 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ("int *_Atomic p;\n", "a qualifier after `*`", "6.7.6.1"),
         (
             "void f(int a[volatile 2]);\n",
-            "`static` or a qualifier",
-            "6.7.6.3 p7",
-        ),
-        (
-            "void f(int a[restrict 2]);\n",
-            "`static` or a qualifier",
+            "`volatile` or `_Atomic`",
             "6.7.6.3 p7",
         ),
         (
             "void f(int a[_Atomic 2]);\n",
-            "`static` or a qualifier",
+            "`volatile` or `_Atomic`",
             "6.7.6.3 p7",
         ),
         ("_Atomic(int) x;\n", "`_Atomic`", "6.7.2.4"),
@@ -738,26 +733,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "a variadic function's `...`",
             "6.7.6.3",
         ),
-        (
-            "void f(int a[static 2]);\n",
-            "`static` or a qualifier",
-            "6.7.6.3 p7",
-        ),
-        (
-            "void f(int a[const 2]);\n",
-            "`static` or a qualifier",
-            "6.7.6.3 p7",
-        ),
-        (
-            "void f(int (a)[static 3]);\n",
-            "`static` or a qualifier",
-            "6.7.6.3 p7",
-        ),
-        (
-            "void f(int (*p[static 3]));\n",
-            "`static` or a qualifier",
-            "6.7.6.3 p7",
-        ),
     ];
     let malformed = [
         "int main(void) { case 1: return 0; }\n",
@@ -775,6 +750,9 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         // What C17 forbids that one more token, or the loop around it, shows.
         "void f(int a[2][static 3]);\n",
         "void f(int (*p)[static 3]);\n",
+        "void f(int a[static]);\n",
+        "void f(int a[static static 2]);\n",
+        "void f(int a[const static const 2]);\n",
         "int main(void) { _Thread_local int x; }\n",
         "int main(void) { break; }\n",
         "int main(void) { continue; }\n",
@@ -845,6 +823,8 @@ fn a_star_length_says_where_c_allows_it_rather_than_that_it_is_allowed_here() {
     let sources = [
         "void f(int a[*]);\n",
         "void f(int a[2][*]);\n",
+        "void f(int a[const *]);\n",
+        "void f(int a[restrict *]);\n",
         "int f(int *p, int a[*], int b[*]) {\n    return 0;\n}\n",
         "int f(void (*g)(int a[*])) {\n    return 0;\n}\n",
     ];
