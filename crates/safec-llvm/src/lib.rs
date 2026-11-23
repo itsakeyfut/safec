@@ -27,4 +27,5 @@
 //!
 //! [`interp::Trap`]: safec_ir::interp::Trap
 
+mod abi;
 pub mod emit;

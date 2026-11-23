@@ -16,11 +16,11 @@
 use safec_ir::ir::{Rank, Sign};
 use std::fmt::Write as _;
 
+use crate::abi::{self, Class};
 use safec_ir::ir::{
-    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Place, Projection,
-    Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Passes, Place,
+    Projection, Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::{Extend, Integer, Target};
 
@@ -111,6 +111,7 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         refusals: Vec::new(),
         next_temp: 0,
         at: None,
+        returned_in: None,
     };
 
     for id in unit.statics() {
@@ -153,6 +154,35 @@ struct Emitter<'a> {
     /// writing it. Set in exactly two places, both of which are the only two
     /// shapes in the IR that carry an `Origin`: an operation and a call.
     at: Option<Span>,
+    /// Where the function being written puts a struct it returns in
+    /// registers, and the pieces it returns it as: see `Emitter::body`.
+    returned_in: Option<(String, Vec<u32>)>,
+}
+
+/// The bytes each piece of a struct passed in registers starts at, in order.
+fn piece_offsets(pieces: &[u32]) -> Vec<u64> {
+    let mut offsets = Vec::with_capacity(pieces.len());
+    let mut at = 0;
+    for &bits in pieces {
+        offsets.push(at);
+        at += u64::from(bits / 8);
+    }
+    offsets
+}
+
+/// The type a struct returned in these pieces is returned as.
+fn aggregate(pieces: &[u32]) -> String {
+    match pieces {
+        [one] => format!("i{one}"),
+        _ => format!(
+            "{{ {} }}",
+            pieces
+                .iter()
+                .map(|bits| format!("i{bits}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
 }
 
 impl Emitter<'_> {
@@ -270,7 +300,7 @@ impl Emitter<'_> {
     /// `print::shown` is the wrong escape here: LLVM reads `\xx` and nothing
     /// else, so a `\u{1b}` would arrive as six characters of name.
     fn name(&self, function: &Function) -> String {
-        let spelled = quoted(self.sources, function.name);
+        let spelled = function.spelled(self.sources);
         if plain(spelled) {
             format!("@{spelled}")
         } else {
@@ -1027,6 +1057,36 @@ impl Emitter<'_> {
                 )
             }
             Terminator::Return => {
+                // A struct returned in registers is read out of the bytes it
+                // was written into, piece by piece (#1201).
+                if let Some((slot, pieces)) = self.returned_in.clone() {
+                    let mut value = "undef".to_owned();
+                    let spelled = aggregate(&pieces);
+                    for (index, (bits, offset)) in
+                        pieces.iter().zip(piece_offsets(&pieces)).enumerate()
+                    {
+                        let at = self.temp();
+                        writeln!(out, "  {at} = getelementptr i8, ptr {slot}, i64 {offset}")
+                            .expect("writing to a string cannot fail");
+                        let piece = self.temp();
+                        writeln!(out, "  {piece} = load i{bits}, ptr {at}")
+                            .expect("writing to a string cannot fail");
+                        if pieces.len() == 1 {
+                            value = piece;
+                        } else {
+                            let next = self.temp();
+                            writeln!(
+                                out,
+                                "  {next} = insertvalue {spelled} {value}, i{bits} {piece}, {index}"
+                            )
+                            .expect("writing to a string cannot fail");
+                            value = next;
+                        }
+                    }
+                    writeln!(out, "  ret {spelled} {value}")
+                        .expect("writing to a string cannot fail");
+                    return Ok(());
+                }
                 let place = Place::local(function.return_place());
                 let ty = function.local(function.return_place());
                 if matches!(self.unit.ty(ty), Ty::Void) {
@@ -1092,7 +1152,7 @@ impl Emitter<'_> {
         // A callee whose signature cannot be written is not in the module at
         // all, so a call to it would name nothing. The refusal points at the
         // call rather than at the callee, which is the span this walk holds.
-        let (name, _, _) = self.signature(called)?;
+        let (name, returned, _) = self.signature(called)?;
         let returns = called.local(called.return_place());
         let parameters: Vec<TyId> = called
             .parameters()
@@ -1109,12 +1169,76 @@ impl Emitter<'_> {
 
         // C17 6.5.2.2 p7 converts each argument to its parameter's type, which
         // is what the interpreter does on the way into a frame.
+        //
+        // **A struct argument is passed as its target's C ABI says**, read out
+        // of the copy the IR passes the address of, and a struct result
+        // returned in registers is written into where the caller said
+        // (#1201). See `abi::classify`.
         let mut passed = Vec::with_capacity(arguments.len());
-        for (argument, parameter) in arguments.iter().zip(&parameters) {
+        let mut returned_into: Option<(String, Vec<u32>)> = None;
+        for (index, (argument, parameter)) in arguments.iter().zip(&parameters).enumerate() {
+            let passes = called.passes(index);
             let value = self.operand(function, argument, *parameter, out)?;
-            passed.push(format!("{} {value}", self.parameter(*parameter)));
+            if passes == Passes::Value {
+                passed.push(format!("{} {value}", self.parameter(*parameter)));
+                continue;
+            }
+            let (class, size, align) = self.struct_class(*parameter)?;
+            match (passes, class) {
+                (Passes::StructCopy, Class::Registers(pieces)) => {
+                    for (bits, offset) in pieces.iter().zip(piece_offsets(&pieces)) {
+                        let at = self.temp();
+                        writeln!(out, "  {at} = getelementptr i8, ptr {value}, i64 {offset}")
+                            .expect("writing to a string cannot fail");
+                        let piece = self.temp();
+                        writeln!(out, "  {piece} = load i{bits}, ptr {at}")
+                            .expect("writing to a string cannot fail");
+                        passed.push(format!("i{bits} {piece}"));
+                    }
+                }
+                (Passes::StructCopy, Class::Memory { byval: false }) => {
+                    passed.push(format!("ptr {value}"));
+                }
+                (Passes::StructCopy, Class::Memory { byval: true }) => {
+                    passed.push(format!("ptr byval([{size} x i8]) align {align} {value}"));
+                }
+                (Passes::StructReturn, Class::Memory { .. }) => {
+                    passed.push(format!("ptr sret([{size} x i8]) align {align} {value}"));
+                }
+                (Passes::StructReturn, Class::Registers(pieces)) => {
+                    returned_into = Some((value, pieces));
+                }
+                (Passes::Value, _) => unreachable!("answered above"),
+            }
         }
         let passed = passed.join(", ");
+
+        if let Some((into, pieces)) = returned_into {
+            let result = self.temp();
+            writeln!(out, "  {result} = call {returned} {name}({passed})")
+                .expect("writing to a string cannot fail");
+            for (index, (bits, offset)) in pieces.iter().zip(piece_offsets(&pieces)).enumerate() {
+                let piece = if pieces.len() == 1 {
+                    result.clone()
+                } else {
+                    let piece = self.temp();
+                    writeln!(out, "  {piece} = extractvalue {returned} {result}, {index}")
+                        .expect("writing to a string cannot fail");
+                    piece
+                };
+                let at = self.temp();
+                writeln!(out, "  {at} = getelementptr i8, ptr {into}, i64 {offset}")
+                    .expect("writing to a string cannot fail");
+                writeln!(out, "  store i{bits} {piece}, ptr {at}")
+                    .expect("writing to a string cannot fail");
+            }
+            match then {
+                Some(then) => writeln!(out, "  br label %bb{}", then.index()),
+                None => writeln!(out, "  unreachable"),
+            }
+            .expect("writing to a string cannot fail");
+            return Ok(());
+        }
 
         // The attribute goes on the call as well as on the callee. LLVM reads a
         // call site whose attributes disagree with its callee's as undefined
@@ -1181,18 +1305,63 @@ impl Emitter<'_> {
     /// such a function is refused in turn, because there is nothing to call.
     fn signature(&mut self, function: &Function) -> Refuses<(String, String, Vec<String>)> {
         let name = self.name(function);
-        let returns = self.result(function.local(function.return_place()));
+        let mut returns = self.result(function.local(function.return_place()));
         let mut parameters = Vec::new();
 
-        for local in function.parameters() {
+        for (index, local) in function.parameters().enumerate() {
             let ty = function.local(local);
             if matches!(self.unit.ty(ty), Ty::Void) {
                 return self.refuse(format!("{name}, which has a parameter that holds nothing"));
             }
-            parameters.push(self.parameter(ty));
+            // **A struct crosses as its target's C ABI says** (#1201): see
+            // `abi::classify`.
+            match function.passes(index) {
+                Passes::Value => parameters.push(self.parameter(ty)),
+                passes => {
+                    let (class, size, align) = self.struct_class(ty)?;
+                    match (passes, class) {
+                        (Passes::StructCopy, Class::Registers(pieces)) => {
+                            parameters.extend(pieces.iter().map(|bits| format!("i{bits}")));
+                        }
+                        (Passes::StructCopy, Class::Memory { byval: false }) => {
+                            parameters.push("ptr".to_owned());
+                        }
+                        (Passes::StructCopy, Class::Memory { byval: true }) => {
+                            parameters.push(format!("ptr byval([{size} x i8]) align {align}"));
+                        }
+                        (Passes::StructReturn, Class::Registers(pieces)) => {
+                            returns = aggregate(&pieces);
+                        }
+                        (Passes::StructReturn, Class::Memory { .. }) => {
+                            parameters.push(format!("ptr sret([{size} x i8]) align {align}"));
+                        }
+                        (Passes::Value, _) => unreachable!("answered above"),
+                    }
+                }
+            }
         }
 
         Ok((name, returns, parameters))
+    }
+
+    /// How the struct a parameter of type `pointer` points at crosses a
+    /// call here, with its size and alignment, or a refusal on a target
+    /// whose C ABI this backend does not write yet.
+    fn struct_class(&mut self, pointer: TyId) -> Refuses<(Class, u64, u64)> {
+        let Ty::Pointer(pointee) = self.unit.ty(pointer) else {
+            return self.refuse("a struct passed by value that is not a pointer in the IR");
+        };
+        let Ty::Struct(id) = self.unit.ty(pointee) else {
+            return self.refuse("a struct passed by value that points at no struct");
+        };
+        let layout = self.unit.struct_layout(id);
+        match abi::classify(self.unit.target(), layout) {
+            Some(class) => Ok((class, layout.size, layout.align)),
+            None => self.refuse(format!(
+                "a struct passed or returned by value on `{}`, whose C ABI this backend does not write yet",
+                self.unit.target().triple()
+            )),
+        }
     }
 
     /// One function, appended to the module.
@@ -1277,14 +1446,65 @@ impl Emitter<'_> {
 
         // A parameter arrives as a value and the rest of the body wants a
         // place, which is what makes this the first thing a function does.
+        //
+        // **A struct passed in registers is put back into bytes of its own**,
+        // and the parameter is their address, which is what the IR passes
+        // (#1201); one in memory arrives as that address already. A struct
+        // returned in registers is written into bytes of the function's own,
+        // read back out at `return`. `arg` counts LLVM's parameters, which a
+        // struct in two registers is two of and one returned in registers
+        // none of.
+        self.returned_in = None;
+        let mut arg = 0;
         for (index, local) in function.parameters().enumerate() {
-            let spelled = self.spell(function.local(local));
-            writeln!(
-                &mut body,
-                "  store {spelled} %arg{index}, ptr %_{}",
-                local.index()
-            )
-            .expect("writing to a string cannot fail");
+            let ty = function.local(local);
+            let passes = function.passes(index);
+            if passes == Passes::Value {
+                let spelled = self.spell(ty);
+                writeln!(
+                    &mut body,
+                    "  store {spelled} %arg{arg}, ptr %_{}",
+                    local.index()
+                )
+                .expect("writing to a string cannot fail");
+                arg += 1;
+                continue;
+            }
+            let (class, size, align) = self.struct_class(ty)?;
+            match (passes, class) {
+                (Passes::StructCopy, Class::Registers(pieces)) => {
+                    let copy = format!("%_copy{}", local.index());
+                    writeln!(&mut body, "  {copy} = alloca [{size} x i8], align {align}")
+                        .expect("writing to a string cannot fail");
+                    for (bits, offset) in pieces.iter().zip(piece_offsets(&pieces)) {
+                        let at = self.temp();
+                        writeln!(
+                            &mut body,
+                            "  {at} = getelementptr i8, ptr {copy}, i64 {offset}"
+                        )
+                        .expect("writing to a string cannot fail");
+                        writeln!(&mut body, "  store i{bits} %arg{arg}, ptr {at}")
+                            .expect("writing to a string cannot fail");
+                        arg += 1;
+                    }
+                    writeln!(&mut body, "  store ptr {copy}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                }
+                (Passes::StructReturn, Class::Registers(pieces)) => {
+                    let slot = format!("%_returned{}", local.index());
+                    writeln!(&mut body, "  {slot} = alloca [{size} x i8], align {align}")
+                        .expect("writing to a string cannot fail");
+                    writeln!(&mut body, "  store ptr {slot}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                    self.returned_in = Some((slot, pieces));
+                }
+                (Passes::StructCopy | Passes::StructReturn, Class::Memory { .. }) => {
+                    writeln!(&mut body, "  store ptr %arg{arg}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                    arg += 1;
+                }
+                (Passes::Value, _) => unreachable!("answered above"),
+            }
         }
 
         // A block of its own rather than the first real one, so that the

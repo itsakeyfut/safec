@@ -86,10 +86,16 @@ to point into one object, against not asked and named as a silence.
   bytes being the row it walks, since C17 6.5.6 p7 makes a member an array
   of one: `a_member_s_address_walks_the_member_alone` is silent with no row
   entered.
-* Still unguarded, because unions, a struct crossing a call and comparing
-  pointers are not lowered yet: the link-and-run test per ABI shape, and a
-  corpus case for the comparison's code, which their sub-issues of #614 add
-  as they land.
+* **A struct crosses a call as the target's C ABI says** (#1201):
+  `a_struct_by_value_meets_clangs_abi` in `tests/abi.rs` links an object
+  this compiler built against one `clang` built, both ways round, for each
+  size class, on each runner's own target, Win64 on Windows and x86-64
+  System V on Linux and macOS. `abi::classify` answers the two by name and
+  refuses every other target. Mutation: classify a Win64 struct of 8 bytes as
+  memory; it fails on Windows.
+* Still unguarded, because unions and comparing pointers are not lowered
+  yet: a corpus case for the comparison's code, which its sub-issue of #614
+  adds as it lands.
 
 ### Consequences
 

@@ -259,8 +259,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
     for id in unit.functions() {
         let function = unit.function(id);
         dump_node(sources, "Function", function.name, 0, out);
-        write!(out, " {:?}", quoted(sources, function.name))
-            .expect("writing to a string cannot fail");
+        write!(out, " {:?}", function.spelled(sources)).expect("writing to a string cannot fail");
         // A declaration and a definition with no blocks would read alike, and
         // one of them is a function whose body this compiler never saw.
         if !function.is_defined() {
@@ -623,7 +622,7 @@ fn dump_terminator(
             then,
             origin: _,
         } => {
-            write!(out, " {:?}", quoted(sources, unit.function(*callee).name))
+            write!(out, " {:?}", unit.function(*callee).spelled(sources))
                 .expect("writing to a string cannot fail");
             // A call with no continuation names no block and says why, so the
             // artifact tells a call that does not return from one whose block

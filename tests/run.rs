@@ -125,4 +125,10 @@ programs! {
     /// value is laid out (#1202). Mutation: take every member's offset as zero in the
     /// backend's `Projection::Field` arm; this exits with another value.
     a_nested_struct_and_an_array_of_structs_are_read_by_member,
+    /// Structs of each size class the C ABIs tell apart, 3, 8, 12 and 24
+    /// bytes, returned and passed by value, a parameter written in the callee
+    /// without reaching the caller's, and a struct assigned and copied
+    /// through pointers (#1201). Mutation: pass a struct argument's own
+    /// address instead of a copy's in `Task::Copied`; this fails.
+    a_struct_is_assigned_passed_and_returned_by_value,
 }

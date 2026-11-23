@@ -40,8 +40,8 @@ use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, Linkage, LocalId, Operand,
-    Operation, Origin, Parameter, Place, Projection, Promise, Rvalue, Shape, Static, StaticId,
-    StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue, Shape, Static,
+    StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -329,6 +329,8 @@ pub fn lower(
         structs: HashMap::new(),
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
+        memcpy: None,
+        struct_copies: HashSet::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
         file_statics: HashMap::new(),
@@ -430,6 +432,13 @@ struct Lowering<'a> {
     /// The tags whose layout was refused, said once. See
     /// [`Lowering::struct_of`].
     refused_structs: HashSet<TagId>,
+    /// The `memcpy` a struct copy calls, made once. See
+    /// [`Lowering::copy_struct`].
+    memcpy: Option<FuncId>,
+    /// The parameters of the function being lowered that stand for a struct
+    /// passed by value, each the address of its copy. See
+    /// [`Passes::StructCopy`].
+    struct_copies: HashSet<LocalId>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -669,6 +678,12 @@ impl Builder {
 enum Task {
     /// Push the value of this expression.
     Value(ExprId),
+    /// Take the value this call left, the temporary a struct was returned
+    /// into, as the place the struct is (#1201).
+    Placed(ExprId),
+    /// The struct argument whose place is on the stack is copied, and the
+    /// copy's address is the argument's value (#1201).
+    Copied(ExprId),
     /// Push the place this expression names.
     Place(ExprId),
     /// The operands this node reads are on the stacks; produce its value.
@@ -1421,12 +1436,25 @@ impl Lowering<'_> {
         parameters: &Parameters,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<(TyId, Vec<Parameter>)> {
-        let returns = self.ty(name, returns, diagnostics)?;
-        if matches!(self.unit.ty(returns), Ty::Struct(_)) {
-            self.struct_value_not_yet(name, diagnostics);
-            return None;
-        }
+        let mut returns = self.ty(name, returns, diagnostics)?;
         let mut lowered = Vec::new();
+        // **A struct returned by value goes where the caller says**, through
+        // a pointer passed first, and the function returns nothing (#1201).
+        // See `Passes`.
+        if matches!(self.unit.ty(returns), Ty::Struct(_)) {
+            // **Never null**: every caller passes where it wants the result,
+            // so the pointer is promised, which no source wrote and no caller
+            // can break. Unpromised, every member written through it was
+            // doubted as through a pointer that may be null.
+            lowered.push(Parameter {
+                ty: self.unit.push_type(Ty::Pointer(returns)),
+                nonnull: Some(Promise::Declared(name)),
+                name: None,
+                reads_only: false,
+                passes: Passes::StructReturn,
+            });
+            returns = self.unit.push_type(Ty::Void);
+        }
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
@@ -1452,9 +1480,21 @@ impl Lowering<'_> {
                     return None;
                 }
                 let ty = self.ty(at, parameter.ty, diagnostics)?;
+                // **A struct passed by value is the address of the caller's
+                // copy** (#1201). See `Passes`.
                 if matches!(self.unit.ty(ty), Ty::Struct(_)) {
-                    self.struct_value_not_yet(at, diagnostics);
-                    return None;
+                    // Never null either, for the same reason: every caller
+                    // passes its copy's address. Mutation: promise nothing;
+                    // `a_struct_is_assigned_passed_and_returned_by_value`'s
+                    // `read_a_member` reports `SC0403`.
+                    lowered.push(Parameter {
+                        ty: self.unit.push_type(Ty::Pointer(ty)),
+                        nonnull: Some(Promise::Declared(at)),
+                        name: parameter.name,
+                        reads_only: false,
+                        passes: Passes::StructCopy,
+                    });
+                    continue;
                 }
                 lowered.push(Parameter {
                     reads_only: matches!(self.ast.ty(parameter.ty),
@@ -1472,11 +1512,110 @@ impl Lowering<'_> {
                         | None => None,
                     },
                     name: parameter.name,
+                    passes: Passes::Value,
                 });
             }
         }
 
         Some((returns, lowered))
+    }
+
+    /// Whether the expression `id` has a struct type.
+    fn is_struct(&self, id: ExprId) -> bool {
+        self.types
+            .of(id)
+            .is_some_and(|ty| matches!(self.ast.ty(ty), Type::Struct { .. }))
+    }
+
+    /// The address of the struct at `place`, as an operand: the pointer it is
+    /// reached through, `&*p` being `p` (C17 6.5.3.2 p3), or a temporary
+    /// holding `&s` for a struct with no pointer in front of it.
+    fn struct_address_of(&mut self, builder: &mut Builder, place: Place, at: Span) -> Operand {
+        if let Some(pointer) = place.without_last_deref() {
+            return Operand::Copy(pointer);
+        }
+        let ty = self
+            .unit
+            .place_ty(&builder.function, &place)
+            .expect("a place this lowering built has a type");
+        let pointer = self.unit.push_type(Ty::Pointer(ty));
+        let address = builder.function.push_local(pointer);
+        builder.push(Operation {
+            place: Place::local(address),
+            value: Rvalue::Address(place),
+            origin: Origin::Generated(at),
+        });
+        Operand::Copy(Place::local(address))
+    }
+
+    /// Copy the struct at `from` into `into`: a call to `memcpy` of the
+    /// struct's size, made by this compiler whatever the source declares
+    /// (#1201). **A call the memory check reads as the library copy it is**,
+    /// slot by slot and carrying what the source holds, so a struct copy is
+    /// answered by the door that already answers `memcpy`, and the backend
+    /// writes the copy LLVM writes for one.
+    fn copy_struct(
+        &mut self,
+        builder: &mut Builder,
+        into: Place,
+        from: Place,
+        at: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let ty = self
+            .unit
+            .place_ty(&builder.function, &into)
+            .expect("a place this lowering built has a type");
+        let size = self.unit.size_of(ty)?;
+        let memcpy = self.memcpy(at, diagnostics)?;
+        let into = self.struct_address_of(builder, into, at);
+        let from = self.struct_address_of(builder, from, at);
+        let then = builder.function.reserve_block();
+        builder.end(Terminator::Call {
+            callee: memcpy,
+            arguments: vec![into, from, Operand::Constant(i128::from(size))],
+            destination: None,
+            then: Some(then),
+            origin: Origin::Written(at),
+        });
+        builder.switch(then);
+        Some(())
+    }
+
+    /// The `memcpy` a struct copy calls: the program's own declaration of
+    /// it, where it has one, and otherwise one this compiler makes, so that
+    /// a module never declares it twice. A program that defines `memcpy`
+    /// itself is refused a struct copy: what it calls is not the library's.
+    fn memcpy(&mut self, at: Span, diagnostics: &mut DiagnosticSink) -> Option<FuncId> {
+        if let Some(id) = self.memcpy {
+            return Some(id);
+        }
+        let id = match self.functions.get("memcpy") {
+            Some(&id) if !self.unit.function(id).is_defined() => id,
+            Some(_) => {
+                diagnostics.report(
+                    Diagnostic::error("cannot copy a struct where `memcpy` is defined here")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(at, "a struct copied"))
+                        .with_note("a struct is copied by the library's `memcpy`, and this program defines its own"),
+                );
+                return None;
+            }
+            None => {
+                let void = self.unit.push_type(Ty::Void);
+                let pointer = self.unit.push_type(Ty::Pointer(void));
+                let (rank, sign) = self.unit.target().size_type();
+                let size = self.unit.push_type(Ty::Integer { rank, sign });
+                self.unit.push_function(Function::builtin(
+                    "memcpy",
+                    at,
+                    pointer,
+                    [pointer, pointer, size],
+                ))
+            }
+        };
+        self.memcpy = Some(id);
+        Some(id)
     }
 
     /// Refuse a struct used as a value: passed, returned, assigned or read
@@ -1841,11 +1980,19 @@ impl Lowering<'_> {
         }
         let return_place = function.return_place();
         function.mark_const_levels(return_place, returns_const_levels);
+        // The written parameters, after the pointer a struct result goes
+        // through where there is one.
+        let hidden = usize::from(function.returns_a_struct());
         if let Parameters::Prototype(declared) = &parameters {
-            for (parameter, local) in declared
+            for (index, (parameter, local)) in declared
                 .iter()
-                .zip(function.parameters().collect::<Vec<_>>())
+                .zip(function.parameters().skip(hidden).collect::<Vec<_>>())
+                .enumerate()
             {
+                if function.passes(index + hidden) == Passes::StructCopy {
+                    function.mark_const_levels(local, self.pointing_at_levels(parameter.ty));
+                    continue;
+                }
                 if self.read_only(parameter.ty) {
                     function.mark_read_only(local);
                 }
@@ -1884,10 +2031,18 @@ impl Lowering<'_> {
 
         // A parameter is a local before the body's first statement, and its
         // name is how the body reaches it.
+        self.struct_copies.clear();
         if let Parameters::Prototype(parameters) = &parameters {
-            for (parameter, local) in parameters.iter().zip(function.parameters()) {
+            for (index, (parameter, local)) in parameters
+                .iter()
+                .zip(function.parameters().skip(hidden))
+                .enumerate()
+            {
                 if let Some(at) = parameter.name {
                     self.locals.insert(at, local);
+                }
+                if function.passes(index + hidden) == Passes::StructCopy {
+                    self.struct_copies.insert(local);
                 }
             }
         }
@@ -2441,6 +2596,22 @@ impl Lowering<'_> {
             }
             Stmt::Return { value, span } => {
                 let (value, span) = (*value, *span);
+                // **A struct is returned into where the caller said**, the
+                // pointer passed first, and the function returns nothing
+                // (#1201).
+                if let Some(value) = value.filter(|_| builder.function.returns_a_struct()) {
+                    let from = self.place_of(builder, value, diagnostics)?;
+                    let into = builder
+                        .function
+                        .parameters()
+                        .next()
+                        .expect("a struct result's pointer is the first parameter");
+                    self.copy_struct(builder, Place::local(into).deref(), from, span, diagnostics)?;
+                    builder.sequenced(self.ast.expr(value).span());
+                    self.leave_scopes(builder, 0, span);
+                    builder.end(Terminator::Return);
+                    return Some(());
+                }
                 if let Some(value) = value {
                     let operand = self.value(builder, value, diagnostics)?;
                     let place = Place::local(builder.function.return_place());
@@ -2549,16 +2720,26 @@ impl Lowering<'_> {
                         // at the place being written, so this is what the same
                         // store gets written the other way.
                         if let Some(init) = declarator.init {
+                            let at = self.store_span(name, span, declarator.span, diagnostics)?;
+                            // A struct is copied from where it is, as an
+                            // assignment copies one (#1201).
+                            if self.is_struct(init) {
+                                let from = self.place_of(builder, init, diagnostics)?;
+                                self.copy_struct(
+                                    builder,
+                                    Place::local(local),
+                                    from,
+                                    at,
+                                    diagnostics,
+                                )?;
+                                builder.sequenced(self.ast.expr(init).span());
+                                continue;
+                            }
                             let operand = self.value(builder, init, diagnostics)?;
                             builder.push(Operation {
                                 place: Place::local(local),
                                 value: Rvalue::Use(operand),
-                                origin: Origin::Written(self.store_span(
-                                    name,
-                                    span,
-                                    declarator.span,
-                                    diagnostics,
-                                )?),
+                                origin: Origin::Written(at),
                             });
                             // One per declarator that has an initializer:
                             // `int a = f(), b = g();` is two full expressions
@@ -3243,13 +3424,39 @@ impl Lowering<'_> {
         full: bool,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Option<Operand>> {
+        let (value, _) = self.walk_from(builder, root, full, Task::Value(root), diagnostics)?;
+        Some(value)
+    }
+
+    /// The place a full expression names, for what reads a struct whole: a
+    /// struct copied, which is copied from where it is rather than read into
+    /// a value (#1201). [`Lowering::walk`], started from the place.
+    fn place_of(
+        &mut self,
+        builder: &mut Builder,
+        root: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Place> {
+        let (_, place) = self.walk_from(builder, root, true, Task::Place(root), diagnostics)?;
+        Some(place.expect("a place for a root asked for one"))
+    }
+
+    /// [`Lowering::walk`] and [`Lowering::place_of`], from `start`.
+    fn walk_from(
+        &mut self,
+        builder: &mut Builder,
+        root: ExprId,
+        full: bool,
+        start: Task,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(Option<Operand>, Option<Place>)> {
         // Set here rather than restored, so that an expression abandoned
         // half-way by a type error cannot leave the next one reading a flag
         // the walk that set it never finished with.
         self.top_level = full;
         self.root = full.then_some(root);
 
-        let mut tasks = vec![Task::Value(root)];
+        let mut tasks = vec![start];
         let mut values: Vec<Operand> = Vec::new();
         let mut places: Vec<Place> = Vec::new();
 
@@ -3282,15 +3489,39 @@ impl Lowering<'_> {
                     }
                 }
                 Task::Restore(top_level) => self.top_level = top_level,
+                Task::Copied(id) => {
+                    let from = places.pop().expect("a struct argument");
+                    let span = self.ast.expr(id).span();
+                    let ty = self.ty_of(id, diagnostics)?;
+                    let copy = builder.function.push_local(ty);
+                    self.copy_struct(builder, Place::local(copy), from, span, diagnostics)?;
+                    let pointer = self.unit.push_type(Ty::Pointer(ty));
+                    let address = builder.function.push_local(pointer);
+                    builder.push(Operation {
+                        place: Place::local(address),
+                        value: Rvalue::Address(Place::local(copy)),
+                        origin: Origin::Generated(span),
+                    });
+                    values.push(Operand::Copy(Place::local(address)));
+                }
+                Task::Placed(id) => {
+                    let Some(Operand::Copy(place)) = values.pop() else {
+                        unreachable!(
+                            "a struct a call returns is the place it was returned into: {id:?}"
+                        );
+                    };
+                    places.push(place);
+                }
             }
         }
 
         let value = values.pop();
+        let place = places.pop();
         assert!(
-            values.is_empty(),
-            "every value an expression pushed was read: {values:?}"
+            values.is_empty() && places.is_empty(),
+            "every value and place an expression pushed was read: {values:?} {places:?}"
         );
-        Some(value)
+        Some((value, place))
     }
 
     /// Whether lowering `id` leaves a value on the walk's stack.
@@ -3605,6 +3836,20 @@ impl Lowering<'_> {
                     tasks.push(Task::Value(*lhs));
                 }
             }
+            // **A struct is copied from where it is**, its value never read
+            // whole (#1201): the right operand is asked for its place, and
+            // `finish_value` copies one place into the other.
+            Expr::Assign {
+                op: None,
+                place,
+                value,
+                ..
+            } if self.is_struct(*place) => {
+                tasks.push(Task::Finish(id));
+                tasks.push(Task::Conflicts(id));
+                tasks.push(Task::Place(*value));
+                tasks.push(Task::Place(*place));
+            }
             Expr::Assign { place, value, .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Conflicts(id));
@@ -3646,7 +3891,15 @@ impl Lowering<'_> {
                 }
                 tasks.push(Task::Conflicts(id));
                 for &argument in arguments.iter().rev() {
-                    tasks.push(Task::Value(argument));
+                    // **A struct argument is the address of a copy of it**
+                    // (#1201): its place, then the copy. See
+                    // `Passes::StructCopy`.
+                    if self.is_struct(argument) {
+                        tasks.push(Task::Copied(argument));
+                        tasks.push(Task::Place(argument));
+                    } else {
+                        tasks.push(Task::Value(argument));
+                    }
                 }
             }
             Expr::Comma { lhs, rhs, .. } => {
@@ -3709,7 +3962,16 @@ impl Lowering<'_> {
             }
             Expr::Identifier { span, .. } => match self.static_named(id) {
                 Some(object) => places.push(self.reach_static(builder, object, *span)),
-                None => places.push(Place::local(self.local(id, diagnostics)?)),
+                // **A struct parameter is the copy its pointer names**
+                // (#1201): `s` is `*p`. See `Passes::StructCopy`.
+                None => {
+                    let local = self.local(id, diagnostics)?;
+                    places.push(if self.struct_copies.contains(&local) {
+                        Place::local(local).deref()
+                    } else {
+                        Place::local(local)
+                    });
+                }
             },
             // The array a literal is, through its address as any static is.
             Expr::String { span, .. } => {
@@ -3760,6 +4022,12 @@ impl Lowering<'_> {
                 tasks.push(Task::Conflicts(id));
                 tasks.push(Task::Value(*index));
                 tasks.push(Task::Value(*base));
+            }
+            // **A call returning a struct names the temporary it returned
+            // into** (#1201): its value is that place, taken as one.
+            Expr::Call { .. } if self.is_struct(id) => {
+                tasks.push(Task::Placed(id));
+                tasks.push(Task::Value(id));
             }
             // Everything else has a value and no place. An assignment, `&`,
             // `++` and `--` each ask for one, so the message says that rather
@@ -4165,6 +4433,24 @@ impl Lowering<'_> {
                     }
                 }
             }
+            Expr::Assign {
+                op: None,
+                place: written,
+                span,
+                ..
+            } if self.is_struct(*written) => {
+                let span = *span;
+                let from = places.pop().expect("the struct copied");
+                let into = places.pop().expect("the struct copied into");
+                self.copy_struct(builder, into, from, span, diagnostics)?;
+                // Its value is the struct, which is read whole by nothing
+                // that is lowered yet.
+                if self.discarding == Some(id) {
+                    return Some(());
+                }
+                self.struct_value_not_yet(span, diagnostics);
+                return None;
+            }
             Expr::Assign { op, span, .. } => {
                 let (op, span) = (*op, *span);
                 let value = values.pop().expect("a value");
@@ -4227,8 +4513,36 @@ impl Lowering<'_> {
             } => {
                 let (callee, count, span) = (*callee, arguments.len(), *span);
                 let at = values.len() - count;
-                let arguments: Vec<Operand> = values.split_off(at);
+                let mut arguments: Vec<Operand> = values.split_off(at);
                 let called = self.callee(callee, diagnostics)?;
+                // **A struct result goes into a temporary the caller makes**,
+                // its address passed first, and the temporary is the call's
+                // value: a place `Task::Placed` takes where one is asked
+                // (#1201).
+                if self.unit.function(called).returns_a_struct() {
+                    let ty = self.ty_of(id, diagnostics)?;
+                    let result = builder.function.push_local(ty);
+                    let pointer = self.unit.push_type(Ty::Pointer(ty));
+                    let address = builder.function.push_local(pointer);
+                    builder.push(Operation {
+                        place: Place::local(address),
+                        value: Rvalue::Address(Place::local(result)),
+                        origin: Origin::Generated(span),
+                    });
+                    arguments.insert(0, Operand::Copy(Place::local(address)));
+                    let then = builder.function.reserve_block();
+                    let returns = self.root != Some(id) || !self.does_not_return(called);
+                    builder.end(Terminator::Call {
+                        callee: called,
+                        arguments,
+                        destination: None,
+                        then: returns.then_some(then),
+                        origin: Origin::Written(span),
+                    });
+                    builder.switch(then);
+                    values.push(Operand::Copy(Place::local(result)));
+                    return Some(());
+                }
                 // A call to a function returning `void` writes nowhere, which
                 // is what `Terminator::Call::destination`'s `None` is for:
                 // a local made to hold nothing would be a write the source
@@ -5589,7 +5903,7 @@ impl Lowering<'_> {
     /// elsewhere is a program C does not define and is not asked about. See
     /// ADR-0051.
     fn does_not_return(&self, called: FuncId) -> bool {
-        let name = self.sources.snippet(self.unit.function(called).name);
+        let name = self.unit.function(called).spelled(self.sources);
         DOES_NOT_RETURN
             .iter()
             .any(|&(reserved, _)| reserved == name)

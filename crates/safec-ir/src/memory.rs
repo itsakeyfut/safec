@@ -831,7 +831,7 @@ fn analysis<'a>(
         parameters: function.parameters().collect(),
         exposed_parameters: function
             .parameters()
-            .filter(|_| sources.snippet(function.name) != "main")
+            .filter(|_| function.spelled(sources) != "main")
             // No parameter is an array: C17 6.7.6.3 p7 adjusts it to a
             // pointer.
             .filter(|&local| unit.ty(function.local(local)).is_pointer())

@@ -238,7 +238,7 @@ impl Allocations<'_> {
 
     /// What this check can read in the name of the function being called.
     pub(super) fn callee(&self, id: FuncId) -> Callee {
-        let name = self.sources.snippet(self.unit.function(id).name);
+        let name = self.unit.function(id).spelled(self.sources);
         if DOES_NOT_RETURN
             .iter()
             .any(|&(reserved, _)| reserved == name)

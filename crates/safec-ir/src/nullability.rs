@@ -1131,7 +1131,7 @@ impl Analysis for Nullability<'_> {
             ..
         } = terminator
         {
-            let name = self.sources.snippet(self.unit.function(*callee).name);
+            let name = self.unit.function(*callee).spelled(self.sources);
             if DOES_NOT_RETURN
                 .iter()
                 .any(|&(reserved, _)| reserved == name)

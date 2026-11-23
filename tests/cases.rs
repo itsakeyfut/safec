@@ -54,6 +54,13 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A struct copied is a library copy, so a freed pointer it carries,
+        // assigned or passed by value, is `SC0402` where it is used; a struct
+        // parameter is the copy its never-null pointer names, so reading a
+        // member of one reports nothing (#1201). Mutation: make the copy's
+        // `memcpy` no library function in `Function::builtin`; `assigned`
+        // loses its `SC0402`.
+        a_struct_is_assigned_passed_and_returned_by_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store into a struct that points at itself, leaving the function
         // through a parameter, through mutually pointing structs, and into a
         // local an unknown call was handed, is checked and ends (#1202
@@ -8895,12 +8902,12 @@ cases! {
         // error.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A program that uses structs as C allows, an object assigned from
-        // `*p`, passed and returned, passes the type checker, and the lowering
-        // refuses `make`, `take` and `f` under `SC0304`, since a struct used
-        // as a value is not lowered yet (#1201), and lowers `main`. Mutation: refuse a declaration holding a
-        // struct in the type checker again; the lowering is never reached,
-        // `main` is not printed, and this fails.
-        a_struct_program_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p`, passed and returned, passes the type checker and is lowered:
+        // a copy as a `memcpy`, an argument as its copy's address and a result
+        // through the pointer passed first (#1201). Mutation: refuse a
+        // declaration holding a struct in the type checker again; the
+        // lowering is never reached, and this fails.
+        a_struct_program_is_typed_and_lowered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // 6.5.3.4 p2: the operand of `sizeof` is not evaluated, so `f` is
         // not called and the function is a return of a constant. Mutation:
         // lower a `sizeof` that has a value by its operand; a call appears.
