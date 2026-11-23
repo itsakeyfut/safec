@@ -226,6 +226,33 @@ pub fn lay_out(members: impl IntoIterator<Item = (u64, u64)>) -> Option<(Vec<u64
     Some((offsets, end.checked_next_multiple_of(align)?, align))
 }
 
+/// A layout rule, [`lay_out`] or [`lay_out_union`]: each member's size and
+/// alignment in, each one's offset and the whole's size and alignment out.
+type LayoutRule = fn(Vec<(u64, u64)>) -> Option<(Vec<u64>, u64, u64)>;
+
+/// Where each member of a union goes, given each one's size and alignment
+/// in bytes, in order: every offset 0, and the whole the largest member
+/// rounded up to the strictest alignment (C17 6.7.2.1 p6 and p16). `None`
+/// where the size overflows a `u64`.
+///
+/// **The one rule for a union's layout**, asked by
+/// [`TranslationUnit::push_union`] and by the type check for `sizeof`, as
+/// [`lay_out`] is for a struct. Mutation: place each member after the one
+/// before it; `the_layout_of_every_struct_shape_is_clangs` fails.
+pub fn lay_out_union(
+    members: impl IntoIterator<Item = (u64, u64)>,
+) -> Option<(Vec<u64>, u64, u64)> {
+    let mut offsets = Vec::new();
+    let mut largest: u64 = 0;
+    let mut align: u64 = 1;
+    for (size, member_align) in members {
+        offsets.push(0);
+        largest = largest.max(size);
+        align = align.max(member_align);
+    }
+    Some((offsets, largest.checked_next_multiple_of(align)?, align))
+}
+
 /// One member of a [`StructLayout`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MemberLayout {
@@ -332,6 +359,12 @@ pub enum Ty {
     /// (#1201). A member is reached through its address, a
     /// [`Projection::Field`] under `Rvalue::Address`.
     Struct(StructId),
+    /// A union, laid out in [`TranslationUnit::struct_layout`] as a struct
+    /// whose every member starts at 0 (#1203): the members share one table
+    /// with structs, and a union is a type of its own, as a struct is.
+    /// Everything a struct is to every reader, a union is too, its members'
+    /// offsets aside, which is why each `match` answers the two together.
+    Union(StructId),
 }
 
 impl Ty {
@@ -355,7 +388,8 @@ impl Ty {
             }
             | Ty::Void
             | Ty::Array { .. }
-            | Ty::Struct(_) => false,
+            | Ty::Struct(_)
+            | Ty::Union(_) => false,
         }
     }
 }
@@ -2019,6 +2053,14 @@ impl TranslationUnit {
         Some(id)
     }
 
+    /// Lay out a union of these members, and say which it is: as
+    /// [`Self::push_struct`], by [`lay_out_union`].
+    pub fn push_union(&mut self, members: &[TyId]) -> Option<StructId> {
+        let id = self.declare_struct();
+        self.complete_union(id, members)?;
+        Some(id)
+    }
+
     /// A struct with no members yet, so that a pointer to it can be a type
     /// before its members are laid out: `struct L { struct L *next; }` is a
     /// pointer to `L` inside `L` (C17 6.7.2.3 p8), and one nothing in this
@@ -2038,6 +2080,21 @@ impl TranslationUnit {
     ///
     /// If `id` already has members: one struct is laid out once.
     pub fn complete_struct(&mut self, id: StructId, members: &[TyId]) -> Option<()> {
+        self.complete(id, members, lay_out)
+    }
+
+    /// Lay out the declared union `id` with these members: as
+    /// [`Self::complete_struct`], by [`lay_out_union`].
+    ///
+    /// # Panics
+    ///
+    /// If `id` already has members.
+    pub fn complete_union(&mut self, id: StructId, members: &[TyId]) -> Option<()> {
+        self.complete(id, members, lay_out_union)
+    }
+
+    /// Lay out `id` with these members by the rule `rule`.
+    fn complete(&mut self, id: StructId, members: &[TyId], rule: LayoutRule) -> Option<()> {
         assert!(
             self.structs[id.0 as usize].is_none(),
             "struct {} is already laid out",
@@ -2047,7 +2104,7 @@ impl TranslationUnit {
             .iter()
             .map(|&ty| Some((self.size_of(ty)?, self.align_of(ty)?)))
             .collect::<Option<Vec<_>>>()?;
-        let (offsets, size, align) = lay_out(sized)?;
+        let (offsets, size, align) = rule(sized)?;
         self.structs[id.0 as usize] = Some(StructLayout {
             members: members
                 .iter()
@@ -2098,7 +2155,7 @@ impl TranslationUnit {
             Ty::Pointer(_) => Some(self.target.alignment(None)),
             Ty::Void => None,
             Ty::Array { element, .. } => self.align_of(element),
-            Ty::Struct(layout) => Some(self.layout_of(layout)?.align),
+            Ty::Struct(layout) | Ty::Union(layout) => Some(self.layout_of(layout)?.align),
         }
     }
 
@@ -2142,7 +2199,7 @@ impl TranslationUnit {
             Ty::Integer { rank, sign } => Some(self.target.integer(rank, sign)),
             // No array or struct is a value, so none is converted or
             // range-checked.
-            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } | Ty::Struct(_) => None,
+            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } | Ty::Struct(_) | Ty::Union(_) => None,
         }
     }
 
@@ -2184,7 +2241,7 @@ impl TranslationUnit {
                 return self.size_of(element)?.checked_mul(length);
             }
             // Its members and their padding, laid out once.
-            Ty::Struct(layout) => return Some(self.layout_of(layout)?.size),
+            Ty::Struct(layout) | Ty::Union(layout) => return Some(self.layout_of(layout)?.size),
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.
@@ -2217,7 +2274,7 @@ impl TranslationUnit {
                 (Projection::Index(_), Ty::Array { element, .. }) => element,
                 (Projection::Index(_), _) => return None,
                 // The member's type, which the layout keeps.
-                (Projection::Field(member), Ty::Struct(layout)) => {
+                (Projection::Field(member), Ty::Struct(layout) | Ty::Union(layout)) => {
                     self.layout_of(layout)?.members.get(*member as usize)?.ty
                 }
                 (Projection::Field(_), _) => return None,

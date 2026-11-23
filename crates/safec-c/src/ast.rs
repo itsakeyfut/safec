@@ -203,6 +203,11 @@ pub enum Type {
     /// uses is dropped as every one is. Each occurrence is its own `TypeId`,
     /// as every type is here.
     Struct {
+        /// Whether it was written `union`, C17 6.7.2.1 p6's other structure:
+        /// every member at the start, overlapping. Everything else about one
+        /// is a struct's, its tag included, which shares one name space with
+        /// a struct's (6.2.3 p1).
+        union: bool,
         /// The tag, if one was written.
         tag: Option<Span>,
         /// The members, if a `{ ... }` was written: never empty, because C17
@@ -1714,9 +1719,10 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             // The tag as written, and `(anonymous)` for none. A base of more
             // than one word, so it is spelled here and returned with the same
             // spacing as the others below.
-            Type::Struct { tag, .. } => {
+            Type::Struct { tag, union, .. } => {
                 let tag = tag.map_or("(anonymous)", |tag| sources.snippet(tag));
-                let spelled = format!("{constant}struct {tag}");
+                let keyword = if *union { "union" } else { "struct" };
+                let spelled = format!("{constant}{keyword} {tag}");
                 return if inner.is_empty() || inner.starts_with('[') {
                     format!("{spelled}{inner}")
                 } else {

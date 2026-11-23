@@ -54,6 +54,15 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // Every member of a union is the same bytes at offset 0, so a
+        // pointer written as one member is read back through another as
+        // what those bytes hold (#1203): the same member is read as written,
+        // the pointer read as a `long long` and cast back is `SC0416`, a
+        // number read as a pointer `SC0413`, and a pointer cut short by a
+        // narrower member `SC0413`. None is answered safe. Mutation: lay a
+        // union out as a struct in `lay_out_union`; `pointer_cut_short` no
+        // longer overwrites the pointer and loses its `SC0413`.
+        a_union_holds_its_members_at_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct copied is a library copy, so a freed pointer it carries,
         // assigned or passed by value, is `SC0402` where it is used; a struct
         // parameter is a local of the callee's own, so reading a member of one
@@ -8527,6 +8536,12 @@ cases! {
     }
 
     "frontend" => {
+        // A union is read as a structure type of its own: its `sizeof` the
+        // largest member rounded to the strictest alignment, a constant, and
+        // its tag in the one name space structs share, so `union S` after
+        // `struct S` is C17 6.7.2.3 p2's conflict (#1203). Mutation: put
+        // `union` back among the specifiers not read yet; this is `SC0207`.
+        a_union_is_a_structure_of_its_own: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A typedef declares no object, so it has nothing to initialize
         // (C17 6.7.8 p3), and is refused under its own code rather than read
         // (#1205). Mutation: drop the check in `Parser::declare_declarators`;

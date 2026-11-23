@@ -1,4 +1,4 @@
-//! Every struct shape is laid out by the IR as `clang` lays it out, on every
+//! Every struct and union shape is laid out by the IR as `clang` lays it out, on every
 //! target this compiler knows (ADR-0124: the IR lays an aggregate out, and
 //! nothing else does, so this is the one answer to compare).
 //!
@@ -13,7 +13,7 @@
 
 use std::process::{Command, Stdio};
 
-use safec_ir::ir::{Rank, Sign, TranslationUnit, Ty, TyId};
+use safec_ir::ir::{Rank, Sign, StructId, TranslationUnit, Ty, TyId};
 use safec_ir::target::Target;
 
 /// One member's type, as both the C below and the IR spell it.
@@ -41,7 +41,7 @@ impl Member {
             Member::Integer(rank, _) => integer(rank).to_owned(),
             Member::Pointer => "int *".to_owned(),
             Member::Array(rank, _) => integer(rank).to_owned(),
-            Member::Shape(index, _) => format!("struct S{index}"),
+            Member::Shape(index, _) => format!("{} S{index}", keyword(index)),
         }
     }
 
@@ -59,8 +59,7 @@ impl Member {
                     .iter()
                     .map(|member| member.ir(unit, shapes))
                     .collect();
-                let id = unit.push_struct(&members).expect("every shape is laid out");
-                let element = unit.push_type(Ty::Struct(id));
+                let (_, element) = lay(unit, index, &members);
                 match length {
                     Some(length) => unit.push_type(Ty::Array { element, length }),
                     None => element,
@@ -85,10 +84,37 @@ impl Member {
     }
 }
 
+/// The shapes from this index on are unions (#1203), and the rest structs.
+const FIRST_UNION: usize = 12;
+
+/// `union` or `struct`, for the shape at `index`.
+fn keyword(index: usize) -> &'static str {
+    if index >= FIRST_UNION {
+        "union"
+    } else {
+        "struct"
+    }
+}
+
+/// Lay out the shape at `index` of these members as the IR does, and say
+/// which it is and its type.
+fn lay(unit: &mut TranslationUnit, index: usize, members: &[TyId]) -> (StructId, TyId) {
+    if index >= FIRST_UNION {
+        let id = unit.push_union(members).expect("every shape is laid out");
+        (id, unit.push_type(Ty::Union(id)))
+    } else {
+        let id = unit.push_struct(members).expect("every shape is laid out");
+        (id, unit.push_type(Ty::Struct(id)))
+    }
+}
+
 /// The shapes, chosen for where padding falls: after a `char` before each
 /// wider member, at the end to the strictest alignment, around an array, and
 /// a `long long`, which `i686` aligns to four in a struct; and a struct as a
-/// member and an array of them, aligned as their strictest member (#1202).
+/// member and an array of them, aligned as their strictest member (#1202);
+/// and unions, from [`FIRST_UNION`] on, sized as their largest member
+/// rounded to the strictest alignment, which `i686`'s `long long` and a
+/// `char` array longer than the widest member each move (#1203).
 fn shapes() -> Vec<Vec<Member>> {
     use Member::{Array, Integer, Pointer, Shape};
     use Rank::{Char, Int, Long, LongLong, Short};
@@ -123,6 +149,15 @@ fn shapes() -> Vec<Vec<Member>> {
             Integer(Char, Signed),
         ],
         vec![Shape(7, None), Integer(Char, Signed), Shape(9, Some(2))],
+        vec![Integer(Char, Signed), Integer(Int, Signed)],
+        vec![Integer(LongLong, Signed), Array(Char, 13), Pointer],
+        vec![
+            Integer(Short, Signed),
+            Shape(2, None),
+            Integer(Char, Signed),
+        ],
+        vec![Integer(Char, Signed), Shape(12, Some(3))],
+        vec![Integer(Char, Signed), Shape(14, None), Integer(Int, Signed)],
     ]
 }
 
@@ -131,18 +166,22 @@ fn shapes() -> Vec<Vec<Member>> {
 fn clang_layouts(triple: &str, shapes: &[Vec<Member>]) -> Option<Vec<(Vec<u64>, u64, u64)>> {
     let mut source = String::new();
     for (n, members) in shapes.iter().enumerate() {
-        source.push_str(&format!("struct S{n} {{"));
+        source.push_str(&format!("{} S{n} {{", keyword(n)));
         for (k, member) in members.iter().enumerate() {
             source.push_str(&format!(" {} m{k}{};", member.c(), member.suffix()));
         }
         source.push_str(" };\n");
         for k in 0..members.len() {
             source.push_str(&format!(
-                "long long o_{n}_{k} = __builtin_offsetof(struct S{n}, m{k});\n"
+                "long long o_{n}_{k} = __builtin_offsetof({} S{n}, m{k});\n",
+                keyword(n)
             ));
         }
-        source.push_str(&format!("long long s_{n} = sizeof(struct S{n});\n"));
-        source.push_str(&format!("long long a_{n} = _Alignof(struct S{n});\n"));
+        source.push_str(&format!("long long s_{n} = sizeof({} S{n});\n", keyword(n)));
+        source.push_str(&format!(
+            "long long a_{n} = _Alignof({} S{n});\n",
+            keyword(n)
+        ));
     }
     let dir = std::env::temp_dir().join(format!("safec_layout_{triple}"));
     let _ = std::fs::remove_dir_all(&dir);
@@ -191,7 +230,9 @@ fn clang_layouts(triple: &str, shapes: &[Vec<Member>]) -> Option<Vec<(Vec<u64>, 
 }
 
 /// Mutation: place each member at the end of the one before it in
-/// `safec_ir::ir::lay_out`; this fails at the first shape with padding.
+/// `safec_ir::ir::lay_out`; this fails at the first shape with padding. Size
+/// a union as its first member in `lay_out_union`; this fails at the second
+/// union.
 #[test]
 fn the_layout_of_every_struct_shape_is_clangs() {
     let clang_is_here = Command::new("clang")
@@ -214,15 +255,13 @@ fn the_layout_of_every_struct_shape_is_clangs() {
         let Some(expected) = clang_layouts(triple, &shapes) else {
             panic!("clang ran for {triple}");
         };
-        for (members, (offsets, size, align)) in shapes.iter().zip(expected) {
+        for (index, (members, (offsets, size, align))) in shapes.iter().zip(expected).enumerate() {
             let mut unit = TranslationUnit::new(target);
             let types: Vec<TyId> = members
                 .iter()
                 .map(|member| member.ir(&mut unit, &shapes))
                 .collect();
-            let id = unit
-                .push_struct(&types)
-                .expect("every shape here is laid out");
+            let (id, _) = lay(&mut unit, index, &types);
             let layout = unit.struct_layout(id);
             let laid: Vec<u64> = layout.members.iter().map(|member| member.offset).collect();
             let spelled: Vec<String> = members.iter().map(|member| member.c()).collect();

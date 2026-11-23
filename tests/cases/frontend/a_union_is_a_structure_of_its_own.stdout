@@ -1,0 +1,13 @@
+Declaration a_union_is_a_structure_of_its_own.c:1:1 "union U"
+  Field a_union_is_a_structure_of_its_own.c:2:5 "c" "char"
+  Field a_union_is_a_structure_of_its_own.c:3:5 "l" "long long"
+Declaration a_union_is_a_structure_of_its_own.c:6:1 "sized" "int[sizeof(union U) == 8 ? 1 : -1]"
+Declaration a_union_is_a_structure_of_its_own.c:8:1 "struct S"
+  Field a_union_is_a_structure_of_its_own.c:9:5 "a" "int"
+Declaration a_union_is_a_structure_of_its_own.c:12:1 "union S"
+  Field a_union_is_a_structure_of_its_own.c:13:5 "a" "int"
+Function a_union_is_a_structure_of_its_own.c:16:1 "pointer" "union U *(union U *)"
+  Parameter a_union_is_a_structure_of_its_own.c:16:18 "u" "union U *"
+  Compound a_union_is_a_structure_of_its_own.c:16:30
+    Return a_union_is_a_structure_of_its_own.c:17:5
+      Identifier a_union_is_a_structure_of_its_own.c:17:12 "u"

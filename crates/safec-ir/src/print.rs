@@ -469,7 +469,8 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                     }
                     | Ty::Void
                     | Ty::Pointer(_)
-                    | Ty::Struct(_) => format!("*{inner}"),
+                    | Ty::Struct(_)
+                    | Ty::Union(_) => format!("*{inner}"),
                 };
                 current = pointee;
             }
@@ -484,6 +485,12 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
             // layout is what it holds, and `--emit ast` spells the name.
             Ty::Struct(id) => {
                 struct_name = format!("struct #{}", id.index());
+                break struct_name.as_str();
+            }
+            // Numbered in the one table it shares with structs, so `union #1`
+            // and `struct #0` are never one number twice.
+            Ty::Union(id) => {
+                struct_name = format!("union #{}", id.index());
                 break struct_name.as_str();
             }
         }

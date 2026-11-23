@@ -412,7 +412,7 @@ impl Allocations<'_> {
             .locals()
             .map(|local| {
                 let length = match self.unit.ty(function.local(local)) {
-                    Ty::Array { .. } | Ty::Struct(_) => {
+                    Ty::Array { .. } | Ty::Struct(_) | Ty::Union(_) => {
                         self.innermost_elements(function.local(local))
                     }
                     _ => None,
@@ -477,7 +477,8 @@ impl Allocations<'_> {
                         sign: _,
                     }
                     | Ty::Void
-                    | Ty::Struct(_) => None,
+                    | Ty::Struct(_)
+                    | Ty::Union(_) => None,
                 },
                 Operand::Constant(_) => None,
             })
@@ -704,7 +705,7 @@ impl Allocations<'_> {
             // Mutation: answer `None`;
             // `a_pointer_member_written_then_read_is_written`'s `local`
             // reports `SC0411`.
-            Ty::Struct(_) => {
+            Ty::Struct(_) | Ty::Union(_) => {
                 stored_pointer(self.unit, ty)?;
                 let slot = u64::from(self.unit.target().pointer_bits() / 8);
                 let size = self.unit.size_of(ty)?;
@@ -767,7 +768,7 @@ impl Allocations<'_> {
                 | Ty::Void,
             ) => false,
             // Where any member may, as `stored_pointer` answers (#1200).
-            Some(Ty::Struct(_)) => self
+            Some(Ty::Struct(_) | Ty::Union(_)) => self
                 .unit
                 .place_ty(function, place)
                 .and_then(|ty| stored_pointer(self.unit, ty))
@@ -784,7 +785,7 @@ impl Allocations<'_> {
                         sign: _,
                     }
                     | Ty::Void => false,
-                    Ty::Struct(_) => stored_pointer(self.unit, element).is_some(),
+                    Ty::Struct(_) | Ty::Union(_) => stored_pointer(self.unit, element).is_some(),
                     Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
                 }
             }
@@ -808,7 +809,9 @@ impl Allocations<'_> {
             .place_ty(function, &Place::local(taken.local).deref())?;
         let mut offset: u64 = 0;
         for step in members {
-            let (Projection::Field(member), Ty::Struct(layout)) = (step, self.unit.ty(ty)) else {
+            let (Projection::Field(member), Ty::Struct(layout) | Ty::Union(layout)) =
+                (step, self.unit.ty(ty))
+            else {
                 return None;
             };
             offset = offset.checked_add(self.unit.offset_of(layout, *member))?;
@@ -838,7 +841,8 @@ impl Allocations<'_> {
             }
             | Ty::Void
             | Ty::Array { .. }
-            | Ty::Struct(_) => None,
+            | Ty::Struct(_)
+            | Ty::Union(_) => None,
         }
     }
 
@@ -875,7 +879,8 @@ impl Allocations<'_> {
                     sign: _,
                 }
                 | Ty::Void
-                | Ty::Struct(_) => 0,
+                | Ty::Struct(_)
+                | Ty::Union(_) => 0,
                 Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
             levels.push(Width::AtMost(width));
@@ -1168,7 +1173,8 @@ impl Allocations<'_> {
                 }
                 | Ty::Void
                 | Ty::Array { .. }
-                | Ty::Struct(_),
+                | Ty::Struct(_)
+                | Ty::Union(_),
             )
             | None => Some(0),
         }
@@ -1369,7 +1375,8 @@ impl Allocations<'_> {
                 rank: Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }) => false,
-            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. } | Ty::Struct(_)) | None => false,
+            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. } | Ty::Struct(_) | Ty::Union(_))
+            | None => false,
         }
     }
 

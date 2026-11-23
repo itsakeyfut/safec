@@ -24,7 +24,8 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
         }
         | Ty::Void
         | Ty::Pointer(_)
-        | Ty::Struct(_) => ty,
+        | Ty::Struct(_)
+        | Ty::Union(_) => ty,
     }
 }
 
@@ -55,7 +56,7 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
 /// `local` reports `SC0411`.
 pub(crate) fn stored_pointer(unit: &TranslationUnit, stored: TyId) -> Option<TyId> {
     let element = innermost_element(unit, stored);
-    if let Ty::Struct(layout) = unit.ty(element) {
+    if let Ty::Struct(layout) | Ty::Union(layout) = unit.ty(element) {
         // One with no members holds nothing anybody knows of.
         return unit
             .layout_of(layout)?
@@ -91,6 +92,6 @@ pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
         // bound, and walking it never ended. What a member holds is asked
         // through the member's own pointer type, which is counted where it
         // is used, so nothing reads a struct's own depth: measured.
-        Ty::Struct(_) => 0,
+        Ty::Struct(_) | Ty::Union(_) => 0,
     }
 }

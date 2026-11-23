@@ -394,7 +394,7 @@ impl Allocations<'_> {
                     Some(Ty::Void | Ty::Pointer(_) | Ty::Array { .. }) => false,
                     // No store writes a struct whole yet (#1201); one that
                     // did would be bytes, as a copy is.
-                    Some(Ty::Struct(_)) => true,
+                    Some(Ty::Struct(_) | Ty::Union(_)) => true,
                 }
             }
             StoreKind::Copy => true,

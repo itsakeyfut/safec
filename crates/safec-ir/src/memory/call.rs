@@ -144,7 +144,9 @@ impl Allocations<'_> {
             } => true,
             Ty::Void | Ty::Pointer(_) => false,
             // Where no member holds one, as `stored_pointer` answers.
-            Ty::Struct(_) => crate::layout::stored_pointer(self.unit, pointee).is_none(),
+            Ty::Struct(_) | Ty::Union(_) => {
+                crate::layout::stored_pointer(self.unit, pointee).is_none()
+            }
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2557,7 +2559,8 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Struct(_) => 0,
+            | Ty::Struct(_)
+            | Ty::Union(_) => 0,
             Ty::Array { .. } => {
                 unreachable!("`innermost_element` strips every array")
             }
@@ -2624,7 +2627,7 @@ impl Allocations<'_> {
                     } => false,
                     // Members of more than one type, so it may store any
                     // pointer somewhere below (#1200).
-                    Ty::Struct(_) => true,
+                    Ty::Struct(_) | Ty::Union(_) => true,
                     Ty::Pointer(_) | Ty::Array { .. } => {
                         unreachable!("the loop strips every pointer and array")
                     }
@@ -2635,7 +2638,8 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Struct(_) => true,
+            | Ty::Struct(_)
+            | Ty::Union(_) => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2870,7 +2874,8 @@ impl Allocations<'_> {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Struct(_) => return usize::MAX,
+            | Ty::Struct(_)
+            | Ty::Union(_) => return usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         };
         match self.unit.ty(copied) {
@@ -2882,7 +2887,8 @@ impl Allocations<'_> {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Struct(_) => usize::MAX,
+            | Ty::Struct(_)
+            | Ty::Union(_) => usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }

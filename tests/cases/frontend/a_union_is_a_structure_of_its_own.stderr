@@ -1,0 +1,12 @@
+error[SC0313]: use of `S` with tag type that does not match previous declaration
+    ╭─[ a_union_is_a_structure_of_its_own.c:12:7 ]
+    │
+  8 │ struct S {
+    │        ┬  
+    │        ╰── declared `struct S` here
+    │ 
+ 12 │ union S {
+    │       ┬  
+    │       ╰── written `union S` here
+────╯
+  = note: C17 6.7.2.3 p2

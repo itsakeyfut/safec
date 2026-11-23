@@ -1870,6 +1870,7 @@ impl Checker<'_> {
             .resolution
             .definition(self.resolution.tag(self.resolution.bound(ast, ty)))?;
         let Type::Struct {
+            union,
             members: Some(members),
             ..
         } = ast.ty(definition)
@@ -1880,7 +1881,13 @@ impl Checker<'_> {
             .iter()
             .map(|member| self.size_and_align(ast, member.ty))
             .collect::<Option<Vec<_>>>()?;
-        let (_, size, align) = safec_ir::ir::lay_out(sized)?;
+        // The IR's rule for each, so `sizeof` and the layout the backend
+        // writes are one answer (ADR-0124).
+        let (_, size, align) = if *union {
+            safec_ir::ir::lay_out_union(sized)?
+        } else {
+            safec_ir::ir::lay_out(sized)?
+        };
         Some((size, align))
     }
 
