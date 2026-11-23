@@ -1,7 +1,7 @@
 error[SC0208]: a typedef cannot be initialized
-   ╭─[ a_typedef_with_an_initializer_is_refused.c:1:1 ]
+   ╭─[ a_typedef_with_an_initializer_is_refused.c:1:13 ]
    │
  1 │ typedef int T = 1;
-   │ ────────┬────────  
-   │         ╰────────── a typedef name declares no object
+   │             ┬  
+   │             ╰── a typedef name declares no object
 ───╯

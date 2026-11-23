@@ -1,0 +1,7 @@
+error[SC0313]: typedef redefinition of `T` with a different type
+   ╭─[ a_typedef_redefined_as_another_type_is_refused.c:2:14 ]
+   │
+ 2 │ typedef long T;
+   │              ┬  
+   │              ╰── declared in this scope already as another type
+───╯

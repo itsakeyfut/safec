@@ -1,0 +1,6 @@
+Declaration a_parameter_hides_a_typedef_from_its_declarator_on.c:1:1 "int"
+Error a_parameter_hides_a_typedef_from_its_declarator_on.c:2:1
+Function a_parameter_hides_a_typedef_from_its_declarator_on.c:3:1 "main" "int (void)"
+  Compound a_parameter_hides_a_typedef_from_its_declarator_on.c:3:16
+    Return a_parameter_hides_a_typedef_from_its_declarator_on.c:3:18
+      Number a_parameter_hides_a_typedef_from_its_declarator_on.c:3:25 "0"

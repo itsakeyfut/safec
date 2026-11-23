@@ -88,4 +88,10 @@ programs! {
     /// block that hides one (#1205). Mutation: stop declaring typedef names in
     /// `Parser::declare_declarators`; this does not build.
     a_typedef_names_the_type_it_was_declared_with,
+    /// A typedef in a block that hides the file's, an object that hides it
+    /// from the end of its own declarator (C17 6.2.1 p7), so `int T =
+    /// sizeof(T);` measures the `int`, and a label spelled like it, which has a
+    /// name space of its own (#1205 review). Mutation: declare a name after
+    /// its initializer in `Parser::init_declarator_list`; this exits 1.
+    a_typedef_in_a_block_is_scoped_as_c_says,
 }

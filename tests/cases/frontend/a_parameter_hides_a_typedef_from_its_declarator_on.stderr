@@ -1,0 +1,7 @@
+error[SC0201]: expected a declaration
+   ╭─[ a_parameter_hides_a_typedef_from_its_declarator_on.c:2:14 ]
+   │
+ 2 │ int g(int T, T y) { return y; }
+   │              ┬  
+   │              ╰── this cannot begin one
+───╯

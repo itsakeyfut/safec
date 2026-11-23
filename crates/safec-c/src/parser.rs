@@ -6,7 +6,7 @@
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
-//! `sizeof`, the type qualifiers but `const`, the storage classes but `static` and `extern`, `typedef`, a variadic function's ellipsis,
+//! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
@@ -28,7 +28,7 @@
 
 use crate::ast::{
     Ast, Attribute, BinOp, Declaration, Expr, ExprId, ForStart, Function, InitDeclarator, Item,
-    Nullability, Parameters, Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp,
+    Nullability, Parameters, Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -137,10 +137,17 @@ const NOTHING_DECLARED: Code = Code::new("SC0206");
 const UNREAD: Code = Code::new("SC0207");
 
 /// A typedef written with an initializer, `typedef int T = 1;`. A typedef
-/// name declares no object (C17 6.7.8 p3), so there is nothing to
-/// initialize. The parser's, since it is the stage that reads `typedef` and
+/// declaration declares no object, only a name for a type (C17 6.7.8 p3), so
+/// there is nothing to initialize. The parser's, since it is the stage that reads `typedef` and
 /// resolves typedef names, which no later stage sees.
 const TYPEDEF_INITIALIZED: Code = Code::new("SC0208");
+
+/// A name declared as a typedef name and as an ordinary identifier in one
+/// scope, `typedef int T; T T;` at file scope (C17 6.7 p3, 6.2.1 p4). The
+/// type check's code for a name declared twice incompatibly, since that is
+/// what it is; the parser reports it because only the parser knows typedef
+/// names.
+const REDECLARED_KIND: Code = Code::new("SC0313");
 
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
 /// either stage.
@@ -490,11 +497,14 @@ impl Words {
 /// and is read by [`Parser::struct_specifier`]. The one test for where a
 /// declaration, a parameter list or a `for`'s declaration begins.
 ///
-/// One place, asked from five, none of which consumes: `compound` and
+/// The keyword half of the answer: every place that asks goes through
+/// [`Parser::begins_specifiers_at`], which adds typedef names, since a name
+/// alone does not say. Asked, none of them consuming, by `compound` and
 /// `for_statement`, to tell a declaration from a statement (C17 6.8.2, 6.8.5);
 /// `parenthesised_declarator`, to tell a parenthesised declarator from a
-/// parameter list; `primary`, to tell a type name in parentheses from an
-/// expression; and `ends_a_label_c17_forbids`. All of them have to agree about
+/// parameter list; `type_name_follows`, to tell a type name in parentheses from
+/// an expression; `ends_a_label_c17_forbids`; and the recovery that finds where
+/// an item ends. All of them have to agree about
 /// what begins a declaration, and a second copy of the answer is what would let
 /// them stop agreeing, and two spellings of one decision have already left a
 /// case here answered by neither.
@@ -503,7 +513,11 @@ fn begins_specifiers(kind: TokenKind) -> bool {
         || matches!(
             kind,
             TokenKind::Keyword(
-                Keyword::Struct | Keyword::Const | Keyword::Static | Keyword::Extern
+                Keyword::Struct
+                    | Keyword::Const
+                    | Keyword::Static
+                    | Keyword::Extern
+                    | Keyword::Typedef
             )
         )
 }
@@ -546,13 +560,12 @@ struct Unread {
 ///
 /// One table, so every position asks the same question. Each row says which
 /// positions C allows the keyword in, because one that is C in one place is a
-/// constraint violation in another: `typedef` in a parameter list breaks
-/// C17 6.7.6.3 p2, and `typedef` in a `for` breaks 6.8.5 p3. Those keep
-/// [`EXPECTED`]. So does `_Imaginary`, which only Annex G gives a meaning;
+/// constraint violation in another: `register` outside a block or a
+/// parameter breaks C17 6.7.1 p6. Those keep [`EXPECTED`]. So does `_Imaginary`, which only Annex G gives a meaning;
 /// `case` and `default` outside a `switch` are [`Parser::case_statement`]'s. `restrict` has no row: 6.7.3 p2 allows it only on a
 /// pointer to an object, so leading a declaration it is C only before a
-/// typedef name for one, which this parser does not read, and after a `*` it
-/// is [`Parser::declarator`]'s to refuse.
+/// typedef name for one, and after a `*` it is [`Parser::declarator`]'s to
+/// refuse.
 fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
     use Position::{BlockScope, Expression, FileScope, ForInit, Member, Parameter};
 
@@ -892,13 +905,13 @@ impl Parser<'_> {
                 TokenKind::Punct(Punct::RightBrace) => {
                     depth -= 1;
                     let next = self.tokens.get(end).copied();
-                    // What begins an item includes what the parser refuses
-                    // at the start of one, `inline` and `typedef` among them,
+                    // What begins an item includes a typedef name and what the
+                    // parser refuses at the start of one, `inline` among them,
                     // or a `}` before one swallowed it. Found by review. Not
                     // a name, which is a struct's declarator here.
                     let ends_here = next.is_none_or(|next| {
                         next.is_eof()
-                            || begins_specifiers(next.kind)
+                            || self.begins_specifiers_at(next)
                             || next.kind == TokenKind::Annotation(Annotation::Attribute)
                             || matches!(next.kind, TokenKind::Keyword(keyword)
                                 if unread_keyword(keyword, Position::FileScope).is_some())
@@ -1034,10 +1047,33 @@ impl Parser<'_> {
                 );
                 return Item::Error { span: first };
             }
-            self.declare_name(declared.name, None);
+            // **A function definition's declarator writes its function type**
+            // (C17 6.9.1 p2, footnote 162): `typedef int F(void); F g { ... }`
+            // takes it from a typedef and is not C, and was accepted (#1205
+            // review).
+            if declared.ty == declared.base
+                && matches!(self.ast.ty(declared.ty), Type::Function { .. })
+            {
+                self.report(
+                    "a function definition writes its parameter list",
+                    "C17 6.9.1 p2: the type may not come from a typedef",
+                    diagnostics,
+                );
+                return Item::Error { span: first };
+            }
+            if self
+                .declare_name(declared.name, None, diagnostics)
+                .is_none()
+            {
+                return Item::Error { span: first };
+            }
+            // **The body's outermost block is the parameters' scope** (C17
+            // 6.2.1 p4), so a typedef there that redeclares a parameter is
+            // refused as one in the same scope. Read in a scope of its own,
+            // it was not (#1205 review).
             self.names.push(std::collections::HashMap::new());
-            self.declare_parameters(declared.ty);
-            let body = self.compound(diagnostics);
+            self.declare_parameters(declared.ty, diagnostics);
+            let body = self.function_body(diagnostics);
             self.names.pop();
             let Some(body) = body else {
                 return Item::Error { span: first };
@@ -1074,9 +1110,6 @@ impl Parser<'_> {
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return Item::Error { span: start };
         };
-        if !self.declare_declarators(&declarators, typedef, diagnostics) {
-            return Item::Error { span: start };
-        }
 
         if self
             .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
@@ -1216,12 +1249,28 @@ impl Parser<'_> {
             return_nullability: mut returns,
             declares,
             storage: _,
-            typedef: _,
+            typedef,
         } = declared;
         let mut declarators = Vec::new();
 
         loop {
+            // **In scope from the end of its declarator** (C17 6.2.1 p7), so
+            // `char T = 1, n = sizeof(T);` measures the `char` and `typedef
+            // int T, U[sizeof(T)];` the `int`. Declared after the whole list,
+            // the first read `sizeof(T)` as the outer typedef's and built
+            // wrong code (#1205 review).
+            self.declare_name(name, typedef.then_some(ty), diagnostics)?;
             let init = self.initializer(diagnostics)?;
+            if typedef && init.is_some() {
+                self.report_at(
+                    declarator,
+                    TYPEDEF_INITIALIZED,
+                    "a typedef cannot be initialized",
+                    "a typedef name declares no object",
+                    diagnostics,
+                );
+                return None;
+            }
             let end = self.previous().span;
             let own = self.try_join(declarator, end);
             declarators.push(InitDeclarator {
@@ -1582,18 +1631,63 @@ impl Parser<'_> {
 
     /// Declare `name` in the innermost scope: as a typedef name for `ty`, or
     /// as an ordinary identifier where `ty` is `None`, which hides a typedef
-    /// name of an outer scope.
-    fn declare_name(&mut self, name: Span, ty: Option<TypeId>) {
+    /// name of an outer scope. **Not as the other kind in the same scope**:
+    /// `typedef int T; T T;` at file scope declares `T` twice in one name
+    /// space, which C17 6.7 p3 forbids, and was accepted (#1205 review).
+    /// `None` once reported.
+    fn declare_name(
+        &mut self,
+        name: Span,
+        ty: Option<TypeId>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
         let text = self.sources.snippet(name).to_owned();
+        let already = self
+            .names
+            .last()
+            .and_then(|scope| scope.get(&text))
+            .copied();
+        // **A typedef name may be declared again in its scope only as the
+        // same type** (C17 6.7 p3, as C11 relaxed it): `typedef int T;
+        // typedef long T;` was accepted, the second silently winning (#1205
+        // review). Compared by spelling, since the parser has no type
+        // compatibility of its own and two spellings of one type are spelled
+        // alike once resolved.
+        if let (Some(Some(before)), Some(now)) = (already, ty) {
+            if spell_type(self.sources, &self.ast, before)
+                != spell_type(self.sources, &self.ast, now)
+            {
+                self.report_at(
+                    name,
+                    REDECLARED_KIND,
+                    format!("typedef redefinition of `{text}` with a different type"),
+                    "declared in this scope already as another type",
+                    diagnostics,
+                );
+                return None;
+            }
+        }
+        let clash = already.is_some_and(|already| already.is_some() != ty.is_some());
+        if clash {
+            self.report_at(
+                name,
+                REDECLARED_KIND,
+                format!("redefinition of `{text}` as a different kind of name"),
+                "declared in this scope already as the other kind",
+                diagnostics,
+            );
+            return None;
+        }
         if let Some(scope) = self.names.last_mut() {
             scope.insert(text, ty);
         }
+        Some(())
     }
 
     /// The names a function definition's parameters declare, in the scope
     /// its body is read in (C17 6.2.1 p4), so a parameter hides a typedef
     /// name of the same spelling there.
-    fn declare_parameters(&mut self, function: TypeId) {
+    fn declare_parameters(&mut self, function: TypeId, diagnostics: &mut DiagnosticSink) {
         if let Type::Function {
             parameters: Parameters::Prototype(parameters),
             ..
@@ -1601,7 +1695,9 @@ impl Parser<'_> {
         {
             let names: Vec<Span> = parameters.iter().filter_map(|p| p.name).collect();
             for name in names {
-                self.declare_name(name, None);
+                // Each parameter is in a scope of its own here, the body's, so
+                // two of one name are sema's to report, not this.
+                let _ = self.declare_name(name, None, diagnostics);
             }
         }
     }
@@ -1993,11 +2089,12 @@ impl Parser<'_> {
     /// `direct-abstract-declarator` has `( parameter-type-list_opt )` with
     /// nothing before it. What follows tells them apart, because a parameter
     /// list either ends at once or begins with a declaration specifier, and a
-    /// declarator begins with `*`, `(` or a name. `typedef` is what makes this
-    /// genuinely ambiguous in full C, and `typedef` is a later stage.
+    /// declarator begins with `*`, `(` or a name. A typedef name is what makes
+    /// this genuinely ambiguous (C17 6.7.6.3 p11): `int (T)` with `T` a typedef
+    /// name is a parameter list, so [`Parser::begins_specifiers_at`] answers.
     fn parenthesised_declarator(&self) -> bool {
-        let after = self.peek_at(1).kind;
-        !begins_specifiers(after) && after != TokenKind::Punct(Punct::RightParen)
+        let after = self.peek_at(1);
+        !self.begins_specifiers_at(after) && after.kind != TokenKind::Punct(Punct::RightParen)
     }
 
     /// The `[...]` and `(...)` that follow a direct-declarator, in source order.
@@ -2112,6 +2209,19 @@ impl Parser<'_> {
     }
 
     fn parameter_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+        // **A prototype is a scope of its own** (C17 6.2.1 p4), in which each
+        // parameter's name hides a typedef name from the end of its
+        // declarator: `int g(int T, T y)` is not C where `T` is a typedef
+        // name, and was read as one (#1205 review).
+        self.names.push(std::collections::HashMap::new());
+        let read = self.parameter_items(diagnostics);
+        self.names.pop();
+        read
+    }
+
+    /// The parameters of a list, in the scope [`Parser::parameter_list`]
+    /// opened.
+    fn parameter_items(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
         let mut parameters: Vec<Declaration> = Vec::new();
 
         loop {
@@ -2140,6 +2250,9 @@ impl Parser<'_> {
             let start = self.peek().span;
             let base = self.specifiers(Position::Parameter, diagnostics)?;
             let (name, derivations) = self.declarator(false, diagnostics)?;
+            if let Some(name) = name {
+                self.declare_name(name, None, diagnostics)?;
+            }
             // The parameter's own pointer is the last derivation, the one that
             // makes the parameter's type. `apply` refuses one written anywhere
             // else, so this is the only one there is to keep.
@@ -2389,6 +2502,14 @@ impl Parser<'_> {
         read
     }
 
+    /// A function definition's body: a compound statement in the scope its
+    /// caller opened for the parameters, rather than one of its own.
+    fn function_body(&mut self, diagnostics: &mut DiagnosticSink) -> Option<StmtId> {
+        let start = self.peek().span;
+        self.expect(TokenKind::Punct(Punct::LeftBrace), "`{`", diagnostics)?;
+        self.block_items(start, diagnostics)
+    }
+
     /// The items of a block whose `{` [`Parser::compound`] has read, in the
     /// scope it opened.
     fn block_items(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> Option<StmtId> {
@@ -2412,7 +2533,11 @@ impl Parser<'_> {
                     // `__attribute__` goes with the declarations, where
                     // `specifiers` refuses it by name, rather than to the
                     // expressions, which would call it a missing one.
-                    let item = if parser.begins_specifiers_at(parser.peek())
+                    // **A typedef name followed by `:` is a label**, since
+                    // labels have a name space of their own (C17 6.2.3 p1).
+                    let labels = parser.peek().kind == TokenKind::Identifier
+                        && parser.peek_at(1).kind == TokenKind::Punct(Punct::Colon);
+                    let item = if !labels && parser.begins_specifiers_at(parser.peek())
                         || parser.check(TokenKind::Annotation(Annotation::Attribute))
                     {
                         parser.declaration_statement(diagnostics)
@@ -2464,9 +2589,6 @@ impl Parser<'_> {
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
         };
-        if !self.declare_declarators(&declarators, typedef, diagnostics) {
-            return self.ast.push_stmt(Stmt::Error { span: start });
-        }
 
         if self
             .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
@@ -2483,36 +2605,6 @@ impl Parser<'_> {
             storage,
             span,
         })
-    }
-
-    /// Declare each declarator's name in the innermost scope: a typedef name
-    /// for its type where the declaration wrote `typedef`, an ordinary
-    /// identifier otherwise. A typedef with an initializer is refused, since
-    /// it declares no object to initialize (C17 6.7.9 p3 in spirit; `clang`
-    /// says "illegal initializer").
-    fn declare_declarators(
-        &mut self,
-        declarators: &[InitDeclarator],
-        typedef: bool,
-        diagnostics: &mut DiagnosticSink,
-    ) -> bool {
-        for declarator in declarators {
-            let Some(name) = declarator.declaration.name else {
-                continue;
-            };
-            if typedef && declarator.init.is_some() {
-                self.report_at(
-                    declarator.declaration.span,
-                    TYPEDEF_INITIALIZED,
-                    "a typedef cannot be initialized",
-                    "a typedef name declares no object",
-                    diagnostics,
-                );
-                return false;
-            }
-            self.declare_name(name, typedef.then_some(declarator.declaration.ty));
-        }
-        true
     }
 
     /// One statement, and where it went in the tree.
@@ -2936,6 +3028,16 @@ impl Parser<'_> {
 
         // The same test a block makes, so a `for` reads a declaration where a
         // block would and nowhere else.
+        // A `for` clause declares objects with automatic storage only (C17
+        // 6.8.5 p3), so a typedef there is not C.
+        if self.check(TokenKind::Keyword(Keyword::Typedef)) {
+            self.report(
+                "a `for` clause cannot declare a typedef",
+                "C17 6.8.5 p3 allows only objects here",
+                diagnostics,
+            );
+            return failed(self);
+        }
         let first = if self.begins_specifiers_at(self.peek())
             || self.check(TokenKind::Annotation(Annotation::Attribute))
         {
@@ -3832,10 +3934,10 @@ impl Parser<'_> {
     /// Whether the token after a label's `:` is one C17 does not allow there:
     /// the `}` that closes its block, or the start of a declaration.
     fn ends_a_label_c17_forbids(&self) -> bool {
-        let after = self.peek_at(2).kind;
-        after == TokenKind::Punct(Punct::RightBrace)
-            || begins_specifiers(after)
-            || matches!(after, TokenKind::Keyword(keyword)
+        let after = self.peek_at(2);
+        after.kind == TokenKind::Punct(Punct::RightBrace)
+            || self.begins_specifiers_at(after)
+            || matches!(after.kind, TokenKind::Keyword(keyword)
                 if unread_keyword(keyword, Position::BlockScope).is_some())
     }
 

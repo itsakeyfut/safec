@@ -1,0 +1,16 @@
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_typedef_names_a_type_the_memory_check_reads.c:11:5 ]
+    │
+  5 │     P p = malloc(sizeof(int));
+    │           ─────────┬─────────  
+    │                    ╰─────────── allocated here
+    │ 
+ 10 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 11 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
