@@ -752,6 +752,7 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         "void f(int (*p)[static 3]);\n",
         "void f(int a[static]);\n",
         "void f(int a[static static 2]);\n",
+        "void f(int a[const static const 2]);\n",
         "int main(void) { _Thread_local int x; }\n",
         "int main(void) { break; }\n",
         "int main(void) { continue; }\n",
@@ -822,6 +823,8 @@ fn a_star_length_says_where_c_allows_it_rather_than_that_it_is_allowed_here() {
     let sources = [
         "void f(int a[*]);\n",
         "void f(int a[2][*]);\n",
+        "void f(int a[const *]);\n",
+        "void f(int a[restrict *]);\n",
         "int f(int *p, int a[*], int b[*]) {\n    return 0;\n}\n",
         "int f(void (*g)(int a[*])) {\n    return 0;\n}\n",
     ];

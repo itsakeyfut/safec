@@ -2332,26 +2332,8 @@ impl Parser<'_> {
                         });
                         continue;
                     }
-                    if self.check(TokenKind::Punct(Punct::Star))
-                        && self.peek_at(1).kind == TokenKind::Punct(Punct::RightBracket)
-                    {
-                        // **Not `report_unread`, whose words say this is
-                        // valid here.** C17 6.7.6.2 p4 allows `[*]` only at
-                        // function prototype scope, and a definition's own
-                        // parameters are not there; this is met before the
-                        // parser has seen whether a body follows. So the
-                        // words say where C allows it, which holds at every
-                        // position, and `docs/diagnostics.md` records the
-                        // exception to `SC0207` (#532).
-                        self.report_noted(
-                            UNREAD,
-                            "`[*]` is not read yet",
-                            "allowed only at function prototype scope, and not read yet",
-                            "C17 6.7.6.2 p4 allows `[*]` only at function prototype scope, which a \
-                             definition's own parameters are not at; this compiler does not read \
-                             it anywhere yet",
-                            diagnostics,
-                        );
+                    if self.star_closes() {
+                        self.unread_star(diagnostics);
                         return None;
                     }
                 }
@@ -2392,6 +2374,32 @@ impl Parser<'_> {
         Some(suffixes)
     }
 
+    /// Whether the brackets hold `*` alone from here, C17 6.7.6.2's `[*]`.
+    fn star_closes(&self) -> bool {
+        self.check(TokenKind::Punct(Punct::Star))
+            && self.peek_at(1).kind == TokenKind::Punct(Punct::RightBracket)
+    }
+
+    /// Refuse `[*]`, with or without qualifiers before the `*`.
+    ///
+    /// **Not `report_unread`, whose words say this is valid here.** C17
+    /// 6.7.6.2 p4 allows `[*]` only at function prototype scope, and a
+    /// definition's own parameters are not there; this is met before the
+    /// parser has seen whether a body follows. So the words say where C
+    /// allows it, which holds at every position, and `docs/diagnostics.md`
+    /// records the exception to `SC0207` (#532).
+    fn unread_star(&mut self, diagnostics: &mut DiagnosticSink) {
+        self.report_noted(
+            UNREAD,
+            "`[*]` is not read yet",
+            "allowed only at function prototype scope, and not read yet",
+            "C17 6.7.6.2 p4 allows `[*]` only at function prototype scope, which a \
+             definition's own parameters are not at; this compiler does not read \
+             it anywhere yet",
+            diagnostics,
+        );
+    }
+
     /// The brackets of a parameter's outermost array derivation, from just
     /// after its `[` through its `]`, where they begin with `static` or a
     /// qualifier: C17 6.7.6.2 p1's `[ type-qualifier-list_opt
@@ -2414,12 +2422,24 @@ impl Parser<'_> {
     ) -> Option<(bool, Option<ExprId>, Option<Span>)> {
         let mut constant = false;
         let mut is_static = false;
+        // 6.7.6.2 p1 writes `static` once, before the qualifiers or after
+        // them, and not between two lists of them: `[const static const 2]`
+        // is not C. Mutation: drop this; `[const static const 2]` in
+        // `valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not`
+        // is read.
+        let mut qualified_before_static = false;
         loop {
+            let qualifier = matches!(
+                self.peek().kind,
+                TokenKind::Keyword(Keyword::Const | Keyword::Restrict)
+            );
+            if qualifier && is_static && qualified_before_static {
+                break;
+            }
+            qualified_before_static |= qualifier && !is_static;
             match self.peek().kind {
                 TokenKind::Keyword(Keyword::Const) => constant = true,
                 TokenKind::Keyword(Keyword::Restrict) => {}
-                // 6.7.6.2 p1 writes `static` once, before the qualifiers or
-                // after them.
                 TokenKind::Keyword(Keyword::Static) if !is_static => is_static = true,
                 TokenKind::Keyword(Keyword::Static) => {
                     self.report(
@@ -2442,6 +2462,14 @@ impl Parser<'_> {
                 _ => break,
             }
             self.advance();
+        }
+        // `[const *]` is `[*]` with a qualifier, which is valid where `[*]`
+        // is, and not read where `[*]` is not. Mutation: drop this;
+        // `a_star_length_says_where_c_allows_it_rather_than_that_it_is_allowed_here`
+        // gets `SC0201` for `[const *]`.
+        if !is_static && self.star_closes() {
+            self.unread_star(diagnostics);
+            return None;
         }
         if self.check(TokenKind::Punct(Punct::RightBracket)) {
             if is_static {
