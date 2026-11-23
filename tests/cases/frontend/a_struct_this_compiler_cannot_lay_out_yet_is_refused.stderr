@@ -1,39 +1,15 @@
-error[SC0304]: cannot compile something of type `struct Inner[2]` yet
-    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:11:5 ]
-    │
- 11 │     struct Inner many[2];
-    │     ──────────┬─────────  
-    │               ╰─────────── declared here
-────╯
-  = note: an array of structs is not laid out yet
-error[SC0304]: cannot compile something of type `struct Outer` yet
-    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:16:5 ]
-    │
- 16 │     struct Outer o;
-    │     ───────┬──────  
-    │            ╰──────── declared here
-────╯
-  = note: a struct member of struct type is not laid out yet
-error[SC0304]: cannot compile something of type `struct List` yet
-   ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:8:5 ]
-   │
- 8 │     struct List *next;
-   │     ────────┬────────  
-   │             ╰────────── declared here
-───╯
-  = note: a struct that reaches itself through a member is not laid out yet
 error[SC0304]: cannot compile something of type `struct Fixed` yet
-    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:28:5 ]
-    │
- 28 │     struct Fixed f;
-    │     ───────┬──────  
-    │            ╰──────── declared here
-────╯
+   ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:6:5 ]
+   │
+ 6 │     struct Fixed f;
+   │     ───────┬──────  
+   │            ╰──────── declared here
+───╯
   = note: a struct with a `const` member is not laid out yet
 error[SC0304]: cannot compile something of type `struct Huge` yet
-    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:38:5 ]
+    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:16:5 ]
     │
- 38 │     struct Huge h;
+ 16 │     struct Huge h;
     │     ──────┬──────  
     │           ╰──────── declared here
 ────╯

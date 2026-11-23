@@ -54,6 +54,19 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A pointer member written through its address and read back is
+        // written, in a local struct and a heap one, and beside a member that
+        // is no pointer, narrower than one or as wide (#1202). Mutation: answer
+        // `false` for a struct in `built::is_array`; `local` and the two
+        // beside it report `SC0411`.
+        a_pointer_member_written_then_read_is_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer member of a nested struct read before anything wrote it is
+        // `SC0411`, and so is one of an array element nothing wrote, while the
+        // element beside it was; a pointer from the inner member's address
+        // reaching past it is doubted (#1202). Mutation: move a member's
+        // address by no slot in the transfer's member arm; `element_never_written`
+        // is silent.
+        a_nested_struct_and_an_array_of_structs_are_read_by_member: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A member that is no array is an array of one for arithmetic (C17
         // 6.5.6 p7), so a pointer from its address that reaches the next
         // member, or the one before, is doubted though it stays inside the
@@ -8503,13 +8516,10 @@ cases! {
         // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
         // this declares `T` and reports nothing.
         a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
-        // An array of structs, a member of struct type and a struct that
-        // reaches itself are each refused under `SC0304`, since their layout
-        // and what a member of one is to the memory check are #1202's. So is
-        // a struct with a `const` member, whose `const` the memory check
-        // keeps per object and not per slot.
-        // Mutation: lay an array of structs out in `Lowering::ty`; `arrays`
-        // is lowered.
+        // A struct with a `const` member, whose `const` the memory check
+        // keeps per object and not per slot, and one larger than the target
+        // can address, are refused under `SC0304`. Mutation: lay a `const`
+        // member out in `Lowering::struct_of`; `Fixed` is lowered.
         a_struct_this_compiler_cannot_lay_out_yet_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct reached through a `const` struct is typed as a copy the
         // type check makes, which the name resolver never bound, so its tag is
@@ -10081,10 +10091,11 @@ cases! {
     }
     "codegen" => {
         // A struct is bytes to LLVM, so its storage says its alignment, a
-        // global's and a local's alike: after a `char` global it is at an
-        // 8-byte boundary, as `clang` puts it (#1200 review). Mutation:
-        // answer nothing for a struct in `Emitter::struct_align`; both lose
-        // their `align 8`.
+        // global's and a local's alike, and an array of them as its element
+        // (#1202): after a `char` global each is at an 8-byte boundary, as
+        // `clang` puts it (#1200 review). Mutation: answer nothing for a
+        // struct in `Emitter::struct_align`; all three lose their `align 8`,
+        // and for an array alone, `many` does.
         a_struct_global_is_aligned_as_its_layout_says: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // The `--emit llvm-ir` cases, kept together because what each is for is
         // only visible beside the others. `every_operator` is the one that

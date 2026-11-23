@@ -197,8 +197,8 @@ impl Emitter<'_> {
         }
     }
 
-    /// `, align N` for storage of a struct type, from the layout, and nothing
-    /// for any other. **A struct is bytes to LLVM**, which aligns `[N x i8]`
+    /// `, align N` for storage of a struct type, or an array of them, from the
+    /// layout, and nothing for any other. **A struct is bytes to LLVM**, which aligns `[N x i8]`
     /// to one, so its alignment is said wherever its storage is made, a
     /// local's and a global's alike: a global left at one put an 8-byte
     /// member at an address 1 mod 8 (#1200 review). Every other type is
@@ -208,7 +208,9 @@ impl Emitter<'_> {
     fn struct_align(&self, ty: TyId) -> String {
         match self.unit.ty(ty) {
             Ty::Struct(layout) => format!(", align {}", self.unit.struct_layout(layout).align),
-            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => String::new(),
+            // An array of them is aligned as its element (#1202).
+            Ty::Array { element, .. } => self.struct_align(element),
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) => String::new(),
         }
     }
 

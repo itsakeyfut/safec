@@ -49,15 +49,16 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
 /// member holds one: its memory is pointers at some slots and not others, and
 /// answering that it holds none would leave a pointer member unasked by every
 /// reader above, a silence, where answering that it holds one asks the
-/// slots that hold none too, a report the reader sees (#1200). **Held by
-/// nothing, measured**: answering none changes no case, since every member
-/// is read and written through a pointer typed as the member, which asks
-/// the member's own type; a struct copied or handed whole read the same.
+/// slots that hold none too, a report the reader sees (#1200). It is what
+/// counts a struct's slots for the per-slot record (#1202). Mutation: answer
+/// none for a struct; `a_pointer_member_written_then_read_is_written`'s
+/// `local` reports `SC0411`.
 pub(crate) fn stored_pointer(unit: &TranslationUnit, stored: TyId) -> Option<TyId> {
     let element = innermost_element(unit, stored);
     if let Ty::Struct(layout) = unit.ty(element) {
+        // One with no members holds nothing anybody knows of.
         return unit
-            .struct_layout(layout)
+            .layout_of(layout)?
             .members
             .iter()
             .filter_map(|member| stored_pointer(unit, member.ty))
@@ -85,14 +86,11 @@ pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
         // because every use of an array converts it into a temporary of the
         // element's pointer type, which is one `*` deeper still.
         Ty::Array { element, .. } => pointer_depth(unit, element),
-        // As deep as its deepest member, for the same reason, and held by
-        // nothing either, measured.
-        Ty::Struct(layout) => unit
-            .struct_layout(layout)
-            .members
-            .iter()
-            .map(|member| pointer_depth(unit, member.ty))
-            .max()
-            .unwrap_or(0),
+        // **No deeper than nothing**: a struct may point at itself, `struct
+        // L { struct L *next; }`, so its depth through its members has no
+        // bound, and walking it never ended. What a member holds is asked
+        // through the member's own pointer type, which is counted where it
+        // is used, so nothing reads a struct's own depth: measured.
+        Ty::Struct(_) => 0,
     }
 }

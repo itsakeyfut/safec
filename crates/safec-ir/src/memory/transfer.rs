@@ -412,7 +412,9 @@ impl Allocations<'_> {
             .locals()
             .map(|local| {
                 let length = match self.unit.ty(function.local(local)) {
-                    Ty::Array { .. } => self.innermost_elements(function.local(local)),
+                    Ty::Array { .. } | Ty::Struct(_) => {
+                        self.innermost_elements(function.local(local))
+                    }
                     _ => None,
                 };
                 match length {
@@ -695,13 +697,24 @@ impl Allocations<'_> {
         match self.unit.ty(ty) {
             Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
             Ty::Pointer(_) => Some(1),
-            // Members of more than one type are no run of elements to count.
+            // **Its pointer-sized slots, where it holds a pointer**, which is
+            // what an element is counted in, so that a member's address
+            // moves through them as an element's does (#1202): one that
+            // holds none has no element to count, as an `int` has not.
+            // Mutation: answer `None`;
+            // `a_pointer_member_written_then_read_is_written`'s `local`
+            // reports `SC0411`.
+            Ty::Struct(_) => {
+                stored_pointer(self.unit, ty)?;
+                let slot = u64::from(self.unit.target().pointer_bits() / 8);
+                let size = self.unit.size_of(ty)?;
+                (size % slot == 0).then_some(size / slot)
+            }
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Void
-            | Ty::Struct(_) => None,
+            | Ty::Void => None,
         }
     }
 
@@ -801,7 +814,7 @@ impl Allocations<'_> {
             offset = offset.checked_add(self.unit.offset_of(layout, *member))?;
             ty = self
                 .unit
-                .struct_layout(layout)
+                .layout_of(layout)?
                 .members
                 .get(*member as usize)?
                 .ty;
@@ -4005,7 +4018,19 @@ impl Allocations<'_> {
                             // In bytes: the offset is counted in them.
                             Some(1),
                         );
-                        reached.moved_by_arithmetic(None);
+                        // **The slot moves with it, where the offset is a
+                        // whole number of them**: an element is counted in
+                        // pointer-sized slots (`Held::element`), and a store
+                        // through a member at a slot's start lands in that
+                        // slot as `p[1] = q` does. Moved by an unknown count,
+                        // a pointer member written and then read was doubted
+                        // as unwritten in any struct of more than one slot
+                        // (#1202). Mutation: move it by `None`;
+                        // `a_pointer_member_written_then_read_is_written`
+                        // reports `SC0411`.
+                        let slot = u64::from(self.unit.target().pointer_bits() / 8);
+                        let by = (offset % slot == 0).then(|| i128::from(offset / slot));
+                        reached.moved_by_arithmetic(by);
                         // **And it walks the member alone**: C17 6.5.6 p7
                         // makes a member that is no array an array of one
                         // for arithmetic, and p8 keeps a pointer into it

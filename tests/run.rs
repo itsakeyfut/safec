@@ -117,4 +117,11 @@ programs! {
     /// `Lowering::member_base`'s temporary in `Lowering::struct_address`;
     /// this does not build.
     a_member_through_a_pointer_read_out_of_memory_is_read,
+    /// A struct member of struct type and an array member of structs, reached
+    /// by `.` chains and through a pointer to the inner struct, a global and
+    /// a local array of structs, a list that points at itself walked to its
+    /// end, a pointer to a struct nothing defines, and `sizeof` of the outer
+    /// (#1202). Mutation: take every member's offset as zero in the
+    /// backend's `Projection::Field` arm; this exits with another value.
+    a_nested_struct_and_an_array_of_structs_are_read_by_member,
 }

@@ -1,0 +1,381 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_member_written_then_read_is_written.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "size"
+Function a_pointer_member_written_then_read_is_written.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "pointer"
+Function a_pointer_member_written_then_read_is_written.c:19:5 "local"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "struct #0" "two"
+  Local "_3" "struct #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *" "t"
+  Local "_7" "struct #0 *"
+  Local "_8" "int **"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_pointer_member_written_then_read_is_written.c:20:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_member_written_then_read_is_written.c:20:13 generated
+    Operation a_pointer_member_written_then_read_is_written.c:22:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:22:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:22:18 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_pointer_member_written_then_read_is_written.c:22:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_pointer_member_written_then_read_is_written.c:22:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:23:14 generated
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:23:14 written
+      Destination "_8"
+      Address
+        Place "_7"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:23:10 written
+      Destination "_6"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_pointer_member_written_then_read_is_written.c:23:14 generated
+    Operation a_pointer_member_written_then_read_is_written.c:24:12 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Operation a_pointer_member_written_then_read_is_written.c:24:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_pointer_member_written_then_read_is_written.c:24:12 generated
+    Return
+Function a_pointer_member_written_then_read_is_written.c:27:5 "heap"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "struct #0 *" "two"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **"
+  Local "_6" "int *"
+  Local "_7" "int *" "t"
+  Local "_8" "int **"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_pointer_member_written_then_read_is_written.c:28:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_member_written_then_read_is_written.c:28:13 generated
+    ArgumentsEvaluated a_pointer_member_written_then_read_is_written.c:29:23 generated
+    Call a_pointer_member_written_then_read_is_written.c:29:23 written "malloc" "bb1"
+      Destination "_3"
+      Constant 16
+  Block "bb1"
+    Operation a_pointer_member_written_then_read_is_written.c:29:17 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_member_written_then_read_is_written.c:29:23 generated
+    Operation a_pointer_member_written_then_read_is_written.c:30:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_member_written_then_read_is_written.c:30:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_member_written_then_read_is_written.c:30:9 generated
+    Operation a_pointer_member_written_then_read_is_written.c:31:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_pointer_member_written_then_read_is_written.c:31:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_member_written_then_read_is_written.c:30:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_member_written_then_read_is_written.c:33:5 written
+      Destination "_5"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:33:19 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_pointer_member_written_then_read_is_written.c:33:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_6"
+    Sequenced a_pointer_member_written_then_read_is_written.c:33:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:34:14 written
+      Destination "_8"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:34:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_pointer_member_written_then_read_is_written.c:34:14 generated
+    ArgumentsEvaluated a_pointer_member_written_then_read_is_written.c:35:5 generated
+    Call a_pointer_member_written_then_read_is_written.c:35:5 written "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_pointer_member_written_then_read_is_written.c:35:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:36:12 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Operation a_pointer_member_written_then_read_is_written.c:36:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_pointer_member_written_then_read_is_written.c:36:12 generated
+    Return
+Function a_pointer_member_written_then_read_is_written.c:39:5 "beside_an_int"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "struct #1" "m"
+  Local "_3" "struct #1 *"
+  Local "_4" "int *"
+  Local "_5" "struct #1 *"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "int *" "t"
+  Local "_9" "struct #1 *"
+  Local "_10" "int **"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_pointer_member_written_then_read_is_written.c:40:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_member_written_then_read_is_written.c:40:13 generated
+    Operation a_pointer_member_written_then_read_is_written.c:42:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:42:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_pointer_member_written_then_read_is_written.c:42:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_pointer_member_written_then_read_is_written.c:42:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:43:5 generated
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:43:5 written
+      Destination "_6"
+      Address
+        Place "_5"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:43:17 written
+      Destination "_7"
+      Address
+        Place "_1"
+    Operation a_pointer_member_written_then_read_is_written.c:43:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_7"
+    Sequenced a_pointer_member_written_then_read_is_written.c:43:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:44:14 generated
+      Destination "_9"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:44:14 written
+      Destination "_10"
+      Address
+        Place "_9"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:44:10 written
+      Destination "_8"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_member_written_then_read_is_written.c:44:14 generated
+    Operation a_pointer_member_written_then_read_is_written.c:45:12 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Operation a_pointer_member_written_then_read_is_written.c:45:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_member_written_then_read_is_written.c:45:12 generated
+    Return
+Function a_pointer_member_written_then_read_is_written.c:48:5 "beside_a_long_long"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "struct #2" "w"
+  Local "_3" "struct #2 *"
+  Local "_4" "long long *"
+  Local "_5" "struct #2 *"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "int *" "t"
+  Local "_9" "struct #2 *"
+  Local "_10" "int **"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_pointer_member_written_then_read_is_written.c:49:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_member_written_then_read_is_written.c:49:13 generated
+    Operation a_pointer_member_written_then_read_is_written.c:51:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:51:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_pointer_member_written_then_read_is_written.c:51:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_pointer_member_written_then_read_is_written.c:51:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:52:5 generated
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:52:5 written
+      Destination "_6"
+      Address
+        Place "_5"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:52:17 written
+      Destination "_7"
+      Address
+        Place "_1"
+    Operation a_pointer_member_written_then_read_is_written.c:52:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_7"
+    Sequenced a_pointer_member_written_then_read_is_written.c:52:5 generated
+    Operation a_pointer_member_written_then_read_is_written.c:53:14 generated
+      Destination "_9"
+      Address
+        Place "_2"
+    Operation a_pointer_member_written_then_read_is_written.c:53:14 written
+      Destination "_10"
+      Address
+        Place "_9"
+          Deref
+            Field
+              Member 1
+    Operation a_pointer_member_written_then_read_is_written.c:53:10 written
+      Destination "_8"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_member_written_then_read_is_written.c:53:14 generated
+    Operation a_pointer_member_written_then_read_is_written.c:54:12 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Operation a_pointer_member_written_then_read_is_written.c:54:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_member_written_then_read_is_written.c:54:12 generated
+    Return
+Function a_pointer_member_written_then_read_is_written.c:57:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_pointer_member_written_then_read_is_written.c:57:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_pointer_member_written_then_read_is_written.c:58:12 written "local" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_pointer_member_written_then_read_is_written.c:58:22 written "heap" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_pointer_member_written_then_read_is_written.c:58:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Call a_pointer_member_written_then_read_is_written.c:58:31 written "beside_an_int" "bb3"
+      Destination "_4"
+  Block "bb3"
+    Operation a_pointer_member_written_then_read_is_written.c:58:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Call a_pointer_member_written_then_read_is_written.c:58:49 written "beside_a_long_long" "bb4"
+      Destination "_6"
+  Block "bb4"
+    Operation a_pointer_member_written_then_read_is_written.c:58:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Operation a_pointer_member_written_then_read_is_written.c:58:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_member_written_then_read_is_written.c:58:12 generated
+    Return

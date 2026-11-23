@@ -22,6 +22,9 @@ enum Member {
     Integer(Rank, Sign),
     Pointer,
     Array(Rank, u64),
+    /// The shape at this index in [`shapes`], which comes before it, by
+    /// value, or an array of this many of it (#1202).
+    Shape(usize, Option<u64>),
 }
 
 impl Member {
@@ -38,18 +41,31 @@ impl Member {
             Member::Integer(rank, _) => integer(rank).to_owned(),
             Member::Pointer => "int *".to_owned(),
             Member::Array(rank, _) => integer(rank).to_owned(),
+            Member::Shape(index, _) => format!("struct S{index}"),
         }
     }
 
     fn suffix(self) -> String {
         match self {
-            Member::Array(_, length) => format!("[{length}]"),
-            Member::Integer(..) | Member::Pointer => String::new(),
+            Member::Array(_, length) | Member::Shape(_, Some(length)) => format!("[{length}]"),
+            Member::Integer(..) | Member::Pointer | Member::Shape(_, None) => String::new(),
         }
     }
 
-    fn ir(self, unit: &mut TranslationUnit) -> TyId {
+    fn ir(self, unit: &mut TranslationUnit, shapes: &[Vec<Member>]) -> TyId {
         match self {
+            Member::Shape(index, length) => {
+                let members: Vec<TyId> = shapes[index]
+                    .iter()
+                    .map(|member| member.ir(unit, shapes))
+                    .collect();
+                let id = unit.push_struct(&members).expect("every shape is laid out");
+                let element = unit.push_type(Ty::Struct(id));
+                match length {
+                    Some(length) => unit.push_type(Ty::Array { element, length }),
+                    None => element,
+                }
+            }
             Member::Integer(rank, sign) => unit.push_type(Ty::Integer { rank, sign }),
             Member::Pointer => {
                 let int = unit.push_type(Ty::Integer {
@@ -71,9 +87,10 @@ impl Member {
 
 /// The shapes, chosen for where padding falls: after a `char` before each
 /// wider member, at the end to the strictest alignment, around an array, and
-/// a `long long`, which `i686` aligns to four in a struct.
+/// a `long long`, which `i686` aligns to four in a struct; and a struct as a
+/// member and an array of them, aligned as their strictest member (#1202).
 fn shapes() -> Vec<Vec<Member>> {
-    use Member::{Array, Integer, Pointer};
+    use Member::{Array, Integer, Pointer, Shape};
     use Rank::{Char, Int, Long, LongLong, Short};
     use Sign::Signed;
     vec![
@@ -95,6 +112,17 @@ fn shapes() -> Vec<Vec<Member>> {
         ],
         vec![Integer(LongLong, Signed), Integer(Char, Signed)],
         vec![Integer(Char, Signed), Pointer, Integer(Char, Signed)],
+        vec![
+            Integer(Char, Signed),
+            Shape(2, None),
+            Integer(Short, Signed),
+        ],
+        vec![
+            Integer(Char, Signed),
+            Shape(0, Some(3)),
+            Integer(Char, Signed),
+        ],
+        vec![Shape(7, None), Integer(Char, Signed), Shape(9, Some(2))],
     ]
 }
 
@@ -188,7 +216,10 @@ fn the_layout_of_every_struct_shape_is_clangs() {
         };
         for (members, (offsets, size, align)) in shapes.iter().zip(expected) {
             let mut unit = TranslationUnit::new(target);
-            let types: Vec<TyId> = members.iter().map(|member| member.ir(&mut unit)).collect();
+            let types: Vec<TyId> = members
+                .iter()
+                .map(|member| member.ir(&mut unit, &shapes))
+                .collect();
             let id = unit
                 .push_struct(&types)
                 .expect("every shape here is laid out");

@@ -327,7 +327,6 @@ pub fn lower(
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
         structs: HashMap::new(),
-        laying_out: HashSet::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
         file_statics: HashMap::new(),
@@ -423,9 +422,6 @@ struct Lowering<'a> {
     /// The IR struct each struct tag became, so that one struct type is one
     /// `Ty::Struct` however many times it is written. See [`Lowering::ty`].
     structs: HashMap<TagId, StructId>,
-    /// The tags whose members are being lowered now: a member that reaches
-    /// one of them is a struct that points at itself, which #1202 lowers.
-    laying_out: HashSet<TagId>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -2048,12 +2044,23 @@ impl Lowering<'_> {
     /// The IR struct the struct type `ty` is, laid out from its definition's
     /// members the first time its tag is met.
     ///
-    /// **Refused, and not laid out, where the struct is incomplete, where it
-    /// reaches itself through a member, or where a member is a struct**:
-    /// what such a member is laid out as is #1202's, and a guess here would
-    /// be a layout the backend and the memory check both believe. Refused
-    /// under the code for what this compiler does not do yet, at the
-    /// declaration that needed it.
+    /// **Declared before its members are lowered**, so that a member pointing
+    /// at the struct itself, `struct L { struct L *next; }`, is a pointer to
+    /// the struct being laid out (C17 6.7.2.3 p8): a pointer needs no layout
+    /// of what it points at. A struct nothing defines is declared and never
+    /// laid out, which a pointer to it is all it can be, the type check
+    /// refusing an object of one. A member of struct type is laid out
+    /// first, at its alignment, its offsets adding up under the outer's.
+    /// Mutation: cache the id only after the members are lowered;
+    /// `a_nested_struct_and_an_array_of_structs_are_read_by_member` in
+    /// `tests/run.rs` overflows the stack.
+    ///
+    /// **Refused, and not cached, where a member is refused**, a struct with
+    /// a `const` member, and one larger than the target can address: an id
+    /// left declared and incomplete for one with a definition would be a
+    /// layout nobody gave, asked of by the backend. Each use asks again and
+    /// is refused again, under the code for what this compiler does not do
+    /// yet, at the declaration that needed it.
     fn struct_of(
         &mut self,
         at: Span,
@@ -2075,12 +2082,10 @@ impl Lowering<'_> {
                 .with_note(why.to_owned()),
             );
         };
+        let id = self.unit.declare_struct();
+        self.structs.insert(tag, id);
         let Some(definition) = self.resolution.definition(tag) else {
-            not_yet(
-                diagnostics,
-                "a struct with no definition is not laid out yet",
-            );
-            return None;
+            return Some(id);
         };
         let Type::Struct {
             members: Some(members),
@@ -2089,24 +2094,9 @@ impl Lowering<'_> {
         else {
             unreachable!("a tag's definition is a struct with members");
         };
-        if !self.laying_out.insert(tag) {
-            not_yet(
-                diagnostics,
-                "a struct that reaches itself through a member is not laid out yet",
-            );
-            return None;
-        }
         let mut lowered = Vec::with_capacity(members.len());
         let mut refused = false;
         for member in members {
-            if self.holds_a_struct(member.ty) {
-                not_yet(
-                    diagnostics,
-                    "a struct member of struct type is not laid out yet",
-                );
-                refused = true;
-                break;
-            }
             // **A `const` member is refused**, since the memory check keeps
             // what is defined `const` per object, a static's or a local's
             // (ADR-0120), and a member is a slot of an object that is not:
@@ -2130,17 +2120,13 @@ impl Lowering<'_> {
                 }
             }
         }
-        self.laying_out.remove(&tag);
-        if refused {
-            return None;
-        }
-        let Some(id) = self.unit.push_struct(&lowered) else {
+        if !refused && self.unit.complete_struct(id, &lowered).is_none() {
             not_yet(
                 diagnostics,
                 "a struct too large to count in bytes is not laid out",
             );
-            return None;
-        };
+            refused = true;
+        }
         // **No larger than the target can address**, as `types.rs` holds an
         // array to: three members that each fit made a struct none could,
         // and its `alloca` built a program that does not start (#1200
@@ -2148,34 +2134,18 @@ impl Lowering<'_> {
         // `a_struct_this_compiler_cannot_lay_out_yet_is_refused`'s `Huge`
         // is lowered.
         let limit = 1u64 << self.unit.target().pointer_bits().min(61);
-        if self.unit.struct_layout(id).size >= limit {
+        if !refused && self.unit.struct_layout(id).size >= limit {
             not_yet(
                 diagnostics,
                 "a struct larger than this target can address is not laid out",
             );
+            refused = true;
+        }
+        if refused {
+            self.structs.remove(&tag);
             return None;
         }
-        self.structs.insert(tag, id);
         Some(id)
-    }
-
-    /// Whether `ty` is a struct, or an array of them, by value: a member of
-    /// one is laid out by #1202.
-    fn holds_a_struct(&self, ty: TypeId) -> bool {
-        let mut ty = ty;
-        loop {
-            match self.ast.ty(ty) {
-                Type::Array { element, .. } => ty = *element,
-                Type::Struct { .. } => return true,
-                Type::Integer {
-                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
-                    sign: _,
-                }
-                | Type::Void
-                | Type::Pointer(_)
-                | Type::Function { .. } => return false,
-            }
-        }
     }
 
     /// The length an array type was written with, where the type check gave
@@ -2251,22 +2221,6 @@ impl Lowering<'_> {
             }
         };
 
-        // **An array of structs is #1202's**, as a member of struct type is:
-        // what an element's member is to the memory check is the design
-        // there (#1200 review). Mutation: lay one out; the array in
-        // `a_struct_this_compiler_cannot_lay_out_yet_is_refused` is lowered.
-        if matches!(base, Ty::Struct(_)) && derivations.iter().any(Option::is_some) {
-            diagnostics.report(
-                Diagnostic::error(format!(
-                    "cannot compile something of type `{}` yet",
-                    spell_type(self.sources, self.ast, id)
-                ))
-                .with_code(LOWERING)
-                .with_label(Label::primary(at, "declared here"))
-                .with_note("an array of structs is not laid out yet"),
-            );
-            return None;
-        }
         let mut ty = self.unit.push_type(base);
         for derivation in derivations.into_iter().rev() {
             ty = self.unit.push_type(match derivation {
