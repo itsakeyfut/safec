@@ -135,6 +135,6 @@ programs! {
     /// low half of the `long long` read; a union sits in a struct as a
     /// member, and is assigned, passed and returned by value (#1203).
     /// Mutation: lay a union out as a struct in `lay_out_union`; the low
-    /// half is read from the wrong bytes and this exits 3.
+    /// half is read from the wrong bytes and this fails.
     a_union_holds_its_members_at_one_place,
 }

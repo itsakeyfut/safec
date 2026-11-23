@@ -8539,8 +8539,8 @@ cases! {
         // A union is read as a structure type of its own: its `sizeof` the
         // largest member rounded to the strictest alignment, a constant, and
         // its tag in the one name space structs share, so `union S` after
-        // `struct S` is C17 6.7.2.3 p2's conflict (#1203). Mutation: put
-        // `union` back among the specifiers not read yet; this is `SC0207`.
+        // `struct S` is C17 6.7.2.3 p2's conflict (#1203). Mutation: stop
+        // reading `union` in `Parser::specifiers`; this is refused.
         a_union_is_a_structure_of_its_own: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A typedef declares no object, so it has nothing to initialize
         // (C17 6.7.8 p3), and is refused under its own code rather than read
