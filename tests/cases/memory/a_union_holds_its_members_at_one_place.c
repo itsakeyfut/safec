@@ -33,6 +33,26 @@ int pointer_cut_short(void) {
     return *s.pointer;
 }
 
+int element_number_read_as_pointer(void) {
+    int x = 1;
+    union Slot table[2];
+    table[0].pointer = &x;
+    table[0].number = 5;
+    return *table[0].pointer;
+}
+
+void fill(union Slot *_Nonnull slot);
+int take(union Slot *_Nonnull slot);
+
+int handed_on(void) {
+    int x = 1;
+    union Slot s;
+    s.pointer = &x;
+    fill(&s);
+    return take(&s);
+}
+
 int main(void) {
-    return same_member() + pointer_read_as_number() + number_read_as_pointer() + pointer_cut_short();
+    return same_member() + pointer_read_as_number() + number_read_as_pointer() + pointer_cut_short()
+        + element_number_read_as_pointer() + handed_on();
 }

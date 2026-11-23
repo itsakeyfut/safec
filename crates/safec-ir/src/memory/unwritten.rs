@@ -345,8 +345,7 @@ pub(super) fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) 
         }
         | Ty::Void
         | Ty::Array { .. }
-        | Ty::Struct(_)
-        | Ty::Union(_) => false,
+        | Ty::Struct(_) => false,
     }
 }
 

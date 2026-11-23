@@ -84,12 +84,15 @@ impl Member {
     }
 }
 
-/// The shapes from this index on are unions (#1203), and the rest structs.
-const FIRST_UNION: usize = 12;
+/// Where the unions begin in [`shapes`]: after every struct, counted from
+/// the list itself, so a struct shape added later moves it with them.
+fn first_union() -> usize {
+    struct_shapes().len()
+}
 
 /// `union` or `struct`, for the shape at `index`.
 fn keyword(index: usize) -> &'static str {
-    if index >= FIRST_UNION {
+    if index >= first_union() {
         "union"
     } else {
         "struct"
@@ -99,9 +102,9 @@ fn keyword(index: usize) -> &'static str {
 /// Lay out the shape at `index` of these members as the IR does, and say
 /// which it is and its type.
 fn lay(unit: &mut TranslationUnit, index: usize, members: &[TyId]) -> (StructId, TyId) {
-    if index >= FIRST_UNION {
+    if index >= first_union() {
         let id = unit.push_union(members).expect("every shape is laid out");
-        (id, unit.push_type(Ty::Union(id)))
+        (id, unit.push_type(Ty::Struct(id)))
     } else {
         let id = unit.push_struct(members).expect("every shape is laid out");
         (id, unit.push_type(Ty::Struct(id)))
@@ -112,10 +115,17 @@ fn lay(unit: &mut TranslationUnit, index: usize, members: &[TyId]) -> (StructId,
 /// wider member, at the end to the strictest alignment, around an array, and
 /// a `long long`, which `i686` aligns to four in a struct; and a struct as a
 /// member and an array of them, aligned as their strictest member (#1202);
-/// and unions, from [`FIRST_UNION`] on, sized as their largest member
-/// rounded to the strictest alignment, which `i686`'s `long long` and a
-/// `char` array longer than the widest member each move (#1203).
+/// and unions after them, sized as their largest member rounded to the
+/// strictest alignment, which `i686`'s `long long` and a `char` array longer
+/// than the widest member each move (#1203).
 fn shapes() -> Vec<Vec<Member>> {
+    let mut shapes = struct_shapes();
+    shapes.extend(union_shapes(shapes.len()));
+    shapes
+}
+
+/// The struct shapes, which [`shapes`] gives first.
+fn struct_shapes() -> Vec<Vec<Member>> {
     use Member::{Array, Integer, Pointer, Shape};
     use Rank::{Char, Int, Long, LongLong, Short};
     use Sign::Signed;
@@ -149,6 +159,16 @@ fn shapes() -> Vec<Vec<Member>> {
             Integer(Char, Signed),
         ],
         vec![Shape(7, None), Integer(Char, Signed), Shape(9, Some(2))],
+    ]
+}
+
+/// The union shapes, which [`shapes`] gives after the structs, from index
+/// `first`: one of them is named by its index there.
+fn union_shapes(first: usize) -> Vec<Vec<Member>> {
+    use Member::{Array, Integer, Pointer, Shape};
+    use Rank::{Char, Int, LongLong, Short};
+    use Sign::Signed;
+    vec![
         vec![Integer(Char, Signed), Integer(Int, Signed)],
         vec![Integer(LongLong, Signed), Array(Char, 13), Pointer],
         vec![
@@ -156,8 +176,12 @@ fn shapes() -> Vec<Vec<Member>> {
             Shape(2, None),
             Integer(Char, Signed),
         ],
-        vec![Integer(Char, Signed), Shape(12, Some(3))],
-        vec![Integer(Char, Signed), Shape(14, None), Integer(Int, Signed)],
+        vec![Integer(Char, Signed), Shape(first, Some(3))],
+        vec![
+            Integer(Char, Signed),
+            Shape(first + 2, None),
+            Integer(Int, Signed),
+        ],
     ]
 }
 

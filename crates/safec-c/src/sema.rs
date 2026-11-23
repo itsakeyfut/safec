@@ -1120,11 +1120,12 @@ impl Resolver<'_> {
     fn close_definition(&mut self, definition: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         if let Type::Struct {
+            union,
             members: Some(members),
             ..
         } = ast.ty(definition)
         {
-            self.check_members(members, diagnostics);
+            self.check_members(members, *union, diagnostics);
         }
         let tag = self.resolution.tag(definition);
         self.completed.insert(tag);
@@ -1149,7 +1150,19 @@ impl Resolver<'_> {
     /// array member: its element is held to 6.7.6.2 p1 like any array's. A
     /// struct with a flexible array member is no member of another, which is
     /// p3's second sentence.
-    fn check_members(&mut self, members: &[Declaration], diagnostics: &mut DiagnosticSink) {
+    ///
+    /// **Both rules are a structure's, and not a union's** (#1203): p18
+    /// gives a flexible array member to "a structure" alone, so one in a
+    /// union is an incomplete member, and p3 keeps a struct that has one out
+    /// of a structure, so it is a member of a union like any other.
+    /// Mutation: ask neither of `union`; `a_union_is_a_structure_of_its_own`
+    /// accepts `Flexible` and refuses `Holder`.
+    fn check_members(
+        &mut self,
+        members: &[Declaration],
+        union: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let ast = self.ast;
         let mut names: HashMap<&str, Span> = HashMap::new();
         for (index, member) in members.iter().enumerate() {
@@ -1170,7 +1183,8 @@ impl Resolver<'_> {
                 }
             }
 
-            let flexible = index + 1 == members.len()
+            let flexible = !union
+                && index + 1 == members.len()
                 && matches!(ast.ty(member.ty), Type::Array { length: None, element, .. }
                     if self.resolution.complete(ast, *element))
                 && members[..index]
@@ -1189,7 +1203,7 @@ impl Resolver<'_> {
                     at,
                     format!("has incomplete type `{spelled}`"),
                 ));
-            } else if self.resolution.has_flexible_array_member(ast, member.ty) {
+            } else if !union && self.resolution.has_flexible_array_member(ast, member.ty) {
                 let spelled = spell_type(self.sources, ast, member.ty);
                 diagnostics.report(unfit_member(
                     self.sources,

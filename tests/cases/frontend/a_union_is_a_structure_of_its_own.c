@@ -16,3 +16,33 @@ union S {
 union U *pointer(union U *u) {
     return u;
 }
+
+union U {
+    int again;
+};
+
+struct V {
+    int a;
+};
+
+union V;
+
+union Flexible {
+    int n;
+    int rest[];
+};
+
+struct Tail {
+    int n;
+    int rest[];
+};
+
+union Holder {
+    struct Tail tail;
+    int other;
+};
+
+int incomplete(void) {
+    union Later;
+    return sizeof(union Later);
+}

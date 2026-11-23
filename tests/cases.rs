@@ -58,10 +58,12 @@ cases! {
         // pointer written as one member is read back through another as
         // what those bytes hold (#1203): the same member is read as written,
         // the pointer read as a `long long` and cast back is `SC0416`, a
-        // number read as a pointer `SC0413`, and a pointer cut short by a
-        // narrower member `SC0413`. None is answered safe. Mutation: lay a
-        // union out as a struct in `lay_out_union`; `pointer_cut_short` no
-        // longer overwrites the pointer and loses its `SC0413`.
+        // number read as a pointer `SC0413`, a pointer cut short by a
+        // narrower member `SC0413`, a number written into an element of an
+        // array of unions `SC0413`, and a union handed to a call after one
+        // that may write it `SC0413`. None is answered safe. Mutation: lay a
+        // union out as a struct in `lay_out_union`; `number_read_as_pointer`
+        // no longer reads the number it wrote and says `SC0411` instead.
         a_union_holds_its_members_at_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct copied is a library copy, so a freed pointer it carries,
         // assigned or passed by value, is `SC0402` where it is used; a struct
@@ -8536,11 +8538,28 @@ cases! {
     }
 
     "frontend" => {
-        // A union is read as a structure type of its own: its `sizeof` the
-        // largest member rounded to the strictest alignment, a constant, and
-        // its tag in the one name space structs share, so `union S` after
-        // `struct S` is C17 6.7.2.3 p2's conflict (#1203). Mutation: stop
-        // reading `union` in `Parser::specifiers`; this is refused.
+        // `union` after another type specifier is refused as the clash it
+        // is, naming `union` (#1203). Mutation: drop `Keyword::Union` from
+        // `tagged_keyword` in `Parser::specifiers`; this says `expected a
+        // name` instead.
+        a_union_after_another_type_specifier_is_refused: ["--emit", "ast"],
+        // An anonymous union member is not read yet, and is called a union
+        // (#1203). Mutation: say `struct` for every anonymous member in
+        // `member_with_no_name`; this changes.
+        an_anonymous_union_member_is_not_read_yet: ["--emit", "ast"],
+        // A union is read as a structure type of its own (#1203): its
+        // `sizeof` the largest member rounded to the strictest alignment, a
+        // constant, and its tag in the one name space structs share, so
+        // `union S` after `struct S`, and `union V;` over `struct V`, are
+        // C17 6.7.2.3 p2's conflict, and a union defined twice is redefined
+        // as a union. A flexible array member is a structure's alone (p18),
+        // so one in a union is an incomplete member, while a struct that has
+        // one may be a union's member, p3 keeping it out of a structure only.
+        // Mutations: answer `TagKind::Struct` in `struct_kind`, and both
+        // conflicts and the redefinition's words go; size a union by
+        // `lay_out` in `Types::struct_layout`, and `sized` is refused; ask
+        // neither of `union` in `check_members`, and `Flexible` is accepted
+        // and `Holder` refused.
         a_union_is_a_structure_of_its_own: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A typedef declares no object, so it has nothing to initialize
         // (C17 6.7.8 p3), and is refused under its own code rather than read
@@ -10211,6 +10230,10 @@ cases! {
         // `Emitter::function`; this is refused under `SC0801`, and it
         // panicked before the check was written.
         a_declaration_of_an_incomplete_struct_value_is_left_out: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A union's storage is aligned as its strictest member, as a
+        // struct's is, since `[N x i8]` alone aligns to 1 (#1203). Mutation:
+        // drop the alignment from `struct_align`; this changes.
+        a_union_is_aligned_as_its_strictest_member: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
@@ -10229,7 +10252,8 @@ cases! {
         // function, rather than as a program that names no place: C17
         // 6.5.16.1 p1 lets the right of an assignment be any struct value,
         // and the program is valid (#1201). Mutation: drop the refusal in
-        // `begin_place`'s last arm; each says it names no place.
+        // `begin_place`'s last arm; each says it names no place. `discarded` and `read_through` read a union
+        // whole, and are refused as a union used as a value.
         a_struct_value_that_is_no_object_is_not_lowered_yet: ["--emit", "safety-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
         // An enumeration with no negative constant is `unsigned int` off
         // MSVC, as `clang` makes it (C17 6.7.2.2 p4), so `u - 1 < 0` is an

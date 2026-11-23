@@ -469,8 +469,7 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                     }
                     | Ty::Void
                     | Ty::Pointer(_)
-                    | Ty::Struct(_)
-                    | Ty::Union(_) => format!("*{inner}"),
+                    | Ty::Struct(_) => format!("*{inner}"),
                 };
                 current = pointee;
             }
@@ -483,14 +482,11 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
             }
             // By its number in the unit, since the IR keeps no tag: the
             // layout is what it holds, and `--emit ast` spells the name.
+            // A union is numbered in the one table it shares with structs, so
+            // `union #1` and `struct #0` are never one number twice.
             Ty::Struct(id) => {
-                struct_name = format!("struct #{}", id.index());
-                break struct_name.as_str();
-            }
-            // Numbered in the one table it shares with structs, so `union #1`
-            // and `struct #0` are never one number twice.
-            Ty::Union(id) => {
-                struct_name = format!("union #{}", id.index());
+                let keyword = if unit.is_union(id) { "union" } else { "struct" };
+                struct_name = format!("{keyword} #{}", id.index());
                 break struct_name.as_str();
             }
         }

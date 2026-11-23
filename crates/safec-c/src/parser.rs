@@ -2067,18 +2067,21 @@ impl Parser<'_> {
     /// `at` is where the member declaration began, which is where both reports
     /// point: the parser is standing on its `;` by now.
     fn member_with_no_name(&mut self, at: Span, base: TypeId, diagnostics: &mut DiagnosticSink) {
-        let anonymous = matches!(
-            self.ast.ty(base),
+        let anonymous = match self.ast.ty(base) {
             Type::Struct {
-                union: _,
+                union,
                 tag: None,
                 members: Some(_),
-            }
-        );
-        if anonymous {
+            } => Some(if *union { "union" } else { "struct" }),
+            _ => None,
+        };
+        if let Some(keyword) = anonymous {
             let built = Diagnostic::error("an anonymous member is not read yet")
                 .with_code(UNREAD)
-                .with_label(Label::primary(at, "a struct with no name of its own"))
+                .with_label(Label::primary(
+                    at,
+                    format!("a {keyword} with no name of its own"),
+                ))
                 .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
             self.report_built(at, built, diagnostics);
             return;

@@ -25,3 +25,16 @@ void argument(struct S a, struct S b, int k) {
 int member(struct S a, struct S b) {
     return (a = b).c;
 }
+
+union U {
+    int c;
+    long long l;
+};
+
+void discarded(union U u) {
+    u;
+}
+
+void read_through(union U *p) {
+    *p;
+}

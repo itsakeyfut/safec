@@ -2629,8 +2629,14 @@ impl Checker<'_> {
             // Mutation: ask whether anything defines it at all;
             // `sizeof_refuses_what_has_no_size`'s `sizeof(struct L)` is
             // accepted.
-            Type::Struct { .. } if !self.complete_here(ast, self.resolution.bound(ast, ty)) => {
-                Some("a struct not complete here, which is incomplete")
+            Type::Struct { union, .. }
+                if !self.complete_here(ast, self.resolution.bound(ast, ty)) =>
+            {
+                Some(if *union {
+                    "a union not complete here, which is incomplete"
+                } else {
+                    "a struct not complete here, which is incomplete"
+                })
             }
             Type::Integer { .. }
             | Type::Pointer(_)
@@ -5231,9 +5237,11 @@ fn unsteppable(
         Type::Function { .. } => Some("a function is not an object"),
         Type::Array { length: None, .. } => Some("an array of unknown length has no size"),
         // Complete where the step is written, which `complete` answers.
-        Type::Struct { .. } => {
-            (!complete(pointee)).then_some("a struct that is not complete here has no size")
-        }
+        Type::Struct { union, .. } => (!complete(pointee)).then_some(if *union {
+            "a union that is not complete here has no size"
+        } else {
+            "a struct that is not complete here has no size"
+        }),
         Type::Integer {
             rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,

@@ -170,7 +170,7 @@ fn pointed_at_struct(unit: &TranslationUnit, pointer: TyId) -> Option<&safec_ir:
     let Ty::Pointer(pointee) = unit.ty(pointer) else {
         return None;
     };
-    let (Ty::Struct(id) | Ty::Union(id)) = unit.ty(pointee) else {
+    let Ty::Struct(id) = unit.ty(pointee) else {
         return None;
     };
     unit.layout_of(id)
@@ -397,9 +397,7 @@ impl Emitter<'_> {
             // **Bytes, and no LLVM struct type**: the IR lays a struct out and
             // nothing else does, so its storage is its size in bytes and a
             // member is reached at its offset into them. See ADR-0124.
-            Ty::Struct(layout) | Ty::Union(layout) => {
-                format!("[{} x i8]", self.unit.struct_layout(layout).size)
-            }
+            Ty::Struct(layout) => format!("[{} x i8]", self.unit.struct_layout(layout).size),
         }
     }
 
@@ -414,7 +412,7 @@ impl Emitter<'_> {
     fn struct_align(&self, ty: TyId) -> String {
         match self.unit.ty(ty) {
             // One nothing defines is declared as `i8`, by `Self::global`.
-            Ty::Struct(layout) | Ty::Union(layout) => self
+            Ty::Struct(layout) => self
                 .unit
                 .layout_of(layout)
                 .map_or_else(String::new, |layout| format!(", align {}", layout.align)),
@@ -604,7 +602,7 @@ impl Emitter<'_> {
                 // `a_struct_is_laid_out_and_read_through_its_members` exits
                 // with another value.
                 Projection::Field(member) => match self.unit.ty(ty) {
-                    Ty::Struct(layout) | Ty::Union(layout) => {
+                    Ty::Struct(layout) => {
                         let offset = self.unit.offset_of(layout, *member);
                         let at = self.temp();
                         writeln!(
@@ -638,7 +636,7 @@ impl Emitter<'_> {
         }
         // C reads an array only by converting it to a pointer to its first
         // element (C17 6.3.2.1 p3), which the lowering does where it is used.
-        if matches!(self.unit.ty(ty), Ty::Struct(_) | Ty::Union(_)) {
+        if matches!(self.unit.ty(ty), Ty::Struct(_)) {
             return self.refuse("a read of a whole struct, which is not lowered yet");
         }
         if matches!(self.unit.ty(ty), Ty::Array { .. }) {
@@ -1139,7 +1137,7 @@ impl Emitter<'_> {
         if matches!(self.unit.ty(to), Ty::Array { .. }) {
             return self.refuse("an assignment to a whole array, which C does not have");
         }
-        if matches!(self.unit.ty(to), Ty::Struct(_) | Ty::Union(_)) {
+        if matches!(self.unit.ty(to), Ty::Struct(_)) {
             return self.refuse("an assignment to a whole struct, which is not lowered yet");
         }
 

@@ -1453,7 +1453,7 @@ impl Lowering<'_> {
         // **A struct returned by value goes where the caller says**, through
         // a pointer passed first, and the function returns nothing (#1201).
         // See `Passes`.
-        if matches!(self.unit.ty(returns), Ty::Struct(_) | Ty::Union(_)) {
+        if matches!(self.unit.ty(returns), Ty::Struct(_)) {
             // **Never null**: every caller passes where it wants the result,
             // so the pointer is promised, which no source wrote and no caller
             // can break. Unpromised, every member written through it was
@@ -1494,7 +1494,7 @@ impl Lowering<'_> {
                 let ty = self.ty(at, parameter.ty, diagnostics)?;
                 // **A struct passed by value is the address of the caller's
                 // copy** (#1201). See `Passes`.
-                if matches!(self.unit.ty(ty), Ty::Struct(_) | Ty::Union(_)) {
+                if matches!(self.unit.ty(ty), Ty::Struct(_)) {
                     // Never null either, for the same reason: every caller
                     // passes its copy's address. Mutation: promise nothing;
                     // `a_struct_is_assigned_passed_and_returned_by_value`'s
@@ -1636,11 +1636,17 @@ impl Lowering<'_> {
     /// backend have no meaning for: the backend refused it as `SC0801`, and
     /// the check read it as nothing anybody decided. Refused here, under the
     /// code for what this compiler does not do yet.
-    fn struct_value_not_yet(&self, at: Span, diagnostics: &mut DiagnosticSink) {
+    ///
+    /// Said of a union as a union (#1203), the expression `id` saying which.
+    fn struct_value_not_yet(&self, id: ExprId, at: Span, diagnostics: &mut DiagnosticSink) {
+        let keyword = match self.types.of(id).map(|ty| self.ast.ty(ty)) {
+            Some(Type::Struct { union: true, .. }) => "union",
+            _ => "struct",
+        };
         diagnostics.report(
-            Diagnostic::error("cannot compile a struct used as a value yet")
+            Diagnostic::error(format!("cannot compile a {keyword} used as a value yet"))
                 .with_code(LOWERING)
-                .with_label(Label::primary(at, "a struct, whole"))
+                .with_label(Label::primary(at, format!("a {keyword}, whole")))
                 .with_note("a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet"),
         );
     }
@@ -2277,7 +2283,13 @@ impl Lowering<'_> {
         let id = match self.structs.get(&tag) {
             Some(&id) => id,
             None => {
-                let id = self.unit.declare_struct();
+                // **A union is a struct declared a union** (#1203), and laid
+                // out by its rule. See `Ty::Struct`.
+                let id = if matches!(self.ast.ty(ty), Type::Struct { union: true, .. }) {
+                    self.unit.declare_union()
+                } else {
+                    self.unit.declare_struct()
+                };
                 self.structs.insert(tag, id);
                 id
             }
@@ -2304,14 +2316,12 @@ impl Lowering<'_> {
             return Some(id);
         };
         let Type::Struct {
-            union,
             members: Some(members),
             ..
         } = self.ast.ty(definition)
         else {
             unreachable!("a tag's definition is a struct with members");
         };
-        let union = *union;
         // A struct that holds itself by value is incomplete inside itself,
         // which the type check refuses (C17 6.7.2.1 p3); one met again here
         // is a gap that left, said rather than recursed into.
@@ -2348,14 +2358,7 @@ impl Lowering<'_> {
         self.laying_out.remove(&tag);
         // Only where nothing was refused: a layout of the members lowered
         // before a refused one would be a struct laid out short.
-        if !refused
-            && if union {
-                self.unit.complete_union(id, &lowered)
-            } else {
-                self.unit.complete_struct(id, &lowered)
-            }
-            .is_none()
-        {
+        if !refused && self.unit.complete_struct(id, &lowered).is_none() {
             not_yet(
                 diagnostics,
                 "a struct too large to count in bytes is not laid out",
@@ -2474,11 +2477,12 @@ impl Lowering<'_> {
                     // `a_nested_struct_and_an_array_of_structs_are_read_by_member`
                     // in `tests/run.rs` does not build.
                     let behind_a_pointer = derivations.iter().any(Option::is_none);
-                    let union = matches!(self.ast.ty(current), Type::Struct { union: true, .. });
-                    let id = self.struct_of(at, current, !behind_a_pointer, diagnostics)?;
-                    // **A union is a struct with every member at 0**, in the
-                    // one table (#1203). See `Ty::Union`.
-                    break if union { Ty::Union(id) } else { Ty::Struct(id) };
+                    break Ty::Struct(self.struct_of(
+                        at,
+                        current,
+                        !behind_a_pointer,
+                        diagnostics,
+                    )?);
                 }
                 // #74, which is the issue for what the IR cannot say, is about
                 // storage duration rather than about these.
@@ -4108,7 +4112,7 @@ impl Lowering<'_> {
                 // here. Mutation: drop this; `a_struct_value_that_is_no_object_is_not_lowered_yet`
                 // says the program names no place.
                 if self.is_struct(id) {
-                    self.struct_value_not_yet(self.ast.expr(id).span(), diagnostics);
+                    self.struct_value_not_yet(id, self.ast.expr(id).span(), diagnostics);
                     return None;
                 }
                 diagnostics.report(
@@ -4140,8 +4144,7 @@ impl Lowering<'_> {
             }
             | Ty::Void
             | Ty::Pointer(_)
-            | Ty::Struct(_)
-            | Ty::Union(_) => ty,
+            | Ty::Struct(_) => ty,
         }
     }
 
@@ -4264,9 +4267,9 @@ impl Lowering<'_> {
                 if self
                     .unit
                     .place_ty(&builder.function, &place)
-                    .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_) | Ty::Union(_)))
+                    .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
                 {
-                    self.struct_value_not_yet(self.ast.expr(id).span(), diagnostics);
+                    self.struct_value_not_yet(id, self.ast.expr(id).span(), diagnostics);
                     return None;
                 }
                 let span = self.ast.expr(id).span();
@@ -4301,11 +4304,9 @@ impl Lowering<'_> {
                         if self
                             .unit
                             .place_ty(&builder.function, &place)
-                            .is_some_and(|ty| {
-                                matches!(self.unit.ty(ty), Ty::Struct(_) | Ty::Union(_))
-                            })
+                            .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
                         {
-                            self.struct_value_not_yet(span, diagnostics);
+                            self.struct_value_not_yet(id, span, diagnostics);
                             return None;
                         }
                         values.push(self.decayed(builder, place, span));
@@ -4506,7 +4507,7 @@ impl Lowering<'_> {
                 if self.discarding == Some(id) {
                     return Some(());
                 }
-                self.struct_value_not_yet(span, diagnostics);
+                self.struct_value_not_yet(id, span, diagnostics);
                 return None;
             }
             Expr::Assign { op, span, .. } => {
@@ -5478,7 +5479,7 @@ impl Lowering<'_> {
             ),
             // No arithmetic is done on a struct (C17 6.5.16.2 p1, 6.5.2.4
             // p1), which `types.rs` refuses before a place exists.
-            Ty::Struct(_) | Ty::Union(_) => unreachable!(
+            Ty::Struct(_) => unreachable!(
                 "a struct reached a compound assignment, `++` or `--`, which the type check refuses"
             ),
         })
@@ -5767,8 +5768,7 @@ impl Lowering<'_> {
                 }
                 | Ty::Void
                 | Ty::Array { .. }
-                | Ty::Struct(_)
-                | Ty::Union(_) => false,
+                | Ty::Struct(_) => false,
             };
             let unordered = self
                 .unordered_writes(value)
@@ -5817,8 +5817,7 @@ impl Lowering<'_> {
                     }
                     | Ty::Void
                     | Ty::Array { .. }
-                    | Ty::Struct(_)
-                    | Ty::Union(_) => false,
+                    | Ty::Struct(_) => false,
                 };
                 if !write || !pointer || said.contains(&local) {
                     continue;

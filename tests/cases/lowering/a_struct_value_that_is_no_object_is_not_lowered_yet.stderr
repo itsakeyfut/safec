@@ -38,3 +38,19 @@ error[SC0304]: cannot compile a struct used as a value yet
     │               ╰──── a struct, whole
 ────╯
   = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a union used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:35:5 ]
+    │
+ 35 │     u;
+    │     ┬  
+    │     ╰── a union, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a union used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:39:5 ]
+    │
+ 39 │     *p;
+    │     ─┬  
+    │      ╰── a union, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
