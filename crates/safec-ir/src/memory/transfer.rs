@@ -474,7 +474,8 @@ impl Allocations<'_> {
                         rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }
-                    | Ty::Void => None,
+                    | Ty::Void
+                    | Ty::Struct(_) => None,
                 },
                 Operand::Constant(_) => None,
             })
@@ -694,11 +695,13 @@ impl Allocations<'_> {
         match self.unit.ty(ty) {
             Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
             Ty::Pointer(_) => Some(1),
+            // Members of more than one type are no run of elements to count.
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Void => None,
+            | Ty::Void
+            | Ty::Struct(_) => None,
         }
     }
 
@@ -750,6 +753,12 @@ impl Allocations<'_> {
                 }
                 | Ty::Void,
             ) => false,
+            // Where any member may, as `stored_pointer` answers (#1200).
+            Some(Ty::Struct(_)) => self
+                .unit
+                .place_ty(function, place)
+                .and_then(|ty| stored_pointer(self.unit, ty))
+                .is_some(),
             // As its elements do: no whole array is read or written, and where
             // one were, what it holds is its elements. **Held by nothing,
             // measured**: answering `false` changes no case, since no C reads a
@@ -762,10 +771,42 @@ impl Allocations<'_> {
                         sign: _,
                     }
                     | Ty::Void => false,
+                    Ty::Struct(_) => stored_pointer(self.unit, element).is_some(),
                     Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
                 }
             }
         }
+    }
+
+    /// How far into what `taken`'s local points a member's address is, in
+    /// bytes, and the member's type, where `taken` is `(*p).m`, or a member
+    /// of a member: one dereference of a local and then members alone, which
+    /// is the one shape the lowering builds a `Field` in. `None` for every
+    /// other place.
+    fn member_offset(&self, function: &Function, taken: &Place) -> Option<(u64, TyId)> {
+        let [Projection::Deref, members @ ..] = taken.steps() else {
+            return None;
+        };
+        if members.is_empty() {
+            return None;
+        }
+        let mut ty = self
+            .unit
+            .place_ty(function, &Place::local(taken.local).deref())?;
+        let mut offset: u64 = 0;
+        for step in members {
+            let (Projection::Field(member), Ty::Struct(layout)) = (step, self.unit.ty(ty)) else {
+                return None;
+            };
+            offset = offset.checked_add(self.unit.offset_of(layout, *member))?;
+            ty = self
+                .unit
+                .struct_layout(layout)
+                .members
+                .get(*member as usize)?
+                .ty;
+        }
+        Some((offset, ty))
     }
 
     /// How many bytes one object of the type a place's pointer points to
@@ -776,13 +817,15 @@ impl Allocations<'_> {
         let ty = self.unit.place_ty(function, place)?;
         match self.unit.ty(ty) {
             Ty::Pointer(pointee) => Some(self.unit.size_of(pointee).unwrap_or(0)),
-            // An array is not a pointer, so a place of one points at nothing.
+            // An array is not a pointer, so a place of one points at nothing,
+            // and nor does a struct.
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
             | Ty::Void
-            | Ty::Array { .. } => None,
+            | Ty::Array { .. }
+            | Ty::Struct(_) => None,
         }
     }
 
@@ -812,11 +855,14 @@ impl Allocations<'_> {
                     stored = inner;
                     self.unit.size_of(inner).unwrap_or(0)
                 }
+                // A struct's members are of more than one type, so nothing
+                // below one is believed, as below a `void *`.
                 Ty::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
-                | Ty::Void => 0,
+                | Ty::Void
+                | Ty::Struct(_) => 0,
                 Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
             levels.push(Width::AtMost(width));
@@ -1108,7 +1154,8 @@ impl Allocations<'_> {
                     sign: _,
                 }
                 | Ty::Void
-                | Ty::Array { .. },
+                | Ty::Array { .. }
+                | Ty::Struct(_),
             )
             | None => Some(0),
         }
@@ -1309,7 +1356,7 @@ impl Allocations<'_> {
                 rank: Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }) => false,
-            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. }) | None => false,
+            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. } | Ty::Struct(_)) | None => false,
         }
     }
 
@@ -3928,6 +3975,76 @@ impl Allocations<'_> {
                         held.name_static(self.static_slot(*id));
                         value.replace(at, held);
                     }
+                    // **A member's address is the pointer moved by the
+                    // member's offset**, `&(*p).m` being `p` plus that many
+                    // bytes: the lowering builds a `Field` only after a
+                    // dereference of a pointer local, a local struct's own
+                    // address taken first. So it is read as the arithmetic
+                    // it is, by the door arithmetic goes through, and the
+                    // member is the slot of the object at that position, as
+                    // an array's element is. See ADR-0124.
+                    //
+                    // Mutation: take the offset as zero;
+                    // `a_struct_member_is_a_slot_of_its_object`'s write past a
+                    // block's end reaches 8 bytes rather than 16.
+                    Rvalue::Address(taken) if self.member_offset(function, taken).is_some() => {
+                        let (offset, member) = self
+                            .member_offset(function, taken)
+                            .expect("the guard above found one");
+                        let base = Operand::Copy(Place::local(taken.local));
+                        let by = Operand::Constant(i128::from(offset));
+                        let mut reached = built_from(
+                            Some(BinOp::Add),
+                            &[&base, &by],
+                            value,
+                            |local| self.is_pointer(function, local),
+                            |place| self.may_be_pointer(function, place),
+                            |place| self.reads_a_byte(function, place),
+                            |local, depth| self.reads_caller_memory(local, depth, value),
+                            |local| self.is_array(function, local),
+                            // In bytes: the offset is counted in them.
+                            Some(1),
+                        );
+                        reached.moved_by_arithmetic(None);
+                        // **And it walks the member alone**: C17 6.5.6 p7
+                        // makes a member that is no array an array of one
+                        // for arithmetic, and p8 keeps a pointer into it
+                        // from reaching past it, though the struct is wider
+                        // (Annex J.2). So the member's bytes are the row the
+                        // pointer walks, as an array's row is (#947).
+                        // Bounded by the struct instead, `int *m = &v.a;
+                        // m[1] = 1;` wrote `v.b` and was proved (#1200
+                        // review). Mutation: enter no row;
+                        // `a_member_s_address_walks_the_member_alone` is
+                        // silent.
+                        reached.position = match (reached.position.at, self.unit.size_of(member)) {
+                            (At::Bytes(start), Some(len)) => {
+                                let entered = Row { start, len };
+                                let row = match reached.position.row {
+                                    Some(walked) => walked.within(entered),
+                                    None => Some(entered),
+                                };
+                                match row {
+                                    Some(row) => Position {
+                                        at: At::Bytes(start),
+                                        row: Some(row),
+                                    },
+                                    None => Position {
+                                        at: At::Unknown,
+                                        row: None,
+                                    },
+                                }
+                            }
+                            // Not counted, so no row is known to walk, and no
+                            // bound either.
+                            (At::Within { .. } | At::Moved | At::Unknown, _)
+                            | (At::Bytes(_), None) => Position {
+                                at: At::Unknown,
+                                row: None,
+                            },
+                        };
+                        value.replace(at, reached);
+                    }
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
                     // is `StorageDead` and is the lifetime phase's.
@@ -3948,7 +4065,11 @@ impl Allocations<'_> {
                         // is reached by arithmetic.
                         let at_start = taken.steps().iter().all(|step| match step {
                             Projection::Index(Operand::Constant(0)) => true,
-                            Projection::Index(_) | Projection::Deref => false,
+                            // A member is taken by the arm above, after a
+                            // dereference, so none reaches here.
+                            Projection::Index(_) | Projection::Deref | Projection::Field(_) => {
+                                false
+                            }
                         });
                         value.replace(
                             at,
@@ -4015,7 +4136,11 @@ impl Allocations<'_> {
                                         Shape::Deref(_) | Shape::Indexed => false,
                                     }) || match taken.steps() {
                                         [Projection::Index(Operand::Constant(0))] => true,
-                                        [Projection::Index(_) | Projection::Deref] => false,
+                                        [
+                                            Projection::Index(_)
+                                            | Projection::Deref
+                                            | Projection::Field(_),
+                                        ] => false,
                                         _ => false,
                                     })
                                     .then(|| Referent::Local(LocalIdx::of(taken.local))),

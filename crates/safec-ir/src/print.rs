@@ -437,6 +437,7 @@ fn block_name(index: usize) -> String {
 fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
     let mut current = ty;
     let mut inner = String::new();
+    let struct_name: String;
 
     let base = loop {
         match unit.ty(current) {
@@ -453,7 +454,8 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                         sign: _,
                     }
                     | Ty::Void
-                    | Ty::Pointer(_) => format!("*{inner}"),
+                    | Ty::Pointer(_)
+                    | Ty::Struct(_) => format!("*{inner}"),
                 };
                 current = pointee;
             }
@@ -463,6 +465,12 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
             Ty::Array { element, length } => {
                 inner = format!("{inner}[{length}]");
                 current = element;
+            }
+            // By its number in the unit, since the IR keeps no tag: the
+            // layout is what it holds, and `--emit ast` spells the name.
+            Ty::Struct(id) => {
+                struct_name = format!("struct #{}", id.index());
+                break struct_name.as_str();
             }
         }
     };
@@ -492,6 +500,11 @@ fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out:
 
         match projection {
             Projection::Index(index) => dump_operand(sources, index, depth + 2 + step, out),
+            Projection::Field(member) => {
+                dump_line("Member", depth + 2 + step, out);
+                write!(out, " {member}").expect("writing to a string cannot fail");
+                out.push('\n');
+            }
             Projection::Deref => {}
         }
     }

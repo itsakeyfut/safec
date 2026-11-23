@@ -1194,6 +1194,8 @@ pub struct Ast {
     types: Vec<Type>,
     /// Which types are `const`-qualified, by id. See [`Ast::push_const`].
     consts: std::collections::HashSet<TypeId>,
+    /// The type each `const` copy was made from. See [`Ast::unqualified`].
+    copied_from: std::collections::HashMap<TypeId, TypeId>,
     /// Every enumeration constant, in the order declared.
     enumerators: Vec<Enumerator>,
     /// Every `enum` specifier, as written.
@@ -1224,6 +1226,7 @@ impl Ast {
         }
         let copy = self.push_type(self.ty(ty).clone());
         self.consts.insert(copy);
+        self.copied_from.insert(copy, ty);
         if let Some(&enumeration) = self.enumeration_of.get(&ty) {
             self.enumeration_of.insert(copy, enumeration);
         }
@@ -1281,6 +1284,19 @@ impl Ast {
     /// by rank alone, since the sign is not known yet.
     pub fn settle_enumerations(&mut self) {
         self.enumerations_settled = true;
+    }
+
+    /// The type `ty` was copied from to qualify it, followed to the first
+    /// that is no copy, and `ty` itself where it is none. **What the name
+    /// resolver bound**, where the copy was made after it ran: the type
+    /// check qualifies a member of a `const` struct, and a struct copied so
+    /// was bound to no tag, so asking its tag panicked (#1200 review).
+    pub fn unqualified(&self, ty: TypeId) -> TypeId {
+        let mut ty = ty;
+        while let Some(&from) = self.copied_from.get(&ty) {
+            ty = from;
+        }
+        ty
     }
 
     /// Whether `ty` is `const`-qualified. See [`Ast::push_const`].

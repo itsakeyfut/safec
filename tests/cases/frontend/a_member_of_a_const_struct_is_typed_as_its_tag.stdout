@@ -1,0 +1,25 @@
+Declaration a_member_of_a_const_struct_is_typed_as_its_tag.c:1:1 "struct I"
+  Field a_member_of_a_const_struct_is_typed_as_its_tag.c:2:5 "x" "int"
+Declaration a_member_of_a_const_struct_is_typed_as_its_tag.c:4:1 "struct O"
+  Field a_member_of_a_const_struct_is_typed_as_its_tag.c:5:5 "i" "struct I"
+  Field a_member_of_a_const_struct_is_typed_as_its_tag.c:6:5 "many" "struct I[2]"
+  Field a_member_of_a_const_struct_is_typed_as_its_tag.c:7:5 "y" "int"
+Function a_member_of_a_const_struct_is_typed_as_its_tag.c:9:1 "f" "int (const struct O *)"
+  Parameter a_member_of_a_const_struct_is_typed_as_its_tag.c:9:7 "p" "const struct O *"
+  Compound a_member_of_a_const_struct_is_typed_as_its_tag.c:9:26
+    Return a_member_of_a_const_struct_is_typed_as_its_tag.c:10:5
+      Binary a_member_of_a_const_struct_is_typed_as_its_tag.c:10:12 "+"
+        Binary a_member_of_a_const_struct_is_typed_as_its_tag.c:10:12 "+"
+          Member a_member_of_a_const_struct_is_typed_as_its_tag.c:10:12 "." "x"
+            Member a_member_of_a_const_struct_is_typed_as_its_tag.c:10:12 "->" "i"
+              Identifier a_member_of_a_const_struct_is_typed_as_its_tag.c:10:12 "p"
+          Cast a_member_of_a_const_struct_is_typed_as_its_tag.c:10:21 "int"
+            SizeofExpr a_member_of_a_const_struct_is_typed_as_its_tag.c:10:26
+              Member a_member_of_a_const_struct_is_typed_as_its_tag.c:10:33 "->" "i"
+                Identifier a_member_of_a_const_struct_is_typed_as_its_tag.c:10:33 "p"
+        Cast a_member_of_a_const_struct_is_typed_as_its_tag.c:10:41 "int"
+          SizeofExpr a_member_of_a_const_struct_is_typed_as_its_tag.c:10:46
+            Subscript a_member_of_a_const_struct_is_typed_as_its_tag.c:10:53
+              Member a_member_of_a_const_struct_is_typed_as_its_tag.c:10:53 "->" "many"
+                Identifier a_member_of_a_const_struct_is_typed_as_its_tag.c:10:53 "p"
+              Number a_member_of_a_const_struct_is_typed_as_its_tag.c:10:61 "0"

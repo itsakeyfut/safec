@@ -345,9 +345,20 @@ struct Nullability<'a> {
 fn escaped_in(function: &Function) -> Vec<bool> {
     let mut escaped = vec![false; function.locals().len()];
 
+    // **Not a place through a dereference**: `&(*t).m`, a member's address
+    // (#1200), takes the address of what `t` points at and not of `t`, as
+    // `taken::address_taken` reads it. Counted, every pointer a member was
+    // reached through was escaped, its nullness given up on, and each read
+    // of a member doubted as maybe null. Mutation: count it;
+    // `a_struct_read_through_its_members_is_proved` reports `SC0403`.
     let mut taken = |value: &Rvalue| {
         if let Rvalue::Address(place) = value {
-            escaped[place.local.index()] = true;
+            if !place.steps().iter().any(|step| match step {
+                Projection::Deref => true,
+                Projection::Index(_) | Projection::Field(_) => false,
+            }) {
+                escaped[place.local.index()] = true;
+            }
         }
     };
 
@@ -1357,7 +1368,12 @@ fn report(
     }
 }
 
-/// Where an element runs, and each pointer local it moves by `+` or `-`.
+/// Where an element runs, and each pointer local it moves by `+` or `-`,
+/// or takes a member's address through, `&(*p).m`, which is `p` moved by the
+/// member's offset (ADR-0124): a null `p` is asked there, as `p + 1` is,
+/// whether or not the member is then read (#1200 review). Mutation: answer
+/// nothing for a member's address; `a_member_of_a_null_pointer_is_doubted`'s
+/// `address_alone` is silent.
 fn moved_in_element<'e>(
     unit: &TranslationUnit,
     function: &Function,
@@ -1366,6 +1382,21 @@ fn moved_in_element<'e>(
     let Element::Assign(operation) = element else {
         return None;
     };
+    if let Rvalue::Address(place) = &operation.value {
+        let member = place.steps().iter().any(|step| match step {
+            Projection::Field(_) => true,
+            Projection::Deref | Projection::Index(_) => false,
+        });
+        let through = match place.steps().first() {
+            Some(Projection::Deref) => true,
+            Some(Projection::Index(_) | Projection::Field(_)) | None => false,
+        };
+        let moved = (member && through && pointer_typed(unit, function, place.local))
+            .then_some(place)
+            .into_iter()
+            .collect();
+        return Some((operation.origin.span(), moved));
+    }
     let Rvalue::Binary {
         op: BinOp::Add | BinOp::Sub,
         lhs,
@@ -1419,7 +1450,8 @@ fn own_local(operand: &Operand) -> Option<LocalId> {
 fn read_out_of_memory(place: &Place) -> bool {
     place.steps().iter().skip(1).any(|step| match step {
         Projection::Deref => true,
-        Projection::Index(_) => false,
+        // Under `Rvalue::Address` alone, as an index is (#1200).
+        Projection::Index(_) | Projection::Field(_) => false,
     })
 }
 

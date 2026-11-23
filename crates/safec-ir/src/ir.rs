@@ -174,6 +174,67 @@ pub struct FuncId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TyId(u32);
 
+/// Which struct, within one [`TranslationUnit`]: a type of its own, so that
+/// two structs with the same members are two types (C17 6.2.7 p1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct StructId(u32);
+
+impl StructId {
+    /// The index this handle refers to, for printing and for a side table.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// A struct as the target lays it out: each member's type and byte offset,
+/// and the whole's size and alignment. Worked out once, by
+/// [`TranslationUnit::push_struct`], and the one answer the backend and the
+/// memory check read. See ADR-0124.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StructLayout {
+    /// Each member, in the order declared.
+    pub members: Vec<MemberLayout>,
+    /// How many bytes the whole takes, trailing padding included.
+    pub size: u64,
+    /// The strictest of its members' alignments.
+    pub align: u64,
+}
+
+/// Where each member of a struct goes, given each one's size and alignment
+/// in bytes, in order: each one's offset, and the whole's size and
+/// alignment. `None` where a count overflows a `u64`.
+///
+/// C17 6.7.2.1 p15 and p17: each member at the first offset after the one
+/// before it that its alignment divides, and the whole rounded up to the
+/// strictest alignment, so that an array of them keeps each aligned.
+///
+/// **The one rule for a struct's layout** (ADR-0124), asked by
+/// [`TranslationUnit::push_struct`] and by the type check for `sizeof`,
+/// which is a constant before any IR exists. Mutation: place each member at
+/// the end of the one before it; `the_layout_of_every_struct_shape_is_clangs`
+/// fails.
+pub fn lay_out(members: impl IntoIterator<Item = (u64, u64)>) -> Option<(Vec<u64>, u64, u64)> {
+    let mut offsets = Vec::new();
+    let mut end: u64 = 0;
+    let mut align: u64 = 1;
+    for (size, member_align) in members {
+        let offset = end.checked_next_multiple_of(member_align)?;
+        offsets.push(offset);
+        end = offset.checked_add(size)?;
+        align = align.max(member_align);
+    }
+    Some((offsets, end.checked_next_multiple_of(align)?, align))
+}
+
+/// One member of a [`StructLayout`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MemberLayout {
+    /// Its type.
+    pub ty: TyId,
+    /// Where it starts, in bytes from the start of the struct.
+    pub offset: u64,
+}
+
 /// Which block, within one [`Function`].
 ///
 /// Meaningless in another function, the way an index into one arena is
@@ -264,6 +325,13 @@ pub enum Ty {
         /// How many elements there are, which the lowering never makes zero.
         length: u64,
     },
+    /// A struct, laid out in [`TranslationUnit::struct_layout`].
+    ///
+    /// **Never a value yet**, as an array is not: no operation reads or
+    /// writes one whole, which is assignment's, and a call's and a return's
+    /// (#1201). A member is reached through its address, a
+    /// [`Projection::Field`] under `Rvalue::Address`.
+    Struct(StructId),
 }
 
 impl Ty {
@@ -286,7 +354,8 @@ impl Ty {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Array { .. } => false,
+            | Ty::Array { .. }
+            | Ty::Struct(_) => false,
         }
     }
 }
@@ -297,18 +366,25 @@ impl Ty {
 /// takes to reach what is being read or written: `*p` is one [`Deref`], and
 /// an array's element is one [`Index`], which the lowering builds only as a
 /// constant zero to convert a local array to a pointer to its first element:
-/// `a[i]` is `*(a + i)`. A field selector joins them when structs do.
+/// `a[i]` is `*(a + i)`. A struct's member is one [`Field`], which the
+/// lowering builds only under `Rvalue::Address` too: `s.m` is `*&s.m`, so
+/// every read and write is through a pointer, as an element's is.
 ///
 /// [`Ord`] for the reason [`Place`] gives.
 ///
 /// [`Deref`]: Projection::Deref
 /// [`Index`]: Projection::Index
+/// [`Field`]: Projection::Field
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Projection {
     /// What the pointer points at.
     Deref,
     /// The element this operand selects.
     Index(Operand),
+    /// The member of a struct at this index, counting from zero in the order
+    /// declared: the slot of the object at the member's offset and width.
+    /// See ADR-0124.
+    Field(u32),
 }
 
 /// Somewhere a value can be read from or written to.
@@ -355,6 +431,7 @@ impl Projection {
         match self {
             Self::Deref => "Deref",
             Self::Index(_) => "Index",
+            Self::Field(_) => "Field",
         }
     }
 }
@@ -395,7 +472,7 @@ impl Place {
         for step in &self.projection {
             match step {
                 Projection::Deref => derefs += 1,
-                Projection::Index(_) => return Shape::Indexed,
+                Projection::Index(_) | Projection::Field(_) => return Shape::Indexed,
             }
         }
         if derefs == 0 {
@@ -430,7 +507,7 @@ impl Place {
                 local: self.local,
                 projection: rest.to_vec(),
             }),
-            Some((Projection::Index(_), _)) | None => None,
+            Some((Projection::Index(_) | Projection::Field(_), _)) | None => None,
         }
     }
 
@@ -464,8 +541,9 @@ pub enum Shape {
     /// `Rvalue::Address`, which is no place read or written, and `a[i]` is
     /// `*(a + i)` (#621). See ADR-0045.
     Deref(usize),
-    /// A step that is not a dereference: today an `Index`, which the lowering
-    /// builds only under `Rvalue::Address` (#621).
+    /// A step that is not a dereference: an `Index` or a `Field`, which the
+    /// lowering builds only under `Rvalue::Address` (#621, #1200). The name
+    /// predates the second, and ADR-0113 records it.
     Indexed,
 }
 
@@ -1831,6 +1909,8 @@ pub struct TranslationUnit {
     /// So that one type has one id. Not part of the shape: an implementation
     /// detail of [`Self::push_type`].
     interned: HashMap<Ty, TyId>,
+    /// Every struct's layout, by [`StructId`].
+    structs: Vec<StructLayout>,
 }
 
 impl TranslationUnit {
@@ -1842,6 +1922,63 @@ impl TranslationUnit {
             statics: Vec::new(),
             types: Vec::new(),
             interned: HashMap::new(),
+            structs: Vec::new(),
+        }
+    }
+
+    /// Lay out a struct of these members, in order, and say which it is.
+    /// `None` where a member has no size or alignment this unit can give,
+    /// which the lowering refuses before it asks. The layout is
+    /// [`lay_out`]'s.
+    pub fn push_struct(&mut self, members: &[TyId]) -> Option<StructId> {
+        let sized = members
+            .iter()
+            .map(|&ty| Some((self.size_of(ty)?, self.align_of(ty)?)))
+            .collect::<Option<Vec<_>>>()?;
+        let (offsets, size, align) = lay_out(sized)?;
+        let id = StructId(u32::try_from(self.structs.len()).expect("fewer than 2^32 structs"));
+        self.structs.push(StructLayout {
+            members: members
+                .iter()
+                .zip(offsets)
+                .map(|(&ty, offset)| MemberLayout { ty, offset })
+                .collect(),
+            size,
+            align,
+        });
+        Some(id)
+    }
+
+    /// The layout of the struct `id` names.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`TranslationUnit`].
+    pub fn struct_layout(&self, id: StructId) -> &StructLayout {
+        &self.structs[id.0 as usize]
+    }
+
+    /// Where member `member` of the struct `id` starts, in bytes. See
+    /// ADR-0124: the one answer to it, which the backend writes as a byte
+    /// offset and the memory check reads as a position.
+    ///
+    /// # Panics
+    ///
+    /// If the struct has no such member.
+    pub fn offset_of(&self, id: StructId, member: u32) -> u64 {
+        self.struct_layout(id).members[member as usize].offset
+    }
+
+    /// The alignment in bytes of an object of this type on this unit's
+    /// target, or `None` for `void`. An array is its element's, and a struct
+    /// its strictest member's (C17 6.7.2.1 p15).
+    pub fn align_of(&self, id: TyId) -> Option<u64> {
+        match self.ty(id) {
+            Ty::Integer { rank, .. } => Some(self.target.alignment(Some(rank))),
+            Ty::Pointer(_) => Some(self.target.alignment(None)),
+            Ty::Void => None,
+            Ty::Array { element, .. } => self.align_of(element),
+            Ty::Struct(layout) => Some(self.struct_layout(layout).align),
         }
     }
 
@@ -1883,8 +2020,9 @@ impl TranslationUnit {
     pub fn integer(&self, id: TyId) -> Option<Integer> {
         match self.ty(id) {
             Ty::Integer { rank, sign } => Some(self.target.integer(rank, sign)),
-            // No array is a value, so none is converted or range-checked.
-            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => None,
+            // No array or struct is a value, so none is converted or
+            // range-checked.
+            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } | Ty::Struct(_) => None,
         }
     }
 
@@ -1925,6 +2063,8 @@ impl TranslationUnit {
             Ty::Array { element, length } => {
                 return self.size_of(element)?.checked_mul(length);
             }
+            // Its members and their padding, laid out once.
+            Ty::Struct(layout) => return Some(self.struct_layout(layout).size),
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.
@@ -1956,6 +2096,11 @@ impl TranslationUnit {
                 // still `*(p + i)`. See `docs/c-family.md`.
                 (Projection::Index(_), Ty::Array { element, .. }) => element,
                 (Projection::Index(_), _) => return None,
+                // The member's type, which the layout keeps.
+                (Projection::Field(member), Ty::Struct(layout)) => {
+                    self.struct_layout(layout).members.get(*member as usize)?.ty
+                }
+                (Projection::Field(_), _) => return None,
             };
         }
         Some(ty)

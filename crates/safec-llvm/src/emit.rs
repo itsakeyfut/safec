@@ -190,6 +190,25 @@ impl Emitter<'_> {
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
             Ty::Array { element, length } => format!("[{length} x {}]", self.spell(element)),
+            // **Bytes, and no LLVM struct type**: the IR lays a struct out and
+            // nothing else does, so its storage is its size in bytes and a
+            // member is reached at its offset into them. See ADR-0124.
+            Ty::Struct(layout) => format!("[{} x i8]", self.unit.struct_layout(layout).size),
+        }
+    }
+
+    /// `, align N` for storage of a struct type, from the layout, and nothing
+    /// for any other. **A struct is bytes to LLVM**, which aligns `[N x i8]`
+    /// to one, so its alignment is said wherever its storage is made, a
+    /// local's and a global's alike: a global left at one put an 8-byte
+    /// member at an address 1 mod 8 (#1200 review). Every other type is
+    /// one LLVM already aligns as the target does. Mutation: answer nothing
+    /// for a struct; `a_struct_global_is_aligned_as_its_layout_says`
+    /// loses its `align 8`.
+    fn struct_align(&self, ty: TyId) -> String {
+        match self.unit.ty(ty) {
+            Ty::Struct(layout) => format!(", align {}", self.unit.struct_layout(layout).align),
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => String::new(),
         }
     }
 
@@ -307,6 +326,7 @@ impl Emitter<'_> {
                 format!("{name} = internal {kind} {spelled} {init}")
             }
         };
+        let line = format!("{line}{}", self.struct_align(object.ty));
         writeln!(out, "{line}").expect("writing to a string cannot fail");
     }
 
@@ -355,6 +375,25 @@ impl Emitter<'_> {
                 Projection::Index(_) => {
                     return self.refuse("an index other than an array's first element");
                 }
+                // **A member is its offset in bytes from its object**, which
+                // the IR's layout gives, so the backend lays out nothing. See
+                // ADR-0124. Mutation: take every offset as zero;
+                // `a_struct_is_laid_out_and_read_through_its_members` exits
+                // with another value.
+                Projection::Field(member) => match self.unit.ty(ty) {
+                    Ty::Struct(layout) => {
+                        let offset = self.unit.offset_of(layout, *member);
+                        let at = self.temp();
+                        writeln!(
+                            out,
+                            "  {at} = getelementptr i8, ptr {address}, i64 {offset}"
+                        )
+                        .expect("writing to a string cannot fail");
+                        address = at;
+                        ty = self.unit.struct_layout(layout).members[*member as usize].ty;
+                    }
+                    _ => return self.refuse("a member of something that is not a struct"),
+                },
             }
         }
 
@@ -376,6 +415,9 @@ impl Emitter<'_> {
         }
         // C reads an array only by converting it to a pointer to its first
         // element (C17 6.3.2.1 p3), which the lowering does where it is used.
+        if matches!(self.unit.ty(ty), Ty::Struct(_)) {
+            return self.refuse("a read of a whole struct, which is not lowered yet");
+        }
         if matches!(self.unit.ty(ty), Ty::Array { .. }) {
             return self.refuse("a read of a whole array, which C converts rather than reads");
         }
@@ -874,6 +916,9 @@ impl Emitter<'_> {
         if matches!(self.unit.ty(to), Ty::Array { .. }) {
             return self.refuse("an assignment to a whole array, which C does not have");
         }
+        if matches!(self.unit.ty(to), Ty::Struct(_)) {
+            return self.refuse("an assignment to a whole struct, which is not lowered yet");
+        }
 
         let value = match &operation.value {
             Rvalue::Use(from) => self.operand(function, from, to, out)?,
@@ -1204,8 +1249,13 @@ impl Emitter<'_> {
                 continue;
             }
             let spelled = self.spell(ty);
-            writeln!(&mut body, "  %_{} = alloca {spelled}", local.index())
-                .expect("writing to a string cannot fail");
+            writeln!(
+                &mut body,
+                "  %_{} = alloca {spelled}{}",
+                local.index(),
+                self.struct_align(ty)
+            )
+            .expect("writing to a string cannot fail");
         }
 
         // A parameter arrives as a value and the rest of the body wants a

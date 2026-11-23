@@ -1,24 +1,24 @@
-error[SC0304]: cannot compile something of type `struct S` yet
+error[SC0304]: cannot compile a struct used as a value yet
    ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:4:10 ]
    │
  4 │ struct S make(void);
    │          ──┬─  
-   │            ╰─── declared here
+   │            ╰─── a struct, whole
 ───╯
-  = note: the integer types, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far
-error[SC0304]: cannot compile something of type `struct S` yet
+  = note: a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
    ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:5:19 ]
    │
  5 │ int take(struct S s);
    │                   ┬  
-   │                   ╰── declared here
+   │                   ╰── a struct, whole
 ───╯
-  = note: the integer types, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far
-error[SC0304]: cannot compile something of type `struct S *` yet
-   ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:6:17 ]
+  = note: a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
+   ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:8:13 ]
    │
- 6 │ int f(struct S *p, struct S *q) {
-   │                 ┬  
-   │                 ╰── declared here
+ 8 │     local = *p;
+   │             ─┬  
+   │              ╰── a struct, whole
 ───╯
-  = note: the integer types, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far
+  = note: a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet

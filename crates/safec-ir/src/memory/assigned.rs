@@ -156,7 +156,8 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                 Rvalue::Address(place) => {
                     if place.steps().iter().any(|step| match step {
                         Projection::Deref => true,
-                        Projection::Index(_) => false,
+                        // `&s.m` reads nothing, as `&a[0]` does (#1200).
+                        Projection::Index(_) | Projection::Field(_) => false,
                     }) {
                         reads.push((place.local, at));
                     }

@@ -54,6 +54,30 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A member that is no array is an array of one for arithmetic (C17
+        // 6.5.6 p7), so a pointer from its address that reaches the next
+        // member, or the one before, is doubted though it stays inside the
+        // struct (p8, Annex J.2), and one that stays in the member is not
+        // (#1200 review). Mutation: enter no row in the transfer's member
+        // arm; `past_the_member` and `before_the_member` are silent.
+        a_member_s_address_walks_the_member_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A member is the slot of its object at its offset (ADR-0124): a read
+        // after the struct is freed is `SC0402`, a write of the member 16
+        // bytes into a 4-byte block `SC0412`, and a pointer member read
+        // before anything wrote it `SC0411` (#1200). Mutation: take the
+        // offset as zero in the transfer's member arm; the write past the end
+        // reaches 8 bytes and the `SC0412` names that instead.
+        a_struct_member_is_a_slot_of_its_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same members, each written before it is read, on the stack
+        // and on the heap, report nothing (#1200). Mutation: count `&(*t).m`
+        // as taking `t`'s address in `nullability::escaped_in`; each member
+        // read is `SC0403`.
+        a_struct_read_through_its_members_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p->m` with `p` null is a null dereference, proved where `p` is
+        // null and doubted where it may be (#1200). Mutation: answer a
+        // member's address as never null in `Nullability::nullness_of`;
+        // both are silent.
+        a_member_of_a_null_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `static 2` says the argument has at least two elements, and the
         // memory check does not believe it: the parameter is the pointer it
         // is adjusted to, so `a[5]` is doubted, not proved within (#1210).
@@ -8479,6 +8503,21 @@ cases! {
         // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
         // this declares `T` and reports nothing.
         a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
+        // An array of structs, a member of struct type and a struct that
+        // reaches itself are each refused under `SC0304`, since their layout
+        // and what a member of one is to the memory check are #1202's. So is
+        // a struct with a `const` member, whose `const` the memory check
+        // keeps per object and not per slot.
+        // Mutation: lay an array of structs out in `Lowering::ty`; `arrays`
+        // is lowered.
+        a_struct_this_compiler_cannot_lay_out_yet_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A struct reached through a `const` struct is typed as a copy the
+        // type check makes, which the name resolver never bound, so its tag is
+        // the one of the type it was copied from: `p->i.x`, `sizeof(p->i)` and
+        // an element of a member array of structs are typed, rather than a
+        // panic and a false `SC0306` (#1200 review). Mutation: ask a copy's
+        // own tag in `Resolution::bound`; this panics.
+        a_member_of_a_const_struct_is_typed_as_its_tag: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.6.3 p7: the qualifiers in a parameter's brackets are the
         // pointer's it is adjusted to, so `int a[const 2]` is an
         // `int *const a` and `a = 0` is refused (#1210). Mutation: drop them
@@ -8593,10 +8632,11 @@ cases! {
         // C17 6.11.5 makes it obsolescent and not invalid. Mutation: read only
         // the first half in `Parser::specifiers`; `SC0201`.
         a_storage_class_after_the_type_is_read: ["--emit", "ast"],
-        // C17 6.5.3.4 p1 refuses a function and an incomplete type, `SC0306`;
-        // a struct has no layout here yet, `SC0304`. Mutation: drop the
-        // incomplete arm in `Checker::sizeof`; `sizeof(void)` and `sizeof
-        // a` are `SC0304` instead.
+        // C17 6.5.3.4 p1 refuses a function and an incomplete type, `SC0306`,
+        // a struct nothing defines among them, and one defined only after
+        // the `sizeof`, `struct L`. Mutation: drop the incomplete arm in
+        // `Checker::sizeof`; `sizeof(void)`, `sizeof(struct S)` and `sizeof
+        // a` are `SC0304` instead, and `sizeof(struct L)` is accepted.
         sizeof_refuses_what_has_no_size: ["--emit", "ast"],
         // 6.5.4 p2: to `void` or to a scalar from a scalar. Mutation: let a
         // struct operand through in `Checker::cast`; the first is accepted.
@@ -8833,8 +8873,8 @@ cases! {
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A program that uses structs as C allows, an object assigned from
         // `*p`, passed and returned, passes the type checker, and the lowering
-        // refuses `make`, `take` and `f` under `SC0304`, since the IR holds no
-        // struct, and lowers `main`. Mutation: refuse a declaration holding a
+        // refuses `make`, `take` and `f` under `SC0304`, since a struct used
+        // as a value is not lowered yet (#1201), and lowers `main`. Mutation: refuse a declaration holding a
         // struct in the type checker again; the lowering is never reached,
         // `main` is not printed, and this fails.
         a_struct_program_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8918,12 +8958,11 @@ cases! {
         // report goes.
         a_struct_with_a_flexible_array_member_is_no_member_and_no_element: ["--emit", "ast"],
         // A program using members as C allows passes the type checker, and
-        // the lowering refuses its one member access, the first it meets,
-        // under `SC0304`, since the IR holds no struct to take a member
-        // of. Mutation: refuse a member access of the right shape in the
-        // type checker again; that report is the type checker's, and the
-        // lowering is never reached.
-        a_program_using_members_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // the lowering lays its struct out and reads each member through its
+        // address, `&(*t).m` (#1200). Mutation: refuse a member access of
+        // the right shape in the type checker again; that report is the type
+        // checker's, and the lowering is never reached.
+        a_program_using_members_is_typed_and_lowered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `struct S` is never completed, so `*p = *q` assigns to an object
         // of incomplete type (C17 6.5.16 p2) and reads the value of another,
         // and `*p, 0` reads one (6.3.2.1 p2): three `SC0315`. `&*p` reads no
@@ -10041,6 +10080,12 @@ cases! {
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
     }
     "codegen" => {
+        // A struct is bytes to LLVM, so its storage says its alignment, a
+        // global's and a local's alike: after a `char` global it is at an
+        // 8-byte boundary, as `clang` puts it (#1200 review). Mutation:
+        // answer nothing for a struct in `Emitter::struct_align`; both lose
+        // their `align 8`.
+        a_struct_global_is_aligned_as_its_layout_says: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // The `--emit llvm-ir` cases, kept together because what each is for is
         // only visible beside the others. `every_operator` is the one that
         // stops the operator table being a table nothing checks: without it,

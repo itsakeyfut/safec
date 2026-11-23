@@ -1,0 +1,47 @@
+Target "x86_64-pc-windows-msvc"
+Static "s" "struct #0" external zero
+Function a_program_using_members_is_typed_and_lowered.c:6:5 "main"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *"
+  Local "_2" "int *"
+  Local "_3" "struct #0 *"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_program_using_members_is_typed_and_lowered.c:6:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_program_using_members_is_typed_and_lowered.c:7:12 generated
+      Destination "_1"
+      Static "s"
+    Operation a_program_using_members_is_typed_and_lowered.c:7:12 written
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_program_using_members_is_typed_and_lowered.c:7:18 generated
+      Destination "_3"
+      Static "s"
+    Operation a_program_using_members_is_typed_and_lowered.c:7:18 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 1
+    Operation a_program_using_members_is_typed_and_lowered.c:7:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_2"
+          Deref
+        Copy "_4"
+          Deref
+    Operation a_program_using_members_is_typed_and_lowered.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_program_using_members_is_typed_and_lowered.c:7:12 generated
+    Return

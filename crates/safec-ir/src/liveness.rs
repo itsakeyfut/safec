@@ -41,7 +41,7 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                 match step {
                     Projection::Deref => {}
                     Projection::Index(Operand::Copy(index)) => reads_of_place(index, read, written),
-                    Projection::Index(Operand::Constant(_)) => {}
+                    Projection::Index(Operand::Constant(_)) | Projection::Field(_) => {}
                 }
             }
         }

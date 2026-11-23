@@ -1,0 +1,231 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_read_through_its_members_is_proved.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "size"
+Function a_struct_read_through_its_members_is_proved.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "pointer"
+Function a_struct_read_through_its_members_is_proved.c:9:5 "local"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "x"
+  Local "_2" "struct #0 *"
+  Local "_3" "int *"
+  Local "_4" "struct #0 *"
+  Local "_5" "int *"
+  Local "_6" "struct #0 *"
+  Local "_7" "int *"
+  Local "_8" "struct #0 *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_struct_read_through_its_members_is_proved.c:11:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_struct_read_through_its_members_is_proved.c:11:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_read_through_its_members_is_proved.c:11:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_struct_read_through_its_members_is_proved.c:11:5 generated
+    Operation a_struct_read_through_its_members_is_proved.c:12:5 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_struct_read_through_its_members_is_proved.c:12:5 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_read_through_its_members_is_proved.c:12:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_struct_read_through_its_members_is_proved.c:12:5 generated
+    Operation a_struct_read_through_its_members_is_proved.c:13:12 generated
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_struct_read_through_its_members_is_proved.c:13:12 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_read_through_its_members_is_proved.c:13:18 generated
+      Destination "_8"
+      Address
+        Place "_1"
+    Operation a_struct_read_through_its_members_is_proved.c:13:18 written
+      Destination "_9"
+      Address
+        Place "_8"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_read_through_its_members_is_proved.c:13:12 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_7"
+          Deref
+        Copy "_9"
+          Deref
+    Operation a_struct_read_through_its_members_is_proved.c:13:12 written
+      Destination "_11"
+      Binary "Sub"
+        Copy "_10"
+        Constant 1
+    Operation a_struct_read_through_its_members_is_proved.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_struct_read_through_its_members_is_proved.c:13:12 generated
+    Return
+Function a_struct_read_through_its_members_is_proved.c:16:5 "heap"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int" "r"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_struct_read_through_its_members_is_proved.c:17:22 generated
+    Call a_struct_read_through_its_members_is_proved.c:17:22 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_read_through_its_members_is_proved.c:17:18 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_struct_read_through_its_members_is_proved.c:17:22 generated
+    Operation a_struct_read_through_its_members_is_proved.c:18:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_struct_read_through_its_members_is_proved.c:18:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_struct_read_through_its_members_is_proved.c:18:9 generated
+    Operation a_struct_read_through_its_members_is_proved.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_struct_read_through_its_members_is_proved.c:19:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_struct_read_through_its_members_is_proved.c:18:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_struct_read_through_its_members_is_proved.c:21:5 written
+      Destination "_4"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_read_through_its_members_is_proved.c:21:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 5
+    Sequenced a_struct_read_through_its_members_is_proved.c:21:5 generated
+    Operation a_struct_read_through_its_members_is_proved.c:22:5 written
+      Destination "_5"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_read_through_its_members_is_proved.c:22:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_struct_read_through_its_members_is_proved.c:22:5 generated
+    Operation a_struct_read_through_its_members_is_proved.c:23:13 written
+      Destination "_7"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_read_through_its_members_is_proved.c:23:20 written
+      Destination "_8"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_read_through_its_members_is_proved.c:23:13 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_7"
+          Deref
+        Copy "_8"
+          Deref
+    Operation a_struct_read_through_its_members_is_proved.c:23:9 written
+      Destination "_6"
+      Use
+        Copy "_9"
+    Sequenced a_struct_read_through_its_members_is_proved.c:23:13 generated
+    ArgumentsEvaluated a_struct_read_through_its_members_is_proved.c:24:5 generated
+    Call a_struct_read_through_its_members_is_proved.c:24:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_struct_read_through_its_members_is_proved.c:24:5 generated
+    Operation a_struct_read_through_its_members_is_proved.c:25:12 written
+      Destination "_10"
+      Binary "Sub"
+        Copy "_6"
+        Constant 5
+    Operation a_struct_read_through_its_members_is_proved.c:25:5 written
+      Destination "_0"
+      Use
+        Copy "_10"
+    Sequenced a_struct_read_through_its_members_is_proved.c:25:12 generated
+    Return
+Function a_struct_read_through_its_members_is_proved.c:28:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_struct_read_through_its_members_is_proved.c:28:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_struct_read_through_its_members_is_proved.c:29:12 written "local" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_struct_read_through_its_members_is_proved.c:29:22 written "heap" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_struct_read_through_its_members_is_proved.c:29:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation a_struct_read_through_its_members_is_proved.c:29:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_struct_read_through_its_members_is_proved.c:29:12 generated
+    Return

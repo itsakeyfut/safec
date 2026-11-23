@@ -143,6 +143,8 @@ impl Allocations<'_> {
                 sign: _,
             } => true,
             Ty::Void | Ty::Pointer(_) => false,
+            // Where no member holds one, as `stored_pointer` answers.
+            Ty::Struct(_) => crate::layout::stored_pointer(self.unit, pointee).is_none(),
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2554,7 +2556,8 @@ impl Allocations<'_> {
             | Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
-            } => 0,
+            }
+            | Ty::Struct(_) => 0,
             Ty::Array { .. } => {
                 unreachable!("`innermost_element` strips every array")
             }
@@ -2619,6 +2622,9 @@ impl Allocations<'_> {
                         rank: Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     } => false,
+                    // Members of more than one type, so it may store any
+                    // pointer somewhere below (#1200).
+                    Ty::Struct(_) => true,
                     Ty::Pointer(_) | Ty::Array { .. } => {
                         unreachable!("the loop strips every pointer and array")
                     }
@@ -2628,7 +2634,8 @@ impl Allocations<'_> {
             | Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
-            } => true,
+            }
+            | Ty::Struct(_) => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2862,16 +2869,20 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Void => return usize::MAX,
+            | Ty::Void
+            | Ty::Struct(_) => return usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         };
         match self.unit.ty(copied) {
             Ty::Pointer(_) => self.levels_holding_pointers(copied),
+            // A struct's members are of more than one type: every level, as
+            // a side that says nothing (#1200).
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Void => usize::MAX,
+            | Ty::Void
+            | Ty::Struct(_) => usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }

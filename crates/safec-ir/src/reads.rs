@@ -459,8 +459,9 @@ pub(crate) fn first_of_two_derefs(place: &Place) -> Option<Place> {
     };
     match (first, second) {
         (Projection::Deref, Projection::Deref) => Some(Place::local(place.local).deref()),
-        (Projection::Deref | Projection::Index(_), Projection::Deref | Projection::Index(_)) => {
-            None
-        }
+        (
+            Projection::Deref | Projection::Index(_) | Projection::Field(_),
+            Projection::Deref | Projection::Index(_) | Projection::Field(_),
+        ) => None,
     }
 }
