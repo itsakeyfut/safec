@@ -1,0 +1,150 @@
+error[SC0402]: this uses a value that may have been freed
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:20:5 ]
+    │
+ 20 │     *a.pointer = 0;
+    │     ───────┬──────  
+    │            ╰──────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:22:5 ]
+    │
+ 22 │     free(a.pointer);
+    │     ───────┬───────  
+    │            ╰───────── this was read out of memory, which this check does not follow
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+error[SC0402]: this uses a value that may have been freed
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:23:5 ]
+    │
+ 23 │     return *b.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:23:5 ]
+    │
+ 23 │     return *b.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `b` points at
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:23:5 ]
+    │
+ 23 │     return *b.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:27:5 ]
+    │
+ 27 │     return *h.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:27:5 ]
+    │
+ 27 │     return *h.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0402]: this uses a value that may have been freed
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:36:5 ]
+    │
+ 36 │     *h.pointer = 0;
+    │     ───────┬──────  
+    │            ╰──────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:37:5 ]
+    │
+ 37 │     free(h.pointer);
+    │     ───────┬───────  
+    │            ╰───────── this was read out of memory, which this check does not follow
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:38:12 ]
+    │
+ 38 │     return read_through(h);
+    │            ───────┬───────  
+    │                   ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:53:5 ]
+    │
+ 53 │     free(&c);
+    │     ────┬───  
+    │         ╰───── this may be the address of a local
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check could not rule out that this holds a local's address, which free must never be handed; if it is always what an allocation function returned, nothing here says the program is wrong
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:20:5 ]
+    │
+ 20 │     *a.pointer = 0;
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:23:5 ]
+    │
+ 23 │     return *b.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:27:5 ]
+    │
+ 27 │     return *h.pointer;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_struct_is_assigned_passed_and_returned_by_value.c:36:5 ]
+    │
+ 36 │     *h.pointer = 0;
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

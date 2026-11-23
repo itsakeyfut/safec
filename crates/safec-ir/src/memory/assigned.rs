@@ -321,7 +321,7 @@ fn reaches_certainly(
     // 0 unseen, 1 on the walk's stack, 2 done.
     let mut state = vec![0u8; function.blocks().len()];
     let ends_here = |callee: FuncId| {
-        let name = sources.snippet(unit.function(callee).name);
+        let name = unit.function(callee).spelled(sources);
         DOES_NOT_RETURN
             .iter()
             .any(|&(reserved, _)| reserved == name)

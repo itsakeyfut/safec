@@ -93,7 +93,7 @@ pub(crate) fn read_as_library(
     if function.is_defined() {
         return None;
     }
-    let name = sources.snippet(function.name);
+    let name = function.spelled(sources);
     let row = LIBRARY.iter().find(|row| row.name == name)?;
     let declared: Vec<Option<Shape>> = function
         .parameters()

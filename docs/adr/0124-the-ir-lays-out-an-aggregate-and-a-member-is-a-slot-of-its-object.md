@@ -86,10 +86,23 @@ to point into one object, against not asked and named as a silence.
   bytes being the row it walks, since C17 6.5.6 p7 makes a member an array
   of one: `a_member_s_address_walks_the_member_alone` is silent with no row
   entered.
-* Still unguarded, because unions, a struct crossing a call and comparing
-  pointers are not lowered yet: the link-and-run test per ABI shape, and a
-  corpus case for the comparison's code, which their sub-issues of #614 add
-  as they land.
+* **A struct crosses a call as the target's C ABI says** (#1201):
+  `a_struct_by_value_meets_clangs_abi` in `tests/abi.rs` links an object
+  this compiler built against one `clang` built, both ways round, for each
+  size class and after five integers, on each runner's own host: Win64 on
+  Windows, x86-64 System V on Linux, and AArch64 on macOS, whose runner is
+  Apple silicon. The corpus cases `a_struct_crosses_a_call_as_system_v_says`,
+  `a_struct_crosses_a_call_as_aarch64_says` and
+  `a_struct_crosses_a_call_as_win64_says` hold each convention's text on
+  every host. `abi::classify` answers Win64, System V and AArch64 by name,
+  for a whole signature at once since System V counts the registers left,
+  and refuses every other target. Mutations: classify a Win64 struct of 8
+  bytes as memory, and `a_struct_by_value_meets_clangs_abi` fails on
+  Windows; drop System V's count of free registers, and
+  `a_struct_that_does_not_fit_the_registers_left_goes_in_memory` fails.
+* Still unguarded, because unions and comparing pointers are not lowered
+  yet: a corpus case for the comparison's code, which its sub-issue of #614
+  adds as it lands.
 
 ### Consequences
 

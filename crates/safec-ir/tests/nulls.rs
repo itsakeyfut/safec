@@ -20,7 +20,7 @@
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, Function, LocalId, Operand, Operation, Origin, Parameter,
-    Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Passes, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::nullability;
 use safec_ir::source::{SourceMap, Span};
@@ -1576,6 +1576,7 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
             nonnull: Some(Promise::Declared(names.at[1])),
             name: None,
             reads_only: false,
+            passes: Passes::Value,
         }],
     ));
     let mut function = Function::new(names.function, int, vec![]);

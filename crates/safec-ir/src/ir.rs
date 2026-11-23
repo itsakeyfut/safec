@@ -44,7 +44,7 @@
 
 use std::collections::HashMap;
 
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 use crate::target::{Integer, Target};
 
 /// Four of the library functions C says do not return to their caller, with
@@ -1295,6 +1295,31 @@ pub struct Parameter {
     /// the object is `const`). What a call handed read-only storage is
     /// asked by. See ADR-0120.
     pub reads_only: bool,
+    /// What the C parameter it stands for is: itself, or a struct passed by
+    /// value, which the IR passes as a pointer. See [`Passes`].
+    pub passes: Passes,
+}
+
+/// What a parameter of the IR stands for in the C function it lowers.
+///
+/// **A struct crosses a call as a pointer in the IR** (#1201): an argument
+/// is the address of a copy the caller makes, whose storage ends when the
+/// call returns, and a result the address the caller wants it in, passed
+/// first. Both are promised non-null as [`Promise::Made`]. The C frontend
+/// copies an argument again into a local of the callee's own, which is
+/// what the parameter's name is, so no check reads the callee's object as
+/// one the caller handed over. The backend reads this and writes each
+/// target's C ABI, where a struct may travel in registers instead: see
+/// `safec_llvm::abi`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Passes {
+    /// The parameter itself.
+    Value,
+    /// A struct passed by value, as the address of the caller's copy of it.
+    StructCopy,
+    /// Where a struct returned by value goes, the caller's, passed first;
+    /// the function then returns nothing.
+    StructReturn,
 }
 
 /// Why a pointer a function takes or returns is believed not to be null, which
@@ -1315,6 +1340,11 @@ pub enum Promise {
     /// written `_Nullable` (ADR-0050). The span is the name of what was
     /// promised: the function's, for the pointer it returns.
     Defaulted(Span),
+    /// Nothing was written, and this compiler made the pointer: the one a
+    /// struct passed or returned by value crosses as (see [`Passes`]), which
+    /// every caller passes as the address of an object of its own. The span
+    /// is the parameter's name, or the function's for a result.
+    Made(Span),
 }
 
 /// A parameter declared with nothing but its type.
@@ -1324,6 +1354,7 @@ fn unannotated(ty: TyId) -> Parameter {
         nonnull: None,
         name: None,
         reads_only: false,
+        passes: Passes::Value,
     }
 }
 
@@ -1332,6 +1363,12 @@ fn unannotated(ty: TyId) -> Parameter {
 pub struct Function {
     /// The span of its name, which is not its identity: [`FuncId`] is.
     pub name: Span,
+    /// The library function this is, where this compiler made the
+    /// declaration itself rather than reading one: a struct assignment is a
+    /// call to `memcpy` whatever the source declares (#1201). Read by name
+    /// through [`Function::spelled`], so the memory check reads it by its
+    /// row and the backend declares it, and `name` is where it was needed.
+    builtin: Option<&'static str>,
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
     /// The span of the name each local was written with, in step with
@@ -1344,6 +1381,8 @@ pub struct Function {
     nonnull: Vec<Option<Promise>>,
     /// One per parameter: [`Parameter::reads_only`].
     reads_only: Vec<bool>,
+    /// One per parameter: [`Parameter::passes`].
+    passes: Vec<Passes>,
     /// Whether this is a hatch.
     hatch: bool,
     /// Whether its name has internal linkage, `static` in C (C17 6.2.2 p3),
@@ -1403,19 +1442,23 @@ impl Function {
         let mut names = vec![None];
         let mut nonnull = Vec::new();
         let mut reads_only = Vec::new();
+        let mut passes = Vec::new();
         for parameter in parameters {
             locals.push(parameter.ty);
             names.push(parameter.name);
             nonnull.push(parameter.nonnull);
             reads_only.push(parameter.reads_only);
+            passes.push(parameter.passes);
         }
 
         Self {
             name,
+            builtin: None,
             locals,
             names,
             nonnull,
             reads_only,
+            passes,
             hatch: false,
             internal: false,
             return_promise: None,
@@ -1505,6 +1548,31 @@ impl Function {
         declared
     }
 
+    /// A declaration of the library function `library`, which this compiler
+    /// made itself and the source need not spell: see [`Self::spelled`].
+    /// `at` is where it was needed, which a report about the call points at.
+    pub fn builtin(
+        library: &'static str,
+        at: Span,
+        returns: TyId,
+        parameters: impl IntoIterator<Item = TyId>,
+    ) -> Self {
+        let mut declared = Self::declaration(at, returns, parameters);
+        declared.builtin = Some(library);
+        declared
+    }
+
+    /// The name this function is called by: the library function it is,
+    /// where this compiler made it, and what its name's span spells
+    /// otherwise. **Every reader of a function's name asks this**, so a
+    /// declaration made with no source text behind it is named all the same.
+    pub fn spelled<'s>(&self, sources: &'s SourceMap) -> &'s str {
+        match self.builtin {
+            Some(library) => library,
+            None => sources.snippet(self.name),
+        }
+    }
+
     /// Where `_Nonnull` was written on the parameter `local` is, or `None` if
     /// it was not, or if `local` is not a parameter.
     ///
@@ -1568,6 +1636,19 @@ impl Function {
         self.locals.push(ty);
         self.names.push(None);
         id
+    }
+
+    /// What the parameter at `index`, counted from 0, stands for:
+    /// [`Passes::Value`] past the last.
+    pub fn passes(&self, index: usize) -> Passes {
+        self.passes.get(index).copied().unwrap_or(Passes::Value)
+    }
+
+    /// Whether this returns a struct by value, through a pointer passed
+    /// first: see [`Passes::StructReturn`]. A function with no parameters
+    /// answers `false`, by [`Function::passes`]'s answer past the last.
+    pub fn returns_a_struct(&self) -> bool {
+        self.passes(0) == Passes::StructReturn
     }
 
     /// Whether the parameter at `index`, counted from 0, points at `const`,

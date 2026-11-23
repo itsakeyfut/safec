@@ -1,0 +1,608 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_is_assigned_passed_and_returned_by_value.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "size"
+Function a_struct_is_assigned_passed_and_returned_by_value.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "pointer"
+Function a_struct_is_assigned_passed_and_returned_by_value.c:13:5 "assigned"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "a"
+  Local "_2" "struct #0" "b"
+  Local "_3" "struct #0 *"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "struct #0 *"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Local "_9" "struct #0 *"
+  Local "_10" "int **"
+  Local "_11" "struct #0 *"
+  Local "_12" "struct #0 *"
+  Local "_13" "struct #0 *"
+  Local "_14" "int **"
+  Local "_15" "struct #0 *"
+  Local "_16" "int **"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:16:5 generated
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:16:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:16:17 written "malloc" "bb1"
+      Destination "_5"
+      Constant 4
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:16:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:16:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:17:10 generated
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:17:10 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:17:9 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_7"
+          Deref
+    Branch a_struct_is_assigned_passed_and_returned_by_value.c:17:9 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:17:9 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:18:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:18:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:17:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:20:6 generated
+      Destination "_9"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:20:6 written
+      Destination "_10"
+      Address
+        Place "_9"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:20:5 written
+      Destination "_10"
+        Deref
+          Deref
+      Use
+        Constant 0
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:20:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:21:5 generated
+      Destination "_11"
+      Address
+        Place "_2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:21:5 generated
+      Destination "_12"
+      Address
+        Place "_1"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:21:5 written "memcpy" "bb5"
+      Copy "_11"
+      Copy "_12"
+      Constant 8
+  Block "bb5"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:21:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:22:10 generated
+      Destination "_13"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:22:10 written
+      Destination "_14"
+      Address
+        Place "_13"
+          Deref
+            Field
+              Member 0
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:22:5 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:22:5 written "free" "bb6"
+      Copy "_14"
+        Deref
+  Block "bb6"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:22:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:23:13 generated
+      Destination "_15"
+      Address
+        Place "_2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:23:13 written
+      Destination "_16"
+      Address
+        Place "_15"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:23:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+          Deref
+            Deref
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:23:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:26:12 "read_through" internal
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "h"
+  Local "_2" "struct #0"
+  Local "_3" "struct #0 *"
+  Local "_4" "struct #0 *"
+  Local "_5" "int **"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:26:39 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:26:39 written "memcpy" "bb1"
+      Copy "_3"
+      Copy "_1"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:27:13 generated
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:27:13 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:27:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+            Deref
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:27:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:30:5 "passed"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "h"
+  Local "_2" "struct #0 *"
+  Local "_3" "int **"
+  Local "_4" "void *"
+  Local "_5" "struct #0 *"
+  Local "_6" "int **"
+  Local "_7" "int"
+  Local "_8" "struct #0 *"
+  Local "_9" "int **"
+  Local "_10" "struct #0 *"
+  Local "_11" "int **"
+  Local "_12" "struct #0"
+  Local "_13" "struct #0 *"
+  Local "_14" "struct #0 *"
+  Local "_15" "struct #0 *"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:32:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:32:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:32:17 written "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:32:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_4"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:32:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:33:10 generated
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:33:10 written
+      Destination "_6"
+      Address
+        Place "_5"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:33:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_6"
+          Deref
+    Branch a_struct_is_assigned_passed_and_returned_by_value.c:33:9 written "bb2" "bb3"
+      Copy "_7"
+  Block "bb2"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:33:9 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:34:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:34:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:33:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:36:6 generated
+      Destination "_8"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:36:6 written
+      Destination "_9"
+      Address
+        Place "_8"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:36:5 written
+      Destination "_9"
+        Deref
+          Deref
+      Use
+        Constant 0
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:36:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:37:10 generated
+      Destination "_10"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:37:10 written
+      Destination "_11"
+      Address
+        Place "_10"
+          Deref
+            Field
+              Member 0
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:37:5 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:37:5 written "free" "bb5"
+      Copy "_11"
+        Deref
+  Block "bb5"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:37:5 generated
+    StorageLive a_struct_is_assigned_passed_and_returned_by_value.c:38:25 generated "_12"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:38:25 generated
+      Destination "_13"
+      Address
+        Place "_12"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:38:25 generated
+      Destination "_14"
+      Address
+        Place "_1"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:38:25 written "memcpy" "bb6"
+      Copy "_13"
+      Copy "_14"
+      Constant 8
+  Block "bb6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:38:25 generated
+      Destination "_15"
+      Address
+        Place "_12"
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:38:12 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:38:12 written "read_through" "bb7"
+      Destination "_16"
+      Copy "_15"
+  Block "bb7"
+    StorageDead a_struct_is_assigned_passed_and_returned_by_value.c:38:12 generated "_12"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:38:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:38:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:41:12 "read_a_member" internal
+  Local "_0" "int" return
+  Local "_1" "struct #1 *" parameter _Nonnull made struct-copy "c"
+  Local "_2" "struct #1"
+  Local "_3" "struct #1 *"
+  Local "_4" "struct #1 *"
+  Local "_5" "int *"
+  Local "_6" "struct #1 *"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:41:39 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:41:39 written "memcpy" "bb1"
+      Copy "_3"
+      Copy "_1"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:12 generated
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:12 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:18 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:18 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:12 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_5"
+          Deref
+        Copy "_7"
+          Deref
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:42:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:42:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:45:5 "counted"
+  Local "_0" "int" return
+  Local "_1" "struct #1" "c"
+  Local "_2" "struct #1 *"
+  Local "_3" "int *"
+  Local "_4" "struct #1 *"
+  Local "_5" "int *"
+  Local "_6" "struct #1"
+  Local "_7" "struct #1 *"
+  Local "_8" "struct #1 *"
+  Local "_9" "struct #1 *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:47:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:47:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:47:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:47:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:48:5 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:48:5 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:48:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:48:5 generated
+    StorageLive a_struct_is_assigned_passed_and_returned_by_value.c:49:26 generated "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:49:26 generated
+      Destination "_7"
+      Address
+        Place "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:49:26 generated
+      Destination "_8"
+      Address
+        Place "_1"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:49:26 written "memcpy" "bb1"
+      Copy "_7"
+      Copy "_8"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:49:26 generated
+      Destination "_9"
+      Address
+        Place "_6"
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:49:12 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:49:12 written "read_a_member" "bb2"
+      Destination "_10"
+      Copy "_9"
+  Block "bb2"
+    StorageDead a_struct_is_assigned_passed_and_returned_by_value.c:49:12 generated "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:49:12 written
+      Destination "_11"
+      Binary "Sub"
+        Copy "_10"
+        Constant 3
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:49:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:49:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:52:13 "free_own" internal
+  Local "_0" "void" return
+  Local "_1" "struct #1 *" parameter _Nonnull made struct-copy "c"
+  Local "_2" "struct #1"
+  Local "_3" "struct #1 *"
+  Local "_4" "struct #1 *"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:52:35 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:52:35 written "memcpy" "bb1"
+      Copy "_3"
+      Copy "_1"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:53:10 written
+      Destination "_4"
+      Address
+        Place "_2"
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:53:5 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:53:5 written "free" "bb2"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:53:5 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:56:5 "freed_own"
+  Local "_0" "int" return
+  Local "_1" "struct #1" "c"
+  Local "_2" "struct #1 *"
+  Local "_3" "int *"
+  Local "_4" "struct #1 *"
+  Local "_5" "int *"
+  Local "_6" "struct #1"
+  Local "_7" "struct #1 *"
+  Local "_8" "struct #1 *"
+  Local "_9" "struct #1 *"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:58:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:58:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:58:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:58:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:59:5 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:59:5 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 1
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:59:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:59:5 generated
+    StorageLive a_struct_is_assigned_passed_and_returned_by_value.c:60:14 generated "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:60:14 generated
+      Destination "_7"
+      Address
+        Place "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:60:14 generated
+      Destination "_8"
+      Address
+        Place "_1"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:60:14 written "memcpy" "bb1"
+      Copy "_7"
+      Copy "_8"
+      Constant 8
+  Block "bb1"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:60:14 generated
+      Destination "_9"
+      Address
+        Place "_6"
+    ArgumentsEvaluated a_struct_is_assigned_passed_and_returned_by_value.c:60:5 generated
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:60:5 written "free_own" "bb2"
+      Copy "_9"
+  Block "bb2"
+    StorageDead a_struct_is_assigned_passed_and_returned_by_value.c:60:5 generated "_6"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:60:5 generated
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:61:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:61:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:64:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:64:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:65:12 written "assigned" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:65:25 written "passed" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:65:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:65:36 written "counted" "bb3"
+      Destination "_4"
+  Block "bb3"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:65:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Call a_struct_is_assigned_passed_and_returned_by_value.c:65:48 written "freed_own" "bb4"
+      Destination "_6"
+  Block "bb4"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:65:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Operation a_struct_is_assigned_passed_and_returned_by_value.c:65:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_struct_is_assigned_passed_and_returned_by_value.c:65:12 generated
+    Return
+Function a_struct_is_assigned_passed_and_returned_by_value.c:21:5 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "unsigned long long" parameter

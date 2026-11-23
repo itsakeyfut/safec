@@ -1,0 +1,40 @@
+error[SC0304]: cannot compile a struct used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:10:9 ]
+    │
+ 10 │     a = b = c;
+    │         ──┬──  
+    │           ╰──── a struct, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:14:9 ]
+    │
+ 14 │     a = k ? b : c;
+    │         ────┬────  
+    │             ╰────── a struct, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:18:10 ]
+    │
+ 18 │     a = (k, b);
+    │          ──┬─  
+    │            ╰─── a struct, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:22:10 ]
+    │
+ 22 │     take(k ? a : b);
+    │          ────┬────  
+    │              ╰────── a struct, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet
+error[SC0304]: cannot compile a struct used as a value yet
+    ╭─[ a_struct_value_that_is_no_object_is_not_lowered_yet.c:26:13 ]
+    │
+ 26 │     return (a = b).c;
+    │             ──┬──  
+    │               ╰──── a struct, whole
+────╯
+  = note: a struct is copied, passed and returned where it is an object; the value of an assignment, a `?:` or a comma that is a struct is not lowered yet

@@ -16,11 +16,11 @@
 use safec_ir::ir::{Rank, Sign};
 use std::fmt::Write as _;
 
+use crate::abi::{self, Class, Piece};
 use safec_ir::ir::{
-    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Place, Projection,
-    Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Passes, Place,
+    Projection, Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::{Extend, Integer, Target};
 
@@ -111,6 +111,7 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         refusals: Vec::new(),
         next_temp: 0,
         at: None,
+        returned_in: None,
     };
 
     for id in unit.statics() {
@@ -153,6 +154,42 @@ struct Emitter<'a> {
     /// writing it. Set in exactly two places, both of which are the only two
     /// shapes in the IR that carry an `Origin`: an operation and a call.
     at: Option<Span>,
+    /// Where the function being written puts a struct it returns in
+    /// registers, and the pieces it returns it as, set by the prologue
+    /// `Emitter::body` writes for each function and read at its `return`s.
+    returned_in: Option<(String, Vec<Piece>, bool)>,
+}
+
+/// What a struct parameter or result crosses a call as, with the struct's
+/// size and alignment: see [`abi::classify`].
+type Crossing = Option<(Class, u64, u64)>;
+
+/// The layout of the struct a parameter of type `pointer` points at, or
+/// `None` where it is incomplete or not a struct.
+fn pointed_at_struct(unit: &TranslationUnit, pointer: TyId) -> Option<&safec_ir::ir::StructLayout> {
+    let Ty::Pointer(pointee) = unit.ty(pointer) else {
+        return None;
+    };
+    let Ty::Struct(id) = unit.ty(pointee) else {
+        return None;
+    };
+    unit.layout_of(id)
+}
+
+/// Whether `function` takes or returns a struct by value that is never
+/// completed. See `Emitter::function`.
+fn takes_an_incomplete_struct(unit: &TranslationUnit, function: &Function) -> bool {
+    function.parameters().enumerate().any(|(index, local)| {
+        function.passes(index) != Passes::Value
+            && pointed_at_struct(unit, function.local(local)).is_none()
+    })
+}
+
+/// The alignment a `byval` argument is marked with: the struct's own, but
+/// at least 8, which System V gives every argument on the stack and `clang`
+/// writes.
+fn byval_align(align: u64) -> u64 {
+    align.max(8)
 }
 
 impl Emitter<'_> {
@@ -168,6 +205,173 @@ impl Emitter<'_> {
                 at: self.at,
             },
         ))
+    }
+
+    /// How each parameter of `function` crosses a call, `None` for one that
+    /// is not a struct: see [`abi::classify`]. Refused where a struct is
+    /// incomplete, which C allows in a declaration (C17 6.7.6.3 p4) and
+    /// nobody can pass or return, or where the target's C ABI is not written
+    /// here yet.
+    fn crossings(&mut self, function: &Function) -> Refuses<Vec<Crossing>> {
+        let unit = self.unit;
+        let mut layouts = Vec::new();
+        for (index, local) in function.parameters().enumerate() {
+            let passes = function.passes(index);
+            if passes == Passes::Value {
+                layouts.push(None);
+                continue;
+            }
+            let Some(layout) = pointed_at_struct(unit, function.local(local)) else {
+                return self
+                    .refuse("a struct passed or returned by value whose type is incomplete");
+            };
+            layouts.push(Some((passes, layout)));
+        }
+        let parameters: Vec<abi::Parameter> = layouts
+            .iter()
+            .map(|layout| match layout {
+                None => abi::Parameter::Scalar,
+                Some((passes, layout)) => abi::Parameter::Struct(*passes, layout),
+            })
+            .collect();
+        let Some(classes) = abi::classify(unit.target(), &parameters) else {
+            return self.refuse(format!(
+                "a struct passed or returned by value on `{}`, whose C ABI this backend does not write yet",
+                unit.target().triple()
+            ));
+        };
+        Ok(classes
+            .into_iter()
+            .zip(&layouts)
+            .map(|(class, layout)| {
+                class
+                    .zip(layout.as_ref())
+                    .map(|(class, (_, layout))| (class, layout.size, layout.align))
+            })
+            .collect())
+    }
+
+    /// The pieces of the struct at `from`, each read as the bytes it carries
+    /// and widened to its register.
+    ///
+    /// **Read at alignment 1**: a struct of `char`s is 1-aligned and its
+    /// piece an `i64`, and a load that says nothing is one LLVM may assume is
+    /// aligned to its type. **Read as the bytes it carries**, so nothing past
+    /// the struct's last byte is read for a piece wider than what is left.
+    fn read_pieces(&mut self, from: &str, pieces: &[Piece], out: &mut String) -> Vec<String> {
+        let mut values = Vec::with_capacity(pieces.len());
+        for piece in pieces {
+            let at = self.temp();
+            writeln!(
+                out,
+                "  {at} = getelementptr i8, ptr {from}, i64 {}",
+                piece.at
+            )
+            .expect("writing to a string cannot fail");
+            let value = self.temp();
+            writeln!(
+                out,
+                "  {value} = load {}, ptr {at}, align 1",
+                piece.carried()
+            )
+            .expect("writing to a string cannot fail");
+            if piece.carried() == piece.spelled() {
+                values.push(value);
+            } else {
+                let wide = self.temp();
+                writeln!(
+                    out,
+                    "  {wide} = zext {} {value} to {}",
+                    piece.carried(),
+                    piece.spelled()
+                )
+                .expect("writing to a string cannot fail");
+                values.push(wide);
+            }
+        }
+        values
+    }
+
+    /// Write `values`, one per piece, into the struct at `into`: the
+    /// inverse of [`Emitter::read_pieces`], each narrowed to the bytes it
+    /// carries.
+    fn write_pieces(&mut self, into: &str, pieces: &[Piece], values: &[String], out: &mut String) {
+        for (piece, value) in pieces.iter().zip(values) {
+            let narrow = if piece.carried() == piece.spelled() {
+                value.clone()
+            } else {
+                let narrow = self.temp();
+                writeln!(
+                    out,
+                    "  {narrow} = trunc {} {value} to {}",
+                    piece.spelled(),
+                    piece.carried()
+                )
+                .expect("writing to a string cannot fail");
+                narrow
+            };
+            let at = self.temp();
+            writeln!(
+                out,
+                "  {at} = getelementptr i8, ptr {into}, i64 {}",
+                piece.at
+            )
+            .expect("writing to a string cannot fail");
+            writeln!(
+                out,
+                "  store {} {narrow}, ptr {at}, align 1",
+                piece.carried()
+            )
+            .expect("writing to a string cannot fail");
+        }
+    }
+
+    /// One value of [`Class::aggregate`]'s type holding `values`.
+    fn pack(
+        &mut self,
+        pieces: &[Piece],
+        together: bool,
+        values: Vec<String>,
+        out: &mut String,
+    ) -> String {
+        if let [one] = &values[..] {
+            return one.clone();
+        }
+        let spelled = Class::aggregate(pieces, together);
+        let mut packed = "undef".to_owned();
+        for (index, (piece, value)) in pieces.iter().zip(values).enumerate() {
+            let next = self.temp();
+            writeln!(
+                out,
+                "  {next} = insertvalue {spelled} {packed}, {} {value}, {index}",
+                piece.spelled()
+            )
+            .expect("writing to a string cannot fail");
+            packed = next;
+        }
+        packed
+    }
+
+    /// The values one of [`Class::aggregate`]'s type holds, one per piece.
+    fn unpack(
+        &mut self,
+        pieces: &[Piece],
+        together: bool,
+        value: &str,
+        out: &mut String,
+    ) -> Vec<String> {
+        if pieces.len() == 1 {
+            return vec![value.to_owned()];
+        }
+        let spelled = Class::aggregate(pieces, together);
+        let mut values = Vec::with_capacity(pieces.len());
+        for index in 0..pieces.len() {
+            let piece = self.temp();
+            writeln!(out, "  {piece} = extractvalue {spelled} {value}, {index}")
+                .expect("writing to a string cannot fail");
+            values.push(piece);
+        }
+        values
     }
 
     /// A name no other value in this function has.
@@ -270,7 +474,7 @@ impl Emitter<'_> {
     /// `print::shown` is the wrong escape here: LLVM reads `\xx` and nothing
     /// else, so a `\u{1b}` would arrive as six characters of name.
     fn name(&self, function: &Function) -> String {
-        let spelled = quoted(self.sources, function.name);
+        let spelled = function.spelled(self.sources);
         if plain(spelled) {
             format!("@{spelled}")
         } else {
@@ -1027,6 +1231,16 @@ impl Emitter<'_> {
                 )
             }
             Terminator::Return => {
+                // A struct returned in registers is read out of the bytes it
+                // was written into, piece by piece (#1201).
+                if let Some((slot, pieces, together)) = self.returned_in.clone() {
+                    let values = self.read_pieces(&slot, &pieces, out);
+                    let value = self.pack(&pieces, together, values, out);
+                    let spelled = Class::aggregate(&pieces, together);
+                    writeln!(out, "  ret {spelled} {value}")
+                        .expect("writing to a string cannot fail");
+                    return Ok(());
+                }
                 let place = Place::local(function.return_place());
                 let ty = function.local(function.return_place());
                 if matches!(self.unit.ty(ty), Ty::Void) {
@@ -1092,7 +1306,7 @@ impl Emitter<'_> {
         // A callee whose signature cannot be written is not in the module at
         // all, so a call to it would name nothing. The refusal points at the
         // call rather than at the callee, which is the span this walk holds.
-        let (name, _, _) = self.signature(called)?;
+        let (name, returned, _) = self.signature(called)?;
         let returns = called.local(called.return_place());
         let parameters: Vec<TyId> = called
             .parameters()
@@ -1109,12 +1323,64 @@ impl Emitter<'_> {
 
         // C17 6.5.2.2 p7 converts each argument to its parameter's type, which
         // is what the interpreter does on the way into a frame.
+        //
+        // **A struct argument is passed as its target's C ABI says**, read out
+        // of the copy the IR passes the address of, and a struct result
+        // returned in registers is written into where the caller said
+        // (#1201). See `abi::classify`.
+        let crossings = self.crossings(called)?;
         let mut passed = Vec::with_capacity(arguments.len());
-        for (argument, parameter) in arguments.iter().zip(&parameters) {
+        let mut returned_into = None;
+        for (index, ((argument, parameter), crossing)) in
+            arguments.iter().zip(&parameters).zip(crossings).enumerate()
+        {
             let value = self.operand(function, argument, *parameter, out)?;
-            passed.push(format!("{} {value}", self.parameter(*parameter)));
+            let Some((class, size, align)) = crossing else {
+                passed.push(format!("{} {value}", self.parameter(*parameter)));
+                continue;
+            };
+            match (called.passes(index), class) {
+                (Passes::StructReturn, Class::Registers { pieces, together }) => {
+                    returned_into = Some((value, pieces, together));
+                }
+                (Passes::StructReturn, Class::Memory { .. }) => {
+                    passed.push(format!("ptr sret([{size} x i8]) align {align} {value}"));
+                }
+                (_, Class::Registers { pieces, together }) => {
+                    let values = self.read_pieces(&value, &pieces, out);
+                    if together || pieces.len() == 1 {
+                        let packed = self.pack(&pieces, together, values, out);
+                        passed.push(format!("{} {packed}", Class::aggregate(&pieces, together)));
+                    } else {
+                        for (piece, value) in pieces.iter().zip(values) {
+                            passed.push(format!("{} {value}", piece.spelled()));
+                        }
+                    }
+                }
+                (_, Class::Memory { byval: false }) => passed.push(format!("ptr {value}")),
+                (_, Class::Memory { byval: true }) => {
+                    passed.push(format!(
+                        "ptr byval([{size} x i8]) align {} {value}",
+                        byval_align(align)
+                    ));
+                }
+            }
         }
         let passed = passed.join(", ");
+
+        if let Some((into, pieces, together)) = returned_into {
+            let result = self.temp();
+            writeln!(out, "  {result} = call {returned} {name}({passed})")
+                .expect("writing to a string cannot fail");
+            let values = self.unpack(&pieces, together, &result, out);
+            self.write_pieces(&into, &pieces, &values, out);
+            match then {
+                Some(then) => writeln!(out, "  br label %bb{}", then.index()),
+                None => writeln!(out, "  unreachable"),
+            }
+            .expect("writing to a string cannot fail");
+            return Ok(());
+        }
 
         // The attribute goes on the call as well as on the callee. LLVM reads a
         // call site whose attributes disagree with its callee's as undefined
@@ -1181,15 +1447,41 @@ impl Emitter<'_> {
     /// such a function is refused in turn, because there is nothing to call.
     fn signature(&mut self, function: &Function) -> Refuses<(String, String, Vec<String>)> {
         let name = self.name(function);
-        let returns = self.result(function.local(function.return_place()));
+        let mut returns = self.result(function.local(function.return_place()));
+        let crossings = self.crossings(function)?;
         let mut parameters = Vec::new();
 
-        for local in function.parameters() {
+        for (index, (local, crossing)) in function.parameters().zip(crossings).enumerate() {
             let ty = function.local(local);
             if matches!(self.unit.ty(ty), Ty::Void) {
                 return self.refuse(format!("{name}, which has a parameter that holds nothing"));
             }
-            parameters.push(self.parameter(ty));
+            // **A struct crosses as its target's C ABI says** (#1201): see
+            // `abi::classify`.
+            let Some((class, size, align)) = crossing else {
+                parameters.push(self.parameter(ty));
+                continue;
+            };
+            match (function.passes(index), class) {
+                (Passes::StructReturn, Class::Registers { pieces, together }) => {
+                    returns = Class::aggregate(&pieces, together);
+                }
+                (Passes::StructReturn, Class::Memory { .. }) => {
+                    parameters.push(format!("ptr sret([{size} x i8]) align {align}"));
+                }
+                (_, Class::Registers { pieces, together }) => {
+                    if together || pieces.len() == 1 {
+                        parameters.push(Class::aggregate(&pieces, together));
+                    } else {
+                        parameters.extend(pieces.iter().map(|piece| piece.spelled()));
+                    }
+                }
+                (_, Class::Memory { byval: false }) => parameters.push("ptr".to_owned()),
+                (_, Class::Memory { byval: true }) => parameters.push(format!(
+                    "ptr byval([{size} x i8]) align {}",
+                    byval_align(align)
+                )),
+            }
         }
 
         Ok((name, returns, parameters))
@@ -1203,6 +1495,13 @@ impl Emitter<'_> {
         // The name is where a refusal about the whole function points, since
         // it is the only span a `Function` carries.
         self.at = Some(function.name);
+        // **A declaration nobody can call is left out**: one taking or
+        // returning a struct that is never completed is valid C (C17 6.7.6.3
+        // p4) and has no signature to write, and a call to it is refused
+        // where it is, since that call has no struct to pass either.
+        if !function.is_defined() && takes_an_incomplete_struct(unit, function) {
+            return;
+        }
         let Ok((name, returns, parameters)) = self.signature(function) else {
             return;
         };
@@ -1277,14 +1576,63 @@ impl Emitter<'_> {
 
         // A parameter arrives as a value and the rest of the body wants a
         // place, which is what makes this the first thing a function does.
-        for (index, local) in function.parameters().enumerate() {
-            let spelled = self.spell(function.local(local));
-            writeln!(
-                &mut body,
-                "  store {spelled} %arg{index}, ptr %_{}",
-                local.index()
-            )
-            .expect("writing to a string cannot fail");
+        //
+        // **A struct passed in registers is put back into bytes of its own**,
+        // and the parameter is their address, which is what the IR passes
+        // (#1201); one in memory arrives as that address already. A struct
+        // returned in registers is written into bytes of the function's own,
+        // read back out at `return`. `arg` counts LLVM's parameters, which a
+        // struct in two System V registers is two of and one returned in
+        // registers none of.
+        self.returned_in = None;
+        let crossings = self.crossings(function)?;
+        let mut arg = 0;
+        for (index, (local, crossing)) in function.parameters().zip(crossings).enumerate() {
+            let Some((class, size, align)) = crossing else {
+                let spelled = self.spell(function.local(local));
+                writeln!(
+                    &mut body,
+                    "  store {spelled} %arg{arg}, ptr %_{}",
+                    local.index()
+                )
+                .expect("writing to a string cannot fail");
+                arg += 1;
+                continue;
+            };
+            match (function.passes(index), class) {
+                (Passes::StructReturn, Class::Registers { pieces, together }) => {
+                    let slot = format!("%_returned{}", local.index());
+                    writeln!(&mut body, "  {slot} = alloca [{size} x i8], align {align}")
+                        .expect("writing to a string cannot fail");
+                    writeln!(&mut body, "  store ptr {slot}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                    self.returned_in = Some((slot, pieces, together));
+                }
+                (_, Class::Registers { pieces, together }) => {
+                    let copy = format!("%_copy{}", local.index());
+                    writeln!(&mut body, "  {copy} = alloca [{size} x i8], align {align}")
+                        .expect("writing to a string cannot fail");
+                    let values = if together || pieces.len() == 1 {
+                        let value = format!("%arg{arg}");
+                        arg += 1;
+                        self.unpack(&pieces, together, &value, &mut body)
+                    } else {
+                        let values = (arg..arg + pieces.len())
+                            .map(|n| format!("%arg{n}"))
+                            .collect();
+                        arg += pieces.len();
+                        values
+                    };
+                    self.write_pieces(&copy, &pieces, &values, &mut body);
+                    writeln!(&mut body, "  store ptr {copy}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                }
+                (_, Class::Memory { .. }) => {
+                    writeln!(&mut body, "  store ptr %arg{arg}, ptr %_{}", local.index())
+                        .expect("writing to a string cannot fail");
+                    arg += 1;
+                }
+            }
         }
 
         // A block of its own rather than the first real one, so that the

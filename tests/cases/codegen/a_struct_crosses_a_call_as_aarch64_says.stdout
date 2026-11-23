@@ -1,0 +1,450 @@
+target triple = "aarch64-apple-darwin"
+
+define i24 @odd(i64 %arg0) {
+entry:
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca [3 x i8], align 1
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_returned1 = alloca [3 x i8], align 1
+  store ptr %_returned1, ptr %_1
+  %_copy2 = alloca [3 x i8], align 1
+  %t0 = trunc i64 %arg0 to i24
+  %t1 = getelementptr i8, ptr %_copy2, i64 0
+  store i24 %t0, ptr %t1, align 1
+  store ptr %_copy2, ptr %_2
+  br label %bb0
+
+bb0:
+  store ptr %_3, ptr %_4
+  %t2 = load ptr, ptr %_4
+  %t3 = load ptr, ptr %_2
+  %t4 = call ptr @memcpy(ptr %t2, ptr %t3, i64 3)
+  br label %bb1
+
+bb1:
+  store ptr %_3, ptr %_5
+  %t5 = load ptr, ptr %_1
+  %t6 = load ptr, ptr %_5
+  %t7 = call ptr @memcpy(ptr %t5, ptr %t6, i64 3)
+  br label %bb2
+
+bb2:
+  %t8 = getelementptr i8, ptr %_returned1, i64 0
+  %t9 = load i24, ptr %t8, align 1
+  ret i24 %t9
+}
+
+define [2 x i64] @wide([2 x i64] %arg0) {
+entry:
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca [12 x i8], align 4
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_returned1 = alloca [12 x i8], align 4
+  store ptr %_returned1, ptr %_1
+  %_copy2 = alloca [12 x i8], align 4
+  %t0 = extractvalue [2 x i64] %arg0, 0
+  %t1 = extractvalue [2 x i64] %arg0, 1
+  %t2 = getelementptr i8, ptr %_copy2, i64 0
+  store i64 %t0, ptr %t2, align 1
+  %t3 = trunc i64 %t1 to i32
+  %t4 = getelementptr i8, ptr %_copy2, i64 8
+  store i32 %t3, ptr %t4, align 1
+  store ptr %_copy2, ptr %_2
+  br label %bb0
+
+bb0:
+  store ptr %_3, ptr %_4
+  %t5 = load ptr, ptr %_4
+  %t6 = load ptr, ptr %_2
+  %t7 = call ptr @memcpy(ptr %t5, ptr %t6, i64 12)
+  br label %bb1
+
+bb1:
+  store ptr %_3, ptr %_5
+  %t8 = load ptr, ptr %_1
+  %t9 = load ptr, ptr %_5
+  %t10 = call ptr @memcpy(ptr %t8, ptr %t9, i64 12)
+  br label %bb2
+
+bb2:
+  %t11 = getelementptr i8, ptr %_returned1, i64 0
+  %t12 = load i64, ptr %t11, align 1
+  %t13 = getelementptr i8, ptr %_returned1, i64 8
+  %t14 = load i32, ptr %t13, align 1
+  %t15 = zext i32 %t14 to i64
+  %t16 = insertvalue [2 x i64] undef, i64 %t12, 0
+  %t17 = insertvalue [2 x i64] %t16, i64 %t15, 1
+  ret [2 x i64] %t17
+}
+
+define i64 @last(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, [2 x i64] %arg5) {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca i64
+  %_2 = alloca i64
+  %_3 = alloca i64
+  %_4 = alloca i64
+  %_5 = alloca i64
+  %_6 = alloca ptr
+  %_7 = alloca [16 x i8], align 8
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca i64
+  %_12 = alloca i64
+  %_13 = alloca i64
+  %_14 = alloca i64
+  %_15 = alloca i64
+  store i64 %arg0, ptr %_1
+  store i64 %arg1, ptr %_2
+  store i64 %arg2, ptr %_3
+  store i64 %arg3, ptr %_4
+  store i64 %arg4, ptr %_5
+  %_copy6 = alloca [16 x i8], align 8
+  %t0 = extractvalue [2 x i64] %arg5, 0
+  %t1 = extractvalue [2 x i64] %arg5, 1
+  %t2 = getelementptr i8, ptr %_copy6, i64 0
+  store i64 %t0, ptr %t2, align 1
+  %t3 = getelementptr i8, ptr %_copy6, i64 8
+  store i64 %t1, ptr %t3, align 1
+  store ptr %_copy6, ptr %_6
+  br label %bb0
+
+bb0:
+  store ptr %_7, ptr %_8
+  %t4 = load ptr, ptr %_8
+  %t5 = load ptr, ptr %_6
+  %t6 = call ptr @memcpy(ptr %t4, ptr %t5, i64 16)
+  br label %bb1
+
+bb1:
+  store ptr %_7, ptr %_9
+  %t7 = load ptr, ptr %_9
+  %t8 = getelementptr i8, ptr %t7, i64 0
+  store ptr %t8, ptr %_10
+  %t9 = load ptr, ptr %_10
+  %t10 = load i64, ptr %t9
+  %t11 = load i64, ptr %_1
+  %t12 = add nsw i64 %t10, %t11
+  store i64 %t12, ptr %_11
+  %t13 = load i64, ptr %_11
+  %t14 = load i64, ptr %_2
+  %t15 = add nsw i64 %t13, %t14
+  store i64 %t15, ptr %_12
+  %t16 = load i64, ptr %_12
+  %t17 = load i64, ptr %_3
+  %t18 = add nsw i64 %t16, %t17
+  store i64 %t18, ptr %_13
+  %t19 = load i64, ptr %_13
+  %t20 = load i64, ptr %_4
+  %t21 = add nsw i64 %t19, %t20
+  store i64 %t21, ptr %_14
+  %t22 = load i64, ptr %_14
+  %t23 = load i64, ptr %_5
+  %t24 = add nsw i64 %t22, %t23
+  store i64 %t24, ptr %_15
+  %t25 = load i64, ptr %_15
+  store i64 %t25, ptr %_0
+  %t26 = load i64, ptr %_0
+  ret i64 %t26
+}
+
+define void @big(ptr sret([24 x i8]) align 8 %arg0, ptr %arg1) {
+entry:
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca [24 x i8], align 8
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  store ptr %arg0, ptr %_1
+  store ptr %arg1, ptr %_2
+  br label %bb0
+
+bb0:
+  store ptr %_3, ptr %_4
+  %t0 = load ptr, ptr %_4
+  %t1 = load ptr, ptr %_2
+  %t2 = call ptr @memcpy(ptr %t0, ptr %t1, i64 24)
+  br label %bb1
+
+bb1:
+  store ptr %_3, ptr %_5
+  %t3 = load ptr, ptr %_1
+  %t4 = load ptr, ptr %_5
+  %t5 = call ptr @memcpy(ptr %t3, ptr %t4, i64 24)
+  br label %bb2
+
+bb2:
+  ret void
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca [3 x i8], align 1
+  %_2 = alloca [12 x i8], align 4
+  %_3 = alloca [16 x i8], align 8
+  %_4 = alloca [24 x i8], align 8
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca ptr
+  %_12 = alloca ptr
+  %_13 = alloca ptr
+  %_14 = alloca ptr
+  %_15 = alloca ptr
+  %_16 = alloca ptr
+  %_17 = alloca ptr
+  %_18 = alloca ptr
+  %_19 = alloca ptr
+  %_20 = alloca ptr
+  %_21 = alloca ptr
+  %_22 = alloca ptr
+  %_23 = alloca ptr
+  %_24 = alloca ptr
+  %_25 = alloca ptr
+  %_26 = alloca ptr
+  %_27 = alloca [3 x i8], align 1
+  %_28 = alloca ptr
+  %_29 = alloca ptr
+  %_30 = alloca ptr
+  %_31 = alloca [3 x i8], align 1
+  %_32 = alloca ptr
+  %_33 = alloca ptr
+  %_34 = alloca ptr
+  %_35 = alloca [12 x i8], align 4
+  %_36 = alloca ptr
+  %_37 = alloca ptr
+  %_38 = alloca ptr
+  %_39 = alloca [12 x i8], align 4
+  %_40 = alloca ptr
+  %_41 = alloca ptr
+  %_42 = alloca ptr
+  %_43 = alloca i32
+  %_44 = alloca [16 x i8], align 8
+  %_45 = alloca ptr
+  %_46 = alloca ptr
+  %_47 = alloca ptr
+  %_48 = alloca i64
+  %_49 = alloca i32
+  %_50 = alloca i32
+  %_51 = alloca [24 x i8], align 8
+  %_52 = alloca ptr
+  %_53 = alloca ptr
+  %_54 = alloca ptr
+  %_55 = alloca [24 x i8], align 8
+  %_56 = alloca ptr
+  %_57 = alloca ptr
+  %_58 = alloca ptr
+  %_59 = alloca i32
+  %_60 = alloca i32
+  %_61 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  store ptr %_1, ptr %_5
+  %t0 = load ptr, ptr %_5
+  %t1 = getelementptr i8, ptr %t0, i64 0
+  store ptr %t1, ptr %_6
+  %t2 = load ptr, ptr %_6
+  store i8 1, ptr %t2
+  store ptr %_1, ptr %_7
+  %t3 = load ptr, ptr %_7
+  %t4 = getelementptr i8, ptr %t3, i64 1
+  store ptr %t4, ptr %_8
+  %t5 = load ptr, ptr %_8
+  store i8 2, ptr %t5
+  store ptr %_1, ptr %_9
+  %t6 = load ptr, ptr %_9
+  %t7 = getelementptr i8, ptr %t6, i64 2
+  store ptr %t7, ptr %_10
+  %t8 = load ptr, ptr %_10
+  store i8 3, ptr %t8
+  store ptr %_2, ptr %_11
+  %t9 = load ptr, ptr %_11
+  %t10 = getelementptr i8, ptr %t9, i64 0
+  store ptr %t10, ptr %_12
+  %t11 = load ptr, ptr %_12
+  store i32 4, ptr %t11
+  store ptr %_2, ptr %_13
+  %t12 = load ptr, ptr %_13
+  %t13 = getelementptr i8, ptr %t12, i64 4
+  store ptr %t13, ptr %_14
+  %t14 = load ptr, ptr %_14
+  store i32 5, ptr %t14
+  store ptr %_2, ptr %_15
+  %t15 = load ptr, ptr %_15
+  %t16 = getelementptr i8, ptr %t15, i64 8
+  store ptr %t16, ptr %_16
+  %t17 = load ptr, ptr %_16
+  store i32 6, ptr %t17
+  store ptr %_3, ptr %_17
+  %t18 = load ptr, ptr %_17
+  %t19 = getelementptr i8, ptr %t18, i64 0
+  store ptr %t19, ptr %_18
+  %t20 = load ptr, ptr %_18
+  store i64 7, ptr %t20
+  store ptr %_3, ptr %_19
+  %t21 = load ptr, ptr %_19
+  %t22 = getelementptr i8, ptr %t21, i64 8
+  store ptr %t22, ptr %_20
+  %t23 = load ptr, ptr %_20
+  store i64 8, ptr %t23
+  store ptr %_4, ptr %_21
+  %t24 = load ptr, ptr %_21
+  %t25 = getelementptr i8, ptr %t24, i64 0
+  store ptr %t25, ptr %_22
+  %t26 = load ptr, ptr %_22
+  store i64 9, ptr %t26
+  store ptr %_4, ptr %_23
+  %t27 = load ptr, ptr %_23
+  %t28 = getelementptr i8, ptr %t27, i64 8
+  store ptr %t28, ptr %_24
+  %t29 = load ptr, ptr %_24
+  store i64 10, ptr %t29
+  store ptr %_4, ptr %_25
+  %t30 = load ptr, ptr %_25
+  %t31 = getelementptr i8, ptr %t30, i64 16
+  store ptr %t31, ptr %_26
+  %t32 = load ptr, ptr %_26
+  store i64 11, ptr %t32
+  store ptr %_27, ptr %_28
+  store ptr %_1, ptr %_29
+  %t33 = load ptr, ptr %_28
+  %t34 = load ptr, ptr %_29
+  %t35 = call ptr @memcpy(ptr %t33, ptr %t34, i64 3)
+  br label %bb1
+
+bb1:
+  store ptr %_27, ptr %_30
+  store ptr %_31, ptr %_32
+  %t36 = load ptr, ptr %_32
+  %t37 = load ptr, ptr %_30
+  %t38 = getelementptr i8, ptr %t37, i64 0
+  %t39 = load i24, ptr %t38, align 1
+  %t40 = zext i24 %t39 to i64
+  %t41 = call i24 @odd(i64 %t40)
+  %t42 = getelementptr i8, ptr %t36, i64 0
+  store i24 %t41, ptr %t42, align 1
+  br label %bb2
+
+bb2:
+  store ptr %_31, ptr %_33
+  %t43 = load ptr, ptr %_33
+  %t44 = getelementptr i8, ptr %t43, i64 2
+  store ptr %t44, ptr %_34
+  store ptr %_35, ptr %_36
+  store ptr %_2, ptr %_37
+  %t45 = load ptr, ptr %_36
+  %t46 = load ptr, ptr %_37
+  %t47 = call ptr @memcpy(ptr %t45, ptr %t46, i64 12)
+  br label %bb3
+
+bb3:
+  store ptr %_35, ptr %_38
+  store ptr %_39, ptr %_40
+  %t48 = load ptr, ptr %_40
+  %t49 = load ptr, ptr %_38
+  %t50 = getelementptr i8, ptr %t49, i64 0
+  %t51 = load i64, ptr %t50, align 1
+  %t52 = getelementptr i8, ptr %t49, i64 8
+  %t53 = load i32, ptr %t52, align 1
+  %t54 = zext i32 %t53 to i64
+  %t55 = insertvalue [2 x i64] undef, i64 %t51, 0
+  %t56 = insertvalue [2 x i64] %t55, i64 %t54, 1
+  %t57 = call [2 x i64] @wide([2 x i64] %t56)
+  %t58 = extractvalue [2 x i64] %t57, 0
+  %t59 = extractvalue [2 x i64] %t57, 1
+  %t60 = getelementptr i8, ptr %t48, i64 0
+  store i64 %t58, ptr %t60, align 1
+  %t61 = trunc i64 %t59 to i32
+  %t62 = getelementptr i8, ptr %t48, i64 8
+  store i32 %t61, ptr %t62, align 1
+  br label %bb4
+
+bb4:
+  store ptr %_39, ptr %_41
+  %t63 = load ptr, ptr %_41
+  %t64 = getelementptr i8, ptr %t63, i64 8
+  store ptr %t64, ptr %_42
+  %t65 = load ptr, ptr %_34
+  %t66 = load i8, ptr %t65
+  %t67 = sext i8 %t66 to i32
+  %t68 = load ptr, ptr %_42
+  %t69 = load i32, ptr %t68
+  %t70 = add nsw i32 %t67, %t69
+  store i32 %t70, ptr %_43
+  store ptr %_44, ptr %_45
+  store ptr %_3, ptr %_46
+  %t71 = load ptr, ptr %_45
+  %t72 = load ptr, ptr %_46
+  %t73 = call ptr @memcpy(ptr %t71, ptr %t72, i64 16)
+  br label %bb5
+
+bb5:
+  store ptr %_44, ptr %_47
+  %t74 = load ptr, ptr %_47
+  %t75 = getelementptr i8, ptr %t74, i64 0
+  %t76 = load i64, ptr %t75, align 1
+  %t77 = getelementptr i8, ptr %t74, i64 8
+  %t78 = load i64, ptr %t77, align 1
+  %t79 = insertvalue [2 x i64] undef, i64 %t76, 0
+  %t80 = insertvalue [2 x i64] %t79, i64 %t78, 1
+  %t81 = call i64 @last(i64 0, i64 0, i64 0, i64 0, i64 0, [2 x i64] %t80)
+  store i64 %t81, ptr %_48
+  br label %bb6
+
+bb6:
+  %t82 = load i64, ptr %_48
+  %t83 = trunc i64 %t82 to i32
+  store i32 %t83, ptr %_49
+  %t84 = load i32, ptr %_43
+  %t85 = load i32, ptr %_49
+  %t86 = add nsw i32 %t84, %t85
+  store i32 %t86, ptr %_50
+  store ptr %_51, ptr %_52
+  store ptr %_4, ptr %_53
+  %t87 = load ptr, ptr %_52
+  %t88 = load ptr, ptr %_53
+  %t89 = call ptr @memcpy(ptr %t87, ptr %t88, i64 24)
+  br label %bb7
+
+bb7:
+  store ptr %_51, ptr %_54
+  store ptr %_55, ptr %_56
+  %t90 = load ptr, ptr %_56
+  %t91 = load ptr, ptr %_54
+  call void @big(ptr sret([24 x i8]) align 8 %t90, ptr %t91)
+  br label %bb8
+
+bb8:
+  store ptr %_55, ptr %_57
+  %t92 = load ptr, ptr %_57
+  %t93 = getelementptr i8, ptr %t92, i64 16
+  store ptr %t93, ptr %_58
+  %t94 = load ptr, ptr %_58
+  %t95 = load i64, ptr %t94
+  %t96 = trunc i64 %t95 to i32
+  store i32 %t96, ptr %_59
+  %t97 = load i32, ptr %_50
+  %t98 = load i32, ptr %_59
+  %t99 = add nsw i32 %t97, %t98
+  store i32 %t99, ptr %_60
+  %t100 = load i32, ptr %_60
+  %t101 = sub nsw i32 %t100, 27
+  store i32 %t101, ptr %_61
+  %t102 = load i32, ptr %_61
+  store i32 %t102, ptr %_0
+  %t103 = load i32, ptr %_0
+  ret i32 %t103
+}
+
+declare ptr @memcpy(ptr, ptr, i64)
