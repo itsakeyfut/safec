@@ -1,6 +1,4 @@
-struct S {
-    int a;
-};
+struct S;
 int f(void);
 int a[];
 unsigned long long g(void) {

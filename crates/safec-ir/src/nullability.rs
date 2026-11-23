@@ -345,9 +345,20 @@ struct Nullability<'a> {
 fn escaped_in(function: &Function) -> Vec<bool> {
     let mut escaped = vec![false; function.locals().len()];
 
+    // **Not a place through a dereference**: `&(*t).m`, a member's address
+    // (#1200), takes the address of what `t` points at and not of `t`, as
+    // `taken::address_taken` reads it. Counted, every pointer a member was
+    // reached through was escaped, its nullness given up on, and each read
+    // of a member doubted as maybe null. Mutation: count it;
+    // `a_struct_read_through_its_members_is_proved` reports `SC0403`.
     let mut taken = |value: &Rvalue| {
         if let Rvalue::Address(place) = value {
-            escaped[place.local.index()] = true;
+            if !place.steps().iter().any(|step| match step {
+                Projection::Deref => true,
+                Projection::Index(_) | Projection::Field(_) => false,
+            }) {
+                escaped[place.local.index()] = true;
+            }
         }
     };
 
@@ -957,7 +968,19 @@ impl Nullability<'_> {
             // the lowering folds it away, which is ADR-0021, so the rule is
             // safe for a reason that has nothing to do with the clause it used
             // to name.
-            Rvalue::Address(_) | Rvalue::Static(_) => Nullness::NonNull,
+            //
+            // **A member's address is the pointer it goes through, moved**:
+            // `&(*p).m` is `p` plus the member's offset (ADR-0124), so it is
+            // null wherever `p` may be, and the read or write through it that
+            // follows is where a null `p` is said. Answered as the object's
+            // address instead, `p->m` with `p` null was silence. Mutation:
+            // answer `NonNull` for it; `a_member_of_a_null_pointer_is_doubted`
+            // is silent.
+            Rvalue::Address(place) => match place.steps().first() {
+                Some(Projection::Deref) => self.known(known, place.local),
+                Some(Projection::Index(_) | Projection::Field(_)) | None => Nullness::NonNull,
+            },
+            Rvalue::Static(_) => Nullness::NonNull,
             // Anything computed. A pointer moved by `+` or `-` is answered in
             // `Analysis::element` before this is asked, where the move is
             // known to be a pointer's. See ADR-0084.
@@ -1419,7 +1442,8 @@ fn own_local(operand: &Operand) -> Option<LocalId> {
 fn read_out_of_memory(place: &Place) -> bool {
     place.steps().iter().skip(1).any(|step| match step {
         Projection::Deref => true,
-        Projection::Index(_) => false,
+        // Under `Rvalue::Address` alone, as an index is (#1200).
+        Projection::Index(_) | Projection::Field(_) => false,
     })
 }
 

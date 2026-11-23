@@ -35,13 +35,13 @@ use crate::ast::{
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::cut_words;
-use crate::sema::Resolution;
+use crate::sema::{Resolution, TagId};
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
     Between, BinOp, Block, BlockId, Element, FuncId, Function, Linkage, LocalId, Operand,
     Operation, Origin, Parameter, Place, Projection, Promise, Rvalue, Shape, Static, StaticId,
-    StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -326,6 +326,8 @@ pub fn lower(
         functions: HashMap::new(),
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
+        structs: HashMap::new(),
+        laying_out: HashSet::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
         file_statics: HashMap::new(),
@@ -418,6 +420,12 @@ struct Lowering<'a> {
     /// declare what `g` returns, so it is a declaration of the return to agree
     /// with like any other.
     return_nullability: HashMap<String, (Span, Option<Nullability>)>,
+    /// The IR struct each struct tag became, so that one struct type is one
+    /// `Ty::Struct` however many times it is written. See [`Lowering::ty`].
+    structs: HashMap<TagId, StructId>,
+    /// The tags whose members are being lowered now: a member that reaches
+    /// one of them is a struct that points at itself, which #1202 lowers.
+    laying_out: HashSet<TagId>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -1410,6 +1418,10 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<(TyId, Vec<Parameter>)> {
         let returns = self.ty(name, returns, diagnostics)?;
+        if matches!(self.unit.ty(returns), Ty::Struct(_)) {
+            self.struct_value_not_yet(name, diagnostics);
+            return None;
+        }
         let mut lowered = Vec::new();
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
@@ -1435,10 +1447,15 @@ impl Lowering<'_> {
                     self.refuse_parameter(parameter, diagnostics);
                     return None;
                 }
+                let ty = self.ty(at, parameter.ty, diagnostics)?;
+                if matches!(self.unit.ty(ty), Ty::Struct(_)) {
+                    self.struct_value_not_yet(at, diagnostics);
+                    return None;
+                }
                 lowered.push(Parameter {
                     reads_only: matches!(self.ast.ty(parameter.ty),
                         Type::Pointer(pointee) if self.read_only(*pointee)),
-                    ty: self.ty(at, parameter.ty, diagnostics)?,
+                    ty,
                     nonnull: match parameter.nullability {
                         Some(Nullability {
                             specifier: Specifier::Nonnull,
@@ -1456,6 +1473,22 @@ impl Lowering<'_> {
         }
 
         Some((returns, lowered))
+    }
+
+    /// Refuse a struct used as a value: passed, returned, assigned or read
+    /// whole, which #1201 lowers. A struct's members are reached through its
+    /// address and nothing here reads one whole, so a whole read built here
+    /// would be a value the memory check and the backend have no meaning
+    /// for: the backend refused it as `SC0801`, and the check read it as
+    /// nothing anybody decided. Refused here, under the code for what this
+    /// compiler does not do yet.
+    fn struct_value_not_yet(&self, at: Span, diagnostics: &mut DiagnosticSink) {
+        diagnostics.report(
+            Diagnostic::error("cannot compile a struct used as a value yet")
+                .with_code(LOWERING)
+                .with_label(Label::primary(at, "a struct, whole"))
+                .with_note("a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet"),
+        );
     }
 
     /// The span from `from`'s start to `to`'s end, through the one join
@@ -2012,6 +2045,110 @@ impl Lowering<'_> {
         Some(())
     }
 
+    /// The IR struct the struct type `ty` is, laid out from its definition's
+    /// members the first time its tag is met.
+    ///
+    /// **Refused, and not laid out, where the struct is incomplete, where it
+    /// reaches itself through a member, or where a member is a struct**:
+    /// what such a member is laid out as is #1202's, and a guess here would
+    /// be a layout the backend and the memory check both believe. Refused
+    /// under the code for what this compiler does not do yet, at the
+    /// declaration that needed it.
+    fn struct_of(
+        &mut self,
+        at: Span,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<StructId> {
+        let tag = self.resolution.tag(ty);
+        if let Some(&id) = self.structs.get(&tag) {
+            return Some(id);
+        }
+        let not_yet = |diagnostics: &mut DiagnosticSink, why: &str| {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "cannot compile something of type `{}` yet",
+                    spell_type(self.sources, self.ast, ty)
+                ))
+                .with_code(LOWERING)
+                .with_label(Label::primary(at, "declared here"))
+                .with_note(why.to_owned()),
+            );
+        };
+        let Some(definition) = self.resolution.definition(tag) else {
+            not_yet(
+                diagnostics,
+                "a struct with no definition is not laid out yet",
+            );
+            return None;
+        };
+        let Type::Struct {
+            members: Some(members),
+            ..
+        } = self.ast.ty(definition)
+        else {
+            unreachable!("a tag's definition is a struct with members");
+        };
+        if !self.laying_out.insert(tag) {
+            not_yet(
+                diagnostics,
+                "a struct that reaches itself through a member is not laid out yet",
+            );
+            return None;
+        }
+        let mut lowered = Vec::with_capacity(members.len());
+        let mut refused = false;
+        for member in members {
+            if self.holds_a_struct(member.ty) {
+                not_yet(
+                    diagnostics,
+                    "a struct member of struct type is not laid out yet",
+                );
+                refused = true;
+                break;
+            }
+            match self.ty(member.span, member.ty, diagnostics) {
+                Some(member) => lowered.push(member),
+                None => {
+                    refused = true;
+                    break;
+                }
+            }
+        }
+        self.laying_out.remove(&tag);
+        if refused {
+            return None;
+        }
+        let Some(id) = self.unit.push_struct(&lowered) else {
+            not_yet(
+                diagnostics,
+                "a struct too large to count in bytes is not laid out",
+            );
+            return None;
+        };
+        self.structs.insert(tag, id);
+        Some(id)
+    }
+
+    /// Whether `ty` is a struct, or an array of them, by value: a member of
+    /// one is laid out by #1202.
+    fn holds_a_struct(&self, ty: TypeId) -> bool {
+        let mut ty = ty;
+        loop {
+            match self.ast.ty(ty) {
+                Type::Array { element, .. } => ty = *element,
+                Type::Struct { .. } => return true,
+                Type::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Type::Void
+                | Type::Pointer(_)
+                | Type::Function { .. } => return false,
+            }
+        }
+    }
+
     /// The length an array type was written with, where the type check gave
     /// it a value that is positive and fits a `u64`: what `ir::Ty::Array`
     /// holds. `None` for a variable length, and for one that is zero or
@@ -2062,11 +2199,15 @@ impl Lowering<'_> {
                     derivations.push(self.positive_length(*length));
                     current = *element;
                 }
+                // **A struct is laid out once, by the IR**, from its members'
+                // types, and every type that names its tag is that one
+                // `Ty::Struct`. See ADR-0124.
+                Type::Struct { .. } => {
+                    break Ty::Struct(self.struct_of(at, current, diagnostics)?);
+                }
                 // #74, which is the issue for what the IR cannot say, is about
-                // storage duration rather than about these. A struct is typed by
-                // the type checker and reaches here in any program that declares
-                // one, and the IR holds none.
-                Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => {
+                // storage duration rather than about these.
+                Type::Array { .. } | Type::Function { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
                             "cannot compile something of type `{}` yet",
@@ -2074,7 +2215,7 @@ impl Lowering<'_> {
                         ))
                         .with_code(LOWERING)
                         .with_label(Label::primary(at, "declared here"))
-                        .with_note("the integer types, `void`, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
+                        .with_note("the integer types, `void`, structs, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -2967,26 +3108,6 @@ impl Lowering<'_> {
         Some(())
     }
 
-    /// Refuse a member access, which this stage cannot hold yet.
-    ///
-    /// The type checker types one and records the member it names, and the
-    /// IR holds no struct to project it from. A function whose parameter or
-    /// local is a struct, or a pointer to one, is refused at that type
-    /// first, so this is the refusal met by a member access on a file-scope
-    /// object, under the code for what this compiler cannot do yet.
-    fn member_not_yet(&self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<()> {
-        diagnostics.report(
-            Diagnostic::error("cannot compile a member access yet")
-                .with_code(LOWERING)
-                .with_label(Label::primary(
-                    self.ast.expr(id).span(),
-                    "a member of a struct",
-                ))
-                .with_note("structs are read, and not yet held by the IR"),
-        );
-        None
-    }
-
     /// The value of a full expression that has one.
     ///
     /// Every caller reads what this answers, and C17 6.3.2.2 p1 forbids using
@@ -3355,7 +3476,6 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
-            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Number { .. }
             | Expr::Enumerator { .. }
             | Expr::Character { .. }
@@ -3376,7 +3496,10 @@ impl Lowering<'_> {
                 // to ten.
                 values.push(Operand::Constant(self.types.value(id)?));
             }
-            Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
+            Expr::Identifier { .. }
+            | Expr::Subscript { .. }
+            | Expr::String { .. }
+            | Expr::Member { .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Place(id));
             }
@@ -3500,7 +3623,21 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
-            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
+            // `p->m` needs the pointer's value and `s.m` the struct's place,
+            // and both end as a member's address, `&(*p).m`, and a place
+            // through it. See `Self::member`.
+            Expr::Member {
+                base, arrow: true, ..
+            } => {
+                tasks.push(Task::FinishPlace(id));
+                tasks.push(Task::Value(*base));
+            }
+            Expr::Member {
+                base, arrow: false, ..
+            } => {
+                tasks.push(Task::FinishPlace(id));
+                tasks.push(Task::Place(*base));
+            }
             Expr::Identifier { span, .. } => match self.static_named(id) {
                 Some(object) => places.push(self.reach_static(builder, object, *span)),
                 None => places.push(Place::local(self.local(id, diagnostics)?)),
@@ -3608,7 +3745,8 @@ impl Lowering<'_> {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Pointer(_) => ty,
+            | Ty::Pointer(_)
+            | Ty::Struct(_) => ty,
         }
     }
 
@@ -3709,7 +3847,6 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
-            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Cast { operand, span, .. } => {
                 let (operand, span) = (*operand, *span);
                 self.cast(builder, id, operand, span, values, diagnostics)?;
@@ -3724,8 +3861,19 @@ impl Lowering<'_> {
             | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. } => {}
-            Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
+            Expr::Identifier { .. }
+            | Expr::Subscript { .. }
+            | Expr::String { .. }
+            | Expr::Member { .. } => {
                 let place = places.pop().expect("a place");
+                if self
+                    .unit
+                    .place_ty(&builder.function, &place)
+                    .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
+                {
+                    self.struct_value_not_yet(self.ast.expr(id).span(), diagnostics);
+                    return None;
+                }
                 let span = self.ast.expr(id).span();
                 values.push(self.decayed(builder, place, span));
             }
@@ -4057,7 +4205,17 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
-            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
+            Expr::Member { arrow, .. } => {
+                let pointer = if *arrow {
+                    let operand = values.pop().expect("a pointer to a struct");
+                    self.member_base(builder, id, operand, diagnostics)?
+                } else {
+                    let place = places.pop().expect("a struct");
+                    self.struct_address(builder, id, place, diagnostics)?
+                };
+                let place = self.member(builder, id, pointer, diagnostics)?;
+                places.push(place);
+            }
             Expr::Unary { .. } => {
                 let operand = values.pop().expect("a pointer");
                 let place = self.pointed_at(id, operand, diagnostics)?;
@@ -4192,6 +4350,117 @@ impl Lowering<'_> {
         }
     }
 
+    /// The local holding the pointer `p->m` reads through: `p` itself where
+    /// it is a local, and a temporary holding its value otherwise, since a
+    /// member's address is taken through a local (`Self::member`).
+    fn member_base(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        operand: Operand,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<LocalId> {
+        let Expr::Member { base, .. } = *self.ast.expr(id) else {
+            unreachable!("asked of a member access");
+        };
+        if let Operand::Copy(place) = &operand {
+            if place.steps().is_empty() {
+                return Some(place.local);
+            }
+        }
+        let into = self.temporary(builder, base, diagnostics)?;
+        let carried = Self::moved_levels(&builder.function, Function::carried_levels, [&operand]);
+        builder.function.mark_carried_levels(into, carried);
+        builder.push(Operation {
+            place: Place::local(into),
+            value: Rvalue::Use(operand),
+            origin: Origin::Generated(self.ast.expr(base).span()),
+        });
+        Some(into)
+    }
+
+    /// The local holding the address of the struct `s.m` reads a member of,
+    /// `place` being where `s` is: `&s` where it is a local, the pointer
+    /// gone through where it is reached through one, `(*p).m` being `p->m`
+    /// (C17 6.5.2.3 p4 and 6.5.3.2 p3), and a temporary holding that
+    /// pointer where it was read out of memory.
+    fn struct_address(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        place: Place,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<LocalId> {
+        let Expr::Member { base, .. } = *self.ast.expr(id) else {
+            unreachable!("asked of a member access");
+        };
+        let span = self.ast.expr(base).span();
+        if let Some(pointer) = place.without_last_deref() {
+            return self.member_base(builder, id, Operand::Copy(pointer), diagnostics);
+        }
+        let struct_ty = self.ty_of(base, diagnostics)?;
+        let pointer_ty = self.unit.push_type(Ty::Pointer(struct_ty));
+        let into = builder.function.push_local(pointer_ty);
+        if let Some(written) = self.types.of(base) {
+            builder
+                .function
+                .mark_const_levels(into, self.pointing_at_levels(written));
+        }
+        builder.push(Operation {
+            place: Place::local(into),
+            value: Rvalue::Address(place),
+            origin: Origin::Generated(span),
+        });
+        Some(into)
+    }
+
+    /// The place of member `id` names through `pointer`, a local holding the
+    /// address of its struct: `*t` with `t = &(*pointer).m`. **A `Field` only
+    /// ever under that address**, as an `Index` is under an array's, so every
+    /// read and write of a member is through a pointer and is asked as any
+    /// other is: the memory check reads the address as the pointer moved by
+    /// the member's offset, the slot of its object (ADR-0124).
+    fn member(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        pointer: LocalId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Place> {
+        let Some(member) = self.types.member(id) else {
+            unreachable!("the type check records the member every access it typed names");
+        };
+        let member_ty = self.ty_of(id, diagnostics)?;
+        let index = u32::try_from(member.index).expect("fewer than 2^32 members");
+        let pointer_ty = self.unit.push_type(Ty::Pointer(member_ty));
+        let address = builder.function.push_local(pointer_ty);
+        let mut levels = Self::moved_levels(
+            &builder.function,
+            Function::const_levels,
+            [&Operand::Copy(Place::local(pointer))],
+        ) & 1;
+        if let Some(written) = self.types.of(id) {
+            levels |= self.pointing_at_levels(written);
+        }
+        builder.function.mark_const_levels(address, levels);
+        builder.push(Operation {
+            place: Place::local(address),
+            value: Rvalue::Address(Place::new(
+                pointer,
+                vec![Projection::Deref, Projection::Field(index)],
+            )),
+            origin: Origin::Written(self.ast.expr(id).span()),
+        });
+        Some(Place::local(address).deref())
+    }
+
+    /// The `const` levels of a pointer to an object of type `ty`: bit `0`
+    /// where `ty` itself is `const`, and `ty`'s own levels one further down.
+    /// See [`Self::const_levels`].
+    fn pointing_at_levels(&self, ty: TypeId) -> u32 {
+        u32::from(self.ast.is_const(ty)) | (self.const_levels(ty) << 1)
+    }
+
     /// Branch on the first operand of a `&&`, `||` or `?:`.
     fn split(
         &mut self,
@@ -4211,7 +4480,6 @@ impl Lowering<'_> {
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
-            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Binary { op, lhs, rhs, .. } => {
                 let (op, lhs, rhs) = (*op, *lhs, *rhs);
                 let answer = answer.expect("a `&&` or `||` is an `int`");
@@ -4315,6 +4583,7 @@ impl Lowering<'_> {
             | Expr::Assign { .. }
             | Expr::Call { .. }
             | Expr::Subscript { .. }
+            | Expr::Member { .. }
             | Expr::Comma { .. }
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
@@ -4711,6 +4980,11 @@ impl Lowering<'_> {
             Ty::Array { .. } => unreachable!(
                 "an array reached a compound assignment, `++` or `--`, which the type check refuses"
             ),
+            // No arithmetic is done on a struct (C17 6.5.16.2 p1, 6.5.2.4
+            // p1), which `types.rs` refuses before a place exists.
+            Ty::Struct(_) => unreachable!(
+                "a struct reached a compound assignment, `++` or `--`, which the type check refuses"
+            ),
         })
     }
 
@@ -4996,7 +5270,8 @@ impl Lowering<'_> {
                     sign: _,
                 }
                 | Ty::Void
-                | Ty::Array { .. } => false,
+                | Ty::Array { .. }
+                | Ty::Struct(_) => false,
             };
             let unordered = self
                 .unordered_writes(value)
@@ -5044,7 +5319,8 @@ impl Lowering<'_> {
                         sign: _,
                     }
                     | Ty::Void
-                    | Ty::Array { .. } => false,
+                    | Ty::Array { .. }
+                    | Ty::Struct(_) => false,
                 };
                 if !write || !pointer || said.contains(&local) {
                     continue;

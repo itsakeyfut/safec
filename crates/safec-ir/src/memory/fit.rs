@@ -438,7 +438,8 @@ pub(super) fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64>
             sign: _,
         }
         | Ty::Void
-        | Ty::Array { .. } => None,
+        | Ty::Array { .. }
+        | Ty::Struct(_) => None,
     }
 }
 
@@ -720,6 +721,14 @@ pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
             sign: _,
         }
         | Ty::Void => None,
+        // What its deepest pointer member points to, as `stored_pointer`
+        // answers what a struct holds (#1200).
+        Ty::Struct(_) => match crate::layout::stored_pointer(analysis.unit, ty)
+            .map(|pointer| analysis.unit.ty(pointer))
+        {
+            Some(Ty::Pointer(pointee)) => Some(pointee),
+            _ => None,
+        },
         Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }

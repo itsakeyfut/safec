@@ -368,6 +368,21 @@ impl Target {
         }
     }
 
+    /// The alignment in bytes of an integer of `rank`, or of a pointer where
+    /// `rank` is `None`, as a struct member: where C17 6.7.2.1 p15 lets the
+    /// implementation put it. Measured on every row of [`Target::ALL`] with
+    /// `clang 22.1.8 -std=c17 --target=<triple>` reading `offsetof` of each
+    /// type after a `char` in a struct: its size on every target, except
+    /// `long long` on `i686`, which the System V i386 ABI aligns to four.
+    pub fn alignment(self, rank: Option<Rank>) -> u64 {
+        let bits = match rank {
+            None => self.pointer_bits,
+            Some(Rank::LongLong) if self.triple.starts_with("i686-") => 32,
+            Some(rank) => self.integer(rank, Sign::Signed).bits(),
+        };
+        u64::from(bits / self.character.bits())
+    }
+
     /// How many bits a pointer takes here: what an object holding one is
     /// worth when the memory check asks whether an access fits it. See
     /// ADR-0060.

@@ -1839,9 +1839,10 @@ impl Checker<'_> {
     }
 
     /// How many bytes an object of `ty` takes on the target, where this stage
-    /// can say: an integer, a pointer, and an array of either with a constant
-    /// length. `None` for a struct, which has no layout here and whose
-    /// objects the lowering refuses, and for what is no object type.
+    /// can say: an integer, a pointer, an array of a constant length, and a
+    /// struct, laid out by the IR's one rule (`safec_ir::ir::lay_out`, see
+    /// ADR-0124). `None` for what is no object type, a struct with no
+    /// definition, and an array of no constant length.
     fn bytes_of(&self, ast: &Ast, ty: TypeId) -> Option<u128> {
         match *ast.ty(ty) {
             Type::Integer { rank, sign } => {
@@ -1854,7 +1855,47 @@ impl Checker<'_> {
                 let count = u128::try_from(self.values[length?.index()]?).ok()?;
                 count.checked_mul(self.bytes_of(ast, element)?)
             }
-            Type::Struct { .. } | Type::Void | Type::Function { .. } => None,
+            Type::Struct { .. } => self
+                .struct_layout(ast, ty)
+                .map(|(size, _)| u128::from(size)),
+            Type::Void | Type::Function { .. } => None,
+        }
+    }
+
+    /// The size and the alignment in bytes of the struct `ty`, from its
+    /// definition's members, by the IR's rule. `None` where it has no
+    /// definition or a member has no size here.
+    fn struct_layout(&self, ast: &Ast, ty: TypeId) -> Option<(u64, u64)> {
+        let definition = self.resolution.definition(self.resolution.tag(ty))?;
+        let Type::Struct {
+            members: Some(members),
+            ..
+        } = ast.ty(definition)
+        else {
+            return None;
+        };
+        let sized = members
+            .iter()
+            .map(|member| {
+                Some((
+                    u64::try_from(self.bytes_of(ast, member.ty)?).ok()?,
+                    self.align_of(ast, member.ty)?,
+                ))
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let (_, size, align) = safec_ir::ir::lay_out(sized)?;
+        Some((size, align))
+    }
+
+    /// The alignment in bytes of an object of `ty` on the target, as
+    /// `TranslationUnit::align_of` answers it.
+    fn align_of(&self, ast: &Ast, ty: TypeId) -> Option<u64> {
+        match *ast.ty(ty) {
+            Type::Integer { rank, .. } => Some(self.target.alignment(Some(rank))),
+            Type::Pointer(_) => Some(self.target.alignment(None)),
+            Type::Array { element, .. } => self.align_of(ast, element),
+            Type::Struct { .. } => self.struct_layout(ast, ty).map(|(_, align)| align),
+            Type::Void | Type::Function { .. } => None,
         }
     }
 
@@ -2539,10 +2580,10 @@ impl Checker<'_> {
     /// value recorded: the bytes [`Self::bytes_of`] counts, which is what
     /// `clang` answers on the target (`sizeof_is_what_clang_says_it_is`).
     ///
-    /// p1 refuses a function and an incomplete type (`SC0306`). A struct has
-    /// no layout here until #614, and an array of a length that is not a
-    /// constant is sized at run time, which nothing here does yet; both are
-    /// `SC0304`.
+    /// p1 refuses a function and an incomplete type (`SC0306`), a struct
+    /// nothing defines among them. A struct is laid out by the IR's rule
+    /// ([`Self::bytes_of`]). An array of a length that is not a constant is
+    /// sized at run time, which nothing here does yet, and is `SC0304`.
     fn sizeof(
         &mut self,
         ast: &mut Ast,
@@ -2555,6 +2596,14 @@ impl Checker<'_> {
             Type::Function { .. } => Some("a function"),
             Type::Void => Some("`void`, which is incomplete"),
             Type::Array { length: None, .. } => Some("an array of no length, which is incomplete"),
+            Type::Struct { .. }
+                if self
+                    .resolution
+                    .definition(self.resolution.tag(ty))
+                    .is_none() =>
+            {
+                Some("a struct nothing defines, which is incomplete")
+            }
             Type::Integer { .. }
             | Type::Pointer(_)
             | Type::Array {
@@ -2583,7 +2632,7 @@ impl Checker<'_> {
                 .with_code(NOT_YET)
                 .with_label(Label::primary(span, "this `sizeof`"))
                 .with_note(
-                    "a gap in this compiler: a struct has no layout here yet, and an array of a length that is not a constant is sized at run time",
+                    "a gap in this compiler: an array of a length that is not a constant is sized at run time",
                 ),
             );
             return None;

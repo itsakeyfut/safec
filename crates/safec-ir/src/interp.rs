@@ -847,7 +847,9 @@ fn resolve(frames: &Stack, current: usize, place: &Place) -> Result<Location, Tr
             // no element in it, so following one is giving the interpreter
             // arrays, which is its own change (#621). Refused rather than
             // read as no step, which would answer the array for its element.
-            Projection::Index(_) => {
+            // A member is the same: a location here is a whole local, with
+            // no member in it.
+            Projection::Index(_) | Projection::Field(_) => {
                 return Err(Trap::new("an index, which this does not follow yet"));
             }
         }

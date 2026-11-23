@@ -1,16 +1,15 @@
 Declaration sizeof_refuses_what_has_no_size.c:1:1 "struct S"
-  Field sizeof_refuses_what_has_no_size.c:2:5 "a" "int"
-Declaration sizeof_refuses_what_has_no_size.c:4:1 "f" "int (void)"
-Declaration sizeof_refuses_what_has_no_size.c:5:1 "a" "int[]"
-Function sizeof_refuses_what_has_no_size.c:6:1 "g" "unsigned long long (void)"
-  Compound sizeof_refuses_what_has_no_size.c:6:28
-    Return sizeof_refuses_what_has_no_size.c:7:5
-      Binary sizeof_refuses_what_has_no_size.c:7:12 "+"
-        Binary sizeof_refuses_what_has_no_size.c:7:12 "+"
-          Binary sizeof_refuses_what_has_no_size.c:7:12 "+"
-            SizeofExpr sizeof_refuses_what_has_no_size.c:7:12
-              Identifier sizeof_refuses_what_has_no_size.c:7:19 "f"
-            SizeofType sizeof_refuses_what_has_no_size.c:7:23 "void"
-          SizeofType sizeof_refuses_what_has_no_size.c:7:38 "struct S"
-        SizeofExpr sizeof_refuses_what_has_no_size.c:7:57
-          Identifier sizeof_refuses_what_has_no_size.c:7:64 "a"
+Declaration sizeof_refuses_what_has_no_size.c:2:1 "f" "int (void)"
+Declaration sizeof_refuses_what_has_no_size.c:3:1 "a" "int[]"
+Function sizeof_refuses_what_has_no_size.c:4:1 "g" "unsigned long long (void)"
+  Compound sizeof_refuses_what_has_no_size.c:4:28
+    Return sizeof_refuses_what_has_no_size.c:5:5
+      Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
+        Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
+          Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
+            SizeofExpr sizeof_refuses_what_has_no_size.c:5:12
+              Identifier sizeof_refuses_what_has_no_size.c:5:19 "f"
+            SizeofType sizeof_refuses_what_has_no_size.c:5:23 "void"
+          SizeofType sizeof_refuses_what_has_no_size.c:5:38 "struct S"
+        SizeofExpr sizeof_refuses_what_has_no_size.c:5:57
+          Identifier sizeof_refuses_what_has_no_size.c:5:64 "a"

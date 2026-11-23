@@ -71,11 +71,21 @@ to point into one object, against not asked and named as a silence.
 
 ### Confirmation
 
-Nothing guards this yet: no struct, union or pointer comparison is lowered
-when it is written. Each sub-issue of #614 names its guard as it lands: the
-layout test against `clang`, an `E0004` at every reader of a place for
-`Projection::Field`, the link-and-run test per ABI shape, and a corpus case
-for the comparison's code. This section is to be rewritten as they land.
+* **The layout** (#1200): `the_layout_of_every_struct_shape_is_clangs` in
+  `tests/layout.rs` compiles each shape with `clang` on every target and
+  compares `TranslationUnit::push_struct`'s offsets, size and alignment.
+  Mutation: place each member at the end of the one before it in
+  `ir::lay_out`; it fails. `sizeof` in the type check asks the same
+  `lay_out`.
+* **A member is a slot of its object** (#1200): `Projection::Field` is an
+  `E0004` at every reader of a place's steps, and the memory check reads
+  `&(*p).m` as `p` moved by the member's offset.
+  `a_struct_member_is_a_slot_of_its_object` holds it: with the offset taken
+  as zero, its write past a block's end reaches 8 bytes rather than 16.
+* Still unguarded, because unions, a struct crossing a call and comparing
+  pointers are not lowered yet: the link-and-run test per ABI shape, and a
+  corpus case for the comparison's code, which their sub-issues of #614 add
+  as they land.
 
 ### Consequences
 

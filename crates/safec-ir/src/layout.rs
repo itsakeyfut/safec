@@ -16,12 +16,15 @@ use crate::ir::{TranslationUnit, Ty, TyId};
 pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
     match unit.ty(ty) {
         Ty::Array { element, .. } => innermost_element(unit, element),
+        // Memory holding a struct holds that struct, whose members differ:
+        // [`stored_pointer`] answers for them.
         Ty::Integer {
             rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
             sign: _,
         }
         | Ty::Void
-        | Ty::Pointer(_) => ty,
+        | Ty::Pointer(_)
+        | Ty::Struct(_) => ty,
     }
 }
 
@@ -41,8 +44,25 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
 /// was `SC0411`, and a `char`'s address read through an `int *(*)[1]` was
 /// silent where through an `int **` it was `SC0413` (#843). A kind of type
 /// added later is asked at [`Ty::is_pointer`], an exhaustive `match`.
+///
+/// **A struct holds the deepest pointer any member holds**, and none where no
+/// member holds one: its memory is pointers at some slots and not others, and
+/// answering that it holds none would leave a pointer member unasked by every
+/// reader above, a silence, where answering that it holds one asks the
+/// slots that hold none too, a report the reader sees (#1200). **Held by
+/// nothing, measured**: answering none changes no case, since every member
+/// is read and written through a pointer typed as the member, which asks
+/// the member's own type; a struct copied or handed whole read the same.
 pub(crate) fn stored_pointer(unit: &TranslationUnit, stored: TyId) -> Option<TyId> {
     let element = innermost_element(unit, stored);
+    if let Ty::Struct(layout) = unit.ty(element) {
+        return unit
+            .struct_layout(layout)
+            .members
+            .iter()
+            .filter_map(|member| stored_pointer(unit, member.ty))
+            .max_by_key(|&pointer| pointer_depth(unit, pointer));
+    }
     unit.ty(element).is_pointer().then_some(element)
 }
 
@@ -65,5 +85,14 @@ pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
         // because every use of an array converts it into a temporary of the
         // element's pointer type, which is one `*` deeper still.
         Ty::Array { element, .. } => pointer_depth(unit, element),
+        // As deep as its deepest member, for the same reason, and held by
+        // nothing either, measured.
+        Ty::Struct(layout) => unit
+            .struct_layout(layout)
+            .members
+            .iter()
+            .map(|member| pointer_depth(unit, member.ty))
+            .max()
+            .unwrap_or(0),
     }
 }
