@@ -18,7 +18,7 @@
 //! from inside a dump. The renderer asks the same question of a message, so
 //! the answer is one function and this is the crate both sides can reach.
 
-use crate::ir::Rank;
+use crate::ir::{Passes, Rank};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
@@ -294,6 +294,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 match function.promised() {
                     Some(Promise::Declared(_)) => out.push_str(" _Nonnull"),
                     Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull defaulted"),
+                    Some(Promise::Made(_)) => out.push_str(" _Nonnull made"),
                     None => {}
                 }
             } else if function.parameters().any(|parameter| parameter == local) {
@@ -303,7 +304,21 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 match function.nonnull(local) {
                     Some(Promise::Declared(_)) => out.push_str(" _Nonnull"),
                     Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull defaulted"),
+                    Some(Promise::Made(_)) => out.push_str(" _Nonnull made"),
                     None => {}
+                }
+                // What the C parameter it stands for is, so a change in which
+                // parameters stand for a struct shows in every case that
+                // passes one (#1201). Written out, so a fourth is answered for
+                // by `error[E0004]`.
+                let index = function
+                    .parameters()
+                    .position(|parameter| parameter == local)
+                    .expect("a parameter");
+                match function.passes(index) {
+                    Passes::Value => {}
+                    Passes::StructCopy => out.push_str(" struct-copy"),
+                    Passes::StructReturn => out.push_str(" struct-return"),
                 }
             }
             // The name the source wrote, last so that every field before it

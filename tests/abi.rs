@@ -1,8 +1,10 @@
 //! A struct passed and returned by value meets `clang`'s C ABI on the host,
 //! both ways round: a caller this compiler built calls a callee `clang`
 //! built, and the other way, for each size class the ABIs tell apart (#1201,
-//! ADR-0124). On Linux and macOS that is x86-64 System V, and on Windows
-//! Win64, so each CI runner holds the convention of its own target.
+//! ADR-0124). Each CI runner holds the convention of its own host: x86-64
+//! System V on Linux, Win64 on Windows, and AArch64 on macOS, whose runner
+//! is Apple silicon. The other targets' text is held by the
+//! `a_struct_crosses_a_call_as_*_says` corpus cases.
 //!
 //! **Linked and run, not compared as text**: the convention is what the two
 //! objects agree on at run time, and a signature spelled alike can still put
@@ -13,16 +15,21 @@
 use std::fs;
 use std::process::{Command, Stdio};
 
-/// One struct per size class: its members, and the bytes it takes.
-const SHAPES: &[(&str, u64)] = &[
-    ("char a;", 1),
-    ("char a; char b; char c;", 3),
-    ("int a;", 4),
-    ("int a; int b;", 8),
-    ("int a; int b; int c;", 12),
-    ("long long a; long long b;", 16),
-    ("long long a; long long b; long long c;", 24),
+/// One struct per size class the ABIs tell apart, of 1, 3, 4, 8, 12, 16
+/// and 24 bytes.
+const SHAPES: &[&str] = &[
+    "char a;",
+    "char a; char b; char c;",
+    "int a;",
+    "int a; int b;",
+    "int a; int b; int c;",
+    "long long a; long long b;",
+    "long long a; long long b; long long c;",
 ];
+
+/// The five integers `late_K` takes before its struct, which leave System V
+/// one integer register, so a struct of two pieces goes into memory whole.
+const FIVE: &str = "long long a, long long b, long long c, long long d, long long e, ";
 
 /// The member names of a shape, in order.
 fn members(shape: &str) -> Vec<&str> {
@@ -33,10 +40,10 @@ fn members(shape: &str) -> Vec<&str> {
 }
 
 /// The callee: for each shape, `make_K(seed)` fills a struct from `seed`
-/// and returns it, and `sum_K(s)` adds its members.
+/// and returns it, and `sum_K(s)` and `late_K(.., s)` add its members.
 fn callee() -> String {
     let mut source = String::new();
-    for (k, (shape, _)) in SHAPES.iter().enumerate() {
+    for (k, shape) in SHAPES.iter().enumerate() {
         source.push_str(&format!("struct S{k} {{ {shape} }};\n"));
         source.push_str(&format!(
             "struct S{k} make_{k}(int seed) {{\n    struct S{k} s;\n"
@@ -45,32 +52,38 @@ fn callee() -> String {
             source.push_str(&format!("    s.{member} = seed + {i};\n"));
         }
         source.push_str("    return s;\n}\n");
-        source.push_str(&format!("int sum_{k}(struct S{k} s) {{\n    return 0"));
-        for member in members(shape) {
-            source.push_str(&format!(" + (int)s.{member}"));
+        for (name, before) in [("sum", ""), ("late", FIVE)] {
+            source.push_str(&format!(
+                "int {name}_{k}({before}struct S{k} s) {{\n    return 0"
+            ));
+            for member in members(shape) {
+                source.push_str(&format!(" + (int)s.{member}"));
+            }
+            source.push_str(";\n}\n");
         }
-        source.push_str(";\n}\n");
     }
     source
 }
 
-/// The caller: each shape made with seed 10, summed, and checked, through a
-/// struct the callee returned and one passed back to it. Exits with the
-/// shape that went wrong, counted from one, and zero where none did.
+/// The caller: each shape made with seed 10, and summed through both
+/// functions, through a struct the callee returned and passed back to it.
+/// Exits with the shape that went wrong, counted from one, and zero where
+/// none did.
 fn caller() -> String {
     let mut source = String::new();
-    for (k, (shape, _)) in SHAPES.iter().enumerate() {
+    for (k, shape) in SHAPES.iter().enumerate() {
         source.push_str(&format!("struct S{k} {{ {shape} }};\n"));
         source.push_str(&format!("struct S{k} make_{k}(int seed);\n"));
         source.push_str(&format!("int sum_{k}(struct S{k} s);\n"));
+        source.push_str(&format!("int late_{k}({FIVE}struct S{k} s);\n"));
     }
     source.push_str("int main(void) {\n");
-    for (k, (shape, _)) in SHAPES.iter().enumerate() {
+    for (k, shape) in SHAPES.iter().enumerate() {
         let n = members(shape).len();
         let expected: usize = (0..n).map(|i| 10 + i).sum();
         let first = members(shape)[0];
         source.push_str(&format!(
-            "    {{\n        struct S{k} s = make_{k}(10);\n        if (s.{first} != 10 || sum_{k}(s) != {expected}) {{\n            return {};\n        }}\n    }}\n",
+            "    {{\n        struct S{k} s = make_{k}(10);\n        if (s.{first} != 10 || sum_{k}(s) != {expected} || late_{k}(0, 0, 0, 0, 0, s) != {expected}) {{\n            return {};\n        }}\n    }}\n",
             k + 1
         ));
     }
@@ -108,7 +121,7 @@ fn object(by_safec: bool, source: &std::path::Path, out: &std::path::Path) {
 
 /// Mutation: classify a Win64 struct of 1, 2, 4 or 8 bytes as memory in
 /// `abi::classify`; this fails on Windows, where `clang` passes it in a
-/// register. The System V half is held by the Linux and macOS runners.
+/// register. Each other runner holds its own host's rules the same way.
 #[test]
 fn a_struct_by_value_meets_clangs_abi() {
     let clang_is_here = Command::new("clang")
@@ -125,7 +138,9 @@ fn a_struct_by_value_meets_clangs_abi() {
         eprintln!("no `clang` on this machine: no ABI was compared");
         return;
     }
-    let dir = std::env::temp_dir().join("safec_abi");
+    // Named by this process, since a second `cargo test` on the same
+    // machine would otherwise remove the directory this one is using.
+    let dir = std::env::temp_dir().join(format!("safec_abi_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("the temporary directory is writable");
     let (callee_c, caller_c) = (dir.join("callee.c"), dir.join("caller.c"));

@@ -1303,12 +1303,14 @@ pub struct Parameter {
 /// What a parameter of the IR stands for in the C function it lowers.
 ///
 /// **A struct crosses a call as a pointer in the IR** (#1201): an argument
-/// is the address of a copy the caller makes, and a result the address the
-/// caller wants it in, passed first. Every check reads both as the
-/// addresses they are, which is the conservative answer, since a callee
-/// handed an address may write and free through it. The backend reads this
-/// and writes each target's C ABI, where a struct may travel in registers
-/// instead: see `safec_llvm::abi`.
+/// is the address of a copy the caller makes, whose storage ends when the
+/// call returns, and a result the address the caller wants it in, passed
+/// first. Both are promised non-null as [`Promise::Made`]. The C frontend
+/// copies an argument again into a local of the callee's own, which is
+/// what the parameter's name is, so no check reads the callee's object as
+/// one the caller handed over. The backend reads this and writes each
+/// target's C ABI, where a struct may travel in registers instead: see
+/// `safec_llvm::abi`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Passes {
     /// The parameter itself.
@@ -1338,6 +1340,11 @@ pub enum Promise {
     /// written `_Nullable` (ADR-0050). The span is the name of what was
     /// promised: the function's, for the pointer it returns.
     Defaulted(Span),
+    /// Nothing was written, and this compiler made the pointer: the one a
+    /// struct passed or returned by value crosses as (see [`Passes`]), which
+    /// every caller passes as the address of an object of its own. The span
+    /// is the parameter's name, or the function's for a result.
+    Made(Span),
 }
 
 /// A parameter declared with nothing but its type.
@@ -1638,7 +1645,8 @@ impl Function {
     }
 
     /// Whether this returns a struct by value, through a pointer passed
-    /// first: see [`Passes::StructReturn`].
+    /// first: see [`Passes::StructReturn`]. A function with no parameters
+    /// answers `false`, by [`Function::passes`]'s answer past the last.
     pub fn returns_a_struct(&self) -> bool {
         self.passes(0) == Passes::StructReturn
     }

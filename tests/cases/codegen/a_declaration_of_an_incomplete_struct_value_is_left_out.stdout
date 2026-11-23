@@ -1,0 +1,13 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  store i32 0, ptr %_0
+  %t0 = load i32, ptr %_0
+  ret i32 %t0
+}

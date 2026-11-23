@@ -1676,6 +1676,17 @@ fn passed(
             "write `_Nullable` after the `*` of the parameter in every declaration of the function",
             SafetyLevel::Strict,
         ),
+        // Every caller passes the address of an object of its own here, so
+        // this is a defect in this compiler rather than in the program, and
+        // the words say so rather than offering to take back a promise the
+        // program never made.
+        Promise::Made(name) => (
+            name,
+            "the pointer a struct passed by value crosses as",
+            "this compiler passes this struct through a pointer it makes",
+            "report this to safec, since the pointer is the compiler's own",
+            SafetyLevel::Memory,
+        ),
     };
     let (message, label, remedy) = match conclusion {
         Conclusion::Unsafe => (
@@ -1739,6 +1750,15 @@ fn returned(
             "at level 5 this returns a pointer that is not null, because it is not written `_Nullable`",
             "write `_Nullable` after the `*` of the return type",
             SafetyLevel::Strict,
+        ),
+        // No function returns a pointer this compiler made: a struct result
+        // crosses as a parameter. Answered all the same, in the same words
+        // as a parameter's.
+        Promise::Made(name) => (
+            name,
+            "this compiler returns this through a pointer it makes",
+            "report this to safec, since the pointer is the compiler's own",
+            SafetyLevel::Memory,
         ),
     };
     let (message, label, remedy) = match (reached_end, conclusion) {

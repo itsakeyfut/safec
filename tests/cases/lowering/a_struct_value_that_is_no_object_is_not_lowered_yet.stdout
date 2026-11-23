@@ -1,0 +1,59 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:5:10 "take"
+  Local "_0" "void" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-return
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "s"
+  Local "_3" "struct #0"
+  Local "_4" "struct #0 *"
+  Local "_5" "struct #0 *"
+  Block "bb0" entry
+    Operation a_struct_value_that_is_no_object_is_not_lowered_yet.c:5:24 generated
+      Destination "_4"
+      Address
+        Place "_3"
+    Call a_struct_value_that_is_no_object_is_not_lowered_yet.c:5:24 written "memcpy" "bb1"
+      Copy "_4"
+      Copy "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_struct_value_that_is_no_object_is_not_lowered_yet.c:6:5 generated
+      Destination "_5"
+      Address
+        Place "_3"
+    Call a_struct_value_that_is_no_object_is_not_lowered_yet.c:6:5 written "memcpy" "bb2"
+      Copy "_1"
+      Copy "_5"
+      Constant 4
+  Block "bb2"
+    Sequenced a_struct_value_that_is_no_object_is_not_lowered_yet.c:6:12 generated
+    Return
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:9:6 "chained" declared
+  Local "_0" "void" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+  Local "_3" "struct #0 *" parameter _Nonnull made struct-copy "c"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:13:6 "conditional" declared
+  Local "_0" "void" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+  Local "_3" "struct #0 *" parameter _Nonnull made struct-copy "c"
+  Local "_4" "int" parameter "k"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:17:6 "comma" declared
+  Local "_0" "void" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+  Local "_3" "int" parameter "k"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:21:6 "argument" declared
+  Local "_0" "void" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+  Local "_3" "int" parameter "k"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:25:5 "member" declared
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "b"
+Function a_struct_value_that_is_no_object_is_not_lowered_yet.c:5:24 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "unsigned long long" parameter

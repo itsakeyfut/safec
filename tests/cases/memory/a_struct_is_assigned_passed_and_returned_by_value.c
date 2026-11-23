@@ -49,6 +49,18 @@ int counted(void) {
     return read_a_member(c) - 3;
 }
 
+static void free_own(struct Count c) {
+    free(&c);
+}
+
+int freed_own(void) {
+    struct Count c;
+    c.a = 1;
+    c.n = 2;
+    free_own(c);
+    return 0;
+}
+
 int main(void) {
-    return assigned() + passed() + counted();
+    return assigned() + passed() + counted() + freed_own();
 }

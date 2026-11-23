@@ -1,0 +1,140 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_copy_calls_the_programs_own_memcpy.c:5:7 "memcpy"
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "into"
+  Local "_2" "void *" parameter "from"
+  Local "_3" "unsigned long long" parameter "size"
+  Local "_4" "unsigned char *" "to"
+  Local "_5" "unsigned char *" "bytes"
+  Local "_6" "unsigned long long" "i"
+  Local "_7" "unsigned long long"
+  Local "_8" "int"
+  Local "_9" "unsigned char *"
+  Local "_10" "unsigned char *"
+  Local "_11" "unsigned long long"
+  Local "_12" "unsigned long long"
+  Block "bb0" entry
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:6:20 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:6:25 generated
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:7:26 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:7:34 generated
+    StorageLive a_struct_copy_calls_the_programs_own_memcpy.c:8:10 generated "_6"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:29 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:8:33 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:36 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_6"
+        Copy "_3"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:36 generated
+      Destination "_8"
+      Use
+        Copy "_7"
+    Branch a_struct_copy_calls_the_programs_own_memcpy.c:8:36 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:8:36 generated
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:9:9 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_4"
+        Copy "_6"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:9:17 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:9:9 written
+      Destination "_9"
+        Deref
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:9:9 generated
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:46 written
+      Destination "_11"
+      Use
+        Copy "_6"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:46 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:8:46 written
+      Destination "_6"
+      Use
+        Copy "_12"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:8:46 generated
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:8:36 generated
+    StorageDead a_struct_copy_calls_the_programs_own_memcpy.c:10:5 generated "_6"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:11:12 generated
+    Return
+Function a_struct_copy_calls_the_programs_own_memcpy.c:14:5 "copied"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "a"
+  Local "_2" "struct #0"
+  Local "_3" "struct #0 *"
+  Local "_4" "struct #0" "b"
+  Local "_5" "struct #0 *"
+  Local "_6" "struct #0 *"
+  Local "_7" "struct #0 *"
+  Local "_8" "int *"
+  Block "bb0" entry
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:14:21 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_struct_copy_calls_the_programs_own_memcpy.c:14:21 written "memcpy" "bb1"
+      Copy "_3"
+      Copy "_1"
+      Constant 4
+  Block "bb1"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:16:5 generated
+      Destination "_5"
+      Address
+        Place "_4"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:16:5 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Call a_struct_copy_calls_the_programs_own_memcpy.c:16:5 written "memcpy" "bb2"
+      Copy "_5"
+      Copy "_6"
+      Constant 4
+  Block "bb2"
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:16:5 generated
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:17:12 generated
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:17:12 written
+      Destination "_8"
+      Address
+        Place "_7"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_copy_calls_the_programs_own_memcpy.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_struct_copy_calls_the_programs_own_memcpy.c:17:12 generated
+    Return

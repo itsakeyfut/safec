@@ -56,10 +56,13 @@ cases! {
     "memory" => {
         // A struct copied is a library copy, so a freed pointer it carries,
         // assigned or passed by value, is `SC0402` where it is used; a struct
-        // parameter is the copy its never-null pointer names, so reading a
-        // member of one reports nothing (#1201). Mutation: make the copy's
-        // `memcpy` no library function in `Function::builtin`; `assigned`
-        // loses its `SC0402`.
+        // parameter is a local of the callee's own, so reading a member of one
+        // reports nothing and `free(&c)` of one is `SC0401`, as of any local
+        // (#1201). The `SC0403`s at `*a.pointer = 0` and `*h.pointer = 0`, and
+        // the `SC0402` at the first, are not about copies: a pointer kept in a
+        // member is not followed through its test against null, as without
+        // any struct copy. Mutation: spell the compiler's `memcpy` as
+        // `safec_copy` in `Function::builtin`; `assigned` loses its `SC0402`.
         a_struct_is_assigned_passed_and_returned_by_value: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store into a struct that points at itself, leaving the function
         // through a parameter, through mutually pointing structs, and into a
@@ -10168,9 +10171,51 @@ cases! {
         // this changes.
         llvm_ir_of_arrays_and_pointer_arithmetic: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One program, its structs of 3, 12, 16 and 24 bytes passed and
+        // returned, written for each C ABI the backend writes (#1201), and
+        // each signature the one `clang` 22 writes for the target. This host
+        // runs only its own, so these hold the others' text:
+        //
+        // - System V: `{ i64, i32 }` built with `insertvalue` and taken apart
+        //   with `extractvalue`, a 16-byte struct after five integers `byval`
+        //   because one register is left, and a 24-byte one `byval` and
+        //   through `sret`. Mutation: drop the count of free registers in
+        //   `abi::classify`; `last` takes `i64, i64` here.
+        // - AArch64: a 3-byte struct passed as `i64`, read as `i24` and
+        //   widened with `zext`, returned as `i24`, and `[2 x i64]` for 12
+        //   bytes. Mutation: read every piece as its register's width in
+        //   `read_pieces`; the `zext` goes and the `load` reads past the
+        //   struct.
+        // - Win64: 3, 12 and 16 bytes as a plain pointer, 24 returned
+        //   through `sret`. Mutation: write `byval` for Win64's memory
+        //   class; this changes.
+        // A function declared taking or returning a struct that is never
+        // completed is valid C (C17 6.7.6.3 p4) and is never called, so the
+        // module leaves it out rather than refusing a signature it cannot
+        // write (#1201 review). Mutation: drop the check in
+        // `Emitter::function`; this is refused under `SC0801`, and it
+        // panicked before the check was written.
+        a_declaration_of_an_incomplete_struct_value_is_left_out: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
+        a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "lowering" => {
+        // A program that defines `memcpy` before its first struct copy has
+        // the copy call it, as one defining it after does: what defining a
+        // library name means is C17 7.1.3 p2's, which the safety check
+        // reports, and the order of the file decides nothing (#1201).
+        // Mutation: refuse a `memcpy` that is defined in `Lowering::memcpy`;
+        // `copied` is refused.
+        a_struct_copy_calls_the_programs_own_memcpy: ["--emit", "safety-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
+        // A struct value that is no object, the value of an assignment, a
+        // `?:` or a comma, is refused as not lowered yet, each in its own
+        // function, rather than as a program that names no place: C17
+        // 6.5.16.1 p1 lets the right of an assignment be any struct value,
+        // and the program is valid (#1201). Mutation: drop the refusal in
+        // `begin_place`'s last arm; each says it names no place.
+        a_struct_value_that_is_no_object_is_not_lowered_yet: ["--emit", "safety-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
         // An enumeration with no negative constant is `unsigned int` off
         // MSVC, as `clang` makes it (C17 6.7.2.2 p4), so `u - 1 < 0` is an
         // unsigned comparison and `s - 1 < 0` a signed one. Mutation: answer
