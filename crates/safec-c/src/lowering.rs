@@ -745,6 +745,7 @@ fn sequences(expr: &Expr) -> bool {
         Expr::Comma { .. } | Expr::Conditional { .. } => true,
         Expr::Binary { op, .. } => matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr),
         Expr::Number { .. }
+        | Expr::Enumerator { .. }
         | Expr::Character { .. }
         | Expr::Length { .. }
         | Expr::String { .. }
@@ -3230,6 +3231,7 @@ impl Lowering<'_> {
             // Written out rather than `_`, so a kind added later is asked.
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
@@ -3261,6 +3263,7 @@ impl Lowering<'_> {
     fn inert(&self, id: ExprId) -> bool {
         match self.ast.expr(id) {
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
@@ -3353,7 +3356,10 @@ impl Lowering<'_> {
 
         match self.ast.expr(id) {
             Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
-            Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. } => {
+            Expr::Number { .. }
+            | Expr::Enumerator { .. }
+            | Expr::Character { .. }
+            | Expr::Length { .. } => {
                 // Worked out by `types.rs`, where the base, the suffix and
                 // the range of `int` are all one question. A constant it
                 // could not read has no value and has already been reported,
@@ -3561,6 +3567,7 @@ impl Lowering<'_> {
             // expression kind added later is `error[E0004]` here and has to say
             // whether it names a place.
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::Unary { .. }
@@ -3713,7 +3720,10 @@ impl Lowering<'_> {
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
-            Expr::Number { .. } | Expr::Character { .. } | Expr::Length { .. } => {}
+            Expr::Number { .. }
+            | Expr::Enumerator { .. }
+            | Expr::Character { .. }
+            | Expr::Length { .. } => {}
             Expr::Identifier { .. } | Expr::Subscript { .. } | Expr::String { .. } => {
                 let place = places.pop().expect("a place");
                 let span = self.ast.expr(id).span();
@@ -4132,6 +4142,7 @@ impl Lowering<'_> {
             // paid elsewhere: an arm that pushed no place would leave the next
             // `places.pop()` taking an outer expression's place instead.
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
@@ -4295,6 +4306,7 @@ impl Lowering<'_> {
             // reserved and never filled, which is a panic at whatever later
             // moment somebody walks the graph.
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
@@ -4869,6 +4881,7 @@ impl Lowering<'_> {
                 | Expr::SizeofExpr { .. }
                 | Expr::Member { .. }
                 | Expr::Number { .. }
+                | Expr::Enumerator { .. }
                 | Expr::Character { .. }
                 | Expr::Length { .. }
                 | Expr::String { .. }
@@ -4941,6 +4954,7 @@ impl Lowering<'_> {
             // `discard` answers. Written out rather than `_`, so a kind added
             // later is asked whether its operands are unsequenced.
             Expr::Number { .. }
+            | Expr::Enumerator { .. }
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
@@ -5134,6 +5148,7 @@ impl Lowering<'_> {
                 Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {}
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
+                | Expr::Enumerator { .. }
                 | Expr::Character { .. }
                 | Expr::Length { .. }
                 | Expr::String { .. }

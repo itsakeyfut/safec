@@ -1,0 +1,13 @@
+Declaration an_enumerator_value_c_does_not_allow_is_refused.c:1:1 "x" "int"
+Declaration an_enumerator_value_c_does_not_allow_is_refused.c:2:1 "int"
+  Enumerator an_enumerator_value_c_does_not_allow_is_refused.c:2:8 "NOT_CONSTANT"
+    Identifier an_enumerator_value_c_does_not_allow_is_refused.c:2:23 "x"
+Declaration an_enumerator_value_c_does_not_allow_is_refused.c:3:1 "int"
+  Enumerator an_enumerator_value_c_does_not_allow_is_refused.c:3:8 "BIG"
+    Number an_enumerator_value_c_does_not_allow_is_refused.c:3:14 "2147483647"
+  Enumerator an_enumerator_value_c_does_not_allow_is_refused.c:3:26 "PAST"
+  Enumerator an_enumerator_value_c_does_not_allow_is_refused.c:3:32 "AFTER_PAST"
+Function an_enumerator_value_c_does_not_allow_is_refused.c:4:1 "main" "int (void)"
+  Compound an_enumerator_value_c_does_not_allow_is_refused.c:4:16
+    Return an_enumerator_value_c_does_not_allow_is_refused.c:4:18
+      Number an_enumerator_value_c_does_not_allow_is_refused.c:4:25 "0"

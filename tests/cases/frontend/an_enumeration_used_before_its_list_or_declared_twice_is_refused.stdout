@@ -1,0 +1,9 @@
+Declaration an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:1:1 "later" "int"
+Declaration an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:2:1 "int"
+  Enumerator an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:2:14 "A"
+Declaration an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:3:1 "int"
+  Enumerator an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:3:14 "B"
+Function an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:4:1 "main" "int (void)"
+  Compound an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:4:16
+    Return an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:4:18
+      Number an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:4:25 "0"

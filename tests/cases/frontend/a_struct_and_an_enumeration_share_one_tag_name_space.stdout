@@ -1,0 +1,15 @@
+Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:1:1 "struct S"
+  Field a_struct_and_an_enumeration_share_one_tag_name_space.c:1:12 "x" "int"
+Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:2:1 "int"
+  Enumerator a_struct_and_an_enumeration_share_one_tag_name_space.c:2:10 "A"
+Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:3:1 "int"
+  Enumerator a_struct_and_an_enumeration_share_one_tag_name_space.c:3:10 "B"
+Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:4:1 "p" "struct E *"
+Function a_struct_and_an_enumeration_share_one_tag_name_space.c:5:1 "main" "int (void)"
+  Compound a_struct_and_an_enumeration_share_one_tag_name_space.c:5:16
+    Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:6:5 "struct E"
+      Field a_struct_and_an_enumeration_share_one_tag_name_space.c:6:16 "x" "int"
+    Declaration a_struct_and_an_enumeration_share_one_tag_name_space.c:7:5 "e" "int"
+      Enumerator a_struct_and_an_enumeration_share_one_tag_name_space.c:7:16 "B"
+    Return a_struct_and_an_enumeration_share_one_tag_name_space.c:8:5
+      Identifier a_struct_and_an_enumeration_share_one_tag_name_space.c:8:12 "e"

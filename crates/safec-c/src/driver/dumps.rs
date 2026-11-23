@@ -10,8 +10,8 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId,
-    Storage, Type, TypeId, spell_type,
+    Ast, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
+    StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::Diagnostic;
 use crate::token::Token;
@@ -147,6 +147,7 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
         Item::Declaration {
             declarators,
             specified,
+            enumerators,
             storage,
             span,
         } => {
@@ -159,8 +160,30 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
                 depth,
                 out,
             );
+            dump_enumerators(sources, ast, enumerators, depth + 1, out);
         }
         Item::Error { .. } => out.push('\n'),
+    }
+}
+
+/// The enumeration constants a declaration declares, a line each under it,
+/// with the value written for one under that. The value the type checker
+/// gives each is `--emit` nothing's: this is the tree, as read.
+fn dump_enumerators(
+    sources: &SourceMap,
+    ast: &Ast,
+    enumerators: &[EnumeratorId],
+    depth: usize,
+    out: &mut String,
+) {
+    for &id in enumerators {
+        let enumerator = ast.enumerator(id);
+        dump_node(sources, "Enumerator", enumerator.name, depth, out);
+        writeln!(out, " {:?}", quoted(sources, enumerator.name))
+            .expect("writing to a string cannot fail");
+        if let Some(written) = enumerator.written {
+            dump_expr(sources, ast, written, depth + 1, out);
+        }
     }
 }
 
@@ -346,6 +369,7 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
         Stmt::Declaration {
             declarators,
             specified,
+            enumerators,
             storage,
             span,
         } => {
@@ -358,6 +382,7 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 depth,
                 out,
             );
+            dump_enumerators(sources, ast, enumerators, depth + 1, out);
         }
         Stmt::Expression { value, .. } => {
             out.push('\n');
@@ -502,6 +527,7 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
             Expr::Number { span }
             | Expr::Character { span }
             | Expr::Identifier { span }
+            | Expr::Enumerator { span, .. }
             | Expr::Length { span, .. } => {
                 write!(out, " {:?}", quoted(sources, *span))
                     .expect("writing to a string cannot fail");

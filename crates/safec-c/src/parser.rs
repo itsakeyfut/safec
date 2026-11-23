@@ -27,8 +27,9 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, Attribute, BinOp, Declaration, Expr, ExprId, ForStart, Function, InitDeclarator, Item,
-    Nullability, Parameters, Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp, spell_type,
+    Ast, Attribute, BinOp, Declaration, Enumeration, Enumerator, EnumeratorId, Expr, ExprId,
+    ForStart, Function, InitDeclarator, Item, Nullability, Parameters, Specifier, Stmt, StmtId,
+    Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -319,6 +320,27 @@ enum Derivation {
     Function(Parameters),
 }
 
+/// What one identifier names in one scope, as far as the parser has to know
+/// to read what follows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Named {
+    /// An object or a function, which hides a typedef name of an outer scope.
+    Ordinary,
+    /// A typedef name, for this type.
+    Typedef(TypeId),
+    /// An enumeration constant (C17 6.4.4.3), which is an ordinary identifier
+    /// too, and which the parser reads as [`Expr::Enumerator`].
+    Enumerator(EnumeratorId),
+}
+
+/// The ordinary identifiers one scope declares. Tags are the name
+/// resolver's, which reads a typedef name and an enumeration constant as
+/// nothing but the type and the constant the parser resolved them to.
+#[derive(Debug, Default)]
+struct Scope {
+    names: std::collections::HashMap<String, Named>,
+}
+
 /// One of C17 6.7.2's type specifiers that is a single keyword and names a
 /// basic type, alone or with the others: `void`, `char`, `short`, `int`,
 /// `long`, `signed` and `unsigned`. `struct` is more than one token and is
@@ -370,9 +392,9 @@ enum Refused {
     /// A word no list holds beside this one written before it.
     Clash(&'static str),
     /// Any type specifier after a `struct`.
-    AfterStruct,
-    /// A `struct` after other type specifiers.
-    BeforeStruct,
+    AfterTag(&'static str),
+    /// A `struct` or an `enum` after other type specifiers.
+    BeforeTag(&'static str),
     /// Any type specifier after a typedef name.
     AfterTypedefName,
 }
@@ -514,6 +536,7 @@ fn begins_specifiers(kind: TokenKind) -> bool {
             kind,
             TokenKind::Keyword(
                 Keyword::Struct
+                    | Keyword::Enum
                     | Keyword::Const
                     | Keyword::Static
                     | Keyword::Extern
@@ -590,7 +613,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Bool => ("`_Bool`", "6.7.2", SPECIFIER),
         Keyword::Complex => ("`_Complex`", "6.7.2", SPECIFIER),
         Keyword::Union => ("`union`", "6.7.2.1", SPECIFIER),
-        Keyword::Enum => ("`enum`", "6.7.2.2", SPECIFIER),
         Keyword::Inline => ("`inline`", "6.7.4", STORAGE),
         Keyword::Noreturn => ("`_Noreturn`", "6.7.4", STORAGE),
         Keyword::Alignas => (
@@ -761,7 +783,9 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         switches: 0,
         storage: None,
         typedef: false,
-        names: vec![std::collections::HashMap::new()],
+        names: vec![Scope::default()],
+        declaring: false,
+        enumerated: false,
     }
     .run(diagnostics)
 }
@@ -826,7 +850,16 @@ struct Parser<'a> {
     /// 6.2.1 p4). The parser has to know, since `T * x;` is a declaration
     /// where `T` names a type and an expression where it does not (6.7.8).
     /// File scope is the first entry and is never popped.
-    names: Vec<std::collections::HashMap<String, Option<TypeId>>>,
+    names: Vec<Scope>,
+    /// Whether what is being read belongs to a declaration, whose
+    /// [`Stmt::Declaration::enumerators`] carries any enumeration constant
+    /// declared in it. An enumeration defined anywhere else, in a cast in an
+    /// expression statement or in a function definition's specifiers, has
+    /// no declaration to carry it and is refused as not read yet.
+    declaring: bool,
+    /// Whether the last [`Parser::specifiers`] read an enumeration, so that
+    /// `enum E { A };` declares something with no declarator (C17 6.7 p2).
+    enumerated: bool,
 }
 
 impl Parser<'_> {
@@ -996,6 +1029,17 @@ impl Parser<'_> {
     /// of a definition derived a function type is 6.9.1 p2's constraint, and a
     /// constraint is checked later.
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
+        let enumerators = self.ast.enumerator_count();
+        let declaring = std::mem::replace(&mut self.declaring, true);
+        let item = self.item_read(enumerators, diagnostics);
+        self.declaring = declaring;
+        item
+    }
+
+    /// [`Parser::item`], with `enumerators` the count of enumeration
+    /// constants declared before it, so that the ones it declares are the
+    /// rest.
+    fn item_read(&mut self, enumerators: usize, diagnostics: &mut DiagnosticSink) -> Item {
         let first = self.peek().span;
 
         // Before the specifiers, and outside the span of what follows it, which
@@ -1029,6 +1073,7 @@ impl Parser<'_> {
                 return Item::Declaration {
                     declarators: Vec::new(),
                     specified,
+                    enumerators: self.ast.enumerators_since(enumerators),
                     storage: None,
                     span,
                 };
@@ -1061,8 +1106,23 @@ impl Parser<'_> {
                 );
                 return Item::Error { span: first };
             }
+            // **An enumeration defined in a definition's specifiers or
+            // parameters has no declaration to carry it**, so the name
+            // resolver would meet its values nowhere. C allows it, and the
+            // constants of one in the parameters are in scope in the body
+            // (6.2.1 p4), so it is refused as not read yet.
+            if self.ast.enumerator_count() > enumerators {
+                self.report_unread(
+                    Unread {
+                        what: "an enumeration defined in a function definition's header",
+                        clause: "6.7.2.2",
+                    },
+                    diagnostics,
+                );
+                return Item::Error { span: first };
+            }
             if self
-                .declare_name(declared.name, None, diagnostics)
+                .declare_name(declared.name, Named::Ordinary, diagnostics)
                 .is_none()
             {
                 return Item::Error { span: first };
@@ -1071,9 +1131,13 @@ impl Parser<'_> {
             // 6.2.1 p4), so a typedef there that redeclares a parameter is
             // refused as one in the same scope. Read in a scope of its own,
             // it was not (#1205 review).
-            self.names.push(std::collections::HashMap::new());
+            self.names.push(Scope::default());
             self.declare_parameters(declared.ty, diagnostics);
+            // The body's own declarations are each one, and what is between
+            // them is not.
+            self.declaring = false;
             let body = self.function_body(diagnostics);
+            self.declaring = true;
             self.names.pop();
             let Some(body) = body else {
                 return Item::Error { span: first };
@@ -1126,6 +1190,7 @@ impl Parser<'_> {
             // declaration's is.
             declarators: if typedef { Vec::new() } else { declarators },
             specified,
+            enumerators: self.ast.enumerators_since(enumerators),
             storage,
             span,
         }
@@ -1148,6 +1213,7 @@ impl Parser<'_> {
         let base = self.specifiers(at, diagnostics)?;
         let storage = self.storage.take();
         let typedef = std::mem::take(&mut self.typedef);
+        let enumerated = std::mem::take(&mut self.enumerated);
         // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
         // struct with a tag is the one this compiler reads. In a member list
         // any struct goes back to `members`, which tells an anonymous member
@@ -1157,6 +1223,12 @@ impl Parser<'_> {
                 if tag.is_some() || declares == Declares::Member {
                     return Some(Specified::Tag(base));
                 }
+            }
+            // An enumeration with a list declares its constants. In a member
+            // list it declares no member, which 6.7.2.1 p2 asks of a member
+            // declaration.
+            if enumerated && declares != Declares::Member {
+                return Some(Specified::Tag(base));
             }
         }
         // A bit-field with no name, `int : 3;`, before a name is asked for.
@@ -1259,7 +1331,12 @@ impl Parser<'_> {
             // int T, U[sizeof(T)];` the `int`. Declared after the whole list,
             // the first read `sizeof(T)` as the outer typedef's and built
             // wrong code (#1205 review).
-            self.declare_name(name, typedef.then_some(ty), diagnostics)?;
+            let named = if typedef {
+                Named::Typedef(ty)
+            } else {
+                Named::Ordinary
+            };
+            self.declare_name(name, named, diagnostics)?;
             let init = self.initializer(diagnostics)?;
             if typedef && init.is_some() {
                 self.report_at(
@@ -1435,11 +1512,17 @@ impl Parser<'_> {
         // in it: called from inside the loop, the refusal of a struct nested
         // past `MAX_NESTING` cost some 65 KB more stack, and one nested to the
         // limit overflowed the stack rather than being refused, measured.
+        self.enumerated = false;
         let tagged = if self.check(TokenKind::Keyword(Keyword::Struct)) {
-            Some(self.struct_specifier(diagnostics)?)
+            Some((self.struct_specifier(diagnostics)?, "struct"))
+        } else if self.check(TokenKind::Keyword(Keyword::Enum)) {
+            Some((self.enum_specifier(diagnostics)?, "enum"))
         } else {
             None
         };
+        let enumerated = std::mem::take(&mut self.enumerated);
+        let tagged_keyword =
+            |next: TokenKind| matches!(next, TokenKind::Keyword(Keyword::Struct | Keyword::Enum));
         // **A typedef name is a type specifier only where no other is
         // written** (C17 6.7.2 p2): in `T x;` the `T` is the type, and in
         // `int T;` it is the declarator, which hides the typedef name.
@@ -1455,14 +1538,12 @@ impl Parser<'_> {
                     continue;
                 }
             }
-            if named.is_some()
-                && (Word::of(next).is_some() || next == TokenKind::Keyword(Keyword::Struct))
-            {
+            if named.is_some() && (Word::of(next).is_some() || tagged_keyword(next)) {
                 return self.refuse_specifier(Refused::AfterTypedefName, diagnostics);
             }
             if let Some(word) = Word::of(next) {
-                if tagged.is_some() {
-                    return self.refuse_specifier(Refused::AfterStruct, diagnostics);
+                if let Some((_, keyword)) = tagged {
+                    return self.refuse_specifier(Refused::AfterTag(keyword), diagnostics);
                 }
                 match words.with(word) {
                     Ok(next) => words = next,
@@ -1473,12 +1554,16 @@ impl Parser<'_> {
                 self.advance();
                 continue;
             }
-            if next == TokenKind::Keyword(Keyword::Struct) {
+            if tagged_keyword(next) {
+                let keyword = if next == TokenKind::Keyword(Keyword::Struct) {
+                    "struct"
+                } else {
+                    "enum"
+                };
                 return self.refuse_specifier(
-                    if tagged.is_some() {
-                        Refused::AfterStruct
-                    } else {
-                        Refused::BeforeStruct
+                    match tagged {
+                        Some((_, before)) => Refused::AfterTag(before),
+                        None => Refused::BeforeTag(keyword),
                     },
                     diagnostics,
                 );
@@ -1487,8 +1572,12 @@ impl Parser<'_> {
         }
         self.storage = storage;
         self.typedef = typedef;
+        // Set after every member's specifiers were read, so this is the
+        // outer declaration's answer: an `enum` with a list here, which is
+        // what set it last.
+        self.enumerated = enumerated;
         let ty = match (tagged, named, words.ty()) {
-            (Some(tagged), _, _) => tagged,
+            (Some((tagged, _)), _, _) => tagged,
             (None, Some(named), _) => named,
             (None, None, Some(ty)) => self.ast.push_type(ty),
             (None, None, None) => return self.no_type_specifier(at, diagnostics),
@@ -1549,12 +1638,15 @@ impl Parser<'_> {
                 format!("cannot combine with previous `{previous}` declaration specifier"),
                 "C17 6.7.2 p2 lists no type with these specifiers",
             ),
-            Refused::AfterStruct => (
-                "cannot combine with previous `struct` declaration specifier".to_owned(),
+            Refused::AfterTag(keyword) => (
+                format!("cannot combine with previous `{keyword}` declaration specifier"),
                 "a second type",
             ),
-            Refused::BeforeStruct => (
-                "cannot combine a `struct` with the type specifiers before it".to_owned(),
+            Refused::BeforeTag(keyword) => (
+                format!(
+                    "cannot combine {} `{keyword}` with the type specifiers before it",
+                    if keyword == "enum" { "an" } else { "a" }
+                ),
                 "a second type",
             ),
             Refused::AfterTypedefName => (
@@ -1610,6 +1702,15 @@ impl Parser<'_> {
     /// The type `token` names, where it is an identifier the innermost
     /// scope that declares it declares as a typedef name.
     fn typedef_name(&self, token: Token) -> Option<TypeId> {
+        match self.named(token)? {
+            Named::Typedef(ty) => Some(ty),
+            Named::Ordinary | Named::Enumerator(_) => None,
+        }
+    }
+
+    /// What `token` names, where it is an identifier some open scope declares:
+    /// the innermost declaration of it.
+    fn named(&self, token: Token) -> Option<Named> {
         if token.kind != TokenKind::Identifier {
             return None;
         }
@@ -1617,9 +1718,8 @@ impl Parser<'_> {
         self.names
             .iter()
             .rev()
-            .find_map(|scope| scope.get(text))
+            .find_map(|scope| scope.names.get(text))
             .copied()
-            .flatten()
     }
 
     /// Whether specifiers begin at `token`: [`begins_specifiers`], or a
@@ -1629,23 +1729,24 @@ impl Parser<'_> {
         begins_specifiers(token.kind) || self.typedef_name(token).is_some()
     }
 
-    /// Declare `name` in the innermost scope: as a typedef name for `ty`, or
-    /// as an ordinary identifier where `ty` is `None`, which hides a typedef
-    /// name of an outer scope. **Not as the other kind in the same scope**:
-    /// `typedef int T; T T;` at file scope declares `T` twice in one name
-    /// space, which C17 6.7 p3 forbids, and was accepted (#1205 review).
-    /// `None` once reported.
+    /// Declare `name` in the innermost scope as `named`, which hides whatever
+    /// an outer scope declares it as. **Not as another kind in the same
+    /// scope**: `typedef int T; T T;` at file scope declares `T` twice in one
+    /// name space, which C17 6.7 p3 forbids, and was accepted (#1205 review).
+    /// Nor an enumeration constant again, as anything: 6.7 p3 allows only a
+    /// typedef and a tag a second declaration. Two ordinary declarations of
+    /// one name are sema's to judge. `None` once reported.
     fn declare_name(
         &mut self,
         name: Span,
-        ty: Option<TypeId>,
+        named: Named,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         let text = self.sources.snippet(name).to_owned();
         let already = self
             .names
             .last()
-            .and_then(|scope| scope.get(&text))
+            .and_then(|scope| scope.names.get(&text))
             .copied();
         // **A typedef name may be declared again in its scope only as the
         // same type** (C17 6.7 p3, as C11 relaxed it): `typedef int T;
@@ -1653,7 +1754,7 @@ impl Parser<'_> {
         // review). Compared by spelling, since the parser has no type
         // compatibility of its own and two spellings of one type are spelled
         // alike once resolved.
-        if let (Some(Some(before)), Some(now)) = (already, ty) {
+        if let (Some(Named::Typedef(before)), Named::Typedef(now)) = (already, named) {
             if spell_type(self.sources, &self.ast, before)
                 != spell_type(self.sources, &self.ast, now)
             {
@@ -1667,19 +1768,27 @@ impl Parser<'_> {
                 return None;
             }
         }
-        let clash = already.is_some_and(|already| already.is_some() != ty.is_some());
+        let clash = match (already, named) {
+            (None, _)
+            | (Some(Named::Ordinary), Named::Ordinary)
+            | (Some(Named::Typedef(_)), Named::Typedef(_)) => false,
+            (Some(Named::Enumerator(_)), _)
+            | (Some(_), Named::Enumerator(_))
+            | (Some(Named::Ordinary), Named::Typedef(_))
+            | (Some(Named::Typedef(_)), Named::Ordinary) => true,
+        };
         if clash {
             self.report_at(
                 name,
                 REDECLARED_KIND,
                 format!("redefinition of `{text}` as a different kind of name"),
-                "declared in this scope already as the other kind",
+                "declared in this scope already",
                 diagnostics,
             );
             return None;
         }
         if let Some(scope) = self.names.last_mut() {
-            scope.insert(text, ty);
+            scope.names.insert(text, named);
         }
         Some(())
     }
@@ -1697,7 +1806,7 @@ impl Parser<'_> {
             for name in names {
                 // Each parameter is in a scope of its own here, the body's, so
                 // two of one name are sema's to report, not this.
-                let _ = self.declare_name(name, None, diagnostics);
+                let _ = self.declare_name(name, Named::Ordinary, diagnostics);
             }
         }
     }
@@ -1729,6 +1838,89 @@ impl Parser<'_> {
             return None;
         }
         Some(ty)
+    }
+
+    /// C17 6.7.2.2's `enum-specifier`: `enum Tag { A, B = 5, C }`, or
+    /// `enum Tag` for one declared before, as an enumerated type: see
+    /// [`crate::ast::Enumeration`] for what it is and who decides its sign.
+    /// Which enumeration a tag names is the name resolver's, as a struct's is,
+    /// since the two share one name space (6.7.2.3 p2).
+    ///
+    /// Each constant is declared once its definition has been read, value and
+    /// all (C17 6.2.1 p7), so `enum { A = A }` reads an outer `A`.
+    fn enum_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+        self.advance();
+
+        let tag = if self.check(TokenKind::Identifier) {
+            Some(self.advance().span)
+        } else {
+            None
+        };
+
+        if !self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            if tag.is_none() {
+                self.report(
+                    "expected a tag or `{`",
+                    "a tag or `{` is missing here",
+                    diagnostics,
+                );
+                return None;
+            }
+            return Some(self.ast.push_enumeration(Enumeration {
+                tag,
+                constants: None,
+            }));
+        }
+
+        if !self.declaring {
+            self.report_unread(
+                Unread {
+                    what: "an enumeration defined outside a declaration",
+                    clause: "6.7.2.2",
+                },
+                diagnostics,
+            );
+            return None;
+        }
+        self.advance();
+
+        let mut constants = Vec::new();
+        let mut previous = None;
+        loop {
+            if previous.is_some() && self.check(TokenKind::Punct(Punct::RightBrace)) {
+                break;
+            }
+            let name = self.expect(
+                TokenKind::Identifier,
+                "an enumeration constant",
+                diagnostics,
+            )?;
+            let written = if self.eat(TokenKind::Punct(Punct::Equal)) {
+                Some(self.infix_from(CONDITIONAL, diagnostics))
+            } else {
+                None
+            };
+            let enumerator = self.ast.push_enumerator(Enumerator {
+                name,
+                written,
+                previous,
+            });
+            self.declare_name(name, Named::Enumerator(enumerator), diagnostics)?;
+            constants.push(enumerator);
+            previous = Some(enumerator);
+            if !self.eat(TokenKind::Punct(Punct::Comma)) {
+                break;
+            }
+        }
+        self.expect(TokenKind::Punct(Punct::RightBrace), "`}`", diagnostics)?;
+        // A list declares its constants, which is what lets `enum E { A };`
+        // declare nothing else (6.7 p2). `enum E;` alone declares nothing:
+        // footnote 131 says the form a struct has for it does not exist here.
+        self.enumerated = true;
+        Some(self.ast.push_enumeration(Enumeration {
+            tag,
+            constants: Some(constants),
+        }))
     }
 
     /// `struct`, an optional tag, and an optional member list. C17 6.7.2.1.
@@ -2213,7 +2405,7 @@ impl Parser<'_> {
         // parameter's name hides a typedef name from the end of its
         // declarator: `int g(int T, T y)` is not C where `T` is a typedef
         // name, and was read as one (#1205 review).
-        self.names.push(std::collections::HashMap::new());
+        self.names.push(Scope::default());
         let read = self.parameter_items(diagnostics);
         self.names.pop();
         read
@@ -2251,7 +2443,7 @@ impl Parser<'_> {
             let base = self.specifiers(Position::Parameter, diagnostics)?;
             let (name, derivations) = self.declarator(false, diagnostics)?;
             if let Some(name) = name {
-                self.declare_name(name, None, diagnostics)?;
+                self.declare_name(name, Named::Ordinary, diagnostics)?;
             }
             // The parameter's own pointer is the last derivation, the one that
             // makes the parameter's type. `apply` refuses one written anywhere
@@ -2496,7 +2688,7 @@ impl Parser<'_> {
     fn compound(&mut self, diagnostics: &mut DiagnosticSink) -> Option<StmtId> {
         let start = self.peek().span;
         self.expect(TokenKind::Punct(Punct::LeftBrace), "`{`", diagnostics)?;
-        self.names.push(std::collections::HashMap::new());
+        self.names.push(Scope::default());
         let read = self.block_items(start, diagnostics);
         self.names.pop();
         read
@@ -2566,6 +2758,16 @@ impl Parser<'_> {
 
     /// A declaration where C17 6.8.2 allows one instead of a statement.
     fn declaration_statement(&mut self, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let enumerators = self.ast.enumerator_count();
+        let declaring = std::mem::replace(&mut self.declaring, true);
+        let statement = self.declaration_read(enumerators, diagnostics);
+        self.declaring = declaring;
+        statement
+    }
+
+    /// [`Parser::declaration_statement`], as [`Parser::item_read`] is
+    /// [`Parser::item`].
+    fn declaration_read(&mut self, enumerators: usize, diagnostics: &mut DiagnosticSink) -> StmtId {
         let start = self.peek().span;
 
         let declared = match self.declared(Declares::BlockScope, diagnostics) {
@@ -2573,9 +2775,11 @@ impl Parser<'_> {
             Some(Specified::Tag(specified)) => {
                 self.advance();
                 let span = self.join(start, self.previous().span, diagnostics);
+                let enumerators = self.ast.enumerators_since(enumerators);
                 return self.ast.push_stmt(Stmt::Declaration {
                     declarators: Vec::new(),
                     specified,
+                    enumerators,
                     storage: None,
                     span,
                 });
@@ -2598,10 +2802,12 @@ impl Parser<'_> {
         }
 
         let span = self.join(start, self.previous().span, diagnostics);
+        let enumerators = self.ast.enumerators_since(enumerators);
         self.ast.push_stmt(Stmt::Declaration {
             // As at file scope: a typedef declares no object.
             declarators: if typedef { Vec::new() } else { declarators },
             specified,
+            enumerators,
             storage,
             span,
         })
@@ -3007,7 +3213,7 @@ impl Parser<'_> {
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         // A `for` is a block of its own (C17 6.8.5 p5), so a name its clause
         // declares ends with it.
-        self.names.push(std::collections::HashMap::new());
+        self.names.push(Scope::default());
         let read = self.for_parts(start, diagnostics);
         self.names.pop();
         read
@@ -3637,7 +3843,12 @@ impl Parser<'_> {
             return self.string(span, diagnostics);
         }
 
-        if self.eat(TokenKind::Identifier) {
+        if self.check(TokenKind::Identifier) {
+            let named = self.named(self.peek());
+            self.advance();
+            if let Some(Named::Enumerator(enumerator)) = named {
+                return self.ast.push_expr(Expr::Enumerator { enumerator, span });
+            }
             return self.ast.push_expr(Expr::Identifier { span });
         }
 

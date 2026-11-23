@@ -1,0 +1,19 @@
+error[SC0301]: `enum Later` names no enumeration declared before it
+   ╭─[ an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:1:6 ]
+   │
+ 1 │ enum Later later;
+   │      ──┬──  
+   │        ╰──── an enumeration is named only after its list
+───╯
+  = note: C17 6.7.2.3 p3
+error[SC0312]: redefinition of `enum Twice`
+   ╭─[ an_enumeration_used_before_its_list_or_declared_twice_is_refused.c:3:6 ]
+   │
+ 2 │ enum Twice { A };
+   │      ──┬──  
+   │        ╰──── previously defined here
+ 3 │ enum Twice { B };
+   │      ──┬──  
+   │        ╰──── defined again here
+───╯
+  = note: C17 6.7.2.3 p1

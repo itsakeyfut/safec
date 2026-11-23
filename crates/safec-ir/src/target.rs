@@ -352,6 +352,22 @@ impl Target {
         (self.size, Sign::Unsigned)
     }
 
+    /// The sign of an enumerated type whose constants are `negative` or not,
+    /// which C17 6.7.2.2 p4 leaves to the implementation: always signed for
+    /// MSVC, and elsewhere unsigned where no constant is negative. Measured
+    /// on every row of [`Target::ALL`] with `clang 22.1.8 -std=c17
+    /// --target=<triple>` reading `_Generic((enum E)0, int: 1, unsigned: 2)`
+    /// for `enum E { A, B };`, and for an enumeration with a negative
+    /// constant, which is `int` on all eight. The rank is `int`'s either way,
+    /// since a constant `int` does not hold is refused (p2).
+    pub fn enumeration_sign(self, negative: bool) -> Sign {
+        if negative || self.triple.ends_with("-msvc") {
+            Sign::Signed
+        } else {
+            Sign::Unsigned
+        }
+    }
+
     /// How many bits a pointer takes here: what an object holding one is
     /// worth when the memory check asks whether an access fits it. See
     /// ADR-0060.

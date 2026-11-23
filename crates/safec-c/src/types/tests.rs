@@ -2067,7 +2067,7 @@ fn a_struct_is_typed_and_held_to_what_c_says_of_one() {
 /// assigned by their tag at every place the type checker asks
 /// `Ast::compatible`: two tags are refused at each, and one tag at none.
 ///
-/// Mutation: pass `|_, _| true` for `same_struct` at any of the five calls
+/// Mutation: pass `|_, _| true` for `same_tag` at any of the five calls
 /// in this module that compare pointers; that call accepts two tags, and
 /// this fails. The two that compare struct values, in `assignable` and
 /// `conditional`, are held by
@@ -2421,7 +2421,7 @@ fn a_struct_with_a_flexible_array_member_is_no_member_and_no_element() {
 /// take a struct; its row goes silent. Mutation: let `==` or `<` take two
 /// structs; its row goes silent. Mutation: answer `Some(true)` for a struct
 /// place in `assignable` or `compound_assignable`; `s = 1` or `s += 1` goes
-/// silent. Mutation: pass `|_, _| true` for `same_struct` in
+/// silent. Mutation: pass `|_, _| true` for `same_tag` in
 /// `conditional`; `c ? s : t` goes silent. Mutation: refuse a struct as an
 /// `if` condition only; the `while`, `for` and `?:` rows go silent.
 /// Mutation: report the struct arm of `increment` under another code; its

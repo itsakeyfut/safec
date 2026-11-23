@@ -24,8 +24,8 @@ use safec_ir::ir::Rank;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Storage, Type, TypeId, spell_type,
+    Ast, Attribute, Declaration, EnumerationId, EnumeratorId, Expr, ExprId, ForStart,
+    InitDeclarator, Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
@@ -114,11 +114,34 @@ pub struct BindingId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TagId(u32);
 
-/// A tag the program declared, which is one structure type: C17 6.2.3 puts
-/// tags in a name space of their own, and 6.7.2.3 says when two uses of one
-/// name are one type.
+/// Which kind of type a tag is: C17 6.2.3 p1 gives struct and enumeration
+/// tags one name space, so `struct S` and `enum S` in one scope are one tag
+/// written two ways, which 6.7.2.3 p2 forbids.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum TagKind {
+    /// `struct`.
+    Struct,
+    /// `enum`.
+    Enum,
+}
+
+impl TagKind {
+    /// The keyword that writes it.
+    fn keyword(self) -> &'static str {
+        match self {
+            Self::Struct => "struct",
+            Self::Enum => "enum",
+        }
+    }
+}
+
+/// A tag the program declared, which is one structure or enumerated type:
+/// C17 6.2.3 puts tags in a name space of their own, and 6.7.2.3 says when
+/// two uses of one name are one type.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Tag {
+    /// Whether it is a struct's or an enumeration's.
+    pub kind: TagKind,
     /// The name as first written, or `None` for a struct with no tag, which
     /// is a type of its own wherever it is written.
     pub name: Option<Span>,
@@ -178,8 +201,16 @@ pub struct Resolution {
     /// Every attribute this stage accepted as a hatch, by where it was written.
     hatches: Vec<Span>,
     tags: Vec<Tag>,
-    /// The tag every struct written in the tree is, by the type's id.
+    /// The tag every struct and enumerated type written in the tree is, by
+    /// the type's id.
     tag_of: HashMap<TypeId, TagId>,
+    /// The tag each `enum` specifier was bound to, so that a `const` copy of
+    /// one, which [`Ast::push_const`] gives an id of its own, is the same
+    /// tag rather than a second definition of it.
+    enumeration_tag: HashMap<EnumerationId, TagId>,
+    /// The `enum` specifier whose list gave each enumeration tag its
+    /// constants. See [`Resolution::enumeration_definition`].
+    enumeration_definitions: HashMap<TagId, EnumerationId>,
     /// The struct types that are complete where they are written. See
     /// [`Resolution::complete`].
     complete: HashSet<TypeId>,
@@ -366,7 +397,7 @@ impl Resolution {
     /// The tag the struct at `ty` is.
     ///
     /// Two struct types are one type exactly when this answers one tag for
-    /// both, which is what [`Resolution::same_struct`] asks for every caller
+    /// both, which is what [`Resolution::same_tag`] asks for every caller
     /// of `Ast::compatible`.
     ///
     /// # Panics
@@ -383,15 +414,24 @@ impl Resolution {
             .unwrap_or_else(|| panic!("the struct at {ty:?} was bound to no tag"))
     }
 
-    /// Whether the struct types at `left` and `right` are one type, which
-    /// they are exactly when they are one tag (C17 6.2.7 p1). What a caller
-    /// passes [`Ast::compatible`] as its `same_struct`.
+    /// Whether the struct types, or the enumerated types, at `left` and
+    /// `right` are one type, which they are exactly when they are one tag
+    /// (C17 6.2.7 p1). What a caller passes [`Ast::compatible`] as its
+    /// `same_tag`.
     ///
     /// # Panics
     ///
-    /// As [`Resolution::tag`] does, if either is not a struct this stage bound.
-    pub fn same_struct(&self, left: TypeId, right: TypeId) -> bool {
+    /// As [`Resolution::tag`] does, if either is not a type this stage bound.
+    pub fn same_tag(&self, left: TypeId, right: TypeId) -> bool {
         self.tag(left) == self.tag(right)
+    }
+
+    /// The `enum` specifier with a list that the enumerated type `ty` is,
+    /// where this stage bound it to a tag whose list was written: itself, for
+    /// `enum E { A }`, or the one an `enum E` written after it names.
+    pub fn enumeration_definition(&self, ty: TypeId) -> Option<EnumerationId> {
+        let tag = self.tag_of.get(&ty)?;
+        self.enumeration_definitions.get(tag).copied()
     }
 
     /// The tag `id` names.
@@ -470,6 +510,8 @@ pub fn resolve(
             hatches: Vec::new(),
             tags: Vec::new(),
             tag_of: HashMap::new(),
+            enumeration_tag: HashMap::new(),
+            enumeration_definitions: HashMap::new(),
             complete: HashSet::new(),
             closed_at: HashMap::new(),
             walked_at: HashMap::new(),
@@ -644,10 +686,12 @@ impl Resolver<'_> {
             Item::Declaration {
                 declarators,
                 specified,
+                enumerators,
                 storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
+                self.enumerators(enumerators, diagnostics);
                 self.declarators(declarators, diagnostics);
                 self.defined_objects(declarators, diagnostics);
                 for declarator in declarators {
@@ -811,7 +855,13 @@ impl Resolver<'_> {
             } = self.ast.ty(specified)
             {
                 let found = self.tag_here(*tag);
-                let id = found.unwrap_or_else(|| self.declare_tag(Some(*tag), None));
+                let id = match found {
+                    Some(id) => {
+                        self.same_kind(id, TagKind::Struct, *tag, diagnostics);
+                        id
+                    }
+                    None => self.declare_tag(TagKind::Struct, Some(*tag), None),
+                };
                 self.resolution.tag_of.insert(specified, id);
             }
             self.walk_type(specified, diagnostics);
@@ -941,8 +991,14 @@ impl Resolver<'_> {
                 Type::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
+                } => {
+                    if let Some(enumeration) = ast.enumeration_of(ty) {
+                        if !self.resolution.tag_of.contains_key(&ty) {
+                            self.bind_enumeration(ty, enumeration, diagnostics);
+                        }
+                    }
                 }
-                | Type::Void => {}
+                Type::Void => {}
                 Type::Pointer(pointee) => pending.push(Step::Type(*pointee)),
                 Type::Array {
                     element,
@@ -1126,10 +1182,12 @@ impl Resolver<'_> {
             Stmt::Declaration {
                 declarators,
                 specified,
+                enumerators,
                 storage,
                 ..
             } => {
                 self.specified(declarators, *specified, diagnostics);
+                self.enumerators(enumerators, diagnostics);
                 if *storage == Some(Storage::Extern) {
                     self.linking = Some(self.scopes.len() - 1);
                 }
@@ -1249,6 +1307,19 @@ impl Resolver<'_> {
         }
     }
 
+    /// Walk the value written for each enumeration constant a declaration
+    /// declares, in the scope the declaration is in, as any expression is:
+    /// a type name in one binds its struct to the tag in scope there. The
+    /// constants themselves are not looked up, since the parser resolved
+    /// each use of one to the constant it names.
+    fn enumerators(&mut self, enumerators: &[EnumeratorId], diagnostics: &mut DiagnosticSink) {
+        for &id in enumerators {
+            if let Some(written) = self.ast.enumerator(id).written {
+                self.expr(written, diagnostics);
+            }
+        }
+    }
+
     /// Every name under one expression.
     ///
     /// An explicit stack rather than a recursion, because an expression tree
@@ -1351,13 +1422,16 @@ impl Resolver<'_> {
         diagnostics: &mut DiagnosticSink,
     ) {
         let Some(tag) = tag else {
-            let id = self.declare_tag(None, None);
+            let id = self.declare_tag(TagKind::Struct, None, None);
             self.resolution.tag_of.insert(ty, id);
             return;
         };
 
         let id = if defines {
             match self.tag_here(tag) {
+                Some(id) if !self.same_kind(id, TagKind::Struct, tag, diagnostics) => {
+                    self.declare_tag(TagKind::Struct, None, Some(tag))
+                }
                 Some(id) => {
                     if let Some(first) = self.resolution.tags[id.0 as usize].defined {
                         let what = format!("struct {}", self.sources.snippet(tag));
@@ -1373,12 +1447,15 @@ impl Resolver<'_> {
                     }
                     id
                 }
-                None => self.declare_tag(Some(tag), Some(tag)),
+                None => self.declare_tag(TagKind::Struct, Some(tag), Some(tag)),
             }
         } else {
             match self.tag_visible(tag) {
+                Some(id) if !self.same_kind(id, TagKind::Struct, tag, diagnostics) => {
+                    self.declare_tag(TagKind::Struct, None, None)
+                }
                 Some(id) => id,
-                None => self.declare_tag(Some(tag), None),
+                None => self.declare_tag(TagKind::Struct, Some(tag), None),
             }
         };
         self.resolution.tag_of.insert(ty, id);
@@ -1388,6 +1465,110 @@ impl Resolver<'_> {
         if !defines && self.completed.contains(&id) {
             self.resolution.complete.insert(ty);
         }
+    }
+
+    /// Bind the enumerated type at `ty` to a tag, by C17 6.7.2.3, as
+    /// [`Resolver::bind_tag`] binds a struct, with two differences. An
+    /// enumeration is complete once its list is read, so a list is all a tag
+    /// is ever declared by. And `enum E` without a list may name only an
+    /// enumeration already declared (p3), so one that names nothing is
+    /// refused rather than declaring an incomplete type.
+    ///
+    /// A `const` copy of a specifier is bound to the tag the specifier was:
+    /// `typedef enum { A } T; const T x;` is one enumeration.
+    fn bind_enumeration(
+        &mut self,
+        ty: TypeId,
+        enumeration: EnumerationId,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        if let Some(&id) = self.resolution.enumeration_tag.get(&enumeration) {
+            self.resolution.tag_of.insert(ty, id);
+            return;
+        }
+        let written = self.ast.enumeration(enumeration);
+        let id = match (written.tag, written.constants.is_some()) {
+            (None, _) => self.declare_tag(TagKind::Enum, None, None),
+            (Some(tag), true) => match self.tag_here(tag) {
+                Some(id) if !self.same_kind(id, TagKind::Enum, tag, diagnostics) => {
+                    self.declare_tag(TagKind::Enum, None, Some(tag))
+                }
+                Some(id) => {
+                    if let Some(first) = self.resolution.tags[id.0 as usize].defined {
+                        let what = format!("enum {}", self.sources.snippet(tag));
+                        diagnostics.report(redefined(
+                            &what,
+                            tag,
+                            first,
+                            "defined",
+                            "C17 6.7.2.3 p1",
+                        ));
+                    }
+                    self.declare_tag(TagKind::Enum, None, Some(tag))
+                }
+                None => self.declare_tag(TagKind::Enum, Some(tag), Some(tag)),
+            },
+            (Some(tag), false) => match self.tag_visible(tag) {
+                Some(id) if self.same_kind(id, TagKind::Enum, tag, diagnostics) => id,
+                Some(_) => self.declare_tag(TagKind::Enum, None, None),
+                None => {
+                    let spelled = self.sources.snippet(tag);
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "`enum {spelled}` names no enumeration declared before it"
+                        ))
+                        .with_code(UNDECLARED)
+                        .with_label(Label::primary(
+                            tag,
+                            "an enumeration is named only after its list",
+                        ))
+                        .with_note("C17 6.7.2.3 p3"),
+                    );
+                    self.declare_tag(TagKind::Enum, None, None)
+                }
+            },
+        };
+        if self.ast.enumeration(enumeration).constants.is_some() {
+            self.resolution
+                .enumeration_definitions
+                .insert(id, enumeration);
+        }
+        self.resolution.enumeration_tag.insert(enumeration, id);
+        self.resolution.tag_of.insert(ty, id);
+    }
+
+    /// Whether the tag `id`, found for `written`, is of `kind`; reported where
+    /// it is not, since C17 6.7.2.3 p2 makes `struct S` and `enum S` one tag
+    /// written two ways. The wording is clang's.
+    fn same_kind(
+        &self,
+        id: TagId,
+        kind: TagKind,
+        written: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        let found = &self.resolution.tags[id.0 as usize];
+        if found.kind == kind {
+            return true;
+        }
+        let spelled = self.sources.snippet(written);
+        let mut diagnostic = Diagnostic::error(format!(
+            "use of `{spelled}` with tag type that does not match previous declaration"
+        ))
+        .with_code(CONFLICTING)
+        .with_label(Label::primary(
+            written,
+            format!("written `{} {spelled}` here", kind.keyword()),
+        ))
+        .with_note("C17 6.7.2.3 p2");
+        if let Some(first) = found.name {
+            diagnostic = diagnostic.with_label(Label::secondary(
+                first,
+                format!("declared `{} {spelled}` here", found.kind.keyword()),
+            ));
+        }
+        diagnostics.report(diagnostic);
+        false
     }
 
     /// The tag named as `name` is, declared in the innermost scope only.
@@ -1422,9 +1603,13 @@ impl Resolver<'_> {
 
     /// Add a tag to the innermost scope, or to none for a struct with no tag,
     /// which nothing can name.
-    fn declare_tag(&mut self, name: Option<Span>, defined: Option<Span>) -> TagId {
+    fn declare_tag(&mut self, kind: TagKind, name: Option<Span>, defined: Option<Span>) -> TagId {
         let id = TagId(self.resolution.tags.len() as u32);
-        self.resolution.tags.push(Tag { name, defined });
+        self.resolution.tags.push(Tag {
+            kind,
+            name,
+            defined,
+        });
         if name.is_some() {
             self.tag_scopes
                 .last_mut()
@@ -1469,7 +1654,7 @@ impl Resolver<'_> {
     /// Two declarations that are allowed refer to one entity, and 6.7 p4
     /// wants their types compatible. The new one is compared with the name's
     /// standing declaration, see [`Declared`]; two struct types are
-    /// compatible when they are one tag, see [`Resolution::same_struct`].
+    /// compatible when they are one tag, see [`Resolution::same_tag`].
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
@@ -1676,7 +1861,7 @@ impl Resolver<'_> {
                 },
             ) if pointers(self.ast, earlier) == pointers(self.ast, ty) => {
                 self.ast.compatible(*left_returns, *right_returns, &|a, b| {
-                    self.resolution.same_struct(a, b)
+                    self.resolution.same_tag(a, b)
                 }) && if definition {
                     prototype.is_empty()
                 } else {
@@ -1696,11 +1881,11 @@ impl Resolver<'_> {
                 prototype.is_empty()
                     && self
                         .ast
-                        .compatible(earlier, ty, &|a, b| self.resolution.same_struct(a, b))
+                        .compatible(earlier, ty, &|a, b| self.resolution.same_tag(a, b))
             }
             _ => self
                 .ast
-                .compatible(earlier, ty, &|a, b| self.resolution.same_struct(a, b)),
+                .compatible(earlier, ty, &|a, b| self.resolution.same_tag(a, b)),
         }
     }
 

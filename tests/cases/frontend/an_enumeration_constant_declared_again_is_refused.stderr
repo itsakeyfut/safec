@@ -1,0 +1,7 @@
+error[SC0313]: redefinition of `C` as a different kind of name
+   ╭─[ an_enumeration_constant_declared_again_is_refused.c:2:5 ]
+   │
+ 2 │ int C;
+   │     ┬  
+   │     ╰── declared in this scope already
+───╯

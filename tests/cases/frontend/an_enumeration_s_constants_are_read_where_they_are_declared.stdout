@@ -1,0 +1,13 @@
+Declaration an_enumeration_s_constants_are_read_where_they_are_declared.c:1:1 "int"
+  Enumerator an_enumeration_s_constants_are_read_where_they_are_declared.c:1:10 "A"
+  Enumerator an_enumeration_s_constants_are_read_where_they_are_declared.c:1:13 "B"
+    Binary an_enumeration_s_constants_are_read_where_they_are_declared.c:1:17 "+"
+      Enumerator an_enumeration_s_constants_are_read_where_they_are_declared.c:1:17 "A"
+      Number an_enumeration_s_constants_are_read_where_they_are_declared.c:1:21 "2"
+  Enumerator an_enumeration_s_constants_are_read_where_they_are_declared.c:1:24 "C"
+Function an_enumeration_s_constants_are_read_where_they_are_declared.c:2:1 "main" "int (void)"
+  Compound an_enumeration_s_constants_are_read_where_they_are_declared.c:2:16
+    Declaration an_enumeration_s_constants_are_read_where_they_are_declared.c:3:5 "e" "int"
+      Enumerator an_enumeration_s_constants_are_read_where_they_are_declared.c:3:16 "C"
+    Return an_enumeration_s_constants_are_read_where_they_are_declared.c:4:5
+      Identifier an_enumeration_s_constants_are_read_where_they_are_declared.c:4:12 "e"
