@@ -98,6 +98,6 @@ programs! {
     /// on from a written one, negative, in a `switch`, an array length and
     /// `sizeof`, one in a block that hides a file's and an object that hides
     /// one (#1204). Mutation: count the first of a list from `1` in
-    /// `Checker::enumerator_value`; this exits 1.
+    /// `Checker::decide_enumerations`; this exits 1.
     an_enum_gives_each_enumerator_its_value,
 }

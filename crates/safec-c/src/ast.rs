@@ -71,6 +71,29 @@ impl EnumeratorId {
     }
 }
 
+/// Where an enumeration is in [`Ast`]: one `enum` specifier as written,
+/// with its list or without.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EnumerationId(u32);
+
+/// One `enum` specifier, C17 6.7.2.2: `enum E { A, B }` with its constants,
+/// or `enum E` naming one declared before.
+///
+/// **Beside the type, as `const` is** (see [`Ast::push_const`]). The type an
+/// enumeration is stays a [`Type::Integer`], so every question about an
+/// integer answers for it, and [`Ast::enumeration_of`] says which
+/// enumeration it is for the few that ask: whether two types are compatible
+/// (6.2.7 p1), and which tag a specifier names, which the name resolver
+/// answers as it does for a struct. Its sign is the type checker's, which
+/// knows the constants' values: see [`Ast::set_enumeration_sign`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Enumeration {
+    /// The tag written, if one was.
+    pub tag: Option<Span>,
+    /// The constants of a list, or `None` for `enum E` without one.
+    pub constants: Option<Vec<EnumeratorId>>,
+}
+
 /// One enumeration constant, C17 6.7.2.2: its name, and how its value is
 /// given.
 ///
@@ -1173,6 +1196,15 @@ pub struct Ast {
     consts: std::collections::HashSet<TypeId>,
     /// Every enumeration constant, in the order declared.
     enumerators: Vec<Enumerator>,
+    /// Every `enum` specifier, as written.
+    enumerations: Vec<Enumeration>,
+    /// Which enumeration each enumerated type is, by the type's id, `const`
+    /// copies included.
+    enumeration_of: std::collections::HashMap<TypeId, EnumerationId>,
+    /// Whether every enumerated type's sign is the one the type checker
+    /// chose, rather than the `int` the parser gave it. See
+    /// [`Ast::compatible`].
+    enumerations_settled: bool,
 }
 
 impl Ast {
@@ -1192,7 +1224,63 @@ impl Ast {
         }
         let copy = self.push_type(self.ty(ty).clone());
         self.consts.insert(copy);
+        if let Some(&enumeration) = self.enumeration_of.get(&ty) {
+            self.enumeration_of.insert(copy, enumeration);
+        }
         copy
+    }
+
+    /// An enumerated type for `enumeration`: an `int` until the type checker
+    /// gives it its sign.
+    pub fn push_enumeration(&mut self, enumeration: Enumeration) -> TypeId {
+        let id = EnumerationId(self.enumerations.len() as u32);
+        self.enumerations.push(enumeration);
+        let ty = self.push_type(Type::INT);
+        self.enumeration_of.insert(ty, id);
+        ty
+    }
+
+    /// Which enumeration `ty` is, where it is an enumerated type.
+    pub fn enumeration_of(&self, ty: TypeId) -> Option<EnumerationId> {
+        self.enumeration_of.get(&ty).copied()
+    }
+
+    /// The enumeration an id names.
+    pub fn enumeration(&self, id: EnumerationId) -> &Enumeration {
+        &self.enumerations[id.0 as usize]
+    }
+
+    /// Every enumerated type, by id, `const` copies included.
+    pub fn enumerated_types(&self) -> Vec<TypeId> {
+        let mut types: Vec<TypeId> = self.enumeration_of.keys().copied().collect();
+        types.sort_by_key(|ty| ty.0);
+        types
+    }
+
+    /// Give the enumerated type `ty` its sign, C17 6.7.2.2 p4: the integer
+    /// type the implementation chose for it, which the type checker knows
+    /// once the constants have values. The one place a type changes after it
+    /// was pushed, and only from the `int` [`Ast::push_enumeration`] wrote.
+    ///
+    /// # Panics
+    ///
+    /// If `ty` is no enumerated type.
+    pub fn set_enumeration_sign(&mut self, ty: TypeId, sign: Sign) {
+        assert!(
+            self.enumeration_of.contains_key(&ty),
+            "only an enumerated type's sign is set late"
+        );
+        self.types[ty.0 as usize] = Type::Integer {
+            rank: Rank::Int,
+            sign,
+        };
+    }
+
+    /// Say that every enumerated type has its sign. Before this,
+    /// [`Ast::compatible`] compares an enumerated type with an integer type
+    /// by rank alone, since the sign is not known yet.
+    pub fn settle_enumerations(&mut self) {
+        self.enumerations_settled = true;
     }
 
     /// Whether `ty` is `const`-qualified. See [`Ast::push_const`].
@@ -1322,7 +1410,7 @@ impl Ast {
     /// One of the extra cases is reachable in the subset this compiler reads,
     /// and it is in `compatible_parameters` below; another is a struct, which
     /// is compatible with a struct of the same tag, answered by
-    /// `same_struct`: `Resolution::same_struct` is what a caller passes. It is
+    /// `same_tag`: `Resolution::same_tag` is what a caller passes. It is
     /// named for the relation so that whoever adds a case is extending the
     /// right thing.
     ///
@@ -1350,12 +1438,37 @@ impl Ast {
         &self,
         left: TypeId,
         right: TypeId,
-        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+        same_tag: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
         // C17 6.7.3 p11: "both shall have the identically qualified version
         // of a compatible type", at every level the comparison descends to.
         if self.is_const(left) != self.is_const(right) {
             return false;
+        }
+        // C17 6.7.2.2 p4 and 6.2.7 p1: two enumerated types are compatible
+        // only when they are one enumeration, which is one tag as two
+        // structs are, and one is compatible with its integer type. Before
+        // that type's sign is chosen, the name resolver compares the two by
+        // rank alone, and the type checker compares them again once it is
+        // (`Checker::check_redeclared_lengths`).
+        match (self.enumeration_of(left), self.enumeration_of(right)) {
+            (Some(_), Some(_)) => return same_tag(left, right),
+            (Some(_), None) | (None, Some(_)) if !self.enumerations_settled => {
+                return matches!(
+                    (self.ty(left), self.ty(right)),
+                    (
+                        Type::Integer {
+                            rank: Rank::Int,
+                            ..
+                        },
+                        Type::Integer {
+                            rank: Rank::Int,
+                            ..
+                        }
+                    )
+                );
+            }
+            _ => {}
         }
         match (self.ty(left), self.ty(right)) {
             (
@@ -1369,11 +1482,9 @@ impl Ast {
                 },
             ) => left_rank == right_rank && left_sign == right_sign,
             (Type::Void, Type::Void) => true,
-            (Type::Pointer(left), Type::Pointer(right)) => {
-                self.compatible(*left, *right, same_struct)
-            }
+            (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right, same_tag),
             (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
-                self.compatible(*left, *right, same_struct)
+                self.compatible(*left, *right, same_tag)
             }
             (
                 Type::Function {
@@ -1385,8 +1496,8 @@ impl Ast {
                     parameters: right_parameters,
                 },
             ) => {
-                self.compatible(*left, *right, same_struct)
-                    && self.compatible_parameters(left_parameters, right_parameters, same_struct)
+                self.compatible(*left, *right, same_tag)
+                    && self.compatible_parameters(left_parameters, right_parameters, same_tag)
             }
             // Written out rather than `_ => false`, so that a variant added to
             // `Type` has to be answered for here: `error[E0004]` is what says
@@ -1405,9 +1516,10 @@ impl Ast {
             | (Type::Function { .. }, _) => false,
             // Two struct types are one type exactly when they are one tag (C17
             // 6.2.7 p1, with 6.7.2.3 p4 and p5 saying when they are), which is
-            // the resolver's to answer: `same_struct` asks it, so that this
-            // module depends on nothing that knows what a tag is.
-            (Type::Struct { .. }, Type::Struct { .. }) => same_struct(left, right),
+            // the resolver's to answer: `same_tag` asks it, as it does for two
+            // enumerations, so that this module depends on nothing that knows
+            // what a tag is.
+            (Type::Struct { .. }, Type::Struct { .. }) => same_tag(left, right),
             (Type::Struct { .. }, _) => false,
         }
     }
@@ -1420,10 +1532,10 @@ impl Ast {
         &self,
         left: TypeId,
         right: TypeId,
-        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+        same_tag: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
         if self.is_const(left) == self.is_const(right) {
-            return self.compatible(left, right, same_struct);
+            return self.compatible(left, right, same_tag);
         }
         // Each id is a copy of the other's type, so compare the copies'
         // children with the qualifier set aside: the one that is `const`
@@ -1433,7 +1545,7 @@ impl Ast {
         } else {
             (right, left)
         };
-        self.compatible_ignoring(qualified, plain, same_struct)
+        self.compatible_ignoring(qualified, plain, same_tag)
     }
 
     /// Whether `qualified`, a `const` type, is compatible with `plain` once
@@ -1442,16 +1554,14 @@ impl Ast {
         &self,
         qualified: TypeId,
         plain: TypeId,
-        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+        same_tag: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
         match (self.ty(qualified), self.ty(plain)) {
-            (Type::Pointer(left), Type::Pointer(right)) => {
-                self.compatible(*left, *right, same_struct)
-            }
+            (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right, same_tag),
             (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
-                self.compatible(*left, *right, same_struct)
+                self.compatible(*left, *right, same_tag)
             }
-            (Type::Struct { .. }, Type::Struct { .. }) => same_struct(qualified, plain),
+            (Type::Struct { .. }, Type::Struct { .. }) => same_tag(qualified, plain),
             // Two integer types are compatible only where they are one type
             // (C17 6.2.7 p1): `const long long *` takes no `int *`. Every
             // kind is named on the left, so one added later has to answer
@@ -1505,13 +1615,13 @@ impl Ast {
         &self,
         left: &Parameters,
         right: &Parameters,
-        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+        same_tag: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
         match (left, right) {
             (Parameters::Prototype(left), Parameters::Prototype(right)) => {
                 left.len() == right.len()
                     && left.iter().zip(right).all(|(left, right)| {
-                        self.compatible_unqualified(left.ty, right.ty, same_struct)
+                        self.compatible_unqualified(left.ty, right.ty, same_tag)
                     })
             }
             (Parameters::Unspecified, Parameters::Unspecified) => true,

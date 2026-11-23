@@ -1,0 +1,33 @@
+error[SC0313]: use of `S` with tag type that does not match previous declaration
+   ╭─[ a_struct_and_an_enumeration_share_one_tag_name_space.c:2:6 ]
+   │
+ 1 │ struct S { int x; };
+   │        ┬  
+   │        ╰── declared `struct S` here
+ 2 │ enum S { A };
+   │      ┬  
+   │      ╰── written `enum S` here
+───╯
+  = note: C17 6.7.2.3 p2
+error[SC0313]: use of `E` with tag type that does not match previous declaration
+   ╭─[ a_struct_and_an_enumeration_share_one_tag_name_space.c:4:8 ]
+   │
+ 3 │ enum E { B };
+   │      ┬  
+   │      ╰── declared `enum E` here
+ 4 │ struct E *p;
+   │        ┬  
+   │        ╰── written `struct E` here
+───╯
+  = note: C17 6.7.2.3 p2
+error[SC0313]: use of `E` with tag type that does not match previous declaration
+   ╭─[ a_struct_and_an_enumeration_share_one_tag_name_space.c:7:10 ]
+   │
+ 6 │     struct E { int x; };
+   │            ┬  
+   │            ╰── declared `struct E` here
+ 7 │     enum E e = B;
+   │          ┬  
+   │          ╰── written `enum E` here
+───╯
+  = note: C17 6.7.2.3 p2

@@ -1,0 +1,22 @@
+error[SC0313]: conflicting types for `h`
+   ╭─[ an_enumerated_type_is_compatible_with_its_integer_type_alone.c:8:8 ]
+   │
+ 7 │ enum E h(void);
+   │        ┬  
+   │        ╰── previously declared as `int (void)`
+ 8 │ enum F h(void);
+   │        ┬  
+   │        ╰── declared here as `int (void)`
+───╯
+  = note: C17 6.7 p4
+error[SC0313]: conflicting types for `g`
+   ╭─[ an_enumerated_type_is_compatible_with_its_integer_type_alone.c:6:5 ]
+   │
+ 5 │ enum E g(void);
+   │        ┬  
+   │        ╰── previously declared as `unsigned int (void)`
+ 6 │ int g(void);
+   │     ┬  
+   │     ╰── declared here as `int (void)`
+───╯
+  = note: C17 6.7 p4 and 6.7.6.2 p6

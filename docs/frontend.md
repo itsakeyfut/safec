@@ -216,8 +216,14 @@ check** (#1204). The parser knows which identifiers name one, in the same
 scope table as typedef names, and reads a use as `Expr::Enumerator` rather
 than as an identifier, since a constant is no object. Its value is the type
 check's, which evaluates the value written for it, or counts on from the one
-before (C17 6.7.2.2 p3). An enumerated type is `int` from the parser on,
-which `clang` makes every enumeration whose constants `int` holds.
+before (C17 6.7.2.2 p3). An enumerated type is an integer type to every
+stage, with which enumeration it is recorded beside it, as `const` is: its
+tag is the name resolver's, in one name space with a struct's, and its sign
+the type check's once the constants have values. That sign is the target's
+choice (p4): `int` on MSVC, and elsewhere `unsigned int` where no constant
+is negative, as `clang` makes it. An enumeration defined outside a
+declaration, in a cast in a statement or a function definition's header, is
+not read yet.
 
 None is a gap the lexer left, which is why they are a table of their own:
 the first three rows are about what a token is, and these are about what a

@@ -8487,12 +8487,27 @@ cases! {
         // reported again (C17 6.7.2.2 p2). Mutation: report nothing in
         // `Checker::check_enumerators`; both are accepted.
         an_enumerator_value_c_does_not_allow_is_refused: ["--emit", "ast"],
-        // `enum E` before `E`'s list (C17 6.7.2.3 p3), an enumeration defined
-        // twice in one scope, and an enumeration constant declared again as
-        // an object (6.7 p3). Mutation: accept a tag nothing declared in
-        // `Parser::enum_specifier`; `later` is declared and the first report
-        // is the second.
+        // `enum E` before `E`'s list (C17 6.7.2.3 p3), and an enumeration
+        // defined twice in one scope (p1). Mutation: declare a tag for a list
+        // nobody wrote in `Resolver::bind_enumeration`, as a struct's is;
+        // `later` is declared and the first report is the second.
         an_enumeration_used_before_its_list_or_declared_twice_is_refused: ["--emit", "ast"],
+        // An enumeration constant declared again as an object in its scope
+        // (C17 6.7 p3), which the parser reports, since only the parser knows
+        // which names are constants. Mutation: treat an enumeration constant
+        // as an ordinary name in `Parser::declare_name`; it is accepted.
+        an_enumeration_constant_declared_again_is_refused: ["--emit", "ast"],
+        // Two enumerated types are compatible only when they are one
+        // enumeration, and one with its integer type alone, which here is
+        // `unsigned int` (C17 6.7.2.2 p4, 6.2.7 p1): `f` is one function, and
+        // `g` and `h` are refused. The name resolver cannot see `g`'s, since
+        // the sign comes from the constants' values. Mutation: leave out the
+        // integer arm in `Checker::lengths_disagree`; `g` is accepted.
+        an_enumerated_type_is_compatible_with_its_integer_type_alone: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
+        // `struct S` and `enum S` are one tag written two ways (C17 6.7.2.3
+        // p2), and an inner `struct E` hides an outer `enum E`. Mutation:
+        // answer `true` in `Resolver::same_kind`; all three are accepted.
+        a_struct_and_an_enumeration_share_one_tag_name_space: ["--emit", "ast"],
         // A name declared as a typedef and as an object in one scope, or as a
         // typedef of two types, is `SC0313` (C17 6.7 p3); the same type twice
         // is not (#1205 review). Mutation: insert into the scope without the
@@ -10062,6 +10077,11 @@ cases! {
     }
 
     "lowering" => {
+        // An enumeration with no negative constant is `unsigned int` off
+        // MSVC, as `clang` makes it (C17 6.7.2.2 p4), so `u - 1 < 0` is an
+        // unsigned comparison and `s - 1 < 0` a signed one. Mutation: answer
+        // `Sign::Signed` in `Target::enumeration_sign`; both are `slt`.
+        an_enumerated_type_takes_the_sign_its_target_gives_it: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
         // The shape of the Safety IR a program lowers to, where no check and no
         // frontend report is what the case is about.
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

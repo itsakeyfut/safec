@@ -27,9 +27,9 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, Attribute, BinOp, Declaration, Enumerator, EnumeratorId, Expr, ExprId, ForStart, Function,
-    InitDeclarator, Item, Nullability, Parameters, Specifier, Stmt, StmtId, Storage, Type, TypeId,
-    UnOp, spell_type,
+    Ast, Attribute, BinOp, Declaration, Enumeration, Enumerator, EnumeratorId, Expr, ExprId,
+    ForStart, Function, InitDeclarator, Item, Nullability, Parameters, Specifier, Stmt, StmtId,
+    Storage, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -149,12 +149,6 @@ const TYPEDEF_INITIALIZED: Code = Code::new("SC0208");
 /// what it is; the parser reports it because only the parser knows typedef
 /// names.
 const REDECLARED_KIND: Code = Code::new("SC0313");
-
-/// `enum E` with no list, where no enumeration `E` was declared before it
-/// (C17 6.7.2.3 p3). The type check's code for a name used where none is
-/// declared, which is what it is; the parser reports it because only the
-/// parser knows enumeration tags.
-const UNDECLARED_ENUM: Code = Code::new("SC0301");
 
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
 /// either stage.
@@ -339,15 +333,12 @@ enum Named {
     Enumerator(EnumeratorId),
 }
 
-/// The names one scope declares: its ordinary identifiers, and the tags of
-/// its enumerations.
+/// The ordinary identifiers one scope declares. Tags are the name
+/// resolver's, which reads a typedef name and an enumeration constant as
+/// nothing but the type and the constant the parser resolved them to.
 #[derive(Debug, Default)]
 struct Scope {
     names: std::collections::HashMap<String, Named>,
-    /// The tags of the enumerations defined here. Kept apart from a struct's
-    /// tags, which the parser does not track: a struct and an enumeration of
-    /// one tag in one scope (C17 6.7.2.3 p2) is not refused here.
-    enums: std::collections::HashSet<String>,
 }
 
 /// One of C17 6.7.2's type specifiers that is a single keyword and names a
@@ -1116,9 +1107,10 @@ impl Parser<'_> {
                 return Item::Error { span: first };
             }
             // **An enumeration defined in a definition's specifiers or
-            // parameters has no declaration to carry it**, and C gives it
-            // little use: one in a parameter list is visible nowhere a value
-            // could be (6.2.1 p4).
+            // parameters has no declaration to carry it**, so the name
+            // resolver would meet its values nowhere. C allows it, and the
+            // constants of one in the parameters are in scope in the body
+            // (6.2.1 p4), so it is refused as not read yet.
             if self.ast.enumerator_count() > enumerators {
                 self.report_unread(
                     Unread {
@@ -1232,9 +1224,9 @@ impl Parser<'_> {
                     return Some(Specified::Tag(base));
                 }
             }
-            // An enumeration declares its tag or its constants, which
-            // `enum_specifier` required one of. In a member list it declares
-            // no member, which 6.7.2.1 p2 asks of a member declaration.
+            // An enumeration with a list declares its constants. In a member
+            // list it declares no member, which 6.7.2.1 p2 asks of a member
+            // declaration.
             if enumerated && declares != Declares::Member {
                 return Some(Specified::Tag(base));
             }
@@ -1520,6 +1512,7 @@ impl Parser<'_> {
         // in it: called from inside the loop, the refusal of a struct nested
         // past `MAX_NESTING` cost some 65 KB more stack, and one nested to the
         // limit overflowed the stack rather than being refused, measured.
+        self.enumerated = false;
         let tagged = if self.check(TokenKind::Keyword(Keyword::Struct)) {
             Some((self.struct_specifier(diagnostics)?, "struct"))
         } else if self.check(TokenKind::Keyword(Keyword::Enum)) {
@@ -1527,6 +1520,7 @@ impl Parser<'_> {
         } else {
             None
         };
+        let enumerated = std::mem::take(&mut self.enumerated);
         let tagged_keyword =
             |next: TokenKind| matches!(next, TokenKind::Keyword(Keyword::Struct | Keyword::Enum));
         // **A typedef name is a type specifier only where no other is
@@ -1579,8 +1573,9 @@ impl Parser<'_> {
         self.storage = storage;
         self.typedef = typedef;
         // Set after every member's specifiers were read, so this is the
-        // outer declaration's answer.
-        self.enumerated = matches!(tagged, Some((_, "enum")));
+        // outer declaration's answer: an `enum` with a list here, which is
+        // what set it last.
+        self.enumerated = enumerated;
         let ty = match (tagged, named, words.ty()) {
             (Some((tagged, _)), _, _) => tagged,
             (None, Some(named), _) => named,
@@ -1846,13 +1841,10 @@ impl Parser<'_> {
     }
 
     /// C17 6.7.2.2's `enum-specifier`: `enum Tag { A, B = 5, C }`, or
-    /// `enum Tag` for one declared before, as the type `int`.
-    ///
-    /// **`int`, and no type of its own**: 6.7.2.2 p4 leaves an enumerated
-    /// type's integer type to the implementation, and `clang` picks `int` for
-    /// every enumeration whose constants `int` holds, which is all of them
-    /// here, since a constant outside `int` is refused (p2). So an `enum E`
-    /// object is an `int` to every later stage, as the IR has it.
+    /// `enum Tag` for one declared before, as an enumerated type: see
+    /// [`crate::ast::Enumeration`] for what it is and who decides its sign.
+    /// Which enumeration a tag names is the name resolver's, as a struct's is,
+    /// since the two share one name space (6.7.2.3 p2).
     ///
     /// Each constant is declared once its definition has been read, value and
     /// all (C17 6.2.1 p7), so `enum { A = A }` reads an outer `A`.
@@ -1866,29 +1858,18 @@ impl Parser<'_> {
         };
 
         if !self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            let Some(tag) = tag else {
+            if tag.is_none() {
                 self.report(
                     "expected a tag or `{`",
                     "a tag or `{` is missing here",
                     diagnostics,
                 );
                 return None;
-            };
-            // 6.7.2.3 p3: `enum E` without a list only after `E` is
-            // complete, which an enumeration is once its list is read.
-            let text = self.sources.snippet(tag);
-            if !self.names.iter().any(|scope| scope.enums.contains(text)) {
-                let text = text.to_owned();
-                self.report_at(
-                    tag,
-                    UNDECLARED_ENUM,
-                    format!("`enum {text}` names no enumeration declared before it"),
-                    "C17 6.7.2.3 p3 asks for its list first",
-                    diagnostics,
-                );
-                return None;
             }
-            return Some(self.ast.push_type(Type::INT));
+            return Some(self.ast.push_enumeration(Enumeration {
+                tag,
+                constants: None,
+            }));
         }
 
         if !self.declaring {
@@ -1902,24 +1883,8 @@ impl Parser<'_> {
             return None;
         }
         self.advance();
-        if let Some(tag) = tag {
-            let text = self.sources.snippet(tag).to_owned();
-            let scope = self
-                .names
-                .last_mut()
-                .expect("the file scope is never closed");
-            if !scope.enums.insert(text.clone()) {
-                self.report_at(
-                    tag,
-                    REDECLARED_KIND,
-                    format!("redefinition of `enum {text}`"),
-                    "defined in this scope already",
-                    diagnostics,
-                );
-                return None;
-            }
-        }
 
+        let mut constants = Vec::new();
         let mut previous = None;
         loop {
             if previous.is_some() && self.check(TokenKind::Punct(Punct::RightBrace)) {
@@ -1941,13 +1906,21 @@ impl Parser<'_> {
                 previous,
             });
             self.declare_name(name, Named::Enumerator(enumerator), diagnostics)?;
+            constants.push(enumerator);
             previous = Some(enumerator);
             if !self.eat(TokenKind::Punct(Punct::Comma)) {
                 break;
             }
         }
         self.expect(TokenKind::Punct(Punct::RightBrace), "`}`", diagnostics)?;
-        Some(self.ast.push_type(Type::INT))
+        // A list declares its constants, which is what lets `enum E { A };`
+        // declare nothing else (6.7 p2). `enum E;` alone declares nothing:
+        // footnote 131 says the form a struct has for it does not exist here.
+        self.enumerated = true;
+        Some(self.ast.push_enumeration(Enumeration {
+            tag,
+            constants: Some(constants),
+        }))
     }
 
     /// `struct`, an optional tag, and an optional member list. C17 6.7.2.1.

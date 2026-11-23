@@ -1,0 +1,7 @@
+Declaration an_enumeration_constant_declared_again_is_refused.c:1:1 "int"
+  Enumerator an_enumeration_constant_declared_again_is_refused.c:1:8 "C"
+Error an_enumeration_constant_declared_again_is_refused.c:2:1
+Function an_enumeration_constant_declared_again_is_refused.c:3:1 "main" "int (void)"
+  Compound an_enumeration_constant_declared_again_is_refused.c:3:16
+    Return an_enumeration_constant_declared_again_is_refused.c:3:18
+      Number an_enumeration_constant_declared_again_is_refused.c:3:25 "0"
