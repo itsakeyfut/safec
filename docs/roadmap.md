@@ -246,8 +246,23 @@ Phase 9.
   objects. `-D` and `-U` are done ahead of the rest (ADR-0059)
 - a minimal set of standard headers shipped with safec, such as `<stdio.h>`,
   `<stdlib.h>` and `<string.h>`, declaring what a program commonly calls, with
-  the definitions taken from the system's C library. Reading the system's own
-  headers is Phase 9
+  the definitions taken from the system's C library
+- **what replacing a production `cc` needs, moved here from Phase 9 on
+  2026-11-23**: reading the system's own headers, the rest of C11 and C17, the
+  GNU extensions real code uses and the MSVC ones the Windows SDK headers use,
+  and a driver that stands in for `cc` in an existing build (`-O`, `-g`, `-W`,
+  `-std`, `-E`, `-S`, `-M`, `-l`, `-L`, `-shared` and their kin)
+- C23, added on 2026-11-23: its keywords (`bool`, `true`, `false`, `nullptr`,
+  `constexpr`, `typeof`), `[[attributes]]`, binary constants and digit
+  separators, the empty initializer, `auto`, `_BitInt`, `#elifdef` and `#embed`
+- inline assembly, allowed only inside a hatch (ADR-0032), since no check reads
+  it
+
+**This phase now runs ahead of the remaining safety work as well.** On
+2026-11-23 the owner decided that a compiler which replaces `cc` comes first:
+the memory check's open read-only design (#1180, with #1192, #1193 and #1174)
+waits for it, because the representation it needs is the one structs reshape.
+The rule below is what keeps that order safe.
 
 **Safety comes first, and every construct lands under one rule.** It is added
 so that the memory check either reads it or concludes `Unknown` about it. At a
@@ -258,10 +273,11 @@ same program passes without being rewritten. A construct no check reads is
 allowed only inside a hatch (ADR-0032, ADR-0038), and inline assembly, the one
 such construct in view, is Phase 9's.
 
-**Done when:** every construct listed compiles to an executable at `--safety
-off`, and the corpus shows, for each, that at `--safety memory` the memory check
-either reads it or concludes `Unknown`. None is answered safe without being
-read.
+**Done when:** a project that builds with `cc` builds with safec, at `--safety
+off`, with `CC=safec` in its own build; every construct listed compiles to an
+executable there; and the corpus shows, for each, that at `--safety memory` the
+memory check either reads it or concludes `Unknown`. None is answered safe
+without being read.
 
 ### Phase 6: Lifetime Safety
 
@@ -328,29 +344,20 @@ fails rather than passing quietly.
 
 ### Phase 9: Broader C
 
-What replacing a production `cc` needs beyond Phase 11. See
+What is left of broader C once Phase 11 replaces `cc`. See
 [frontend.md](frontend.md), Stage 4.
 
-The core of the language this phase used to hold, from arrays and structs to
-the jump statements, function pointers, variadic functions, the rest of the
-program's own preprocessor, `-c`, `-I` and shipped headers, moved to Phase 11,
-which runs before Phases 6 to 8. What stays here:
+Everything else this phase held, from the system's own headers and the rest of
+C11 and C17 to the GNU extensions and a `cc`-compatible driver, moved to Phase 11
+on 2026-11-23, and inline assembly inside a hatch went with it. What stays here:
 
-- reading the system's own standard headers, which lean on extensions and on
-  nearly all of the language
-- the rest of C11 and C17 that Phase 11 does not list
-- the GNU extensions real code uses, `__attribute__` and its kin
-- a driver that stands in for `cc` in an existing build in full: `-O`, `-g`,
-  `-W` and `-std`, each refused as an unexpected argument today, and a module
-  handed to `clang` with no optimisation level and no debug information
-  (`driver/backend.rs`)
 - a freestanding environment: no C library, an entry point of the program's
-  own, `volatile`
-- inline assembly, allowed only inside a hatch, and an experiment into how much
-  safety can be carried into one
+  own
+- an experiment into how much safety can be carried into a hatch that holds
+  inline assembly
 
-**Done when:** a real single-file C program from outside this repository
-compiles and runs.
+**Done when:** a freestanding program with its own entry point compiles and
+runs, and the experiment has an answer.
 
 ### Phase 10: Clang Integration
 
