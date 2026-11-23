@@ -136,6 +136,12 @@ const NOTHING_DECLARED: Code = Code::new("SC0206");
 /// asks about. What is not C at that position keeps [`EXPECTED`].
 const UNREAD: Code = Code::new("SC0207");
 
+/// A typedef written with an initializer, `typedef int T = 1;`. A typedef
+/// name declares no object (C17 6.7.8 p3), so there is nothing to
+/// initialize. The parser's, since it is the stage that reads `typedef` and
+/// resolves typedef names, which no later stage sees.
+const TYPEDEF_INITIALIZED: Code = Code::new("SC0208");
+
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
 /// either stage.
 pub(crate) const UNREAD_ATTRIBUTE_LABEL: &str =
@@ -243,6 +249,9 @@ struct Declared {
     declares: Declares,
     /// The storage-class specifier written, if one was.
     storage: Option<Storage>,
+    /// Whether the specifiers wrote `typedef`, which makes each declarator a
+    /// typedef name rather than an object or a function (C17 6.7.8).
+    typedef: bool,
 }
 
 /// What a declaration's specifiers were followed by.
@@ -357,6 +366,8 @@ enum Refused {
     AfterStruct,
     /// A `struct` after other type specifiers.
     BeforeStruct,
+    /// Any type specifier after a typedef name.
+    AfterTypedefName,
 }
 
 /// The words a declaration's specifiers have written so far, as the multiset
@@ -552,7 +563,6 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
     const AUTOMATIC: &[Position] = &[BlockScope, ForInit];
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
-        Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
         // At file scope only: C17 6.7.1 p3 wants `static` or `extern` beside
         // it in a block, which the one token asked about here cannot see.
         Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", &[FileScope]),
@@ -737,6 +747,8 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         loops: 0,
         switches: 0,
         storage: None,
+        typedef: false,
+        names: vec![std::collections::HashMap::new()],
     }
     .run(diagnostics)
 }
@@ -792,6 +804,16 @@ struct Parser<'a> {
     /// [`Parser::declared`] takes before anything nested in the declarator
     /// can read specifiers of its own.
     storage: Option<Storage>,
+    /// Whether the last [`Parser::specifiers`] read `typedef`, taken with
+    /// [`Self::storage`] for the same reason.
+    typedef: bool,
+    /// What each identifier names in each open scope, innermost last: the
+    /// type a typedef name stands for, or `None` for an ordinary identifier
+    /// declared there, which hides a typedef name of an outer scope (C17
+    /// 6.2.1 p4). The parser has to know, since `T * x;` is a declaration
+    /// where `T` names a type and an expression where it does not (6.7.8).
+    /// File scope is the first entry and is never popped.
+    names: Vec<std::collections::HashMap<String, Option<TypeId>>>,
 }
 
 impl Parser<'_> {
@@ -1004,7 +1026,20 @@ impl Parser<'_> {
         let storage = declared.storage;
 
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            let Some(body) = self.compound(diagnostics) else {
+            if declared.typedef {
+                self.report(
+                    "a typedef has no body",
+                    "a function definition cannot be a typedef",
+                    diagnostics,
+                );
+                return Item::Error { span: first };
+            }
+            self.declare_name(declared.name, None);
+            self.names.push(std::collections::HashMap::new());
+            self.declare_parameters(declared.ty);
+            let body = self.compound(diagnostics);
+            self.names.pop();
+            let Some(body) = body else {
                 return Item::Error { span: first };
             };
 
@@ -1035,9 +1070,13 @@ impl Parser<'_> {
             return Item::Error { span: first };
         }
 
+        let typedef = declared.typedef;
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return Item::Error { span: start };
         };
+        if !self.declare_declarators(&declarators, typedef, diagnostics) {
+            return Item::Error { span: start };
+        }
 
         if self
             .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
@@ -1048,7 +1087,11 @@ impl Parser<'_> {
 
         let span = self.join(start, self.previous().span, diagnostics);
         Item::Declaration {
-            declarators,
+            // **A typedef declares no object**, so it leaves nothing to type
+            // or lower: what its names stand for is resolved here, and the
+            // tag a `typedef struct S { ... } T;` declares is kept as any tag
+            // declaration's is.
+            declarators: if typedef { Vec::new() } else { declarators },
             specified,
             storage,
             span,
@@ -1071,6 +1114,7 @@ impl Parser<'_> {
         };
         let base = self.specifiers(at, diagnostics)?;
         let storage = self.storage.take();
+        let typedef = std::mem::take(&mut self.typedef);
         // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
         // struct with a tag is the one this compiler reads. In a member list
         // any struct goes back to `members`, which tells an anonymous member
@@ -1114,6 +1158,7 @@ impl Parser<'_> {
             return_nullability: returns,
             declares,
             storage,
+            typedef,
         }))
     }
 
@@ -1171,6 +1216,7 @@ impl Parser<'_> {
             return_nullability: mut returns,
             declares,
             storage: _,
+            typedef: _,
         } = declared;
         let mut declarators = Vec::new();
 
@@ -1331,9 +1377,11 @@ impl Parser<'_> {
         // [`Words::with`], and a `struct` stands alone.
         let scoped = matches!(at, Position::FileScope | Position::BlockScope);
         let mut storage = None;
+        let mut typedef = false;
         let mut constant = false;
         let mut words = Words::default();
-        constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+        constant |=
+            self.eat_qualifiers_and_storage(scoped, (&mut storage, &mut typedef), diagnostics)?;
         // A `struct` stands alone, so it is read before the loop rather than
         // in it: called from inside the loop, the refusal of a struct nested
         // past `MAX_NESTING` cost some 65 KB more stack, and one nested to the
@@ -1343,9 +1391,26 @@ impl Parser<'_> {
         } else {
             None
         };
+        // **A typedef name is a type specifier only where no other is
+        // written** (C17 6.7.2 p2): in `T x;` the `T` is the type, and in
+        // `int T;` it is the declarator, which hides the typedef name.
+        let mut named = None;
         loop {
-            constant |= self.eat_qualifiers_and_storage(scoped, &mut storage, diagnostics)?;
+            constant |=
+                self.eat_qualifiers_and_storage(scoped, (&mut storage, &mut typedef), diagnostics)?;
             let next = self.peek().kind;
+            if tagged.is_none() && named.is_none() && words.is_empty() {
+                if let Some(ty) = self.typedef_name(self.peek()) {
+                    self.advance();
+                    named = Some(ty);
+                    continue;
+                }
+            }
+            if named.is_some()
+                && (Word::of(next).is_some() || next == TokenKind::Keyword(Keyword::Struct))
+            {
+                return self.refuse_specifier(Refused::AfterTypedefName, diagnostics);
+            }
             if let Some(word) = Word::of(next) {
                 if tagged.is_some() {
                     return self.refuse_specifier(Refused::AfterStruct, diagnostics);
@@ -1372,10 +1437,12 @@ impl Parser<'_> {
             break;
         }
         self.storage = storage;
-        let ty = match (tagged, words.ty()) {
-            (Some(tagged), _) => tagged,
-            (None, Some(ty)) => self.ast.push_type(ty),
-            (None, None) => return self.no_type_specifier(at, diagnostics),
+        self.typedef = typedef;
+        let ty = match (tagged, named, words.ty()) {
+            (Some(tagged), _, _) => tagged,
+            (None, Some(named), _) => named,
+            (None, None, Some(ty)) => self.ast.push_type(ty),
+            (None, None, None) => return self.no_type_specifier(at, diagnostics),
         };
         let ty = if constant {
             self.ast.push_const(ty)
@@ -1441,6 +1508,10 @@ impl Parser<'_> {
                 "cannot combine a `struct` with the type specifiers before it".to_owned(),
                 "a second type",
             ),
+            Refused::AfterTypedefName => (
+                "cannot combine a typedef name with another type specifier".to_owned(),
+                "a second type",
+            ),
         };
         self.report(message, label, diagnostics);
         None
@@ -1454,7 +1525,7 @@ impl Parser<'_> {
     fn eat_qualifiers_and_storage(
         &mut self,
         scoped: bool,
-        storage: &mut Option<Storage>,
+        (storage, typedef): (&mut Option<Storage>, &mut bool),
         diagnostics: &mut DiagnosticSink,
     ) -> Option<bool> {
         let mut constant = false;
@@ -1463,12 +1534,15 @@ impl Parser<'_> {
                 constant = true;
                 continue;
             }
+            // `typedef` is a storage class in the grammar only (C17 6.7.1 p5),
+            // and one per declaration like the rest (p2).
             let written = match self.peek().kind {
-                TokenKind::Keyword(Keyword::Static) if scoped => Storage::Static,
-                TokenKind::Keyword(Keyword::Extern) if scoped => Storage::Extern,
+                TokenKind::Keyword(Keyword::Static) if scoped => Some(Storage::Static),
+                TokenKind::Keyword(Keyword::Extern) if scoped => Some(Storage::Extern),
+                TokenKind::Keyword(Keyword::Typedef) if scoped => None,
                 _ => return Some(constant),
             };
-            if storage.is_some() {
+            if storage.is_some() || *typedef {
                 self.report(
                     "a declaration names at most one storage class",
                     "a second storage class",
@@ -1477,7 +1551,58 @@ impl Parser<'_> {
                 return None;
             }
             self.advance();
-            *storage = Some(written);
+            match written {
+                Some(written) => *storage = Some(written),
+                None => *typedef = true,
+            }
+        }
+    }
+
+    /// The type `token` names, where it is an identifier the innermost
+    /// scope that declares it declares as a typedef name.
+    fn typedef_name(&self, token: Token) -> Option<TypeId> {
+        if token.kind != TokenKind::Identifier {
+            return None;
+        }
+        let text = self.sources.snippet(token.span);
+        self.names
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(text))
+            .copied()
+            .flatten()
+    }
+
+    /// Whether specifiers begin at `token`: [`begins_specifiers`], or a
+    /// typedef name. The one test every place that tells a declaration from
+    /// an expression asks.
+    fn begins_specifiers_at(&self, token: Token) -> bool {
+        begins_specifiers(token.kind) || self.typedef_name(token).is_some()
+    }
+
+    /// Declare `name` in the innermost scope: as a typedef name for `ty`, or
+    /// as an ordinary identifier where `ty` is `None`, which hides a typedef
+    /// name of an outer scope.
+    fn declare_name(&mut self, name: Span, ty: Option<TypeId>) {
+        let text = self.sources.snippet(name).to_owned();
+        if let Some(scope) = self.names.last_mut() {
+            scope.insert(text, ty);
+        }
+    }
+
+    /// The names a function definition's parameters declare, in the scope
+    /// its body is read in (C17 6.2.1 p4), so a parameter hides a typedef
+    /// name of the same spelling there.
+    fn declare_parameters(&mut self, function: TypeId) {
+        if let Type::Function {
+            parameters: Parameters::Prototype(parameters),
+            ..
+        } = self.ast.ty(function)
+        {
+            let names: Vec<Span> = parameters.iter().filter_map(|p| p.name).collect();
+            for name in names {
+                self.declare_name(name, None);
+            }
         }
     }
 
@@ -1594,6 +1719,9 @@ impl Parser<'_> {
                 return_nullability,
                 declares,
                 storage: _,
+                // A member has no storage class, so `specifiers` never reads
+                // `typedef` here.
+                typedef: _,
             } = declared;
             let end = self.previous().span;
             members.push(Declaration {
@@ -2255,7 +2383,15 @@ impl Parser<'_> {
     fn compound(&mut self, diagnostics: &mut DiagnosticSink) -> Option<StmtId> {
         let start = self.peek().span;
         self.expect(TokenKind::Punct(Punct::LeftBrace), "`{`", diagnostics)?;
+        self.names.push(std::collections::HashMap::new());
+        let read = self.block_items(start, diagnostics);
+        self.names.pop();
+        read
+    }
 
+    /// The items of a block whose `{` [`Parser::compound`] has read, in the
+    /// scope it opened.
+    fn block_items(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> Option<StmtId> {
         // The one place a block is counted, so the body of a function and a
         // block inside it are the same thing to `depth`.
         let body = self.deeper(
@@ -2276,7 +2412,7 @@ impl Parser<'_> {
                     // `__attribute__` goes with the declarations, where
                     // `specifiers` refuses it by name, rather than to the
                     // expressions, which would call it a missing one.
-                    let item = if begins_specifiers(parser.peek().kind)
+                    let item = if parser.begins_specifiers_at(parser.peek())
                         || parser.check(TokenKind::Annotation(Annotation::Attribute))
                     {
                         parser.declaration_statement(diagnostics)
@@ -2324,9 +2460,13 @@ impl Parser<'_> {
         let specified = declared.base;
         let storage = declared.storage;
 
+        let typedef = declared.typedef;
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
         };
+        if !self.declare_declarators(&declarators, typedef, diagnostics) {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
 
         if self
             .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
@@ -2337,11 +2477,42 @@ impl Parser<'_> {
 
         let span = self.join(start, self.previous().span, diagnostics);
         self.ast.push_stmt(Stmt::Declaration {
-            declarators,
+            // As at file scope: a typedef declares no object.
+            declarators: if typedef { Vec::new() } else { declarators },
             specified,
             storage,
             span,
         })
+    }
+
+    /// Declare each declarator's name in the innermost scope: a typedef name
+    /// for its type where the declaration wrote `typedef`, an ordinary
+    /// identifier otherwise. A typedef with an initializer is refused, since
+    /// it declares no object to initialize (C17 6.7.9 p3 in spirit; `clang`
+    /// says "illegal initializer").
+    fn declare_declarators(
+        &mut self,
+        declarators: &[InitDeclarator],
+        typedef: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        for declarator in declarators {
+            let Some(name) = declarator.declaration.name else {
+                continue;
+            };
+            if typedef && declarator.init.is_some() {
+                self.report_at(
+                    declarator.declaration.span,
+                    TYPEDEF_INITIALIZED,
+                    "a typedef cannot be initialized",
+                    "a typedef name declares no object",
+                    diagnostics,
+                );
+                return false;
+            }
+            self.declare_name(name, typedef.then_some(declarator.declaration.ty));
+        }
+        true
     }
 
     /// One statement, and where it went in the tree.
@@ -2742,6 +2913,16 @@ impl Parser<'_> {
     /// and the first clause is that statement. See [`ForStart`] for why it is
     /// a statement.
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        // A `for` is a block of its own (C17 6.8.5 p5), so a name its clause
+        // declares ends with it.
+        self.names.push(std::collections::HashMap::new());
+        let read = self.for_parts(start, diagnostics);
+        self.names.pop();
+        read
+    }
+
+    /// A `for` statement, in the scope [`Parser::for_statement`] opened.
+    fn for_parts(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         self.advance();
 
         let failed = |parser: &mut Self| parser.ast.push_stmt(Stmt::Error { span: start });
@@ -2755,7 +2936,7 @@ impl Parser<'_> {
 
         // The same test a block makes, so a `for` reads a declaration where a
         // block would and nowhere else.
-        let first = if begins_specifiers(self.peek().kind)
+        let first = if self.begins_specifiers_at(self.peek())
             || self.check(TokenKind::Annotation(Annotation::Attribute))
         {
             let declaration = self.declaration_statement(diagnostics);
@@ -3006,7 +3187,7 @@ impl Parser<'_> {
     /// expression's.
     fn type_name_follows(&self) -> bool {
         let kind = self.peek_at(1).kind;
-        begins_specifiers(kind)
+        self.begins_specifiers_at(self.peek_at(1))
             || matches!(kind, TokenKind::Keyword(keyword)
                 if keyword != Keyword::Register
                     && unread_keyword(keyword, Position::Parameter).is_some())

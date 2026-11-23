@@ -1,0 +1,5 @@
+Error a_typedef_with_an_initializer_is_refused.c:1:1
+Function a_typedef_with_an_initializer_is_refused.c:2:1 "main" "int (void)"
+  Compound a_typedef_with_an_initializer_is_refused.c:2:16
+    Return a_typedef_with_an_initializer_is_refused.c:2:18
+      Number a_typedef_with_an_initializer_is_refused.c:2:25 "0"

@@ -570,7 +570,7 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
         ("int x\n", "SC0201"),
         (too_deep.as_str(), "SC0202"),
         ("int x = {1};\n", "SC0203"),
-        ("typedef int T;\n", "SC0207"),
+        ("typedef int T = 1;\n", "SC0208"),
     ] {
         let parsed = parsed(source);
         let reported = parsed
@@ -610,7 +610,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 #[test]
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
-        ("typedef int T;\n", "`typedef`", "6.7.8"),
         ("_Thread_local int x;\n", "`_Thread_local`", "6.7.1"),
         ("int main(void) { auto int x; }\n", "`auto`", "6.7.1"),
         (
@@ -660,7 +659,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "6.5.1.1",
         ),
         // Each kind of keyword in each other position it is allowed in.
-        ("int main(void) { typedef int T; }\n", "`typedef`", "6.7.8"),
         (
             "int main(void) { inline int f(void); }\n",
             "`inline`",
@@ -918,7 +916,6 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
     const SPECIFIER: &[At] = &[FileScope, BlockScope, Member, Parameter, ForInit];
 
     let keywords: &[(&str, &str, &[At])] = &[
-        ("typedef", "6.7.8", &[FileScope, BlockScope]),
         ("_Thread_local", "6.7.1", &[FileScope]),
         ("auto", "6.7.1", &[BlockScope, ForInit]),
         ("register", "6.7.1", &[BlockScope, Parameter, ForInit]),

@@ -8463,6 +8463,11 @@ cases! {
     }
 
     "frontend" => {
+        // A typedef declares no object, so it has nothing to initialize
+        // (C17 6.7.8 p3), and is refused under its own code rather than read
+        // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
+        // this declares `T` and reports nothing.
+        a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
         // What the frontend makes of a program: its tokens, its tree, and every
         // report from lexing, parsing or type checking, `SC0101` to `SC0399`,
         // whatever artifact the case asks for.

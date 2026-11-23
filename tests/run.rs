@@ -1,0 +1,91 @@
+//! Programs that have to build at `--safety off` and run to the exit code C
+//! gives them: the "compiles to an executable and runs" half of what each
+//! Systems C construct is accepted on (`docs/roadmap.md`, Phase 11).
+//!
+//! The corpus in `tests/cases.rs` holds what the compiler says about a
+//! program. This holds what the program does once built, which no `.stderr`
+//! can: a lowering that compiles a construct to the wrong code is silent
+//! there and wrong here.
+//!
+//! **A literal table, not the files on disk** (ADR-0007), each source brought
+//! in by `include_str!`, so a missing or renamed program is a build failure
+//! rather than a test that runs nothing. Each program exits `0` when what it
+//! computed is what C says, and something else when it is not, so the table
+//! needs no expected value of its own.
+
+use std::fs;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
+/// Whether there is a `clang` on this machine to link a program with.
+fn clang_is_here() -> bool {
+    Command::new("clang")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok()
+}
+
+/// Build `source` at `--safety off` into an executable and run it; it has to
+/// build and exit `0`. Skipped with a note where there is no `clang`, and a
+/// failure where `SAFEC_REQUIRE_LLVM` is set, as in `tests/examples.rs`.
+fn builds_and_exits_zero(name: &str, source: &str) {
+    if !clang_is_here() {
+        assert!(
+            std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+            "SAFEC_REQUIRE_LLVM is set and there is no `clang` to link a program with"
+        );
+        eprintln!("no `clang` on this machine: `{name}` was not run");
+        return;
+    }
+    let dir: PathBuf = std::env::temp_dir().join(format!("safec_run_{name}"));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("the temporary directory is writable");
+    fs::write(dir.join("program.c"), source).expect("the temporary directory is writable");
+    let exe = dir.join(if cfg!(windows) {
+        "program.exe"
+    } else {
+        "program"
+    });
+    let built = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--safety", "off", "-o"])
+        .arg(&exe)
+        .arg("program.c")
+        .current_dir(&dir)
+        .output()
+        .expect("the compiler binary was built for this test");
+    assert!(
+        built.status.success(),
+        "`{name}` did not build:\n{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+    let ran = Command::new(&exe)
+        .status()
+        .expect("the program it built runs");
+    let _ = fs::remove_dir_all(&dir);
+    assert_eq!(ran.code(), Some(0), "`{name}` ran to the wrong result");
+}
+
+macro_rules! programs {
+    ($($(#[$doc:meta])* $name:ident),* $(,)?) => {
+        $(
+            $(#[$doc])*
+            #[test]
+            fn $name() {
+                builds_and_exits_zero(
+                    stringify!($name),
+                    include_str!(concat!("run/", stringify!($name), ".c")),
+                );
+            }
+        )*
+    };
+}
+
+programs! {
+    /// A typedef name for a scalar, a pointer and an unsigned type, in a
+    /// parameter, a cast, `sizeof` and a `for`, and an object in an inner
+    /// block that hides one (#1205). Mutation: stop declaring typedef names in
+    /// `Parser::declare_declarators`; this does not build.
+    a_typedef_names_the_type_it_was_declared_with,
+}
