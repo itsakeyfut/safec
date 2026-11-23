@@ -1878,15 +1878,33 @@ impl Checker<'_> {
         };
         let sized = members
             .iter()
-            .map(|member| {
-                Some((
-                    u64::try_from(self.bytes_of(ast, member.ty)?).ok()?,
-                    self.align_of(ast, member.ty)?,
-                ))
-            })
+            .map(|member| self.size_and_align(ast, member.ty))
             .collect::<Option<Vec<_>>>()?;
         let (_, size, align) = safec_ir::ir::lay_out(sized)?;
         Some((size, align))
+    }
+
+    /// The size and the alignment in bytes of `ty`, **each struct below it
+    /// laid out once**: asked as [`Self::bytes_of`] and [`Self::align_of`]
+    /// apart, a member of struct type laid out the one below it twice, so
+    /// twenty-two structs each holding the last took eight seconds to size
+    /// (#1202 review). Mutation: ask the two apart again;
+    /// `a_struct_nested_deep_is_sized_in_time` does not finish.
+    fn size_and_align(&self, ast: &Ast, ty: TypeId) -> Option<(u64, u64)> {
+        match *ast.ty(ty) {
+            Type::Struct { .. } => self.struct_layout(ast, ty),
+            Type::Array {
+                element, length, ..
+            } => {
+                let (size, align) = self.size_and_align(ast, element)?;
+                let count = u64::try_from(self.values[length?.index()]?).ok()?;
+                Some((size.checked_mul(count)?, align))
+            }
+            Type::Integer { .. } | Type::Pointer(_) | Type::Void | Type::Function { .. } => Some((
+                u64::try_from(self.bytes_of(ast, ty)?).ok()?,
+                self.align_of(ast, ty)?,
+            )),
+        }
     }
 
     /// The alignment in bytes of an object of `ty` on the target, as

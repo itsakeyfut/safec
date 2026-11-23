@@ -54,6 +54,12 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A store into a struct that points at itself, leaving the function
+        // through a parameter, through mutually pointing structs, and into a
+        // local an unknown call was handed, is checked and ends (#1202
+        // review). Mutation: answer a struct's pointer member's pointee in
+        // `fit::pointee`; this hangs.
+        a_node_linked_into_a_list_is_checked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer member written through its address and read back is
         // written, in a local struct and a heap one, and beside a member that
         // is no pointer, narrower than one or as wide (#1202). Mutation: answer
@@ -64,8 +70,8 @@ cases! {
         // `SC0411`, and so is one of an array element nothing wrote, while the
         // element beside it was; a pointer from the inner member's address
         // reaching past it is doubted (#1202). Mutation: move a member's
-        // address by no slot in the transfer's member arm; `element_never_written`
-        // is silent.
+        // address by no slot in the transfer's member arm; both `SC0411`
+        // weaken to doubts.
         a_nested_struct_and_an_array_of_structs_are_read_by_member: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A member that is no array is an array of one for arithmetic (C17
         // 6.5.6 p7), so a pointer from its address that reaches the next
@@ -8518,9 +8524,16 @@ cases! {
         a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
         // A struct with a `const` member, whose `const` the memory check
         // keeps per object and not per slot, and one larger than the target
-        // can address, are refused under `SC0304`. Mutation: lay a `const`
-        // member out in `Lowering::struct_of`; `Fixed` is lowered.
+        // can address, are refused under `SC0304`, once each however many
+        // uses ask. Mutation: lay a `const` member out in
+        // `Lowering::struct_of`; `Fixed` is lowered. Mutation: report a
+        // refused struct at each use; `Fixed` is reported twice.
         a_struct_this_compiler_cannot_lay_out_yet_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Forty structs each holding the last are sized in one walk each, the
+        // `sizeof` of the outermost among them (#1202 review). Mutation: ask
+        // size and alignment apart in `Checker::struct_layout`; this takes
+        // two to the fortieth steps and does not finish.
+        a_struct_nested_deep_is_sized_in_time: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A struct reached through a `const` struct is typed as a copy the
         // type check makes, which the name resolver never bound, so its tag is
         // the one of the type it was copied from: `p->i.x`, `sizeof(p->i)` and
@@ -10090,6 +10103,11 @@ cases! {
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
     }
     "codegen" => {
+        // `extern struct O g;` with `O` defined nowhere, and `&g`, are C
+        // (C17 6.2.5 p22): declared as an `i8`, since only its definition
+        // elsewhere has a size (#1202 review). Mutation: spell it from a
+        // layout in `Emitter::global`; this panics.
+        an_object_of_a_struct_nothing_defines_is_declared: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct is bytes to LLVM, so its storage says its alignment, a
         // global's and a local's alike, and an array of them as its element
         // (#1202): after a `char` global each is at an 8-byte boundary, as

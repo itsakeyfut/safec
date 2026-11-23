@@ -120,8 +120,9 @@ programs! {
     /// A struct member of struct type and an array member of structs, reached
     /// by `.` chains and through a pointer to the inner struct, a global and
     /// a local array of structs, a list that points at itself walked to its
-    /// end, a pointer to a struct nothing defines, and `sizeof` of the outer
-    /// (#1202). Mutation: take every member's offset as zero in the
+    /// end, a pointer to a struct nothing defines, `sizeof` of the outer, and
+    /// a struct reached through a pointer before the struct holding it by
+    /// value is laid out (#1202). Mutation: take every member's offset as zero in the
     /// backend's `Projection::Field` arm; this exits with another value.
     a_nested_struct_and_an_array_of_structs_are_read_by_member,
 }

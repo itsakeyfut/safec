@@ -721,14 +721,14 @@ pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
             sign: _,
         }
         | Ty::Void => None,
-        // What its deepest pointer member points to, as `stored_pointer`
-        // answers what a struct holds (#1200).
-        Ty::Struct(_) => match crate::layout::stored_pointer(analysis.unit, ty)
-            .map(|pointer| analysis.unit.ty(pointer))
-        {
-            Some(Ty::Pointer(pointee)) => Some(pointee),
-            _ => None,
-        },
+        // **A struct is no pointer, and points to nothing**: answered as
+        // what its pointer member points to, a struct that points at itself
+        // answered itself, and every walk down this by type never ended, a
+        // list's `head->next = n` hanging the check (#1202 review). What a
+        // member points to is asked through the member's own pointer type.
+        // Mutation: answer the member's pointee;
+        // `a_node_linked_into_a_list_is_checked` hangs.
+        Ty::Struct(_) => None,
         Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }

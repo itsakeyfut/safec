@@ -6,10 +6,18 @@ error[SC0304]: cannot compile something of type `struct Fixed` yet
    │            ╰──────── declared here
 ───╯
   = note: a struct with a `const` member is not laid out yet
-error[SC0304]: cannot compile something of type `struct Huge` yet
-    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:16:5 ]
+error[SC0304]: cannot compile something of type `struct Rows` yet
+    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:17:5 ]
     │
- 16 │     struct Huge h;
+ 17 │     struct Rows r;
+    │     ──────┬──────  
+    │           ╰──────── declared here
+────╯
+  = note: a struct with a `const` member is not laid out yet
+error[SC0304]: cannot compile something of type `struct Huge` yet
+    ╭─[ a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:27:5 ]
+    │
+ 27 │     struct Huge h;
     │     ──────┬──────  
     │           ╰──────── declared here
 ────╯

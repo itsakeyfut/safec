@@ -1,0 +1,40 @@
+target triple = "x86_64-pc-windows-msvc"
+@handle = external global i8
+
+define ptr @address() {
+entry:
+  %_0 = alloca ptr
+  %_1 = alloca ptr
+  br label %bb0
+
+bb0:
+  store ptr @handle, ptr %_1
+  %t0 = load ptr, ptr %_1
+  store ptr %t0, ptr %_0
+  %t1 = load ptr, ptr %_0
+  ret ptr %t1
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = call ptr @address()
+  store ptr %t0, ptr %_1
+  br label %bb1
+
+bb1:
+  %t1 = load ptr, ptr %_1
+  %t2 = icmp eq ptr %t1, null
+  %t3 = zext i1 %t2 to i32
+  store i32 %t3, ptr %_2
+  %t4 = load i32, ptr %_2
+  store i32 %t4, ptr %_0
+  %t5 = load i32, ptr %_0
+  ret i32 %t5
+}

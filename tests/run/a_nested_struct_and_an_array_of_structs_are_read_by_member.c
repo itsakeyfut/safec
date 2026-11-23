@@ -21,6 +21,20 @@ struct Node {
 
 struct Opaque;
 
+struct Later;
+struct Earlier {
+    struct Later *later;
+    int value;
+};
+struct Later {
+    struct Earlier earlier;
+    int value;
+};
+
+static int through_earlier(struct Earlier *e) {
+    return e->value + e->later->value;
+}
+
 struct Box boxes[2];
 
 static int sum(struct Node *list) {
@@ -72,6 +86,12 @@ int main(void) {
     free(a);
 
     r = r + (nothing() == 0 ? 0 : 1);
+
+    struct Later later;
+    later.value = 3;
+    later.earlier.value = 4;
+    later.earlier.later = &later;
+    r = r + (through_earlier(&later.earlier) == 7 ? 0 : 1);
     r = r + (sizeof(struct Box) == 48 || sizeof(struct Box) == 44 ? 0 : 1);
     return r;
 }

@@ -207,7 +207,11 @@ impl Emitter<'_> {
     /// loses its `align 8`.
     fn struct_align(&self, ty: TyId) -> String {
         match self.unit.ty(ty) {
-            Ty::Struct(layout) => format!(", align {}", self.unit.struct_layout(layout).align),
+            // One nothing defines is declared as `i8`, by `Self::global`.
+            Ty::Struct(layout) => self
+                .unit
+                .layout_of(layout)
+                .map_or_else(String::new, |layout| format!(", align {}", layout.align)),
             // An array of them is aligned as its element (#1202).
             Ty::Array { element, .. } => self.struct_align(element),
             Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) => String::new(),
@@ -294,7 +298,18 @@ impl Emitter<'_> {
         self.at = None;
         let object = self.unit.static_object(id);
         let name = self.global_name(id);
-        let spelled = self.spell(object.ty);
+        // **A declaration of a struct nothing defines is `i8`**: C allows
+        // `extern struct O g;` and `&g` with `O` incomplete (C17 6.2.5 p22,
+        // 6.5.3.2 p1), and an external global's type says nothing of its
+        // size to LLVM, which only the definition elsewhere has. Spelled from
+        // a layout it has none of, this panicked (#1202 review). Mutation:
+        // spell it; `an_object_of_a_struct_nothing_defines_is_declared`
+        // panics.
+        let spelled = if self.unit.size_of(object.ty).is_none() {
+            "i8".to_owned()
+        } else {
+            self.spell(object.ty)
+        };
         let init = match &object.init {
             StaticInit::Zero => Ok("zeroinitializer".to_owned()),
             StaticInit::Int(value) => self.constant(*value, object.ty),
