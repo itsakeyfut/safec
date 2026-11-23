@@ -1,0 +1,7 @@
+error[SC0313]: redefinition of `T` as a different kind of name
+   ╭─[ a_typedef_redefined_as_an_object_is_refused.c:2:3 ]
+   │
+ 2 │ T T;
+   │   ┬  
+   │   ╰── declared in this scope already as the other kind
+───╯

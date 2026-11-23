@@ -54,6 +54,10 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A typedef name stands for its type before the type check, so the
+        // memory check reads a program written through one as it reads the
+        // type itself: the read after the free is `SC0402` (#1205).
+        a_typedef_names_a_type_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The memory check's cases, kept together because what each one is for
         // is a row of one table: `docs/safety-model.md`'s three-valued model
         // met by a program that proves it, one that leaves it unproven, and one
@@ -8463,6 +8467,26 @@ cases! {
     }
 
     "frontend" => {
+        // A typedef declares no object, so it has nothing to initialize
+        // (C17 6.7.8 p3), and is refused under its own code rather than read
+        // (#1205). Mutation: drop the check in `Parser::declare_declarators`;
+        // this declares `T` and reports nothing.
+        a_typedef_with_an_initializer_is_refused: ["--emit", "ast"],
+        // A name declared as a typedef and as an object in one scope, or as a
+        // typedef of two types, is `SC0313` (C17 6.7 p3); the same type twice
+        // is not (#1205 review). Mutation: insert into the scope without the
+        // checks in `Parser::declare_name`; both are accepted.
+        a_typedef_redefined_as_an_object_is_refused: ["--emit", "ast"],
+        a_typedef_redefined_as_another_type_is_refused: ["--emit", "ast"],
+        // A function definition writes its parameter list, and may not take
+        // its type from a typedef (C17 6.9.1 p2). Mutation: drop the check in
+        // `Parser::item`; this defines `g`.
+        a_function_defined_through_a_typedef_is_refused: ["--emit", "ast"],
+        // A parameter's name hides a typedef from the end of its declarator,
+        // so a later parameter cannot use it as a type (C17 6.2.1 p4, p7).
+        // Mutation: do not declare a parameter's name in
+        // `Parser::parameter_items`; this is accepted.
+        a_parameter_hides_a_typedef_from_its_declarator_on: ["--emit", "ast"],
         // What the frontend makes of a program: its tokens, its tree, and every
         // report from lexing, parsing or type checking, `SC0101` to `SC0399`,
         // whatever artifact the case asks for.

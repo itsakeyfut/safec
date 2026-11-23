@@ -1,0 +1,6 @@
+Declaration a_function_defined_through_a_typedef_is_refused.c:1:1 "int"
+Error a_function_defined_through_a_typedef_is_refused.c:2:1
+Function a_function_defined_through_a_typedef_is_refused.c:3:1 "main" "int (void)"
+  Compound a_function_defined_through_a_typedef_is_refused.c:3:16
+    Return a_function_defined_through_a_typedef_is_refused.c:3:18
+      Number a_function_defined_through_a_typedef_is_refused.c:3:25 "0"

@@ -1,0 +1,7 @@
+error[SC0201]: a function definition writes its parameter list
+   ╭─[ a_function_defined_through_a_typedef_is_refused.c:2:5 ]
+   │
+ 2 │ F g { return 0; }
+   │     ┬  
+   │     ╰── C17 6.9.1 p2: the type may not come from a typedef
+───╯

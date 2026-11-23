@@ -198,11 +198,18 @@ where the declared type is scalar, and the parser does not know the type.
 
 The bit-field and the anonymous member are `SC0207`, the code for valid C the
 parser does not read yet, told apart from C it cannot parse where the parse
-failed. `typedef`, a compound literal, a prefixed string literal and the other constructs
+failed. A compound literal, a prefixed string literal and the other constructs
 the parser does not read are reported under it too, each naming the clause
 that makes it valid; `parser.rs::unread_keyword` and the checks beside it
 decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
 code.
+
+**`typedef` is read by the parser, and by nothing after it** (#1205). The
+parser keeps what each identifier names in each open scope, since `T * x;` is
+a declaration where `T` is a typedef name and an expression where it is not
+(C17 6.7.8), and it resolves a typedef name to the type it stands for as it
+reads one. A typedef declares no object, so its declaration reaches the type
+check with no declarators, and nothing after the parser sees a typedef.
 
 None is a gap the lexer left, which is why they are a table of their own:
 the first three rows are about what a token is, and these are about what a
