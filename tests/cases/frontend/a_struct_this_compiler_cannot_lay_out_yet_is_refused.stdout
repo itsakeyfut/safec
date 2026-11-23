@@ -1,0 +1,24 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:10:5 "arrays" declared
+  Local "_0" "int" return
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:15:5 "nested" declared
+  Local "_0" "int" return
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:19:5 "listed" declared
+  Local "_0" "int" return
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:27:5 "fixed" declared
+  Local "_0" "int" return
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:37:5 "huge" declared
+  Local "_0" "int" return
+Function a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:41:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:41:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:42:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_struct_this_compiler_cannot_lay_out_yet_is_refused.c:42:12 generated
+    Return

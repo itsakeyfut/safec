@@ -779,10 +779,11 @@ impl Allocations<'_> {
     }
 
     /// How far into what `taken`'s local points a member's address is, in
-    /// bytes, where `taken` is `(*p).m`, or a member of a member: one
-    /// dereference of a local and then members alone, which is the one shape
-    /// the lowering builds a `Field` in. `None` for every other place.
-    fn member_offset(&self, function: &Function, taken: &Place) -> Option<u64> {
+    /// bytes, and the member's type, where `taken` is `(*p).m`, or a member
+    /// of a member: one dereference of a local and then members alone, which
+    /// is the one shape the lowering builds a `Field` in. `None` for every
+    /// other place.
+    fn member_offset(&self, function: &Function, taken: &Place) -> Option<(u64, TyId)> {
         let [Projection::Deref, members @ ..] = taken.steps() else {
             return None;
         };
@@ -805,7 +806,7 @@ impl Allocations<'_> {
                 .get(*member as usize)?
                 .ty;
         }
-        Some(offset)
+        Some((offset, ty))
     }
 
     /// How many bytes one object of the type a place's pointer points to
@@ -3987,7 +3988,9 @@ impl Allocations<'_> {
                     // `a_struct_member_is_a_slot_of_its_object`'s write past a
                     // block's end reaches 8 bytes rather than 16.
                     Rvalue::Address(taken) if self.member_offset(function, taken).is_some() => {
-                        let offset = self.member_offset(function, taken).unwrap_or(0);
+                        let (offset, member) = self
+                            .member_offset(function, taken)
+                            .expect("the guard above found one");
                         let base = Operand::Copy(Place::local(taken.local));
                         let by = Operand::Constant(i128::from(offset));
                         let mut reached = built_from(
@@ -4003,6 +4006,43 @@ impl Allocations<'_> {
                             Some(1),
                         );
                         reached.moved_by_arithmetic(None);
+                        // **And it walks the member alone**: C17 6.5.6 p7
+                        // makes a member that is no array an array of one
+                        // for arithmetic, and p8 keeps a pointer into it
+                        // from reaching past it, though the struct is wider
+                        // (Annex J.2). So the member's bytes are the row the
+                        // pointer walks, as an array's row is (#947).
+                        // Bounded by the struct instead, `int *m = &v.a;
+                        // m[1] = 1;` wrote `v.b` and was proved (#1200
+                        // review). Mutation: enter no row;
+                        // `a_member_s_address_walks_the_member_alone` is
+                        // silent.
+                        reached.position = match (reached.position.at, self.unit.size_of(member)) {
+                            (At::Bytes(start), Some(len)) => {
+                                let entered = Row { start, len };
+                                let row = match reached.position.row {
+                                    Some(walked) => walked.within(entered),
+                                    None => Some(entered),
+                                };
+                                match row {
+                                    Some(row) => Position {
+                                        at: At::Bytes(start),
+                                        row: Some(row),
+                                    },
+                                    None => Position {
+                                        at: At::Unknown,
+                                        row: None,
+                                    },
+                                }
+                            }
+                            // Not counted, so no row is known to walk, and no
+                            // bound either.
+                            (At::Within { .. } | At::Moved | At::Unknown, _)
+                            | (At::Bytes(_), None) => Position {
+                                at: At::Unknown,
+                                row: None,
+                            },
+                        };
                         value.replace(at, reached);
                     }
                     // The address of a place is not an allocation this check

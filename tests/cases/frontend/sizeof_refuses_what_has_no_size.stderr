@@ -1,32 +1,40 @@
-error[SC0306]: `sizeof` cannot be applied to a function
-   ╭─[ sizeof_refuses_what_has_no_size.c:5:12 ]
+error[SC0306]: `sizeof` cannot be applied to a struct not complete here, which is incomplete
+   ╭─[ sizeof_refuses_what_has_no_size.c:4:12 ]
    │
- 5 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
-   │            ────┬───  
-   │                ╰───── this is `int (void)`
+ 4 │     return sizeof(struct L);
+   │            ────────┬───────  
+   │                    ╰───────── this is `struct L`
 ───╯
+  = note: C17 6.5.3.4 p1
+error[SC0306]: `sizeof` cannot be applied to a function
+    ╭─[ sizeof_refuses_what_has_no_size.c:12:12 ]
+    │
+ 12 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+    │            ────┬───  
+    │                ╰───── this is `int (void)`
+────╯
   = note: C17 6.5.3.4 p1
 error[SC0306]: `sizeof` cannot be applied to `void`, which is incomplete
-   ╭─[ sizeof_refuses_what_has_no_size.c:5:23 ]
-   │
- 5 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
-   │                       ──────┬─────  
-   │                             ╰─────── this is `void`
-───╯
+    ╭─[ sizeof_refuses_what_has_no_size.c:12:23 ]
+    │
+ 12 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+    │                       ──────┬─────  
+    │                             ╰─────── this is `void`
+────╯
   = note: C17 6.5.3.4 p1
-error[SC0306]: `sizeof` cannot be applied to a struct nothing defines, which is incomplete
-   ╭─[ sizeof_refuses_what_has_no_size.c:5:38 ]
-   │
- 5 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
-   │                                      ────────┬───────  
-   │                                              ╰───────── this is `struct S`
-───╯
+error[SC0306]: `sizeof` cannot be applied to a struct not complete here, which is incomplete
+    ╭─[ sizeof_refuses_what_has_no_size.c:12:38 ]
+    │
+ 12 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+    │                                      ────────┬───────  
+    │                                              ╰───────── this is `struct S`
+────╯
   = note: C17 6.5.3.4 p1
 error[SC0306]: `sizeof` cannot be applied to an array of no length, which is incomplete
-   ╭─[ sizeof_refuses_what_has_no_size.c:5:57 ]
-   │
- 5 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
-   │                                                         ────┬───  
-   │                                                             ╰───── this is `int[]`
-───╯
+    ╭─[ sizeof_refuses_what_has_no_size.c:12:57 ]
+    │
+ 12 │     return sizeof f + sizeof(void) + sizeof(struct S) + sizeof a;
+    │                                                         ────┬───  
+    │                                                             ╰───── this is `int[]`
+────╯
   = note: C17 6.5.3.4 p1

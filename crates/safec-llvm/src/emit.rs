@@ -197,6 +197,21 @@ impl Emitter<'_> {
         }
     }
 
+    /// `, align N` for storage of a struct type, from the layout, and nothing
+    /// for any other. **A struct is bytes to LLVM**, which aligns `[N x i8]`
+    /// to one, so its alignment is said wherever its storage is made, a
+    /// local's and a global's alike: a global left at one put an 8-byte
+    /// member at an address 1 mod 8 (#1200 review). Every other type is
+    /// one LLVM already aligns as the target does. Mutation: answer nothing
+    /// for a struct; `a_struct_global_is_aligned_as_its_layout_says`
+    /// loses its `align 8`.
+    fn struct_align(&self, ty: TyId) -> String {
+        match self.unit.ty(ty) {
+            Ty::Struct(layout) => format!(", align {}", self.unit.struct_layout(layout).align),
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) | Ty::Array { .. } => String::new(),
+        }
+    }
+
     /// How LLVM spells what the target asks of this type when it crosses a
     /// call.
     ///
@@ -311,6 +326,7 @@ impl Emitter<'_> {
                 format!("{name} = internal {kind} {spelled} {init}")
             }
         };
+        let line = format!("{line}{}", self.struct_align(object.ty));
         writeln!(out, "{line}").expect("writing to a string cannot fail");
     }
 
@@ -1233,17 +1249,12 @@ impl Emitter<'_> {
                 continue;
             }
             let spelled = self.spell(ty);
-            // A struct is bytes to LLVM, so its alignment is said here, from
-            // the layout, rather than left to the `i8` it is spelled with.
-            match self.unit.ty(ty) {
-                Ty::Struct(layout) => writeln!(
-                    &mut body,
-                    "  %_{} = alloca {spelled}, align {}",
-                    local.index(),
-                    self.unit.struct_layout(layout).align
-                ),
-                _ => writeln!(&mut body, "  %_{} = alloca {spelled}", local.index()),
-            }
+            writeln!(
+                &mut body,
+                "  %_{} = alloca {spelled}{}",
+                local.index(),
+                self.struct_align(ty)
+            )
             .expect("writing to a string cannot fail");
         }
 

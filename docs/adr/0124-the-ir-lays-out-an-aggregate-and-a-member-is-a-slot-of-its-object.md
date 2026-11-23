@@ -82,6 +82,10 @@ to point into one object, against not asked and named as a silence.
   `&(*p).m` as `p` moved by the member's offset.
   `a_struct_member_is_a_slot_of_its_object` holds it: with the offset taken
   as zero, its write past a block's end reaches 8 bytes rather than 16.
+  A pointer from a member's address walks the member alone, the member's
+  bytes being the row it walks, since C17 6.5.6 p7 makes a member an array
+  of one: `a_member_s_address_walks_the_member_alone` is silent with no row
+  entered.
 * Still unguarded, because unions, a struct crossing a call and comparing
   pointers are not lowered yet: the link-and-run test per ABI shape, and a
   corpus case for the comparison's code, which their sub-issues of #614 add

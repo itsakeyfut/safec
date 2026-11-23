@@ -15,10 +15,10 @@ error[SC0304]: cannot compile a struct used as a value yet
 ───╯
   = note: a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet
 error[SC0304]: cannot compile a struct used as a value yet
-   ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:9:10 ]
+   ╭─[ a_struct_program_is_typed_and_refused_by_the_lowering.c:8:13 ]
    │
- 9 │     *q = local;
-   │          ──┬──  
-   │            ╰──── a struct, whole
+ 8 │     local = *p;
+   │             ─┬  
+   │              ╰── a struct, whole
 ───╯
   = note: a struct is reached through its members so far; assigning one, passing one and returning one are not lowered yet

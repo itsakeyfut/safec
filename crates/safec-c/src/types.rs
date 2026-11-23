@@ -1619,7 +1619,7 @@ impl Checker<'_> {
                 Type::Struct { .. } => {
                     self.resolution.complete(ast, ty)
                         || (at_file_scope && {
-                            let tag = self.resolution.tag(ty);
+                            let tag = self.resolution.tag(self.resolution.bound(ast, ty));
                             self.resolution.tag_declaration(tag).defined.is_some()
                         })
                 }
@@ -1866,7 +1866,9 @@ impl Checker<'_> {
     /// definition's members, by the IR's rule. `None` where it has no
     /// definition or a member has no size here.
     fn struct_layout(&self, ast: &Ast, ty: TypeId) -> Option<(u64, u64)> {
-        let definition = self.resolution.definition(self.resolution.tag(ty))?;
+        let definition = self
+            .resolution
+            .definition(self.resolution.tag(self.resolution.bound(ast, ty)))?;
         let Type::Struct {
             members: Some(members),
             ..
@@ -2169,7 +2171,7 @@ impl Checker<'_> {
             return None;
         };
 
-        let tag = self.resolution.tag(structure);
+        let tag = self.resolution.tag(self.resolution.bound(ast, structure));
         let spelled = self.spelled(ast, structure);
         // Complete here means its definition closed above, so it has one.
         let definition = self
@@ -2596,13 +2598,14 @@ impl Checker<'_> {
             Type::Function { .. } => Some("a function"),
             Type::Void => Some("`void`, which is incomplete"),
             Type::Array { length: None, .. } => Some("an array of no length, which is incomplete"),
-            Type::Struct { .. }
-                if self
-                    .resolution
-                    .definition(self.resolution.tag(ty))
-                    .is_none() =>
-            {
-                Some("a struct nothing defines, which is incomplete")
+            // **Complete where the `sizeof` is**, not by the end of the
+            // file: `struct S; ... sizeof(struct S) ... struct S { int x; };`
+            // is p1's incomplete type at the `sizeof` (#1200 review).
+            // Mutation: ask whether anything defines it at all;
+            // `sizeof_refuses_what_has_no_size`'s `sizeof(struct L)` is
+            // accepted.
+            Type::Struct { .. } if !self.complete_here(ast, self.resolution.bound(ast, ty)) => {
+                Some("a struct not complete here, which is incomplete")
             }
             Type::Integer { .. }
             | Type::Pointer(_)
@@ -2632,7 +2635,7 @@ impl Checker<'_> {
                 .with_code(NOT_YET)
                 .with_label(Label::primary(span, "this `sizeof`"))
                 .with_note(
-                    "a gap in this compiler: an array of a length that is not a constant is sized at run time",
+                    "a gap in this compiler: an array of a length that is not a constant is sized at run time, and a struct is sized here only where every member is",
                 ),
             );
             return None;
@@ -3813,7 +3816,10 @@ impl Checker<'_> {
         let Type::Struct { .. } = ast.ty(ty) else {
             return false;
         };
-        let Some(definition) = self.resolution.definition(self.resolution.tag(ty)) else {
+        let Some(definition) = self
+            .resolution
+            .definition(self.resolution.tag(self.resolution.bound(ast, ty)))
+        else {
             return false;
         };
         let Type::Struct {

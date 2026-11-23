@@ -2060,7 +2060,7 @@ impl Lowering<'_> {
         ty: TypeId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StructId> {
-        let tag = self.resolution.tag(ty);
+        let tag = self.resolution.tag(self.resolution.bound(self.ast, ty));
         if let Some(&id) = self.structs.get(&tag) {
             return Some(id);
         }
@@ -2107,6 +2107,21 @@ impl Lowering<'_> {
                 refused = true;
                 break;
             }
+            // **A `const` member is refused**, since the memory check keeps
+            // what is defined `const` per object, a static's or a local's
+            // (ADR-0120), and a member is a slot of an object that is not:
+            // `int *m = (int *)&v; m[1] = 1;` wrote a `const` member with no
+            // report (#1200 review). Mutation: lay one out;
+            // `a_struct_this_compiler_cannot_lay_out_yet_is_refused`'s
+            // `Fixed` is lowered.
+            if self.ast.is_const(member.ty) {
+                not_yet(
+                    diagnostics,
+                    "a struct with a `const` member is not laid out yet",
+                );
+                refused = true;
+                break;
+            }
             match self.ty(member.span, member.ty, diagnostics) {
                 Some(member) => lowered.push(member),
                 None => {
@@ -2126,6 +2141,20 @@ impl Lowering<'_> {
             );
             return None;
         };
+        // **No larger than the target can address**, as `types.rs` holds an
+        // array to: three members that each fit made a struct none could,
+        // and its `alloca` built a program that does not start (#1200
+        // review). Mutation: skip this;
+        // `a_struct_this_compiler_cannot_lay_out_yet_is_refused`'s `Huge`
+        // is lowered.
+        let limit = 1u64 << self.unit.target().pointer_bits().min(61);
+        if self.unit.struct_layout(id).size >= limit {
+            not_yet(
+                diagnostics,
+                "a struct larger than this target can address is not laid out",
+            );
+            return None;
+        }
         self.structs.insert(tag, id);
         Some(id)
     }
@@ -2222,6 +2251,22 @@ impl Lowering<'_> {
             }
         };
 
+        // **An array of structs is #1202's**, as a member of struct type is:
+        // what an element's member is to the memory check is the design
+        // there (#1200 review). Mutation: lay one out; the array in
+        // `a_struct_this_compiler_cannot_lay_out_yet_is_refused` is lowered.
+        if matches!(base, Ty::Struct(_)) && derivations.iter().any(Option::is_some) {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "cannot compile something of type `{}` yet",
+                    spell_type(self.sources, self.ast, id)
+                ))
+                .with_code(LOWERING)
+                .with_label(Label::primary(at, "declared here"))
+                .with_note("an array of structs is not laid out yet"),
+            );
+            return None;
+        }
         let mut ty = self.unit.push_type(base);
         for derivation in derivations.into_iter().rev() {
             ty = self.unit.push_type(match derivation {
@@ -3900,6 +3945,19 @@ impl Lowering<'_> {
                     // place rather than `p` being one.
                     AstUnOp::Deref => {
                         let place = places.pop().expect("a place");
+                        // `*p` read whole is a struct used as a value too, as
+                        // `s` is (#1200 review). Mutation: read it;
+                        // `local = *p;` in
+                        // `a_struct_program_is_typed_and_refused_by_the_lowering`
+                        // is lowered.
+                        if self
+                            .unit
+                            .place_ty(&builder.function, &place)
+                            .is_some_and(|ty| matches!(self.unit.ty(ty), Ty::Struct(_)))
+                        {
+                            self.struct_value_not_yet(span, diagnostics);
+                            return None;
+                        }
                         values.push(self.decayed(builder, place, span));
                     }
                     AstUnOp::AddrOf => {
@@ -4395,11 +4453,36 @@ impl Lowering<'_> {
             unreachable!("asked of a member access");
         };
         let span = self.ast.expr(base).span();
-        if let Some(pointer) = place.without_last_deref() {
-            return self.member_base(builder, id, Operand::Copy(pointer), diagnostics);
-        }
         let struct_ty = self.ty_of(base, diagnostics)?;
         let pointer_ty = self.unit.push_type(Ty::Pointer(struct_ty));
+        // **Typed as the struct's pointer, not as `base`**, which is the
+        // struct itself: `(**pp).m` took a temporary of `base`'s type, so a
+        // pointer was held in a struct-typed local and the backend refused
+        // the copy as a whole struct (#1200 review). Mutation: take
+        // `Self::member_base`'s temporary for it;
+        // `a_member_through_a_pointer_read_out_of_memory_is_read`'s
+        // `through_two` is `SC0801`.
+        if let Some(pointer) = place.without_last_deref() {
+            if pointer.steps().is_empty() {
+                return Some(pointer.local);
+            }
+            let into = builder.function.push_local(pointer_ty);
+            let operand = Operand::Copy(pointer);
+            let carried =
+                Self::moved_levels(&builder.function, Function::carried_levels, [&operand]);
+            builder.function.mark_carried_levels(into, carried);
+            if let Some(written) = self.types.of(base) {
+                builder
+                    .function
+                    .mark_const_levels(into, self.pointing_at_levels(written));
+            }
+            builder.push(Operation {
+                place: Place::local(into),
+                value: Rvalue::Use(operand),
+                origin: Origin::Generated(span),
+            });
+            return Some(into);
+        }
         let into = builder.function.push_local(pointer_ty);
         if let Some(written) = self.types.of(base) {
             builder

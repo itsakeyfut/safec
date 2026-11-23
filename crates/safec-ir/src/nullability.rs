@@ -968,19 +968,7 @@ impl Nullability<'_> {
             // the lowering folds it away, which is ADR-0021, so the rule is
             // safe for a reason that has nothing to do with the clause it used
             // to name.
-            //
-            // **A member's address is the pointer it goes through, moved**:
-            // `&(*p).m` is `p` plus the member's offset (ADR-0124), so it is
-            // null wherever `p` may be, and the read or write through it that
-            // follows is where a null `p` is said. Answered as the object's
-            // address instead, `p->m` with `p` null was silence. Mutation:
-            // answer `NonNull` for it; `a_member_of_a_null_pointer_is_doubted`
-            // is silent.
-            Rvalue::Address(place) => match place.steps().first() {
-                Some(Projection::Deref) => self.known(known, place.local),
-                Some(Projection::Index(_) | Projection::Field(_)) | None => Nullness::NonNull,
-            },
-            Rvalue::Static(_) => Nullness::NonNull,
+            Rvalue::Address(_) | Rvalue::Static(_) => Nullness::NonNull,
             // Anything computed. A pointer moved by `+` or `-` is answered in
             // `Analysis::element` before this is asked, where the move is
             // known to be a pointer's. See ADR-0084.
@@ -1380,7 +1368,12 @@ fn report(
     }
 }
 
-/// Where an element runs, and each pointer local it moves by `+` or `-`.
+/// Where an element runs, and each pointer local it moves by `+` or `-`,
+/// or takes a member's address through, `&(*p).m`, which is `p` moved by the
+/// member's offset (ADR-0124): a null `p` is asked there, as `p + 1` is,
+/// whether or not the member is then read (#1200 review). Mutation: answer
+/// nothing for a member's address; `a_member_of_a_null_pointer_is_doubted`'s
+/// `address_alone` is silent.
 fn moved_in_element<'e>(
     unit: &TranslationUnit,
     function: &Function,
@@ -1389,6 +1382,21 @@ fn moved_in_element<'e>(
     let Element::Assign(operation) = element else {
         return None;
     };
+    if let Rvalue::Address(place) = &operation.value {
+        let member = place.steps().iter().any(|step| match step {
+            Projection::Field(_) => true,
+            Projection::Deref | Projection::Index(_) => false,
+        });
+        let through = match place.steps().first() {
+            Some(Projection::Deref) => true,
+            Some(Projection::Index(_) | Projection::Field(_)) | None => false,
+        };
+        let moved = (member && through && pointer_typed(unit, function, place.local))
+            .then_some(place)
+            .into_iter()
+            .collect();
+        return Some((operation.origin.span(), moved));
+    }
     let Rvalue::Binary {
         op: BinOp::Add | BinOp::Sub,
         lhs,

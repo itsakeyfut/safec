@@ -1,15 +1,22 @@
 Declaration sizeof_refuses_what_has_no_size.c:1:1 "struct S"
-Declaration sizeof_refuses_what_has_no_size.c:2:1 "f" "int (void)"
-Declaration sizeof_refuses_what_has_no_size.c:3:1 "a" "int[]"
-Function sizeof_refuses_what_has_no_size.c:4:1 "g" "unsigned long long (void)"
-  Compound sizeof_refuses_what_has_no_size.c:4:28
-    Return sizeof_refuses_what_has_no_size.c:5:5
-      Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
-        Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
-          Binary sizeof_refuses_what_has_no_size.c:5:12 "+"
-            SizeofExpr sizeof_refuses_what_has_no_size.c:5:12
-              Identifier sizeof_refuses_what_has_no_size.c:5:19 "f"
-            SizeofType sizeof_refuses_what_has_no_size.c:5:23 "void"
-          SizeofType sizeof_refuses_what_has_no_size.c:5:38 "struct S"
-        SizeofExpr sizeof_refuses_what_has_no_size.c:5:57
-          Identifier sizeof_refuses_what_has_no_size.c:5:64 "a"
+Declaration sizeof_refuses_what_has_no_size.c:2:1 "struct L"
+Function sizeof_refuses_what_has_no_size.c:3:1 "early" "unsigned long long (void)"
+  Compound sizeof_refuses_what_has_no_size.c:3:32
+    Return sizeof_refuses_what_has_no_size.c:4:5
+      SizeofType sizeof_refuses_what_has_no_size.c:4:12 "struct L"
+Declaration sizeof_refuses_what_has_no_size.c:6:1 "struct L"
+  Field sizeof_refuses_what_has_no_size.c:7:5 "x" "int"
+Declaration sizeof_refuses_what_has_no_size.c:9:1 "f" "int (void)"
+Declaration sizeof_refuses_what_has_no_size.c:10:1 "a" "int[]"
+Function sizeof_refuses_what_has_no_size.c:11:1 "g" "unsigned long long (void)"
+  Compound sizeof_refuses_what_has_no_size.c:11:28
+    Return sizeof_refuses_what_has_no_size.c:12:5
+      Binary sizeof_refuses_what_has_no_size.c:12:12 "+"
+        Binary sizeof_refuses_what_has_no_size.c:12:12 "+"
+          Binary sizeof_refuses_what_has_no_size.c:12:12 "+"
+            SizeofExpr sizeof_refuses_what_has_no_size.c:12:12
+              Identifier sizeof_refuses_what_has_no_size.c:12:19 "f"
+            SizeofType sizeof_refuses_what_has_no_size.c:12:23 "void"
+          SizeofType sizeof_refuses_what_has_no_size.c:12:38 "struct S"
+        SizeofExpr sizeof_refuses_what_has_no_size.c:12:57
+          Identifier sizeof_refuses_what_has_no_size.c:12:64 "a"

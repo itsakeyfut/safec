@@ -111,4 +111,10 @@ programs! {
     /// Mutation: take every member's offset as zero in the backend's
     /// `Projection::Field` arm; this exits with another value.
     a_struct_is_laid_out_and_read_through_its_members,
+    /// `(*x).m` where `x` is read out of memory: `(**pp).m`, through a global
+    /// pointer and through a pointer member, written, compound-assigned,
+    /// incremented and taken the address of (#1200 review). Mutation: take
+    /// `Lowering::member_base`'s temporary in `Lowering::struct_address`;
+    /// this does not build.
+    a_member_through_a_pointer_read_out_of_memory_is_read,
 }

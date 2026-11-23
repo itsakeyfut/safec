@@ -381,7 +381,9 @@ impl Resolution {
                 }
                 | Type::Pointer(_) => return true,
                 Type::Void | Type::Function { .. } => return false,
-                Type::Struct { .. } => return struct_complete(current),
+                // The one a `const` copy of it was bound as, see
+                // [`Resolution::bound`].
+                Type::Struct { .. } => return struct_complete(self.bound(ast, current)),
                 Type::Array {
                     element, length, ..
                 } => {
@@ -432,6 +434,22 @@ impl Resolution {
     pub fn enumeration_definition(&self, ty: TypeId) -> Option<EnumerationId> {
         let tag = self.tag_of.get(&ty)?;
         self.enumeration_definitions.get(tag).copied()
+    }
+
+    /// `ty`, or the type it was copied from to qualify it, whichever this
+    /// stage bound to a tag: a `const` copy the parser made is bound and its
+    /// original may not be, and one the type check made after this ran is
+    /// not and its original is (#1200 review). `ty` where neither is.
+    pub fn bound(&self, ast: &Ast, ty: TypeId) -> TypeId {
+        if self.tag_of.contains_key(&ty) {
+            return ty;
+        }
+        let original = ast.unqualified(ty);
+        if self.tag_of.contains_key(&original) {
+            original
+        } else {
+            ty
+        }
     }
 
     /// The tag `id` names.

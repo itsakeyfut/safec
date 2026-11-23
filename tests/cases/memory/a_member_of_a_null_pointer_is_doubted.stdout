@@ -51,7 +51,37 @@ Function a_member_of_a_null_pointer_is_doubted.c:10:5 "maybe"
           Deref
     Sequenced a_member_of_a_null_pointer_is_doubted.c:13:12 generated
     Return
-Function a_member_of_a_null_pointer_is_doubted.c:16:5 "main"
+Function a_member_of_a_null_pointer_is_doubted.c:16:5 "address_alone"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" parameter "p"
+  Local "_2" "int *" "q"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_member_of_a_null_pointer_is_doubted.c:17:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_member_of_a_null_pointer_is_doubted.c:17:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_member_of_a_null_pointer_is_doubted.c:17:14 generated
+    Operation a_member_of_a_null_pointer_is_doubted.c:18:12 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_2"
+        Constant 0
+    Operation a_member_of_a_null_pointer_is_doubted.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_member_of_a_null_pointer_is_doubted.c:18:12 generated
+    Return
+Function a_member_of_a_null_pointer_is_doubted.c:21:5 "main"
   Local "_0" "int" return
   Local "_1" "struct #0" "s"
   Local "_2" "struct #0 *"
@@ -60,47 +90,58 @@ Function a_member_of_a_null_pointer_is_doubted.c:16:5 "main"
   Local "_5" "struct #0 *"
   Local "_6" "int"
   Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
   Block "bb0" entry
-    Operation a_member_of_a_null_pointer_is_doubted.c:16:5 generated
+    Operation a_member_of_a_null_pointer_is_doubted.c:21:5 generated
       Destination "_0"
       Use
         Constant 0
-    Operation a_member_of_a_null_pointer_is_doubted.c:18:5 generated
+    Operation a_member_of_a_null_pointer_is_doubted.c:23:5 generated
       Destination "_2"
       Address
         Place "_1"
-    Operation a_member_of_a_null_pointer_is_doubted.c:18:5 written
+    Operation a_member_of_a_null_pointer_is_doubted.c:23:5 written
       Destination "_3"
       Address
         Place "_2"
           Deref
             Field
               Member 0
-    Operation a_member_of_a_null_pointer_is_doubted.c:18:5 written
+    Operation a_member_of_a_null_pointer_is_doubted.c:23:5 written
       Destination "_3"
         Deref
       Use
         Constant 0
-    Sequenced a_member_of_a_null_pointer_is_doubted.c:18:5 generated
-    Call a_member_of_a_null_pointer_is_doubted.c:19:12 written "certainly" "bb1"
+    Sequenced a_member_of_a_null_pointer_is_doubted.c:23:5 generated
+    Call a_member_of_a_null_pointer_is_doubted.c:24:12 written "certainly" "bb1"
       Destination "_4"
   Block "bb1"
-    Operation a_member_of_a_null_pointer_is_doubted.c:19:32 written
+    Operation a_member_of_a_null_pointer_is_doubted.c:24:32 written
       Destination "_5"
       Address
         Place "_1"
-    Call a_member_of_a_null_pointer_is_doubted.c:19:26 written "maybe" "bb2"
+    Call a_member_of_a_null_pointer_is_doubted.c:24:26 written "maybe" "bb2"
       Destination "_6"
       Copy "_5"
   Block "bb2"
-    Operation a_member_of_a_null_pointer_is_doubted.c:19:12 written
+    Operation a_member_of_a_null_pointer_is_doubted.c:24:12 written
       Destination "_7"
       Binary "Add"
         Copy "_4"
         Copy "_6"
-    Operation a_member_of_a_null_pointer_is_doubted.c:19:5 written
+    Call a_member_of_a_null_pointer_is_doubted.c:24:38 written "address_alone" "bb3"
+      Destination "_8"
+      Constant 0
+  Block "bb3"
+    Operation a_member_of_a_null_pointer_is_doubted.c:24:12 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_7"
+        Copy "_8"
+    Operation a_member_of_a_null_pointer_is_doubted.c:24:5 written
       Destination "_0"
       Use
-        Copy "_7"
-    Sequenced a_member_of_a_null_pointer_is_doubted.c:19:12 generated
+        Copy "_9"
+    Sequenced a_member_of_a_null_pointer_is_doubted.c:24:12 generated
     Return
