@@ -235,7 +235,7 @@ pub(super) fn asked_unwritten_in_terminator(
                                 .into_iter()
                                 .map(Storage::Heap)
                                 .chain(locals.into_iter().map(Storage::Local))
-                                .map(|storage| (storage, origin.span()));
+                                .map(|storage| (storage, origin.span(), None));
                             ask_partial(
                                 PartialDoor::CopyOut,
                                 storages,
@@ -297,7 +297,9 @@ fn report_left_unwritten(ask: &UnwrittenAsk<'_, '_>, findings: &mut Vec<Finding>
     // ADR-0087.
     ask_partial(
         PartialDoor::Exit,
-        asked.iter().map(|&(site, at)| (Storage::Heap(site), at)),
+        asked
+            .iter()
+            .map(|&(site, at)| (Storage::Heap(site), at, None)),
         findings,
         ask.analysis,
         known,
@@ -394,8 +396,13 @@ impl PartialDoor {
     /// is reported. Mutation: where it leaves, ask the state alone;
     /// `part_of_a_pointer_in_a_block_an_earlier_turn_made_leaves_after_the_newest_is_written_whole`
     /// goes silent.
-    fn record(self, known: &Known, at: Storage) -> Option<(Option<Span>, WrittenAs)> {
-        let part = known.written[at].may_hold_part();
+    fn record(
+        self,
+        known: &Known,
+        at: Storage,
+        slot: Option<u64>,
+    ) -> Option<(Option<Span>, WrittenAs)> {
+        let part = known.written[at].at(slot).may_hold_part();
         let (asked, place): (bool, fn(Earliest) -> Option<Span>) = match self {
             PartialDoor::Exit | PartialDoor::Return | PartialDoor::Call => {
                 (part || known.part_before[at], Earliest::ever)
@@ -428,7 +435,7 @@ impl PartialDoor {
 /// write is recorded.
 pub(super) fn ask_partial(
     door: PartialDoor,
-    storages: impl IntoIterator<Item = (Storage, Span)>,
+    storages: impl IntoIterator<Item = (Storage, Span, Option<u64>)>,
     findings: &mut Vec<Finding>,
     analysis: &Allocations<'_>,
     known: &Known,
@@ -440,11 +447,11 @@ pub(super) fn ask_partial(
     let pointer = u64::from(target.pointer_bits() / target.integer(Rank::Char, Sign::Plain).bits());
     let narrower =
         |at: Storage| matches!(known.extent[at], Some(Extent::Exactly(size)) if size < pointer);
-    for (at, caret) in storages {
+    for (at, caret, slot) in storages {
         if narrower(at) {
             continue;
         }
-        if let Some((place, written)) = door.record(known, at) {
+        if let Some((place, written)) = door.record(known, at, slot) {
             let said = place.unwrap_or(caret);
             push_part_of_a_pointer(findings, analysis, said, door.asked(), written);
         }
@@ -662,7 +669,7 @@ fn report_returned_unwritten(
             .iter()
             .flatten()
             .chain(&below)
-            .map(|&site| (Storage::Heap(site), operation.origin.span())),
+            .map(|&site| (Storage::Heap(site), operation.origin.span(), None)),
         findings,
         analysis,
         known,
@@ -965,11 +972,27 @@ pub(super) fn loaded_indeterminate(
             }) == 1
                 && known.points_to[place.local].stored_through;
             if !rewritten && analysis.may_be_pointer(function, &place) {
+                // **The slot read, where one dereference reads it at a known
+                // one**: a struct's `int` member written beside its pointer
+                // member left its own slot holding no pointer, and read
+                // whole, the record said the pointer member's read might be
+                // part of one (#1202). Mutation: ask the whole record;
+                // `a_pointer_member_written_then_read_is_written`'s
+                // `beside_an_int` is `SC0413`.
+                let held = &known.points_to[place.local];
+                let one_down = (match place.shape() {
+                    Shape::Deref(depth) => depth,
+                    Shape::Local | Shape::Indexed => 0,
+                }) == 1;
+                let slot = |storage: Storage| match storage {
+                    Storage::Heap(_) => held.site_element,
+                    Storage::Local(_) => held.element,
+                };
                 ask_partial(
                     PartialDoor::Load,
                     blocks_read(&place, known)
                         .into_iter()
-                        .map(|storage| (storage, at)),
+                        .map(|storage| (storage, at, one_down.then(|| slot(storage)).flatten())),
                     findings,
                     analysis,
                     known,
@@ -1136,7 +1159,7 @@ pub(super) fn unwritten_read(
         {
             ask_partial(
                 PartialDoor::Load,
-                [(Storage::Local(LocalIdx::of(local)), at)],
+                [(Storage::Local(LocalIdx::of(local)), at, None)],
                 findings,
                 analysis,
                 known,

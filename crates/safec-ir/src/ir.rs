@@ -1909,8 +1909,10 @@ pub struct TranslationUnit {
     /// So that one type has one id. Not part of the shape: an implementation
     /// detail of [`Self::push_type`].
     interned: HashMap<Ty, TyId>,
-    /// Every struct's layout, by [`StructId`].
-    structs: Vec<StructLayout>,
+    /// Every struct's layout, by [`StructId`], or `None` for one declared
+    /// and not completed: a struct nothing in this unit defines, reached
+    /// only through pointers, and one whose members are being laid out.
+    structs: Vec<Option<StructLayout>>,
 }
 
 impl TranslationUnit {
@@ -1931,13 +1933,41 @@ impl TranslationUnit {
     /// which the lowering refuses before it asks. The layout is
     /// [`lay_out`]'s.
     pub fn push_struct(&mut self, members: &[TyId]) -> Option<StructId> {
+        let id = self.declare_struct();
+        self.complete_struct(id, members)?;
+        Some(id)
+    }
+
+    /// A struct with no members yet, so that a pointer to it can be a type
+    /// before its members are laid out: `struct L { struct L *next; }` is a
+    /// pointer to `L` inside `L` (C17 6.7.2.3 p8), and one nothing in this
+    /// unit defines is only ever pointed at. Its size and alignment are
+    /// `None` until [`Self::complete_struct`] gives it members.
+    pub fn declare_struct(&mut self) -> StructId {
+        let id = StructId(u32::try_from(self.structs.len()).expect("fewer than 2^32 structs"));
+        self.structs.push(None);
+        id
+    }
+
+    /// Lay out the declared struct `id` with these members, in order. `None`
+    /// where a member has no size or alignment this unit can give, the
+    /// struct staying incomplete.
+    ///
+    /// # Panics
+    ///
+    /// If `id` already has members: one struct is laid out once.
+    pub fn complete_struct(&mut self, id: StructId, members: &[TyId]) -> Option<()> {
+        assert!(
+            self.structs[id.0 as usize].is_none(),
+            "struct {} is already laid out",
+            id.0
+        );
         let sized = members
             .iter()
             .map(|&ty| Some((self.size_of(ty)?, self.align_of(ty)?)))
             .collect::<Option<Vec<_>>>()?;
         let (offsets, size, align) = lay_out(sized)?;
-        let id = StructId(u32::try_from(self.structs.len()).expect("fewer than 2^32 structs"));
-        self.structs.push(StructLayout {
+        self.structs[id.0 as usize] = Some(StructLayout {
             members: members
                 .iter()
                 .zip(offsets)
@@ -1946,16 +1976,25 @@ impl TranslationUnit {
             size,
             align,
         });
-        Some(id)
+        Some(())
     }
 
-    /// The layout of the struct `id` names.
+    /// The layout of the struct `id` names, where it is complete.
+    pub fn layout_of(&self, id: StructId) -> Option<&StructLayout> {
+        self.structs[id.0 as usize].as_ref()
+    }
+
+    /// The layout of the complete struct `id` names: what an object, a
+    /// member or a size is asked of, none of which an incomplete struct has.
     ///
     /// # Panics
     ///
-    /// If `id` came from a different [`TranslationUnit`].
+    /// If `id` came from a different [`TranslationUnit`], or names a struct
+    /// with no members: the type check refuses an object of one, so an
+    /// object of one reaching here is a gap it left.
     pub fn struct_layout(&self, id: StructId) -> &StructLayout {
-        &self.structs[id.0 as usize]
+        self.layout_of(id)
+            .unwrap_or_else(|| panic!("struct {} is laid out before it is asked", id.0))
     }
 
     /// Where member `member` of the struct `id` starts, in bytes. See
@@ -1978,7 +2017,7 @@ impl TranslationUnit {
             Ty::Pointer(_) => Some(self.target.alignment(None)),
             Ty::Void => None,
             Ty::Array { element, .. } => self.align_of(element),
-            Ty::Struct(layout) => Some(self.struct_layout(layout).align),
+            Ty::Struct(layout) => Some(self.layout_of(layout)?.align),
         }
     }
 
@@ -2064,7 +2103,7 @@ impl TranslationUnit {
                 return self.size_of(element)?.checked_mul(length);
             }
             // Its members and their padding, laid out once.
-            Ty::Struct(layout) => return Some(self.struct_layout(layout).size),
+            Ty::Struct(layout) => return Some(self.layout_of(layout)?.size),
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.
@@ -2098,7 +2137,7 @@ impl TranslationUnit {
                 (Projection::Index(_), _) => return None,
                 // The member's type, which the layout keeps.
                 (Projection::Field(member), Ty::Struct(layout)) => {
-                    self.struct_layout(layout).members.get(*member as usize)?.ty
+                    self.layout_of(layout)?.members.get(*member as usize)?.ty
                 }
                 (Projection::Field(_), _) => return None,
             };

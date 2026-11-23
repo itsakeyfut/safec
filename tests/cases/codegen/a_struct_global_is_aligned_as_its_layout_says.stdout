@@ -1,6 +1,8 @@
 target triple = "x86_64-pc-windows-msvc"
 @before = global i8 zeroinitializer
 @global = global [16 x i8] zeroinitializer, align 8
+@between = global i8 zeroinitializer
+@many = global [2 x [16 x i8]] zeroinitializer, align 8
 
 define i32 @main() {
 entry:
@@ -12,6 +14,12 @@ entry:
   %_5 = alloca ptr
   %_6 = alloca ptr
   %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca ptr
+  %_12 = alloca ptr
+  %_13 = alloca ptr
   br label %bb0
 
 bb0:
@@ -34,7 +42,24 @@ bb0:
   %t8 = load i64, ptr %t7
   %t9 = load ptr, ptr %_5
   store i64 %t8, ptr %t9
+  store ptr @many, ptr %_8
+  %t10 = load ptr, ptr %_8
+  store ptr %t10, ptr %_9
+  %t11 = load ptr, ptr %_9
+  %t12 = getelementptr [16 x i8], ptr %t11, i64 1
+  store ptr %t12, ptr %_10
+  %t13 = load ptr, ptr %_10
+  %t14 = getelementptr i8, ptr %t13, i64 8
+  store ptr %t14, ptr %_11
+  store ptr @global, ptr %_12
+  %t15 = load ptr, ptr %_12
+  %t16 = getelementptr i8, ptr %t15, i64 8
+  store ptr %t16, ptr %_13
+  %t17 = load ptr, ptr %_13
+  %t18 = load i64, ptr %t17
+  %t19 = load ptr, ptr %_11
+  store i64 %t18, ptr %t19
   store i32 0, ptr %_0
-  %t10 = load i32, ptr %_0
-  ret i32 %t10
+  %t20 = load i32, ptr %_0
+  ret i32 %t20
 }

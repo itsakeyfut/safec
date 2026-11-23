@@ -1,10 +1,30 @@
 error[SC0412]: this may reach outside the object it points at
-   ╭─[ a_struct_global_is_aligned_as_its_layout_says.c:9:5 ]
-   │
- 9 │     global.x = local.x;
-   │     ─────────┬────────  
-   │              ╰────────── this check cannot say this is inside its object
-───╯
+    ╭─[ a_struct_global_is_aligned_as_its_layout_says.c:11:5 ]
+    │
+ 11 │     global.x = local.x;
+    │     ─────────┬────────  
+    │              ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_struct_global_is_aligned_as_its_layout_says.c:12:5 ]
+    │
+ 12 │     many[1].x = global.x;
+    │     ──────────┬─────────  
+    │               ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_struct_global_is_aligned_as_its_layout_says.c:12:5 ]
+    │
+ 12 │     many[1].x = global.x;
+    │     ──────────┬─────────  
+    │               ╰─────────── this check cannot say this is inside its object
+────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

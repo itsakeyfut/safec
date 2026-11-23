@@ -521,15 +521,25 @@ pub(super) fn write_effects(
         .collect()
 }
 
-/// Whether the local at `index` is an array. One answer for the edge a
-/// pointer moved off it keeps and for the write through such a pointer
-/// being of an element. See `Held::moved_by_arithmetic` and
-/// `Known::written`.
+/// Whether the local at `index` is an array, or a struct, whose slots a
+/// member's address moves through as an element's does (ADR-0124). One
+/// answer for the edge a pointer moved off it keeps and for the write
+/// through such a pointer being of an element. See
+/// `Held::moved_by_arithmetic` and `Known::written`.
+///
+/// **A struct among them** (#1202): a pointer member of a local struct
+/// written through its address and read back was doubted as unwritten,
+/// the write landing on no slot of the whole. Mutation: answer `false` for
+/// a struct; `a_pointer_member_written_then_read_is_written`'s `local`
+/// reports `SC0411`.
 pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: LocalIdx) -> bool {
     function
         .locals()
         .nth(index.index())
-        .is_some_and(|local| matches!(unit.ty(function.local(local)), Ty::Array { .. }))
+        .is_some_and(|local| match unit.ty(function.local(local)) {
+            Ty::Array { .. } | Ty::Struct(_) => true,
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) => false,
+        })
 }
 
 /// The sites out of everything a place or an argument reached.
