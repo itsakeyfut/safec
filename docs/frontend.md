@@ -856,3 +856,8 @@ The gate is per input, so `a.c` failing does not stop `b.c` being read.
 Work toward broader C compatibility, potentially C11/C17.
 
 Do not target complete C compatibility from day one.
+
+**Diverged on 2026-11-23.** The roadmap's Phase 11 now targets the whole of
+C17, the GNU and MSVC extensions real code and system headers use, and C23, so
+that safec replaces `cc` in an existing build. See
+[roadmap.md](roadmap.md), Phase 11.

@@ -220,9 +220,9 @@ nothing, and a case the analysis cannot prove is an error that
 
 ### Phase 11: Systems C
 
-The C a multi-file program commonly needs, built before the rest of the safety
-model so that the remaining analyses are written against a language worth
-checking. Phase 5 was built over a subset with no arrays, structs, strings or
+The C that existing projects are written in, so that safec replaces `cc` in
+their builds, built before the rest of the safety model so that the remaining
+analyses are written against a language worth checking. Phase 5 was built over a subset with no arrays, structs, strings or
 globals. See [frontend.md](frontend.md), Stages 2 and 3, which this takes from
 Phase 9.
 
@@ -246,8 +246,43 @@ Phase 9.
   objects. `-D` and `-U` are done ahead of the rest (ADR-0059)
 - a minimal set of standard headers shipped with safec, such as `<stdio.h>`,
   `<stdlib.h>` and `<string.h>`, declaring what a program commonly calls, with
-  the definitions taken from the system's C library. Reading the system's own
-  headers is Phase 9
+  the definitions taken from the system's C library
+- **what replacing a production `cc` needs, moved here from Phase 9 on
+  2026-11-23**, each a sub-issue in the Systems C milestone:
+  - the rest of the aggregates: bit-fields, anonymous members, flexible array
+    members, variable length arrays, and `static` or a qualifier in an array
+    parameter's brackets
+  - the rest of C17's types, qualifiers and keywords: `float`, `double` and
+    `long double`, `_Bool`, `volatile`, `restrict`, `inline`, `register`,
+    `_Noreturn`, `_Static_assert`, `_Alignas` and `_Alignof`, `_Generic`,
+    `_Thread_local`, `_Atomic`, `_Complex`, old-style definitions, and
+    `__func__`
+  - initializers: braced and designated ones, compound literals, a `char`
+    array initialized from a string literal, and the prefixed literals `L`,
+    `u8`, `u` and `U`
+  - the rest of the preprocessor: variadic macros, the predefined macros,
+    `#pragma`, `_Pragma`, `#line`, `#error` and `#warning`
+  - reading the system's own headers after the shipped ones
+  - the GNU extensions real code uses (`__attribute__`, `typeof`, statement
+    expressions, the `__builtin` functions, case ranges, zero-length arrays and
+    the alternate keywords) and the MSVC ones the Windows SDK headers use
+  - a driver that stands in for `cc` in an existing build: `-c`, `-l` and
+    `-L`, `-O`, `-g`, `-W`, `-std`, `-E` and `-S`, the `-M` family, the `-f`
+    options and `-shared`, and `-pthread`, `-x` and `-v`
+- C23, added on 2026-11-23: its keywords (`bool`, `true`, `false`, `nullptr`,
+  `constexpr`, `typeof`, and `static_assert`, `alignas`, `alignof` and
+  `thread_local` as keywords, with `static_assert` taking one argument),
+  `[[attributes]]`, binary constants and digit separators, the empty
+  initializer, `auto`, `_BitInt`, `#elifdef`, `#elifndef` and `#embed`, and
+  `unreachable` with the rest of its library macros
+- inline assembly, allowed only inside a hatch (ADR-0032), since no check reads
+  it
+
+**This phase now runs ahead of the remaining safety work as well.** On
+2026-11-23 the owner decided that a compiler which replaces `cc` comes first:
+the memory check's open read-only design (#1180, with #1192, #1193 and #1174)
+waits for it, because the representation it needs is the one structs reshape.
+The rule below is what keeps that order safe.
 
 **Safety comes first, and every construct lands under one rule.** It is added
 so that the memory check either reads it or concludes `Unknown` about it. At a
@@ -256,12 +291,13 @@ turns it back into a warning (ADR-0033). No construct is refused at levels 1 to
 4 for how it is written (ADR-0049). When a check later reads the construct, the
 same program passes without being rewritten. A construct no check reads is
 allowed only inside a hatch (ADR-0032, ADR-0038), and inline assembly, the one
-such construct in view, is Phase 9's.
+such construct in view, is this phase's, listed above.
 
-**Done when:** every construct listed compiles to an executable at `--safety
-off`, and the corpus shows, for each, that at `--safety memory` the memory check
-either reads it or concludes `Unknown`. None is answered safe without being
-read.
+**Done when:** a project that builds with `cc` builds with safec, at `--safety
+off`, with `CC=safec` in its own build; every construct listed compiles to an
+executable there; and the corpus shows, for each, that at `--safety memory` the
+memory check either reads it or concludes `Unknown`. None is answered safe
+without being read.
 
 ### Phase 6: Lifetime Safety
 
@@ -307,8 +343,8 @@ Safety levels 4 and 5.
   which is what `pthread_create`'s start routine is; brought forward from Phase
   9 when Phase 9 held function pointers (#115). The rest of compiling one is
   Phase 11's, which runs first. `<pthread.h>` is one of the system's own
-  headers, which are Phase 9's, so a program here declares the thread functions
-  it calls by hand
+  headers, which Phase 11 reads since 2026-11-23; until it does, a program here
+  declares the thread functions it calls by hand
 - thread creation and join
 - shared state
 - synchronization primitives
@@ -328,29 +364,20 @@ fails rather than passing quietly.
 
 ### Phase 9: Broader C
 
-What replacing a production `cc` needs beyond Phase 11. See
+What is left of broader C once Phase 11 replaces `cc`. See
 [frontend.md](frontend.md), Stage 4.
 
-The core of the language this phase used to hold, from arrays and structs to
-the jump statements, function pointers, variadic functions, the rest of the
-program's own preprocessor, `-c`, `-I` and shipped headers, moved to Phase 11,
-which runs before Phases 6 to 8. What stays here:
+Everything else this phase held, from the system's own headers and the rest of
+C11 and C17 to the GNU extensions and a `cc`-compatible driver, moved to Phase 11
+on 2026-11-23, and inline assembly inside a hatch went with it. What stays here:
 
-- reading the system's own standard headers, which lean on extensions and on
-  nearly all of the language
-- the rest of C11 and C17 that Phase 11 does not list
-- the GNU extensions real code uses, `__attribute__` and its kin
-- a driver that stands in for `cc` in an existing build in full: `-O`, `-g`,
-  `-W` and `-std`, each refused as an unexpected argument today, and a module
-  handed to `clang` with no optimisation level and no debug information
-  (`driver/backend.rs`)
 - a freestanding environment: no C library, an entry point of the program's
-  own, `volatile`
-- inline assembly, allowed only inside a hatch, and an experiment into how much
-  safety can be carried into one
+  own
+- an experiment into how much safety can be carried into a hatch that holds
+  inline assembly
 
-**Done when:** a real single-file C program from outside this repository
-compiles and runs.
+**Done when:** a freestanding program with its own entry point compiles and
+runs, and the experiment has an answer.
 
 ### Phase 10: Clang Integration
 
