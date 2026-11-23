@@ -1,0 +1,7 @@
+error[SC0201]: `static` may not be used without an array size
+   ╭─[ static_in_an_array_parameter_s_brackets_needs_a_length.c:1:19 ]
+   │
+ 1 │ int f(int a[static]);
+   │                   ┬  
+   │                   ╰── C17 6.7.6.2 p1 writes a length after `static`
+───╯

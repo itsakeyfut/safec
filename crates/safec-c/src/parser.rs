@@ -7,7 +7,7 @@
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is `union`, a bit-field, an anonymous member, casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
-//! `[static N]` and `[*]`, and a prefixed string literal. Each arrives in a
+//! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
@@ -315,6 +315,10 @@ enum Derivation {
         length: Option<ExprId>,
         /// The tokens between the brackets, for `Type::Array::written`.
         written: Option<Span>,
+        /// Whether `const` was written in a parameter's brackets, which
+        /// qualifies the pointer the parameter is adjusted to (C17 6.7.6.3
+        /// p7): `int a[const]` is an `int *const a`.
+        constant: bool,
     },
     /// C17 6.7.6.3.
     Function(Parameters),
@@ -2320,14 +2324,13 @@ impl Parser<'_> {
                         )
                     );
                     if qualified && outermost && suffixes.is_empty() {
-                        self.report_unread(
-                            Unread {
-                                what: "`static` or a qualifier in an array parameter's brackets",
-                                clause: "6.7.6.3 p7",
-                            },
-                            diagnostics,
-                        );
-                        return None;
+                        let (constant, length, written) = self.bracket_qualifiers(diagnostics)?;
+                        suffixes.push(Derivation::Array {
+                            length,
+                            written,
+                            constant,
+                        });
+                        continue;
                     }
                     if self.check(TokenKind::Punct(Punct::Star))
                         && self.peek_at(1).kind == TokenKind::Punct(Punct::RightBracket)
@@ -2368,7 +2371,11 @@ impl Parser<'_> {
                 };
 
                 self.expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)?;
-                suffixes.push(Derivation::Array { length, written });
+                suffixes.push(Derivation::Array {
+                    length,
+                    written,
+                    constant: false,
+                });
             } else if self.check(TokenKind::Punct(Punct::LeftParen)) {
                 self.spend();
                 self.advance();
@@ -2383,6 +2390,83 @@ impl Parser<'_> {
         }
 
         Some(suffixes)
+    }
+
+    /// The brackets of a parameter's outermost array derivation, from just
+    /// after its `[` through its `]`, where they begin with `static` or a
+    /// qualifier: C17 6.7.6.2 p1's `[ type-qualifier-list_opt
+    /// assignment-expression_opt ]`, `[ static type-qualifier-list_opt
+    /// assignment-expression ]` and `[ type-qualifier-list static
+    /// assignment-expression ]`. Whether `const` was among them, the length,
+    /// and the tokens of the length.
+    ///
+    /// **`static` says the argument has at least that many elements** (6.7.6.3
+    /// p7), and nothing here keeps it: the memory check believes a parameter
+    /// as the pointer it is adjusted to, as it does without one, which is the
+    /// conclusion that does not depend on a caller keeping the promise.
+    /// `restrict` permits an optimization this compiler does not make, so
+    /// reading it and keeping nothing is what it means here. `volatile` and
+    /// `_Atomic` are qualifiers this compiler does not read anywhere, and are
+    /// refused as not read yet, as they are elsewhere.
+    fn bracket_qualifiers(
+        &mut self,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(bool, Option<ExprId>, Option<Span>)> {
+        let mut constant = false;
+        let mut is_static = false;
+        loop {
+            match self.peek().kind {
+                TokenKind::Keyword(Keyword::Const) => constant = true,
+                TokenKind::Keyword(Keyword::Restrict) => {}
+                // 6.7.6.2 p1 writes `static` once, before the qualifiers or
+                // after them.
+                TokenKind::Keyword(Keyword::Static) if !is_static => is_static = true,
+                TokenKind::Keyword(Keyword::Static) => {
+                    self.report(
+                        "`static` written twice in an array parameter's brackets",
+                        "C17 6.7.6.2 p1 writes it once",
+                        diagnostics,
+                    );
+                    return None;
+                }
+                TokenKind::Keyword(Keyword::Volatile | Keyword::Atomic) => {
+                    self.report_unread(
+                        Unread {
+                            what: "`volatile` or `_Atomic` in an array parameter's brackets",
+                            clause: "6.7.6.3 p7",
+                        },
+                        diagnostics,
+                    );
+                    return None;
+                }
+                _ => break,
+            }
+            self.advance();
+        }
+        if self.check(TokenKind::Punct(Punct::RightBracket)) {
+            if is_static {
+                self.report(
+                    "`static` may not be used without an array size",
+                    "C17 6.7.6.2 p1 writes a length after `static`",
+                    diagnostics,
+                );
+                return None;
+            }
+            self.advance();
+            return Some((constant, None, None));
+        }
+        let start = self.peek().span;
+        let before = self.previous().span;
+        let length = self.assignment(diagnostics);
+        // A length that read no token has been reported, and has no span to
+        // join: `[static ;` ends here rather than at a span that ends before
+        // it starts.
+        if self.previous().span == before {
+            return None;
+        }
+        let written = self.join(start, self.previous().span, diagnostics);
+        self.expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)?;
+        Some((constant, Some(length), Some(written)))
     }
 
     /// What a function declarator wrote between its parentheses.
@@ -2455,6 +2539,10 @@ impl Parser<'_> {
                 }) => *nullability,
                 _ => None,
             };
+            let bracketed_const = matches!(
+                derivations.last(),
+                Some(Derivation::Array { constant: true, .. })
+            );
             let (written, _) =
                 self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
             // C17 6.7.6.3 p7 and p8: an array of `T` is a pointer to `T`, and
@@ -2462,7 +2550,16 @@ impl Parser<'_> {
             let ty = match self.ast.ty(written) {
                 Type::Array { element, .. } => {
                     let element = *element;
-                    self.ast.push_type(Type::Pointer(element))
+                    let pointer = self.ast.push_type(Type::Pointer(element));
+                    // 6.7.6.3 p7: the qualifiers in the brackets are the
+                    // pointer's. Mutation: drop them; `a = 0` in
+                    // `a_qualifier_in_an_array_parameter_s_brackets_is_the_pointer_s`
+                    // is accepted.
+                    if bracketed_const {
+                        self.ast.push_const(pointer)
+                    } else {
+                        pointer
+                    }
                 }
                 Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
                 Type::Integer {
@@ -2580,7 +2677,11 @@ impl Parser<'_> {
                     nullability: _,
                     constant: _,
                 } => Type::Pointer(ty),
-                Derivation::Array { length, written } => Type::Array {
+                Derivation::Array {
+                    length,
+                    written,
+                    constant: _,
+                } => Type::Array {
                     element: ty,
                     length,
                     written,
