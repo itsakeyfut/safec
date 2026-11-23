@@ -54,6 +54,14 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A pointer kept in an anonymous union is the container's member
+        // (#1207), so the memory check reads it there as any other: written
+        // and read through the same member, a number read back as it, and a
+        // use after a free are each asked, and none is answered safe.
+        // Mutation: lower a member of an anonymous member as the anonymous
+        // member itself in `Lowering::member`; `number_read_as_pointer`
+        // reads the union as a pointer and this changes.
+        a_pointer_in_an_anonymous_member_is_checked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every member of a union is the same bytes at offset 0, so a
         // pointer written as one member is read back through another as
         // what those bytes hold (#1203): the same member is read as written,
@@ -8543,10 +8551,14 @@ cases! {
         // `tagged_keyword` in `Parser::specifiers`; this says `expected a
         // name` instead.
         a_union_after_another_type_specifier_is_refused: ["--emit", "ast"],
-        // An anonymous union member is not read yet, and is called a union
-        // (#1203). Mutation: say `struct` for every anonymous member in
-        // `member_with_no_name`; this changes.
-        an_anonymous_union_member_is_not_read_yet: ["--emit", "ast"],
+        // An anonymous member's members are its container's (C17 6.7.2.1
+        // p13, #1207): `t->number` reaches into an anonymous union and
+        // `t->high` into the anonymous struct inside it, a name declared
+        // twice across them is a redeclaration, and one in none of them is
+        // no member. Mutation: skip anonymous members in
+        // `Checker::find_member`; `read` is `SC0316`. Mutation: check the
+        // names written in `check_members` alone; `Twice` is accepted.
+        an_anonymous_member_is_reached_through_its_container: ["--emit", "ast"],
         // A union is read as a structure type of its own (#1203): its
         // `sizeof` the largest member rounded to the strictest alignment, a
         // constant, and its tag in the one name space structs share, so
@@ -9089,12 +9101,9 @@ cases! {
         // compatible in `Ast::compatible`; the conflict goes silent.
         declarations_of_one_name_as_two_struct_types_conflict: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
-        // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
-        // bit-field, named or not (p9). Mutation: send a member with no
-        // declarator to the `int;` check again; the anonymous member is
-        // `SC0206`, a claim that valid C is invalid. Mutation: drop either
-        // `:` check; that bit-field is `expected` something instead.
-        a_struct_with_an_anonymous_member_is_not_read_yet: ["--emit", "ast"],
+        // makes it valid: a bit-field, named or not (C17 6.7.2.1 p9).
+        // Mutation: drop either `:` check; that bit-field is `expected`
+        // something instead.
         a_bit_field_is_not_read_yet: ["--emit", "ast"],
         a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
         // A `switch` with nothing in it is read and goes straight past its

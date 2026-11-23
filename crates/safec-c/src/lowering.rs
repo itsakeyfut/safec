@@ -4919,16 +4919,18 @@ impl Lowering<'_> {
         let Some(member) = self.types.member(id) else {
             unreachable!("the type check records the member every access it typed names");
         };
+        let (definition, path) = (member.definition, member.path.clone());
         // Its struct laid out, which a pointer to it reached through `->`
         // did not ask for.
-        self.struct_of(
-            self.ast.expr(id).span(),
-            member.definition,
-            true,
-            diagnostics,
-        )?;
+        self.struct_of(self.ast.expr(id).span(), definition, true, diagnostics)?;
         let member_ty = self.ty_of(id, diagnostics)?;
-        let index = u32::try_from(member.index).expect("fewer than 2^32 members");
+        // **One `Field` per step**, through each anonymous member to the one
+        // named (#1207): the place is `(*pointer).anonymous.m`, and every
+        // reader of a place already walks a step at a time.
+        let mut steps = vec![Projection::Deref];
+        steps.extend(path.iter().map(|&index| {
+            Projection::Field(u32::try_from(index).expect("fewer than 2^32 members"))
+        }));
         let pointer_ty = self.unit.push_type(Ty::Pointer(member_ty));
         let address = builder.function.push_local(pointer_ty);
         let mut levels = Self::moved_levels(
@@ -4942,10 +4944,7 @@ impl Lowering<'_> {
         builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
             place: Place::local(address),
-            value: Rvalue::Address(Place::new(
-                pointer,
-                vec![Projection::Deref, Projection::Field(index)],
-            )),
+            value: Rvalue::Address(Place::new(pointer, steps)),
             origin: Origin::Written(self.ast.expr(id).span()),
         });
         Some(Place::local(address).deref())
