@@ -2858,7 +2858,10 @@ impl Lowering<'_> {
                         // declared, every time** (#1209): its storage is
                         // made there, as large as its length then is, which
                         // the backend does at this marker, so it is written
-                        // even in the function's own body.
+                        // even in the function's own body. Mutation: leave it
+                        // to `narrower`; the run of
+                        // `a_variable_length_array_is_sized_when_declared`
+                        // fails.
                         if narrower || self.labeled || variable.is_some() {
                             // Generated for the same reason as the closing half:
                             // the declaration is what this exists because of, and

@@ -1190,8 +1190,10 @@ impl Emitter<'_> {
             // begins, storage of its length's elements is made there, and
             // the stack is put back where it ends, so one in a loop takes no
             // more each time round. Mutation: skip the restore;
-            // `a_variable_length_array_is_sized_when_declared`'s text loses
-            // its `stackrestore`.
+            // `a_variable_length_array_is_made_and_given_back` loses its
+            // `stackrestore`, and the loop in
+            // `a_variable_length_array_is_sized_when_declared` overflows the
+            // stack.
             Element::StorageLive { local, origin: _ } => {
                 if is_variable(self.unit, function.local(*local)) {
                     self.begin_variable(function, *local, out)?;
