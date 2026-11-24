@@ -1821,10 +1821,22 @@ impl Resolver<'_> {
         if !self.memory_checked {
             return;
         }
-        let Type::Function { parameters, .. } = self.ast.ty(ty) else {
+        let Type::Function {
+            parameters,
+            variadic,
+            ..
+        } = self.ast.ty(ty)
+        else {
             return;
         };
         let shapes: Option<Vec<Option<library::Shape>>> = match parameters {
+            // **No row takes `...`**, so a declaration of a row's name with
+            // one is unlike the library's, as `()` is (#1213). Read by its
+            // row, `void *malloc(unsigned long long, ...)` let a freed
+            // pointer passed past the parameters through in silence.
+            // Mutation: read the parameters alone;
+            // `a_library_function_declared_variadic_is_refused` builds.
+            Parameters::Prototype(_) if *variadic => None,
             Parameters::Prototype(declared) => {
                 Some(
                     declared

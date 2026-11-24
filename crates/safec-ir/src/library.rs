@@ -90,7 +90,9 @@ pub(crate) fn read_as_library(
     callee: FuncId,
 ) -> Option<&'static Library> {
     let function = unit.function(callee);
-    if function.is_defined() {
+    // A variadic declaration is no row's, which the frontend refuses
+    // (`SC0320`); a unit built some other way reads it as any call (#1213).
+    if function.is_defined() || function.is_variadic() {
         return None;
     }
     let name = function.spelled(sources);
