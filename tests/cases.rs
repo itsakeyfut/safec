@@ -54,6 +54,17 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A struct local the program never took the address of, read whole
+        // while nothing was written into it, is C17 6.3.2.1 p2's undefined
+        // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
+        // `a_union`, `into_a_block` and `passed` are `SC0411`. A member
+        // written is an assignment performed, so `one_member_written` is
+        // silent, and so is `address_taken`, which p2 does not cover.
+        // Mutations in `memory::assigned`: watch no struct, and the first
+        // five go silent; count the lowering's own address of `t` as the
+        // program's, and the same; count only a whole write, and
+        // `one_member_written` reports.
+        a_struct_local_nothing_wrote_is_reported_where_it_is_copied: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.6 p9 defines a pointer minus a pointer only between
         // elements of one array, narrower than the one object 6.5.8 p5 asks
         // of an ordering, and `compared_apart` asks it (#638). `one` is
