@@ -9877,6 +9877,17 @@ cases! {
         // qualifier rule from `assignable`; the `SC0302` goes. Require the
         // qualifiers to be equal; the conversion that adds one is refused.
         a_conversion_cannot_discard_const: ["--emit", "ast"],
+        // C17 6.5.16.1 p1 asks a function designator as the pointer it
+        // becomes (6.3.2.1 p4): one of another type, or assigned to an
+        // integer, is `SC0302` in an initializer, as an argument, on return
+        // and by assignment, and a function pointer and `void *` convert
+        // only by a cast, since a function is no object type (6.2.5 p1).
+        // `its_own_type` is silent, and so is a pointer to a function
+        // pointer made a `void *`. Mutation: answer a function source
+        // `None` in `assignable`, and every `SC0302` but `through_void`'s
+        // goes; let `void *` stand for a pointer to a function, and
+        // `through_void`'s go.
+        a_function_is_assigned_only_as_a_pointer_to_its_own_type: ["--emit", "ast"],
         // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
         // of the function's type, and one on what a pointer points to is.
         // Mutation: have `compatible` not ask `Ast::is_const`; the second pair

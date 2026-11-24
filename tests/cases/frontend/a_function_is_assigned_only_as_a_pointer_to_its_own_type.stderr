@@ -1,0 +1,68 @@
+error[SC0302]: cannot initialize `int (*)(int *)` with `int (int)`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:13:23 ]
+    │
+ 13 │     int (*g)(int *) = k;
+    │           ┬           ┬  
+    │           ╰────────────── this holds `int (*)(int *)`
+    │                       │  
+    │                       ╰── this is `int (int)`
+────╯
+error[SC0302]: cannot pass `int (void)` to a parameter of type `int *`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:18:8 ]
+    │
+  9 │ void wr(int *p);
+    │              ┬  
+    │              ╰── declared `int *` here
+    │ 
+ 18 │     wr(zero);
+    │        ──┬─  
+    │          ╰─── this is `int (void)`
+────╯
+error[SC0302]: cannot pass `int (int)` to a parameter of type `int (*)(int *)`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:19:19 ]
+    │
+ 10 │ int callit(int (*f)(int *));
+    │                  ┬  
+    │                  ╰── declared `int (*)(int *)` here
+    │ 
+ 19 │     return callit(k);
+    │                   ┬  
+    │                   ╰── this is `int (int)`
+────╯
+error[SC0302]: cannot return `int (int)` from a function returning `int (*)(int *)`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:23:12 ]
+    │
+ 22 │ int (*returned(void))(int *) {
+    │       ────┬───  
+    │           ╰───── declared to return `int (*)(int *)`
+ 23 │     return k;
+    │            ┬  
+    │            ╰── this is `int (int)`
+────╯
+error[SC0302]: cannot assign `int (void)` to `int`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:28:9 ]
+    │
+ 28 │     i = zero;
+    │     ┬   ──┬─  
+    │     ╰───────── this holds `int`
+    │           │   
+    │           ╰─── this is `int (void)`
+────╯
+error[SC0302]: cannot initialize `void *` with `int (void)`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:33:15 ]
+    │
+ 33 │     void *v = zero;
+    │           ┬   ──┬─  
+    │           ╰───────── this holds `void *`
+    │                 │   
+    │                 ╰─── this is `int (void)`
+────╯
+error[SC0302]: cannot initialize `int (*)(void)` with `void *`
+    ╭─[ a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:34:22 ]
+    │
+ 34 │     int (*f)(void) = v;
+    │           ┬          ┬  
+    │           ╰───────────── this holds `int (*)(void)`
+    │                      │  
+    │                      ╰── this is `void *`
+────╯
