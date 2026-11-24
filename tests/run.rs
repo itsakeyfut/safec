@@ -166,4 +166,10 @@ programs! {
     /// past it (#1208). Mutation: size it as one element in
     /// `Checker::struct_layout`; `sizeof` is 8 and this fails.
     a_flexible_array_member_holds_what_was_allocated,
+    /// Variable length arrays sized when they run, `sizeof` included, one
+    /// passed on as a pointer, and one made afresh on each of 200000 passes
+    /// of a loop, its storage given back at the end of each (#1209).
+    /// Mutation: skip the restore at `StorageDead` in the backend; the loop
+    /// takes 800 MB of stack and the program does not finish.
+    a_variable_length_array_is_sized_when_declared,
 }

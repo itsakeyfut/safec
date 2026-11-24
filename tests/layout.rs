@@ -13,7 +13,7 @@
 
 use std::process::{Command, Stdio};
 
-use safec_ir::ir::{Declared, Rank, Sign, StructId, TranslationUnit, Ty, TyId};
+use safec_ir::ir::{Declared, Length, Rank, Sign, StructId, TranslationUnit, Ty, TyId};
 use safec_ir::target::Target;
 
 /// One member's type, as both the C below and the IR spell it.
@@ -100,7 +100,10 @@ impl Member {
                     .collect();
                 let (_, element) = lay(unit, index, &members);
                 match length {
-                    Some(length) => unit.push_type(Ty::Array { element, length }),
+                    Some(length) => unit.push_type(Ty::Array {
+                        element,
+                        length: Length::Constant(length),
+                    }),
                     None => element,
                 }
             }
@@ -130,7 +133,10 @@ impl Member {
                     rank,
                     sign: Sign::Signed,
                 });
-                unit.push_type(Ty::Array { element, length })
+                unit.push_type(Ty::Array {
+                    element,
+                    length: Length::Constant(length),
+                })
             }
         }
     }

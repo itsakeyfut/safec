@@ -39,9 +39,9 @@ use crate::sema::{Resolution, TagId};
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
-    Between, BinOp, Bits, Block, BlockId, Declared, Element, FuncId, Function, Linkage, LocalId,
-    Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue, Shape,
-    Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Between, BinOp, Bits, Block, BlockId, Declared, Element, FuncId, Function, Length, Linkage,
+    LocalId, Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue,
+    Shape, Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -357,6 +357,7 @@ pub fn lower(
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
+        vla_types: HashMap::new(),
         argument_copies: Vec::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
@@ -393,6 +394,12 @@ struct Lowering<'a> {
     /// it is where the name was declared, so it is one per declaration, and a
     /// use reaches it through the binding it resolved to.
     locals: HashMap<Span, LocalId>,
+    /// The IR type of each variable length array local of the function being
+    /// lowered, whose length is a local of its own (#1209): what a use of its
+    /// name is typed as. **Emptied where each function begins**, since a
+    /// `LocalId` means a local of one function only, as `Builder::bit_fields`
+    /// learned (#1206 review).
+    vla_types: HashMap<LocalId, TyId>,
     /// The scopes that are open, innermost last, each holding the locals it
     /// declared directly: a compound statement's, and a `for`'s whose first
     /// clause is a declaration (C17 6.8.5 p5).
@@ -1103,7 +1110,7 @@ impl Lowering<'_> {
         let element = self.unit.push_type(Ty::CHAR);
         let ty = self.unit.push_type(Ty::Array {
             element,
-            length: bytes.len() as u64,
+            length: Length::Constant(bytes.len() as u64),
         });
         let object = self.unit.push_static(Static {
             name: format!(".str.{}", self.strings.len()),
@@ -2115,6 +2122,7 @@ impl Lowering<'_> {
         // `a_struct_is_assigned_passed_and_returned_by_value`'s `freed_own`
         // loses its `SC0401`.
         self.argument_copies.clear();
+        self.vla_types.clear();
         for (written, ty, pointer) in struct_parameters {
             let at = written.unwrap_or(name);
             let lowered = self.ty(at, ty, diagnostics)?;
@@ -2387,9 +2395,14 @@ impl Lowering<'_> {
                     element,
                     length: None,
                     ..
-                } if index + 1 == members.len() => self
-                    .ty(member.span, *element, diagnostics)
-                    .map(|element| self.unit.push_type(Ty::Array { element, length: 0 })),
+                } if index + 1 == members.len() => {
+                    self.ty(member.span, *element, diagnostics).map(|element| {
+                        self.unit.push_type(Ty::Array {
+                            element,
+                            length: Length::Constant(0),
+                        })
+                    })
+                }
                 _ => self.ty(member.span, member.ty, diagnostics),
             };
             match lowered_ty {
@@ -2563,7 +2576,7 @@ impl Lowering<'_> {
                 None => Ty::Pointer(ty),
                 Some(length) => Ty::Array {
                     element: ty,
-                    length,
+                    length: Length::Constant(length),
                 },
             });
         }
@@ -2666,6 +2679,26 @@ impl Lowering<'_> {
     /// The IR type of an expression, or a report that it has none.
     fn ty_of(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
         let ty = self.typed(id, diagnostics)?;
+        // **A name of a variable length array is the array its local is**
+        // (#1209): its length is the local it was worked out into where it
+        // was declared, which the C type, `T[n]`, does not say.
+        if let (
+            Expr::Identifier { .. },
+            Type::Array {
+                length: Some(_), ..
+            },
+        ) = (self.ast.expr(id), self.ast.ty(ty))
+        {
+            if let Some(&local) = self
+                .resolution
+                .resolved(id)
+                .and_then(|binding| self.locals.get(&self.resolution.binding(binding).name))
+            {
+                if let Some(builder_ty) = self.vla_types.get(&local) {
+                    return Some(*builder_ty);
+                }
+            }
+        }
         // **An access to a flexible array member is an array of none**, as
         // its struct was laid out (#1208): `T[]` is no type the IR holds
         // anywhere else, and is not one here, where the access names it.
@@ -2679,7 +2712,10 @@ impl Lowering<'_> {
         ) = (self.types.member(id), self.ast.ty(ty))
         {
             let element = self.ty(self.ast.expr(id).span(), *element, diagnostics)?;
-            return Some(self.unit.push_type(Ty::Array { element, length: 0 }));
+            return Some(self.unit.push_type(Ty::Array {
+                element,
+                length: Length::Constant(0),
+            }));
         }
         self.ty(self.ast.expr(id).span(), ty, diagnostics)
     }
@@ -2785,8 +2821,15 @@ impl Lowering<'_> {
                     if let Some(name) = name {
                         let read_only = self.read_only(ty);
                         let const_levels = self.const_levels(ty);
-                        let ty = self.ty(span, ty, diagnostics)?;
+                        let variable = self.variable_length(builder, ty, span, diagnostics)?;
+                        let ty = match variable {
+                            Some(ty) => ty,
+                            None => self.ty(span, ty, diagnostics)?,
+                        };
                         let local = builder.function.push_named_local(ty, name);
+                        if variable.is_some() {
+                            self.vla_types.insert(local, ty);
+                        }
                         if read_only {
                             builder.function.mark_read_only(local);
                         }
@@ -2811,7 +2854,12 @@ impl Lowering<'_> {
                             let scope = self.scopes.last_mut().expect("a scope is open");
                             scope.declared.push(local);
                         }
-                        if narrower || self.labeled {
+                        // **A variable length array begins where it is
+                        // declared, every time** (#1209): its storage is
+                        // made there, as large as its length then is, which
+                        // the backend does at this marker, so it is written
+                        // even in the function's own body.
+                        if narrower || self.labeled || variable.is_some() {
                             // Generated for the same reason as the closing half:
                             // the declaration is what this exists because of, and
                             // is not itself an instruction to begin storage that
@@ -4047,10 +4095,10 @@ impl Lowering<'_> {
                 tasks.push(Task::Value(*operand));
             }
             // A `sizeof` that has a type has its value, which the fold above
-            // pushed; its operand is never evaluated (C17 6.5.3.4 p2).
-            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {
-                unreachable!("a typed `sizeof` has its value, which the fold above pushed")
-            }
+            // pushed; its operand is never evaluated (C17 6.5.3.4 p2). One
+            // with none is of a variable length array, worked out when the
+            // node finishes (#1209).
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => tasks.push(Task::Finish(id)),
             // The parser reported whatever made this, and the driver's gate
             // means it never reaches here. Reporting it again would be a second
             // diagnostic about the first one's problem, so the function is
@@ -4320,8 +4368,59 @@ impl Lowering<'_> {
                 let (operand, span) = (*operand, *span);
                 self.cast(builder, id, operand, span, values, diagnostics)?;
             }
-            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {
-                unreachable!("a typed `sizeof` has its value, which `begin_value` pushed")
+            // A `sizeof` with no value is of a variable length array, whose
+            // length is the local it was worked out into, times its
+            // element's size (#1209). Mutation: answer the element's size alone;
+            // `a_variable_length_array_is_sized_when_declared` fails.
+            Expr::SizeofExpr { operand, span } => {
+                let (operand, span) = (*operand, *span);
+                let array = match self.ast.expr(operand) {
+                    Expr::Identifier { .. } if self.static_named(operand).is_none() => {
+                        self.local(operand, diagnostics)
+                    }
+                    _ => None,
+                };
+                let Some((held, element)) =
+                    array.and_then(|local| match self.unit.ty(builder.function.local(local)) {
+                        Ty::Array {
+                            element,
+                            length: Length::Local(held),
+                        } => Some((held, element)),
+                        _ => None,
+                    })
+                else {
+                    diagnostics.report(
+                        Diagnostic::error("cannot compile this `sizeof` yet")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(span, "sized when it runs"))
+                            .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
+                    );
+                    return None;
+                };
+                let element = self
+                    .unit
+                    .size_of(element)
+                    .expect("a variable length array's element has a size");
+                let into = self.temporary(builder, id, diagnostics)?;
+                builder.push(Operation {
+                    place: Place::local(into),
+                    value: Rvalue::Binary {
+                        op: BinOp::Mul,
+                        lhs: Operand::Copy(Place::local(held)),
+                        rhs: Operand::Constant(i128::from(element)),
+                    },
+                    origin: Origin::Written(span),
+                });
+                values.push(Operand::Copy(Place::local(into)));
+            }
+            Expr::SizeofType { span, .. } => {
+                diagnostics.report(
+                    Diagnostic::error("cannot compile this `sizeof` yet")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(*span, "sized when it runs"))
+                        .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
+                );
+                return None;
             }
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
@@ -5271,6 +5370,50 @@ impl Lowering<'_> {
             rank,
             sign: safec_ir::ir::Sign::Signed,
         })
+    }
+
+    /// The IR type of a variable length array declared with type `ty`, its
+    /// length worked out into a local of `size_t` here, where the
+    /// declaration is reached (C17 6.7.6.2 p5, #1209), or `None` where `ty`
+    /// is no such array. Only an array whose own length is not a constant
+    /// and whose element has a size: one nested deeper, or behind a
+    /// pointer, is refused by [`Self::ty`] as before.
+    ///
+    /// The length is not checked against zero or a negative value, which
+    /// C makes undefined (p5): the memory check concludes nothing about an
+    /// array whose size it cannot count, and says so where it is used.
+    fn variable_length(
+        &mut self,
+        builder: &mut Builder,
+        ty: TypeId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Option<TyId>> {
+        let Type::Array {
+            element,
+            length: Some(length),
+            ..
+        } = *self.ast.ty(ty)
+        else {
+            return Some(None);
+        };
+        if self.positive_length(length).is_some() || self.types.value(length).is_some() {
+            return Some(None);
+        }
+        let element = self.ty(span, element, diagnostics)?;
+        let counted = self.value(builder, length, diagnostics)?;
+        let (rank, sign) = self.unit.target().size_type();
+        let size = self.unit.push_type(Ty::Integer { rank, sign });
+        let held = builder.function.push_local(size);
+        builder.push(Operation {
+            place: Place::local(held),
+            value: Rvalue::Use(counted),
+            origin: Origin::Generated(self.ast.expr(length).span()),
+        });
+        Some(Some(self.unit.push_type(Ty::Array {
+            element,
+            length: Length::Local(held),
+        })))
     }
 
     /// The `const` levels of a pointer to an object of type `ty`: bit `0`

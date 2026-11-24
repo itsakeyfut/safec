@@ -287,6 +287,35 @@ pub struct Bits {
     pub width: u32,
 }
 
+/// How many elements an array has: a count known when the program is
+/// compiled, or the local that holds it when the array is declared, which a
+/// variable length array's is (C17 6.7.6.2 p4, #1209).
+///
+/// **A local of the function the array is declared in**, so an array type
+/// with one is read in that function alone, as every local is. The length is
+/// worked out once, where the declaration is reached (p5), and the local
+/// holds it from there; nothing writes it again. A type whose length is a
+/// local has no size this unit can give ([`TranslationUnit::size_of`] says
+/// `None`), so every check that counts against a size concludes nothing
+/// about one rather than something wrong.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Length {
+    /// This many elements.
+    Constant(u64),
+    /// As many as this local holds where the array is declared.
+    Local(LocalId),
+}
+
+impl Length {
+    /// The count, where it is known when the program is compiled.
+    pub fn constant(self) -> Option<u64> {
+        match self {
+            Length::Constant(length) => Some(length),
+            Length::Local(_) => None,
+        }
+    }
+}
+
 /// Which block, within one [`Function`].
 ///
 /// Meaningless in another function, the way an index into one arena is
@@ -379,8 +408,8 @@ pub enum Ty {
         /// (C17 6.7.2.1 p18, #1208), the last member of a struct, which takes
         /// no bytes of it and whose elements are as many as were allocated
         /// past it: the memory check bounds a walk through one by the
-        /// allocation rather than by the member.
-        length: u64,
+        /// allocation rather than by the member. See [`Length`].
+        length: Length,
     },
     /// A struct, laid out in [`TranslationUnit::struct_layout`], or a union.
     ///
@@ -2328,9 +2357,11 @@ impl TranslationUnit {
             Ty::Void => return None,
             // `length` elements and no padding between them, C17 6.5.3.4 p7.
             // `None` on overflow, which the memory check reads as an object
-            // it knows nothing of the size of, and so `Unknown`.
+            // it knows nothing of the size of, and so `Unknown`; and `None`
+            // for a variable length array, whose size is its length local's
+            // value, known only when it runs (#1209). See `Length`.
             Ty::Array { element, length } => {
-                return self.size_of(element)?.checked_mul(length);
+                return self.size_of(element)?.checked_mul(length.constant()?);
             }
             // Its members and their padding, laid out once.
             Ty::Struct(layout) => return Some(self.layout_of(layout)?.size),

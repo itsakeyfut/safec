@@ -876,17 +876,17 @@ fn a_constant_the_frontend_could_not_read_is_reported_once_and_lowers_nothing() 
 
 /// A type the IR cannot hold is reported at the declaration that wrote it.
 ///
-/// The IR has `int`, `char`, `void`, pointers and arrays of a constant
-/// length, and a variable length is none of those. Lowering one as a
-/// pointer would tell the memory analysis that one object is another.
-/// Chosen for what the IR cannot hold, and stops testing this the day it
-/// can.
+/// The IR holds a variable length array of elements it can size (#1209),
+/// and an array of variable length arrays is not one: its element has no
+/// size until it runs. Lowering one as a pointer would tell the memory
+/// analysis that one object is another. Chosen for what the IR cannot hold,
+/// and stops testing this the day it can.
 ///
 /// Mutation: lower an array of any length as a pointer to its element.
 /// Nothing is reported and this fails.
 #[test]
 fn a_type_the_ir_cannot_hold_is_reported() {
-    let lowered = lowered("int f(int n) {\n    int a[n];\n    return 0;\n}\n");
+    let lowered = lowered("int f(int n) {\n    int a[n][n];\n    return 0;\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }
@@ -913,7 +913,7 @@ fn a_name_the_ir_cannot_reach_is_reported() {
 #[test]
 fn a_function_that_cannot_be_lowered_does_not_take_the_others_with_it() {
     let lowered = lowered(
-        "int bad(int n) {\n    int a[n];\n    return 0;\n}\n\nint good(void) {\n    return 1;\n}\n",
+        "int bad(int n) {\n    int a[n][n];\n    return 0;\n}\n\nint good(void) {\n    return 1;\n}\n",
     );
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "bad").is_defined());
@@ -1844,7 +1844,13 @@ fn a_local_array_decays_to_the_address_of_its_first_element() {
         .find(|&local| f.name_of(local).map(|span| lowered.sources.snippet(span)) == Some("a"))
         .expect("a local named `a`");
     assert!(
-        matches!(lowered.unit.ty(f.local(a)), Ty::Array { length: 4, .. }),
+        matches!(
+            lowered.unit.ty(f.local(a)),
+            Ty::Array {
+                length: safec_ir::ir::Length::Constant(4),
+                ..
+            }
+        ),
         "{:?}",
         lowered.unit.ty(f.local(a))
     );

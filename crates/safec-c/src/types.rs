@@ -2895,6 +2895,22 @@ impl Checker<'_> {
             );
             return None;
         }
+        // **A variable length array is sized when it runs** (C17 6.5.3.4
+        // p2, #1209): an array whose length is no constant and whose element
+        // has a size, so `sizeof` has `size_t`'s type and no value here, and
+        // the lowering multiplies the length it holds by the element's size.
+        // Mutation: refuse it as before; `a_variable_length_array_is_sized_when_declared`
+        // is refused.
+        if let Type::Array {
+            element,
+            length: Some(length),
+            ..
+        } = *ast.ty(ty)
+        {
+            if self.values[length.index()].is_none() && self.bytes_of(ast, element).is_some() {
+                return Some(self.integer_type(ast, self.target.size_type()));
+            }
+        }
         let Some(bytes) = self.bytes_of(ast, ty) else {
             diagnostics.report(
                 Diagnostic::error(format!(

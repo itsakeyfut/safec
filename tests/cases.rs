@@ -54,6 +54,12 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A variable length array's size is its length local's value, which
+        // this check does not know, so an index into one is doubted, the
+        // first element as much as one at its length, and nothing is
+        // answered safe (#1209). Mutation: give such an array the size of
+        // one element in `TranslationUnit::size_of`; `first` goes silent.
+        a_variable_length_array_is_doubted_where_its_length_is_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A flexible array member takes no bytes of its struct, and its
         // elements are what was allocated past it (C17 6.7.2.1 p18, #1208):
         // `fits` writes the last of four allocated and is silent, `past`
@@ -10316,6 +10322,12 @@ cases! {
         // `abi::classify`; each changes.
         a_struct_with_a_flexible_array_member_crosses_in_memory: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_with_a_flexible_array_member_crosses_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
+        // A variable length array is made where it is declared, `n`
+        // elements' bytes after the stack is kept, and given back where its
+        // scope ends; `sizeof` is its length times its element's size, when
+        // it runs (#1209). Mutation: skip the restore at `StorageDead`;
+        // `stackrestore` goes from the text.
+        a_variable_length_array_is_made_and_given_back: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
@@ -10461,11 +10473,12 @@ cases! {
         // block that only jumps appears.
         a_do_body_that_cannot_fall_through_leaves_its_condition_unreached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_for_declaration_lives_across_the_whole_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `f`'s `for` cannot be lowered, since a variable length array has no
-        // IR yet, and its scope is closed all the same, so `g`, lowered by the
-        // same `Lowering`, opens with only its body's scope and `x` gets no
-        // storage marker. The array is chosen for what the lowering cannot do
-        // and stops testing this the day it can. Mutation: close the `for`'s
+        // `f`'s `for` cannot be lowered, since a variable length array of
+        // variable length arrays has no IR yet (#1209 lowers one of a sized
+        // element), and its scope is closed all the same, so `g`, lowered by
+        // the same `Lowering`, opens with only its body's scope and `x` gets
+        // no storage marker. The array is chosen for what the lowering cannot
+        // do and stops testing this the day it can. Mutation: close the `for`'s
         // scope only when the loop was lowered; `g` gains a `StorageLive`.
         a_for_that_cannot_be_lowered_leaves_no_scope_open: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array converts to the address of its first element and an

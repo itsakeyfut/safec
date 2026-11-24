@@ -1,5 +1,5 @@
 int f(int n) {
-    for (int a[n]; 0;) {
+    for (int a[n][n]; 0;) {
     }
     return 0;
 }

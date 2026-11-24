@@ -3,7 +3,7 @@
 //! does to the [`Known`] value, and what the analysis asks of the IR to answer
 //! that.
 
-use crate::ir::{Rank, Sign};
+use crate::ir::{Length, Rank, Sign};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dataflow::Analysis;
@@ -695,7 +695,9 @@ impl Allocations<'_> {
     /// eight. Found by review of #667.
     fn innermost_elements(&self, ty: TyId) -> Option<u64> {
         match self.unit.ty(ty) {
-            Ty::Array { element, length } => length.checked_mul(self.innermost_elements(element)?),
+            Ty::Array { element, length } => length
+                .constant()?
+                .checked_mul(self.innermost_elements(element)?),
             Ty::Pointer(_) => Some(1),
             // **Its pointer-sized slots, where it holds a pointer**, which is
             // what an element is counted in, so that a member's address
@@ -916,7 +918,13 @@ impl Allocations<'_> {
         // one, bounds it. Mutation: enter its row of no bytes;
         // `a_flexible_array_member_is_bounded_by_its_allocation`'s `fits`
         // reports `SC0412`.
-        if matches!(self.unit.ty(from), Ty::Array { length: 0, .. }) {
+        if matches!(
+            self.unit.ty(from),
+            Ty::Array {
+                length: Length::Constant(0),
+                ..
+            }
+        ) {
             return;
         }
         // **A range enters no one row** (#944): its ends may be in two, and
@@ -4062,7 +4070,13 @@ impl Allocations<'_> {
                             // `a_flexible_array_member_is_bounded_by_its_allocation`'s
                             // `fits` reports `SC0412`.
                             (At::Bytes(start), Some(0))
-                                if matches!(self.unit.ty(member), Ty::Array { length: 0, .. }) =>
+                                if matches!(
+                                    self.unit.ty(member),
+                                    Ty::Array {
+                                        length: Length::Constant(0),
+                                        ..
+                                    }
+                                ) =>
                             {
                                 Position {
                                     at: At::Bytes(start),
