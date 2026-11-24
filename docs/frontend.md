@@ -761,7 +761,8 @@ A pointer minus a pointer builds too, as the target's `ptrdiff_t`: the byte
 distance divided by the element's size from the IR's layout. The memory
 check doubts one it cannot show is between elements of one array (C17
 6.5.6 p9, `SC0419`, #638), which is narrower than the one object an
-ordering asks for: two members of a struct are two arrays.
+ordering asks for: two members of a struct are two arrays, and so are
+two members of one element of an array of structs (#1301).
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and
