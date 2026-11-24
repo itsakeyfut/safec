@@ -129,6 +129,14 @@ const WRITES_READ_ONLY: Code = Code::new("SC0417");
 /// to have, and the fix is in how the length is chosen. See
 /// `memory::Kind::VariableLength`.
 const VARIABLE_LENGTH: Code = Code::new("SC0418");
+
+/// An ordering of two pointers that may point into different objects.
+///
+/// Not any code above, which are each about an access, an allocation or a
+/// size: this is about which two objects a comparison is between, and the
+/// fix is in what the pointers are made from. See
+/// `memory::Kind::ComparedApart`.
+const COMPARED_APART: Code = Code::new("SC0419");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -959,6 +967,13 @@ pub(super) fn memory_finding(
                 .to_owned(),
             "nothing about what this points at is proved from here",
             "keep the value a pointer, or a `void *` where its type has to change",
+        ),
+        // Built only `Unknown`, at the comparison, as the rows above are.
+        (Kind::ComparedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            COMPARED_APART,
+            "this compares pointers that may point into different objects".to_owned(),
+            "nothing shows both point into one object, which C17 6.5.8 p5 asks",
+            "compare pointers into one array, or compare indices instead",
         ),
         // Built only `Unknown`, at the declaration, as the rows above are.
         (Kind::VariableLength, Conclusion::Unknown | Conclusion::Unsafe, _) => (

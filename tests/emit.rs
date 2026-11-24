@@ -45,7 +45,7 @@ fn artifact_path(name: &str) -> PathBuf {
 /// machine does not matter here, and naming one keeps the run from depending
 /// on where it is. `case` is the group and the name, `memory/a_value_freed_twice`.
 fn llvm_ir_to(path: &Path, case: &str) -> std::process::Output {
-    llvm_ir_to_with(path, case, &[])
+    llvm_ir_to_with(path, case, &["--target", "x86_64-pc-windows-msvc"])
 }
 
 /// The same, with arguments the caller needs on top.
@@ -56,7 +56,6 @@ fn llvm_ir_to(path: &Path, case: &str) -> std::process::Output {
 fn llvm_ir_to_with(path: &Path, case: &str, extra: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "llvm-ir"])
-        .args(["--target", "x86_64-pc-windows-msvc"])
         .args(extra)
         .arg("-o")
         .arg(path)
@@ -171,8 +170,9 @@ fn a_proved_unsafe_run_leaves_what_was_already_there() {
 /// keyed on a safety conclusion would leave this writing its file, which is why
 /// this is here and not only the test above.
 ///
-/// A relational comparison of two pointers, `p < p`, is what the backend
-/// refuses today, since #621 made it write `p + 1`. When it stops refusing,
+/// A struct passed by value on `i686`, whose C ABI the backend does not
+/// write yet, is what it refuses today: #621 made it write `p + 1` and #1211
+/// `p < p`, the two this held before. When it stops refusing,
 /// this fails on the exit code rather than passing quietly, which is the right
 /// way round and is the shape `object.rs` uses for the same reason.
 ///
@@ -180,7 +180,11 @@ fn a_proved_unsafe_run_leaves_what_was_already_there() {
 #[test]
 fn a_backend_refusal_leaves_no_llvm_ir() {
     let path = artifact_path("refused.ll");
-    let output = llvm_ir_to(&path, "codegen/an_ir_shape_the_backend_cannot_write");
+    let output = llvm_ir_to_with(
+        &path,
+        "codegen/an_ir_shape_the_backend_cannot_write",
+        &["--target", "i686-unknown-linux-gnu"],
+    );
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
@@ -211,7 +215,7 @@ fn a_warning_still_writes_its_llvm_ir() {
     let output = llvm_ir_to_with(
         &path,
         "memory/a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved",
-        &["--allow-unknown"],
+        &["--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     );
 
     let said = String::from_utf8_lossy(&output.stderr);

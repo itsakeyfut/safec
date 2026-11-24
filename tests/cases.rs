@@ -54,6 +54,12 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // C17 6.5.8 p5 orders pointers into one object only. `one` walks an
+        // array to its end and `past_its_end` compares one past it: silent.
+        // `apart` compares two arrays and `either` a pointer that may be
+        // either: `SC0419` (#1211). Mutation: answer one object whenever
+        // both name something in `compared_apart`; `apart` goes silent.
+        a_comparison_of_pointers_into_one_object_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A variable length array's size is its length local's value, which
         // this check does not know, so an index into one is doubted, the
         // first element as much as one at its length, and nothing is
@@ -10259,7 +10265,11 @@ cases! {
         // The text and whether the text is LLVM are two claims.
         a_narrow_unsigned_value_is_extended_without_a_sign: ["--emit", "llvm-ir", "--target", "armv7-unknown-linux-gnueabihf"],
         a_narrow_value_is_extended_where_the_target_asks: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
-        an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A struct passed by value on `i686`, whose C ABI the backend does
+        // not write yet: a refusal the frontend cannot see, so the module
+        // keeps a declaration in the function's place. It held `p < p` until
+        // #1211 wrote that.
+        an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "i686-unknown-linux-gnu"],
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],

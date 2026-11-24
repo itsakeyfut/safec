@@ -1065,12 +1065,16 @@ impl Emitter<'_> {
                 BinOp::Add | BinOp::Sub => {
                     return self.moved(function, op, lhs, rhs, to, out);
                 }
-                // C17 6.5.8 p5 defines these only between pointers into one
-                // object, which is a question this does not answer yet, and the
-                // reason is not a width.
-                BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => {
-                    return self.refuse("a relational comparison of two pointers");
-                }
+                // **Unsigned, as an address is** (#1211): C17 6.5.8 p5 orders
+                // pointers into one object by where they are in it, and the
+                // memory check doubts one that may be between two objects
+                // rather than this deciding what that means. Mutation: put the
+                // refusal back; `a_comparison_of_pointers_into_one_object_runs`
+                // is refused.
+                BinOp::Lt => "ult",
+                BinOp::Le => "ule",
+                BinOp::Gt => "ugt",
+                BinOp::Ge => "uge",
                 _ => {
                     return self
                         .refuse("arithmetic on a pointer other than moving it by an integer");

@@ -1,7 +1,7 @@
-error[SC0801]: the backend cannot write a relational comparison of two pointers
-   ╭─[ an_ir_shape_the_backend_cannot_write.c:6:12 ]
+error[SC0801]: the backend cannot write a struct passed or returned by value on `i686-unknown-linux-gnu`, whose C ABI this backend does not write yet
+   ╭─[ an_ir_shape_the_backend_cannot_write.c:6:5 ]
    │
- 6 │     return p < p;
-   │            ──┬──  
-   │              ╰──── this is what it could not write
+ 6 │ int first_of(struct pair given) {
+   │     ────┬───  
+   │         ╰───── this is what it could not write
 ───╯
