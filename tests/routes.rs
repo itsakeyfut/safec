@@ -5341,13 +5341,23 @@ fn ask_allowing(name: &str, source: &str) -> Answer {
 
 fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
     // **One program asked once per run**: a row's test and the summary ask
-    // the same two programs at the same level, and answered twice they were
-    // 1,594 processes this binary spent for nothing (#1328). Keyed by what
-    // the compiler is handed, so a row's name, which only labels a failure,
-    // does not split it. Two threads asking at once may both run it, which
-    // costs a process and changes no answer.
+    // the same programs at the same level, and different rows write the same
+    // program, so answered every time they were spawned thousands of times
+    // for nothing (#1328). Keyed by what the compiler is handed, so a row's
+    // name, which only labels a failure, does not split it. Two threads
+    // asking at once may both run it, which costs a process and changes no
+    // answer.
+    //
+    // **Not where an older build is compared**: the comparison is by row
+    // name, which an allowed-file entry and a deliberate quiet are read
+    // from, so every row has to ask it. Cached, a row whose twin asked
+    // first skipped its own comparison, and which twin that was depended on
+    // the threads (found by review).
+    if compare::older_build().is_some() {
+        return ask_uncached(name, source, safety, extra);
+    }
     static ANSWERED: OnceLock<Mutex<HashMap<String, Answer>>> = OnceLock::new();
-    let key = format!("{safety} {extra:?} {source}");
+    let key = format!("{safety}\0{extra:?}\0{source}");
     let answered = ANSWERED.get_or_init(Mutex::default);
     if let Some(answer) = answered
         .lock()
