@@ -176,6 +176,24 @@ fn pointed_at_struct(unit: &TranslationUnit, pointer: TyId) -> Option<&safec_ir:
     unit.layout_of(id)
 }
 
+/// Whether a struct laid out as `layout` holds a flexible array member, an
+/// array of none (C17 6.7.2.1 p18), as its own last member or in a member
+/// struct or union, however deep: what Win64 and System V pass in memory
+/// whatever the size (#1208 review). A recursion over members by value,
+/// which no struct holds itself through.
+fn holds_flexible_array(unit: &TranslationUnit, layout: &safec_ir::ir::StructLayout) -> bool {
+    layout
+        .members
+        .iter()
+        .any(|member| match unit.ty(member.ty) {
+            Ty::Array { length: 0, .. } => true,
+            Ty::Struct(inner) => unit
+                .layout_of(inner)
+                .is_some_and(|inner| holds_flexible_array(unit, inner)),
+            _ => false,
+        })
+}
+
 /// Whether `function` takes or returns a struct by value that is never
 /// completed. See `Emitter::function`.
 fn takes_an_incomplete_struct(unit: &TranslationUnit, function: &Function) -> bool {
@@ -231,7 +249,9 @@ impl Emitter<'_> {
             .iter()
             .map(|layout| match layout {
                 None => abi::Parameter::Scalar,
-                Some((passes, layout)) => abi::Parameter::Struct(*passes, layout),
+                Some((passes, layout)) => {
+                    abi::Parameter::Struct(*passes, layout, holds_flexible_array(unit, layout))
+                }
             })
             .collect();
         let Some(classes) = abi::classify(unit.target(), &parameters) else {

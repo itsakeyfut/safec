@@ -909,6 +909,16 @@ impl Allocations<'_> {
         if from == to || !matches!(self.unit.ty(from), Ty::Array { .. }) {
             return;
         }
+        // **A flexible array member's elements are what was allocated past
+        // it** (C17 6.7.2.1 p18, #1208): an array of none enters no row, as
+        // the member does not where its address is taken (`Self::element`'s
+        // `Field` arm), so the row it is in, the allocation's where it is
+        // one, bounds it. Mutation: enter its row of no bytes;
+        // `a_flexible_array_member_is_bounded_by_its_allocation`'s `fits`
+        // reports `SC0412`.
+        if matches!(self.unit.ty(from), Ty::Array { length: 0, .. }) {
+            return;
+        }
         // **A range enters no one row** (#944): its ends may be in two, and
         // left as it was, with no row, an access past the row one end walks
         // was measured against the whole object and proved inside, found by
@@ -4043,6 +4053,22 @@ impl Allocations<'_> {
                         // `a_member_s_address_walks_the_member_alone` is
                         // silent.
                         reached.position = match (reached.position.at, self.unit.size_of(member)) {
+                            // **A flexible array member walks what was
+                            // allocated past it** (C17 6.7.2.1 p18, #1208):
+                            // an array of none, so no row of its own, and
+                            // the row the struct is in bounds it, the
+                            // allocation's where it is one. Mutation: enter
+                            // its row of no bytes;
+                            // `a_flexible_array_member_is_bounded_by_its_allocation`'s
+                            // `fits` reports `SC0412`.
+                            (At::Bytes(start), Some(0))
+                                if matches!(self.unit.ty(member), Ty::Array { length: 0, .. }) =>
+                            {
+                                Position {
+                                    at: At::Bytes(start),
+                                    row: reached.position.row,
+                                }
+                            }
                             (At::Bytes(start), Some(len)) => {
                                 let entered = Row { start, len };
                                 let row = match reached.position.row {

@@ -2361,7 +2361,7 @@ impl Lowering<'_> {
         }
         let mut lowered = Vec::with_capacity(members.len());
         let mut refused = false;
-        for member in members {
+        for (index, member) in members.iter().enumerate() {
             // **A `const` member is refused**, since the memory check keeps
             // what is defined `const` per object, a static's or a local's
             // (ADR-0120), and a member is a slot of an object that is not:
@@ -2377,7 +2377,22 @@ impl Lowering<'_> {
                 refused = true;
                 break;
             }
-            match self.ty(member.span, member.ty, diagnostics) {
+            // **A flexible array member is an array of none** (C17 6.7.2.1
+            // p18, #1208): the last member, `T d[]`, takes no bytes of the
+            // struct, and its elements are what was allocated past it. The
+            // type check holds it to the last place and to a complete
+            // element. See `Ty::Array`.
+            let lowered_ty = match self.ast.ty(member.ty) {
+                Type::Array {
+                    element,
+                    length: None,
+                    ..
+                } if index + 1 == members.len() => self
+                    .ty(member.span, *element, diagnostics)
+                    .map(|element| self.unit.push_type(Ty::Array { element, length: 0 })),
+                _ => self.ty(member.span, member.ty, diagnostics),
+            };
+            match lowered_ty {
                 Some(ty) => lowered.push(Declared {
                     ty,
                     // The type check held every width to a constant that
@@ -2651,6 +2666,21 @@ impl Lowering<'_> {
     /// The IR type of an expression, or a report that it has none.
     fn ty_of(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
         let ty = self.typed(id, diagnostics)?;
+        // **An access to a flexible array member is an array of none**, as
+        // its struct was laid out (#1208): `T[]` is no type the IR holds
+        // anywhere else, and is not one here, where the access names it.
+        if let (
+            Some(_),
+            Type::Array {
+                element,
+                length: None,
+                ..
+            },
+        ) = (self.types.member(id), self.ast.ty(ty))
+        {
+            let element = self.ty(self.ast.expr(id).span(), *element, diagnostics)?;
+            return Some(self.unit.push_type(Ty::Array { element, length: 0 }));
+        }
         self.ty(self.ast.expr(id).span(), ty, diagnostics)
     }
 
@@ -4982,10 +5012,11 @@ impl Lowering<'_> {
         // **A bit-field is reached through its unit** (#1206): the address is
         // the unit's, of the unit's type, and the place is a temporary the
         // bits are taken into. See `Lowering::bit_fields`.
-        let member_ty = match laid.bits {
-            Some(_) => laid.ty,
-            None => self.ty_of(id, diagnostics)?,
-        };
+        //
+        // The member's type is the one its struct was laid out with, which is
+        // the expression's but for a bit-field's unit and a flexible array
+        // member, an array of none in the IR (#1208) and of no length in C.
+        let member_ty = laid.ty;
         // **One `Field` per step**, through each anonymous member to the one
         // named (#1207): the place is `(*pointer).anonymous.m`, and every
         // reader of a place already walks a step at a time.

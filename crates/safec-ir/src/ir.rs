@@ -361,10 +361,11 @@ pub enum Ty {
     /// A pointer to the type this id names.
     Pointer(TyId),
     /// `length` objects of the type `element` names, one after another,
-    /// which is what C17 6.2.5 p20 makes an array. `length` is never zero:
-    /// the lowering builds one only for a constant length the type check
-    /// gave a positive value, and 6.7.6.2 p1 makes any other constant length
-    /// a constraint violation.
+    /// which is what C17 6.2.5 p20 makes an array. `length` is zero only for
+    /// a flexible array member, as the field says: the lowering builds any
+    /// other only for a constant length the type check gave a positive
+    /// value, and 6.7.6.2 p1 makes any other constant length a constraint
+    /// violation.
     ///
     /// **Never a value.** C reads an array only by converting it to a pointer
     /// to its first element (6.3.2.1 p3) and gives it no assignment, so no
@@ -374,7 +375,11 @@ pub enum Ty {
     Array {
         /// The type of each element.
         element: TyId,
-        /// How many elements there are, which the lowering never makes zero.
+        /// How many elements there are. Zero only for a flexible array member
+        /// (C17 6.7.2.1 p18, #1208), the last member of a struct, which takes
+        /// no bytes of it and whose elements are as many as were allocated
+        /// past it: the memory check bounds a walk through one by the
+        /// allocation rather than by the member.
         length: u64,
     },
     /// A struct, laid out in [`TranslationUnit::struct_layout`], or a union.

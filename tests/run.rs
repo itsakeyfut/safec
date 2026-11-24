@@ -160,4 +160,10 @@ programs! {
     /// in `Lowering::extract`; the reads come out of the wrong bits and this
     /// fails.
     a_bit_field_is_read_and_written_within_its_unit,
+    /// A flexible array member takes no bytes of its struct beyond the
+    /// padding to its elements' alignment, and its elements, written through
+    /// `->` and through a pointer that walks them, are the bytes allocated
+    /// past it (#1208). Mutation: size it as one element in
+    /// `Checker::struct_layout`; `sizeof` is 8 and this fails.
+    a_flexible_array_member_holds_what_was_allocated,
 }

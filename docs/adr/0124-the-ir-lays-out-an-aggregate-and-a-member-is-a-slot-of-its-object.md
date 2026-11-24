@@ -113,6 +113,12 @@ to point into one object, against not asked and named as a silence.
   unsigned type, so it is a slot of its object as any member is.
   Mutation: let a bit-field straddle its unit in
   `record::lay_out_itanium`; it fails.
+* **A flexible array member is an array of none** (#1208): it takes no
+  bytes of its struct, and a walk through it is bounded by the row the
+  struct is in, the allocation's where it is one, rather than by a row of
+  its own. `a_flexible_array_member_is_bounded_by_its_allocation` writes the
+  last allocated element in silence and one past it under `SC0412`.
+  Mutation: enter the member's row of no bytes; `fits` is reported.
 * Still unguarded, because comparing pointers is not lowered yet: a corpus
   case for the comparison's code, which its sub-issue of #614 adds as it
   lands.
