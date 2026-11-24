@@ -1,0 +1,4 @@
+Declaration a_typedef_of_an_untagged_struct_is_no_anonymous_member.c:1:1 "struct (anonymous)"
+  Field a_typedef_of_an_untagged_struct_is_no_anonymous_member.c:2:5 "a" "int"
+  Field a_typedef_of_an_untagged_struct_is_no_anonymous_member.c:3:5 "b" "int"
+Error a_typedef_of_an_untagged_struct_is_no_anonymous_member.c:6:1

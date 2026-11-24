@@ -1,0 +1,59 @@
+error[SC0312]: redefinition of `a`
+    ╭─[ an_anonymous_member_is_reached_through_its_container.c:19:13 ]
+    │
+ 17 │     int a;
+    │         ┬  
+    │         ╰── previously declared here
+    │ 
+ 19 │         int a;
+    │             ┬  
+    │             ╰── declared again here
+────╯
+  = note: C17 6.7 p3
+error[SC0312]: redefinition of `a`
+    ╭─[ an_anonymous_member_is_reached_through_its_container.c:31:13 ]
+    │
+ 30 │         int a;
+    │             ┬  
+    │             ╰── previously declared here
+ 31 │         int a;
+    │             ┬  
+    │             ╰── declared again here
+────╯
+  = note: C17 6.7 p3
+error[SC0312]: redefinition of `x`
+    ╭─[ an_anonymous_member_is_reached_through_its_container.c:47:13 ]
+    │
+ 44 │         int x;
+    │             ┬  
+    │             ╰── previously declared here
+    │ 
+ 47 │         int x;
+    │             ┬  
+    │             ╰── declared again here
+────╯
+  = note: C17 6.7 p3
+error[SC0312]: redefinition of `y`
+    ╭─[ an_anonymous_member_is_reached_through_its_container.c:57:9 ]
+    │
+ 54 │             int y;
+    │                 ┬  
+    │                 ╰── previously declared here
+    │ 
+ 57 │     int y;
+    │         ┬  
+    │         ╰── declared again here
+────╯
+  = note: C17 6.7 p3
+error[SC0316]: no member named `nowhere` in `struct Tagged`
+    ╭─[ an_anonymous_member_is_reached_through_its_container.c:25:14 ]
+    │
+  1 │ struct Tagged {
+    │        ───┬──  
+    │           ╰──── `struct Tagged` is defined here
+    │ 
+ 25 │     return t.nowhere;
+    │              ───┬───  
+    │                 ╰───── not a member of `struct Tagged`
+────╯
+  = note: C17 6.5.2.3 p1

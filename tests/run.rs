@@ -137,4 +137,12 @@ programs! {
     /// Mutation: lay a union out as a struct in `lay_out_union`; the low
     /// half is read from the wrong bytes and this fails.
     a_union_holds_its_members_at_one_place,
+    /// The members of an anonymous struct inside an anonymous union are
+    /// their container's, at their offsets within it: `low` and `high` share
+    /// `whole`'s bytes beside `kind`, read through `.` and `->` (#1207).
+    /// Mutation: keep only the first step of `path` in `Lowering::member`;
+    /// `high` reads the union's first bytes and this fails. Mutation: append
+    /// each step in `Checker::find_member` rather than prepend it; `low`'s
+    /// path is reversed and this fails.
+    an_anonymous_member_is_reached_through_its_container,
 }

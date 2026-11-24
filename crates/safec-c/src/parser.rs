@@ -4,8 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is a bit-field, an anonymous member, casts,
+//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members, anonymous ones too, and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is a bit-field, casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
 //! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -790,6 +790,7 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         names: vec![Scope::default()],
         declaring: false,
         enumerated: false,
+        tag_written: false,
     }
     .run(diagnostics)
 }
@@ -864,6 +865,11 @@ struct Parser<'a> {
     /// Whether the last [`Parser::specifiers`] read an enumeration, so that
     /// `enum E { A };` declares something with no declarator (C17 6.7 p2).
     enumerated: bool,
+    /// Whether the last [`Parser::specifiers`] wrote a struct or union
+    /// specifier, rather than naming one through a typedef: what tells an
+    /// anonymous member from `T;` with `T` a typedef of an untagged struct,
+    /// which C17 6.7.2.1 p13 does not make one (#1207 review).
+    tag_written: bool,
 }
 
 impl Parser<'_> {
@@ -1586,6 +1592,7 @@ impl Parser<'_> {
         // outer declaration's answer: an `enum` with a list here, which is
         // what set it last.
         self.enumerated = enumerated;
+        self.tag_written = tagged.is_some();
         let ty = match (tagged, named, words.ty()) {
             (Some((tagged, _)), _, _) => tagged,
             (None, Some(named), _) => named,
@@ -1988,7 +1995,8 @@ impl Parser<'_> {
     /// The member declarations of a struct through its `}`.
     ///
     /// Each is C17 6.7.2.1 p1's `struct-declaration`: specifiers and at least
-    /// one named declarator, with no initializer. A bit-field's `:` and an
+    /// one named declarator, with no initializer, or an untagged struct or
+    /// union specifier with none at all, p13's anonymous member (#1207). A bit-field's `:` and an
     /// `=` are refused as the `;` they are not, and so is a `}` before any
     /// member, since the grammar asks for one and `clang -pedantic-errors`
     /// calls `struct S {};` a GNU extension.
@@ -2011,8 +2019,39 @@ impl Parser<'_> {
             let at = self.peek().span;
             let declared = match self.declared(Declares::Member, diagnostics)? {
                 Specified::Named(declared) => declared,
-                Specified::Tag(base) => {
-                    self.member_with_no_name(at, base, diagnostics);
+                // **An anonymous member** (#1207): a struct or union with
+                // neither a tag nor a declarator, C17 6.7.2.1 p13, whose
+                // members are the containing one's. A member with no name,
+                // whose type is the anonymous one. **Written here**: `T;`
+                // with `T` a typedef of an untagged struct is not one, and
+                // declares nothing, which `clang` lays out so off MSVC.
+                // Mutation: drop `tag_written`;
+                // `a_typedef_of_an_untagged_struct_is_no_anonymous_member` is
+                // accepted.
+                Specified::Tag(base)
+                    if self.tag_written
+                        && matches!(
+                            self.ast.ty(base),
+                            Type::Struct {
+                                tag: None,
+                                members: Some(_),
+                                ..
+                            }
+                        ) =>
+                {
+                    let end = self.previous().span;
+                    members.push(Declaration {
+                        name: None,
+                        ty: base,
+                        written: base,
+                        span: self.declaration_span(at, at, end, diagnostics),
+                        nullability: None,
+                    });
+                    self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
+                    continue;
+                }
+                Specified::Tag(_) => {
+                    self.declares_no_member(at, diagnostics);
                     return None;
                 }
             };
@@ -2057,35 +2096,14 @@ impl Parser<'_> {
         }
     }
 
-    /// A member declaration of a struct type with no declarator.
+    /// A member declaration of a struct type with no declarator that is not
+    /// an anonymous member: one with a tag, which declares nothing, and
+    /// 6.7.2.1 p2 forbids that in a member list, since `struct T;` names a
+    /// tag a member list has nowhere to put.
     ///
-    /// One with neither a tag nor a name is C17 6.7.2.1 p13's anonymous
-    /// member, which is valid and is not read yet. Any other declares nothing,
-    /// which 6.7.2.1 p2 forbids in a member list: `struct T;` names a tag that
-    /// a member list has nowhere to put.
-    ///
-    /// `at` is where the member declaration began, which is where both reports
-    /// point: the parser is standing on its `;` by now.
-    fn member_with_no_name(&mut self, at: Span, base: TypeId, diagnostics: &mut DiagnosticSink) {
-        let anonymous = match self.ast.ty(base) {
-            Type::Struct {
-                union,
-                tag: None,
-                members: Some(_),
-            } => Some(if *union { "union" } else { "struct" }),
-            _ => None,
-        };
-        if let Some(keyword) = anonymous {
-            let built = Diagnostic::error("an anonymous member is not read yet")
-                .with_code(UNREAD)
-                .with_label(Label::primary(
-                    at,
-                    format!("a {keyword} with no name of its own"),
-                ))
-                .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
-            self.report_built(at, built, diagnostics);
-            return;
-        }
+    /// `at` is where the member declaration began, which is where the report
+    /// points: the parser is standing on its `;` by now.
+    fn declares_no_member(&mut self, at: Span, diagnostics: &mut DiagnosticSink) {
         let built = Diagnostic::error("this member declares nothing")
             .with_code(NOTHING_DECLARED)
             .with_label(Label::primary(at, "a tag, and no member's name"))

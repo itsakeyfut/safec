@@ -106,6 +106,29 @@ const MISDECLARED_LIBRARY: Code = Code::new("SC0320");
 /// and `field 'f' declared as a function`.
 const INCOMPLETE_MEMBER: Code = Code::new("SC0314");
 
+/// The names a member declares in the struct that holds it: its own, or,
+/// for an anonymous member, every name its members declare, through every
+/// anonymous member below (C17 6.7.2.1 p13). A walk with a stack, bounded by
+/// how deep the parser nests a member list.
+fn member_names(ast: &Ast, member: &Declaration) -> Vec<Span> {
+    let mut names = Vec::new();
+    let mut pending = vec![member];
+    while let Some(member) = pending.pop() {
+        match (member.name, ast.ty(member.ty)) {
+            (Some(name), _) => names.push(name),
+            (
+                None,
+                Type::Struct {
+                    members: Some(inner),
+                    ..
+                },
+            ) => pending.extend(inner.iter().rev()),
+            (None, _) => {}
+        }
+    }
+    names
+}
+
 /// The tag kind a structure type was written as: `union` or `struct`.
 fn struct_kind(union: bool) -> TagKind {
     if union {
@@ -1167,29 +1190,36 @@ impl Resolver<'_> {
         let mut names: HashMap<&str, Span> = HashMap::new();
         for (index, member) in members.iter().enumerate() {
             let at = member.name.unwrap_or(member.span);
-            if let Some(name) = member.name {
+            // **An anonymous member's members are this struct's** (C17
+            // 6.7.2.1 p13, #1207), so their names are checked beside the
+            // ones written here, however deep. Mutation: check the names
+            // written here alone; `an_anonymous_member_is_reached_through_its_container`'s
+            // `Twice` is accepted.
+            //
+            // **Each clash once**: names that clash inside one anonymous
+            // member were reported where its own list was checked, so only a
+            // clash with a member before it is said here. Mutation: report
+            // every clash; `Inner` is said twice.
+            let declared = member_names(ast, member);
+            for &name in &declared {
                 let spelled = self.sources.snippet(name);
-                match names.get(spelled) {
-                    Some(&first) => diagnostics.report(redefined(
-                        spelled,
-                        name,
-                        first,
-                        "declared",
-                        "C17 6.7 p3",
-                    )),
-                    None => {
-                        names.insert(spelled, name);
-                    }
+                if let Some(&first) = names.get(spelled) {
+                    diagnostics.report(redefined(spelled, name, first, "declared", "C17 6.7 p3"));
                 }
+            }
+            for name in declared {
+                names.entry(self.sources.snippet(name)).or_insert(name);
             }
 
             let flexible = !union
                 && index + 1 == members.len()
                 && matches!(ast.ty(member.ty), Type::Array { length: None, element, .. }
                     if self.resolution.complete(ast, *element))
+                // A member an anonymous one brings in is named too (p13).
+                // Mutation: ask `name` alone; `Tail` is refused.
                 && members[..index]
                     .iter()
-                    .any(|earlier| earlier.name.is_some());
+                    .any(|earlier| !member_names(ast, earlier).is_empty());
             if matches!(ast.ty(member.ty), Type::Function { .. }) {
                 diagnostics.report(unfit_member(
                     self.sources,

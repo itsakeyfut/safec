@@ -2306,10 +2306,10 @@ fn a_member_access_names_a_member_of_its_struct_or_is_reported() {
         .types
         .member(access("s.c"))
         .expect("`s.c` names a member");
-    assert_eq!(member.index, 2);
+    assert_eq!(member.path, [2]);
     assert_eq!(
-        checked.types.member(access("s.a")).map(|m| m.index),
-        Some(0)
+        checked.types.member(access("s.a")).map(|m| m.path.clone()),
+        Some(vec![0])
     );
     assert_eq!(checked.types.member(access("s.b")), None);
     assert!(matches!(

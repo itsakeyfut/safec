@@ -25,6 +25,11 @@ enum Member {
     /// The shape at this index in [`shapes`], which comes before it, by
     /// value, or an array of this many of it (#1202).
     Shape(usize, Option<u64>),
+    /// An anonymous member (C17 6.7.2.1 p13, #1207): a union where the flag
+    /// says so and a struct where not, of these members, written inline with
+    /// no tag and no name. The IR lays it out as any member of its type, and
+    /// `clang` places it where `__builtin_offsetof` finds its first member.
+    Anonymous(bool, &'static [Member]),
 }
 
 impl Member {
@@ -42,13 +47,47 @@ impl Member {
             Member::Pointer => "int *".to_owned(),
             Member::Array(rank, _) => integer(rank).to_owned(),
             Member::Shape(index, _) => format!("{} S{index}", keyword(index)),
+            // Its spelling in a failure's message; `declared` writes the C.
+            Member::Anonymous(true, _) => "union { .. }".to_owned(),
+            Member::Anonymous(false, _) => "struct { .. }".to_owned(),
+        }
+    }
+
+    /// The member declaration of this member at position `k`, `;` included:
+    /// named `m{k}`, or for an anonymous member its members named `a{k}_{j}`
+    /// inside it.
+    fn declared(self, k: usize) -> String {
+        match self {
+            Member::Anonymous(union, members) => {
+                let keyword = if union { "union" } else { "struct" };
+                let inner: String = members
+                    .iter()
+                    .enumerate()
+                    .map(|(j, member)| format!(" {} a{k}_{j}{};", member.c(), member.suffix()))
+                    .collect();
+                format!(" {keyword} {{{inner} }};")
+            }
+            _ => format!(" {} m{k}{};", self.c(), self.suffix()),
+        }
+    }
+
+    /// What `__builtin_offsetof` names to find this member at position `k`:
+    /// its own name, or an anonymous member's first member, which is where
+    /// the anonymous member starts.
+    fn offset_name(self, k: usize) -> String {
+        match self {
+            Member::Anonymous(..) => format!("a{k}_0"),
+            _ => format!("m{k}"),
         }
     }
 
     fn suffix(self) -> String {
         match self {
             Member::Array(_, length) | Member::Shape(_, Some(length)) => format!("[{length}]"),
-            Member::Integer(..) | Member::Pointer | Member::Shape(_, None) => String::new(),
+            Member::Integer(..)
+            | Member::Pointer
+            | Member::Shape(_, None)
+            | Member::Anonymous(..) => String::new(),
         }
     }
 
@@ -64,6 +103,19 @@ impl Member {
                     Some(length) => unit.push_type(Ty::Array { element, length }),
                     None => element,
                 }
+            }
+            Member::Anonymous(union, members) => {
+                let members: Vec<TyId> = members
+                    .iter()
+                    .map(|member| member.ir(unit, shapes))
+                    .collect();
+                let id = if union {
+                    unit.push_union(&members)
+                } else {
+                    unit.push_struct(&members)
+                }
+                .expect("every shape is laid out");
+                unit.push_type(Ty::Struct(id))
             }
             Member::Integer(rank, sign) => unit.push_type(Ty::Integer { rank, sign }),
             Member::Pointer => {
@@ -126,7 +178,7 @@ fn shapes() -> Vec<Vec<Member>> {
 
 /// The struct shapes, which [`shapes`] gives first.
 fn struct_shapes() -> Vec<Vec<Member>> {
-    use Member::{Array, Integer, Pointer, Shape};
+    use Member::{Anonymous, Array, Integer, Pointer, Shape};
     use Rank::{Char, Int, Long, LongLong, Short};
     use Sign::Signed;
     vec![
@@ -159,13 +211,18 @@ fn struct_shapes() -> Vec<Vec<Member>> {
             Integer(Char, Signed),
         ],
         vec![Shape(7, None), Integer(Char, Signed), Shape(9, Some(2))],
+        vec![
+            Integer(Char, Signed),
+            Anonymous(true, &[Integer(Short, Signed), Integer(LongLong, Signed)]),
+            Integer(Char, Signed),
+        ],
     ]
 }
 
 /// The union shapes, which [`shapes`] gives after the structs, from index
 /// `first`: one of them is named by its index there.
 fn union_shapes(first: usize) -> Vec<Vec<Member>> {
-    use Member::{Array, Integer, Pointer, Shape};
+    use Member::{Anonymous, Array, Integer, Pointer, Shape};
     use Rank::{Char, Int, LongLong, Short};
     use Sign::Signed;
     vec![
@@ -182,6 +239,17 @@ fn union_shapes(first: usize) -> Vec<Vec<Member>> {
             Shape(first + 2, None),
             Integer(Int, Signed),
         ],
+        vec![
+            Integer(Short, Signed),
+            Anonymous(
+                false,
+                &[
+                    Integer(Char, Signed),
+                    Integer(Int, Signed),
+                    Integer(Char, Signed),
+                ],
+            ),
+        ],
     ]
 }
 
@@ -192,13 +260,14 @@ fn clang_layouts(triple: &str, shapes: &[Vec<Member>]) -> Option<Vec<(Vec<u64>, 
     for (n, members) in shapes.iter().enumerate() {
         source.push_str(&format!("{} S{n} {{", keyword(n)));
         for (k, member) in members.iter().enumerate() {
-            source.push_str(&format!(" {} m{k}{};", member.c(), member.suffix()));
+            source.push_str(&member.declared(k));
         }
         source.push_str(" };\n");
-        for k in 0..members.len() {
+        for (k, member) in members.iter().enumerate() {
             source.push_str(&format!(
-                "long long o_{n}_{k} = __builtin_offsetof({} S{n}, m{k});\n",
-                keyword(n)
+                "long long o_{n}_{k} = __builtin_offsetof({} S{n}, {});\n",
+                keyword(n),
+                member.offset_name(k)
             ));
         }
         source.push_str(&format!("long long s_{n} = sizeof({} S{n});\n", keyword(n)));

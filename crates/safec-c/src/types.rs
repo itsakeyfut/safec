@@ -255,13 +255,19 @@ pub struct Types {
 ///
 /// Self-contained, so that a stage reading it needs neither the resolution
 /// nor a second lookup by spelling: `ast.ty(definition)` is a struct with
-/// members, and `index` is in range of them.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// members, `path[0]` is in range of them, and each later step is in range
+/// of the members of the anonymous struct or union the step before names.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Member {
-    /// The struct type whose `{ ... }` declares the member.
+    /// The struct type whose `{ ... }` declares the member, or declares the
+    /// anonymous member that holds it.
     pub definition: TypeId,
-    /// Which of its members, counting from zero in the order written.
-    pub index: usize,
+    /// Which of its members, counting from zero in the order written, and
+    /// on through each anonymous member it is reached through (#1207): a
+    /// member of an anonymous member is the containing struct's (C17 6.7.2.1
+    /// p13), so `s.a` with `a` in an anonymous union at index 1 is `[1, 0]`.
+    /// Never empty.
+    pub path: Vec<usize>,
 }
 
 impl Types {
@@ -324,8 +330,8 @@ impl Types {
     /// # Panics
     ///
     /// If `id` came from a different [`Ast`].
-    pub fn member(&self, id: ExprId) -> Option<Member> {
-        self.member[id.index()]
+    pub fn member(&self, id: ExprId) -> Option<&Member> {
+        self.member[id.index()].as_ref()
     }
 }
 
@@ -2226,12 +2232,7 @@ impl Checker<'_> {
         };
 
         let name = self.sources.snippet(member);
-        let found = members.iter().position(|declared| {
-            declared
-                .name
-                .is_some_and(|declared| self.sources.snippet(declared) == name)
-        });
-        let Some(index) = found else {
+        let Some((path, ty)) = self.find_member(ast, members, name) else {
             let mut diagnostic =
                 Diagnostic::error(format!("no member named `{name}` in `{spelled}`"))
                     .with_code(NO_MEMBER)
@@ -2249,8 +2250,47 @@ impl Checker<'_> {
             diagnostics.report(diagnostic);
             return None;
         };
-        self.members[id.index()] = Some(Member { definition, index });
-        Some(members[index].ty)
+        self.members[id.index()] = Some(Member { definition, path });
+        Some(ty)
+    }
+
+    /// Where the member spelled `name` is among `members`, as a path of
+    /// indices, and its type: a named member's own index, or an anonymous
+    /// member's followed by the path within it (C17 6.7.2.1 p13, #1207).
+    /// The first match in the order written; a name declared twice across
+    /// them was reported by the resolver, which does not stop this check.
+    ///
+    /// A recursion, bounded by how deep the parser nests a member list.
+    /// Mutation: skip anonymous members; `an_anonymous_member_is_reached_through_its_container`'s
+    /// `read` is `SC0316`.
+    fn find_member(
+        &self,
+        ast: &Ast,
+        members: &[Declaration],
+        name: &str,
+    ) -> Option<(Vec<usize>, TypeId)> {
+        for (index, declared) in members.iter().enumerate() {
+            match declared.name {
+                Some(declared_name) if self.sources.snippet(declared_name) == name => {
+                    return Some((vec![index], declared.ty));
+                }
+                Some(_) => {}
+                None => {
+                    let Type::Struct {
+                        members: Some(inner),
+                        ..
+                    } = ast.ty(declared.ty)
+                    else {
+                        continue;
+                    };
+                    if let Some((mut path, ty)) = self.find_member(ast, inner, name) {
+                        path.insert(0, index);
+                        return Some((path, ty));
+                    }
+                }
+            }
+        }
+        None
     }
 
     /// Find every `return` with a value and every initializer, and what each
