@@ -118,7 +118,9 @@ cases! {
         // parameters beside the arguments stop at the last parameter
         // without a panic. `defined` is refused: defining one is #1214's.
         // Mutation: drop the arguments past the parameters from the call in
-        // the lowering; `handed_after_free` goes silent.
+        // the lowering; `handed_after_free` goes silent. Walk `_Nonnull`
+        // parameters by argument position in `nullability::report_arguments`;
+        // `null_to_the_nonnull_parameter` panics.
         a_variadic_call_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
