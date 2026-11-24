@@ -1,40 +1,23 @@
-error[SC0304]: cannot compile a parameter declared as this array yet
-   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:1:27 ]
-   │
- 1 │ int k(int *p, int *q, int a[p - q]);
-   │                           ┬ ──┬──  
-   │                           ╰──────── declared here
-   │                               │    
-   │                               ╰──── nothing worked out what type this has
-───╯
-  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
-error[SC0304]: cannot compile a parameter declared as this array yet
-   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:2:34 ]
+error[SC0306]: `*` cannot take `long long`
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:2:39 ]
    │
  2 │ int l(int *p, int *q, int n, int a[(*(p - q) = 0, n)]);
-   │                                  ┬  ──────┬─────  
-   │                                  ╰──────────────── declared here
-   │                                           │       
-   │                                           ╰─────── nothing worked out what type this has
+   │                                       ──┬──  
+   │                                         ╰──── this is `long long`
 ───╯
-  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
-error[SC0304]: cannot compile a parameter declared as this array yet
-   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:3:34 ]
+error[SC0306]: `<` cannot take `long long` and `int *`
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:3:47 ]
    │
  3 │ int m(int *p, int *q, int n, int a[((p - q) < p, n)]);
-   │                                  ┬   ──┬──  
-   │                                  ╰────────── declared here
-   │                                        │    
-   │                                        ╰──── nothing worked out what type this has
+   │                                      ──┬──    ┬  
+   │                                        ╰───────── this is `long long`
+   │                                               │  
+   │                                               ╰── this is `int *`
 ───╯
-  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
-error[SC0304]: cannot compile a parameter declared as this array yet
-   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:4:34 ]
+error[SC0306]: `*` cannot take `long long`
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:4:40 ]
    │
  4 │ int o(int *p, int *q, int n, int a[((*(p - q) = 0, n), n)]);
-   │                                  ┬   ──────┬─────  
-   │                                  ╰───────────────── declared here
-   │                                            │       
-   │                                            ╰─────── nothing worked out what type this has
+   │                                        ──┬──  
+   │                                          ╰──── this is `long long`
 ───╯
-  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

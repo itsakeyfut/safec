@@ -1398,13 +1398,28 @@ fn moved_in_element<'e>(
         return Some((operation.origin.span(), moved));
     }
     let Rvalue::Binary {
-        op: BinOp::Add | BinOp::Sub,
+        op: op @ (BinOp::Add | BinOp::Sub),
         lhs,
         rhs,
     } = &operation.value
     else {
         return None;
     };
+    // **A pointer minus a pointer moves neither** (C17 6.5.6 p9, #638): it
+    // asks how far apart they are, and the memory check doubts a pointer
+    // that may be null there, under `SC0419`, in words that say so, where
+    // this said each was moved. Mutation: answer them as moved;
+    // `the_difference_of_two_pointers_into_one_array_is_doubted_across_two`'s
+    // `maybe_null` gains two `SC0403`.
+    let pointer = |operand: &Operand| match operand {
+        Operand::Copy(place) => {
+            pointer_typed(unit, function, place.local) && place.steps().is_empty()
+        }
+        Operand::Constant(_) => false,
+    };
+    if *op == BinOp::Sub && pointer(lhs) && pointer(rhs) {
+        return Some((operation.origin.span(), Vec::new()));
+    }
     let moved = [lhs, rhs]
         .into_iter()
         .filter_map(|operand| match operand {

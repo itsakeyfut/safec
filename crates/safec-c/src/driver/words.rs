@@ -130,7 +130,10 @@ const WRITES_READ_ONLY: Code = Code::new("SC0417");
 /// `memory::Kind::VariableLength`.
 const VARIABLE_LENGTH: Code = Code::new("SC0418");
 
-/// An ordering of two pointers that may point into different objects.
+/// An ordering or a difference of two pointers that may point into
+/// different objects, or for a difference, different arrays: the one
+/// question of which object a pair of pointers is into, asked by
+/// `memory::Kind::ComparedApart` and `memory::Kind::SubtractedApart`.
 ///
 /// Not any code above, which are each about an access, an allocation or a
 /// size: this is about which two objects a comparison is between, and the
@@ -967,6 +970,14 @@ pub(super) fn memory_finding(
                 .to_owned(),
             "nothing about what this points at is proved from here",
             "keep the value a pointer, or a `void *` where its type has to change",
+        ),
+        // Built only `Unknown`, at the subtraction, as the rows above are.
+        // The comparison's code, since it is the same question (#638).
+        (Kind::SubtractedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            COMPARED_APART,
+            "this subtracts pointers that may point into different objects".to_owned(),
+            "nothing shows both point into one live object, which C17 6.5.6 p9 asks",
+            "subtract pointers into one array, or subtract indices instead",
         ),
         // Built only `Unknown`, at the comparison, as the rows above are.
         (Kind::ComparedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (

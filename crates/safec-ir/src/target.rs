@@ -352,6 +352,16 @@ impl Target {
         (self.size, Sign::Unsigned)
     }
 
+    /// The type of `ptrdiff_t` here, which a pointer minus a pointer has
+    /// (C17 6.5.6 p9): signed, of `size_t`'s rank. Measured on every row of
+    /// [`Target::ALL`] with `clang 22.1.8 --target=<triple> -dM -E` reading
+    /// `__PTRDIFF_TYPE__` beside `__SIZE_TYPE__`: `long long` and `unsigned
+    /// long long` on Win64, `int` and `unsigned int` on `armv7` and `i686`,
+    /// `long` and `unsigned long` on the other five (#638).
+    pub fn ptrdiff_type(self) -> (Rank, Sign) {
+        (self.size, Sign::Signed)
+    }
+
     /// The sign of an enumerated type whose constants are `negative` or not,
     /// which C17 6.7.2.2 p4 leaves to the implementation: always signed for
     /// MSVC, and elsewhere unsigned where no constant is negative. Measured
@@ -690,6 +700,30 @@ mod tests {
     /// A triple nothing measured is not a target.
     ///
     /// Mutation: answer the first row for anything. This fails.
+    /// `ptrdiff_t` on each target, written out from `clang 22.1.8
+    /// --target=<triple> -dM -E` reading `__PTRDIFF_TYPE__`, rather than
+    /// derived from `size_t`'s column, which would hold for any rule that
+    /// agreed with itself (#638). Mutation: answer `long long` everywhere in
+    /// `Target::ptrdiff_type`; every row but Win64 fails.
+    #[test]
+    fn ptrdiff_t_is_what_clang_says_it_is_on_every_target() {
+        let measured = [
+            ("aarch64-apple-darwin", Rank::Long),
+            ("aarch64-unknown-linux-gnu", Rank::Long),
+            ("armv7-unknown-linux-gnueabihf", Rank::Int),
+            ("i686-unknown-linux-gnu", Rank::Int),
+            ("wasm32-unknown-unknown", Rank::Long),
+            ("x86_64-apple-darwin", Rank::Long),
+            ("x86_64-pc-windows-msvc", Rank::LongLong),
+            ("x86_64-unknown-linux-gnu", Rank::Long),
+        ];
+        assert_eq!(Target::ALL.len(), measured.len());
+        for (triple, rank) in measured {
+            let target = Target::from_triple(triple).expect("a measured triple is known");
+            assert_eq!(target.ptrdiff_type(), (rank, Sign::Signed), "{triple}");
+        }
+    }
+
     #[test]
     fn a_triple_this_compiler_does_not_know_is_not_a_target() {
         assert_eq!(Target::from_triple("x86_64-unknown-none"), None);

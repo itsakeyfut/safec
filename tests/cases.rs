@@ -54,6 +54,20 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // C17 6.5.6 p9 defines a pointer minus a pointer only between
+        // elements of one array, narrower than the one object 6.5.8 p5 asks
+        // of an ordering, and `compared_apart` asks it (#638). `one` is
+        // silent. `SC0419`, with the mutation that silences each:
+        // - `apart`, two arrays: ask only the orderings;
+        // - `two_members` and `two_arrays_in_one`, two arrays in one struct:
+        //   let a difference take any one referent;
+        // - `in_a_block`, a block this check holds no type for: the same;
+        // - `maybe_null`: ask nothing of `may_be_null`.
+        // `after_a_free` is `SC0402` too, a value used: answer a difference
+        // as a move in `operated_on_in_element`. And `maybe_null` has no
+        // `SC0403`, which said the pointer was moved: answer a difference as
+        // a move in the nullability check, and it gains two.
+        the_difference_of_two_pointers_into_one_array_is_doubted_across_two: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.8 p5 orders pointers into one object only, and
         // `compared_apart` answers one object only where each pointer may
         // name the one same live referent and not null (#1211). Silent:
@@ -9487,11 +9501,12 @@ cases! {
         a_conditional_whose_arms_c_does_not_pair_is_a_type_error: ["--emit", "ast"],
         a_conditional_whose_arms_c_pairs_builds: ["--emit", "ast"],
         a_conditional_has_the_type_c_gives_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `p - q` is valid C and untyped here, with nothing reported, so the
-        // `*` beside it is still `int` and the initializer is still checked.
-        // Mutation: answer no type beside an untyped operand; the `SC0302`
-        // goes, and a full build calls the program a gap in this compiler.
-        a_type_error_beside_a_difference_of_pointers_is_still_reported: ["--emit", "ast"],
+        // `p - q` was untyped here until #638 gave it `ptrdiff_t`, and the
+        // `*` beside it is still `int` and the initializer still checked. The
+        // mutation this was written for, answer no type beside an untyped
+        // operand, fails nothing now that no operand here is untyped
+        // (#1298).
+        a_type_error_beside_a_difference_of_pointers_is_still_reported: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
@@ -10362,6 +10377,13 @@ cases! {
         // it runs (#1209). Mutation: skip the restore at `StorageDead`;
         // `stackrestore` goes from the text.
         a_variable_length_array_is_made_and_given_back: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A pointer minus a pointer is as wide as `ptrdiff_t`, which is a
+        // pointer's width: `i32` on `i686` and `i64` on x86-64 Linux, where
+        // `ptrdiff_t` is `long` and not Win64's `long long` (#638).
+        // Mutation: compute in `i64` whatever the target; the `i686` text
+        // changes.
+        the_difference_of_two_pointers_is_as_wide_as_a_pointer_on_i686: ["--emit", "llvm-ir", "--safety", "off", "--target", "i686-unknown-linux-gnu"],
+        the_difference_of_two_pointers_is_as_wide_as_a_pointer_on_x86_64_linux: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         // On `i686`, where `size_t` is 32 bits, the length is widened to the
         // `alloca`'s count, and the storage is as many of the element as it
         // holds, so a `long long` is aligned as LLVM aligns one (eight, as
@@ -10464,6 +10486,13 @@ cases! {
         // the backend's `SC0801` before. Mutation: drop the `void` test in
         // `Lowering::signature`; both reports go, and the IR is printed.
         a_declared_void_parameter_is_not_compiled_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // **The `an_untyped_part_` cases below no longer reach what they were
+        // written for.** Each was built on `p - q`, which #638 gave
+        // `ptrdiff_t`, so each now shows the type check refusing what is
+        // left, and no program found reaches the untyped part: the mutations
+        // their notes name fail nothing until #1298 settles what becomes of
+        // that search. The notes are kept as they were, for that issue.
+        //
         // A prototype's length is never lowered, so a part of it the type
         // check left untyped without a report, `p - q` today, hides a fault
         // nothing asks about. Each is refused as `SC0304`, with a label on

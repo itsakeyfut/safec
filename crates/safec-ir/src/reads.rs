@@ -9,7 +9,10 @@
 //! same kind of question; the nullability check's own test of a load is
 //! `nullability::read_out_of_memory`, which is a different rule.
 
-use crate::ir::{BinOp, Element, Operand, Place, Projection, Rvalue, Shape, Terminator};
+use crate::ir::{
+    BinOp, Element, Function, Operand, Place, Projection, Rvalue, Shape, Terminator,
+    TranslationUnit,
+};
 use crate::source::Span;
 
 /// Where this element runs, and every place it reads or writes through a
@@ -90,17 +93,27 @@ pub(crate) fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Spa
 }
 
 /// Where this element runs, and every local it reads by value as an operand
-/// of an operator whose result is no pointer: a comparison, a negation. Not
-/// a plain copy, and **not `+` or `-`**, whose result carries the pointer to
-/// where it is used, as a copy does: asked here as well, `p[i]` after a free
-/// was said twice, at the move and at the dereference of what it made, found
-/// while implementing. Not a dereference, which [`dereferenced_in_element`]
-/// answers.
+/// of an operator whose result is no pointer: a comparison, a negation, a
+/// pointer minus a pointer. Not a plain copy, and **not a pointer moved by
+/// `+` or `-`**, whose result carries the pointer to where it is used, as a
+/// copy does: asked here as well, `p[i]` after a free was said twice, at the
+/// move and at the dereference of what it made, found while implementing.
+/// Not a dereference, which [`dereferenced_in_element`] answers.
+///
+/// **A pointer minus a pointer is an integer** (C17 6.5.6 p9, #638), so
+/// nothing carries either pointer on to be asked later: both are asked
+/// here, as a comparison's are. Mutation: answer it with the moves;
+/// `the_difference_of_two_pointers_into_one_array_is_doubted_across_two`'s
+/// `after_a_free` loses its `SC0402`.
 ///
 /// **A value used is the question**, which C17 6.2.4 p2 and Annex J.2 make
 /// undefined for a pointer whose object's lifetime has ended, whatever it is
 /// used for. See ADR-0084.
-pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
+pub(crate) fn operated_on_in_element<'e>(
+    unit: &TranslationUnit,
+    function: &Function,
+    element: &'e Element,
+) -> Option<(Span, Vec<&'e Place>)> {
     match element {
         Element::Assign(operation) => {
             let places = match &operation.value {
@@ -127,6 +140,19 @@ pub(crate) fn operated_on_in_element(element: &Element) -> Option<(Span, Vec<&Pl
                     lhs,
                     rhs,
                 } => named(lhs).into_iter().chain(named(rhs)).collect(),
+                Rvalue::Binary {
+                    op: BinOp::Sub,
+                    lhs,
+                    rhs,
+                } if [lhs, rhs].into_iter().all(|operand| match operand {
+                    Operand::Copy(place) => unit
+                        .place_ty(function, place)
+                        .is_some_and(|ty| unit.ty(ty).is_pointer()),
+                    Operand::Constant(_) => false,
+                }) =>
+                {
+                    named(lhs).into_iter().chain(named(rhs)).collect()
+                }
                 Rvalue::Binary {
                     op: BinOp::Add | BinOp::Sub,
                     lhs: _,

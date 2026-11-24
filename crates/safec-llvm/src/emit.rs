@@ -960,9 +960,9 @@ impl Emitter<'_> {
     /// assume an access stays inside its object where the memory check only
     /// concluded `Unknown`.
     ///
-    /// A pointer minus a pointer is `ptrdiff_t` (6.5.6 p9), which this
-    /// compiler has no type for, and is refused (#638). So is arithmetic on a
-    /// `void *`, which 6.5.6 p2 forbids and the type check refuses first.
+    /// A pointer minus a pointer is [`Self::difference`]'s (6.5.6 p9).
+    /// Arithmetic on a `void *` is refused, which 6.5.6 p2 forbids and the
+    /// type check refuses first.
     fn moved(
         &mut self,
         function: &Function,
@@ -975,9 +975,10 @@ impl Emitter<'_> {
         let (pointer, count) = match (self.pointer(function, lhs), self.pointer(function, rhs)) {
             (Some(ty), None) => ((lhs, ty), rhs),
             (None, Some(ty)) if op == BinOp::Add => ((rhs, ty), lhs),
-            (Some(_), Some(_)) => {
-                return self.refuse("a pointer minus a pointer, which needs a type for it");
+            (Some(ty), Some(_)) if op == BinOp::Sub => {
+                return self.difference(function, lhs, rhs, ty, to, out);
             }
+            (Some(_), Some(_)) => return self.refuse("a pointer plus a pointer"),
             (None, _) => return self.refuse("an integer minus a pointer"),
         };
         let (pointer, ty) = pointer;
@@ -1031,6 +1032,59 @@ impl Emitter<'_> {
             "  {result} = getelementptr {spelled}, ptr {base}, i64 {index}"
         )
         .expect("writing to a string cannot fail");
+        Ok(result)
+    }
+
+    /// A pointer minus a pointer, C17 6.5.6 p9: how many elements apart
+    /// they are, as `ptrdiff_t`, which `to` is.
+    ///
+    /// **The byte distance divided by the element's size from the IR**
+    /// (ADR-0124's one layout), not by LLVM's: the memory check counts in
+    /// those bytes too, so the two cannot disagree about a struct's padding.
+    /// Both addresses become integers of `to`'s width, which is a pointer's
+    /// on every target here (`Target::ptrdiff_type`), and the quotient is
+    /// signed, since either may be the lower. Plain `sdiv`, not `exact`: a
+    /// distance that is no multiple is undefined (the pointers are into no
+    /// one array) and the memory check doubts it, `Unknown` by
+    /// `SubtractedApart`, rather than this making
+    /// it poison. Mutation: divide by 1;
+    /// `the_difference_of_two_pointers_into_one_array_is_its_subscripts`
+    /// returns the byte distance.
+    fn difference(
+        &mut self,
+        function: &Function,
+        lhs: &Operand,
+        rhs: &Operand,
+        ty: TyId,
+        to: TyId,
+        out: &mut String,
+    ) -> Refuses<String> {
+        let Ty::Pointer(element) = self.unit.ty(ty) else {
+            unreachable!("`Self::pointer` answers only a pointer's type")
+        };
+        let Some(size) = self.unit.size_of(element).filter(|&size| size > 0) else {
+            return self.refuse("a pointer minus a pointer to something with no size");
+        };
+        let Some(int) = self.unit.integer(to) else {
+            let wanted = self.spell(to);
+            return self.refuse(format!(
+                "a difference of pointers written into a `{wanted}`"
+            ));
+        };
+        let wide = format!("i{}", int.bits());
+        let left = self.operand(function, lhs, ty, out)?;
+        let right = self.operand(function, rhs, ty, out)?;
+        let (from, at) = (self.temp(), self.temp());
+        writeln!(out, "  {from} = ptrtoint ptr {left} to {wide}")
+            .expect("writing to a string cannot fail");
+        writeln!(out, "  {at} = ptrtoint ptr {right} to {wide}")
+            .expect("writing to a string cannot fail");
+        let bytes = self.temp();
+        writeln!(out, "  {bytes} = sub {wide} {from}, {at}")
+            .expect("writing to a string cannot fail");
+        let result = self.temp();
+        writeln!(out, "  {result} = sdiv {wide} {bytes}, {size}")
+            .expect("writing to a string cannot fail");
         Ok(result)
     }
 

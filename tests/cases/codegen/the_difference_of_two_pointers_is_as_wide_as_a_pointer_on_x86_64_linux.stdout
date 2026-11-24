@@ -1,0 +1,25 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+define i64 @apart(ptr %arg0, ptr %arg1) {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca i64
+  store ptr %arg0, ptr %_1
+  store ptr %arg1, ptr %_2
+  br label %bb0
+
+bb0:
+  %t0 = load ptr, ptr %_2
+  %t1 = load ptr, ptr %_1
+  %t2 = ptrtoint ptr %t0 to i64
+  %t3 = ptrtoint ptr %t1 to i64
+  %t4 = sub i64 %t2, %t3
+  %t5 = sdiv i64 %t4, 4
+  store i64 %t5, ptr %_3
+  %t6 = load i64, ptr %_3
+  store i64 %t6, ptr %_0
+  %t7 = load i64, ptr %_0
+  ret i64 %t7
+}

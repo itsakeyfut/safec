@@ -294,7 +294,10 @@ pub(super) fn built_from(
 ///   into, since it is about an integer added to or subtracted from a pointer,
 ///   and p3 allows a pointer only on the left of a `-`.
 /// * exactly one operand was followed. Two is `p - q`, which 6.5.6 p9 makes a
-///   `ptrdiff_t` rather than a pointer, or a shape no C program builds.
+///   `ptrdiff_t` rather than a pointer, and which reaches here since #638:
+///   its result names nothing (it is no pointer, and what each operand may
+///   name is asked of the difference itself, by `memory::compared_apart`);
+///   or a shape no C program builds.
 /// * the other operand is a constant, and **the constant is read rather than
 ///   assumed non-zero**. ADR-0021 folds `p + 0` away where the IR is built, and
 ///   `docs/c-family.md` records that nothing enforces it, so an IR from a
