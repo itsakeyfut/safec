@@ -190,13 +190,13 @@ The second cuts no construct: each declarator's span starts at the shared
 specifiers, which is this compiler's span and not C's, and #555 builds those
 from the construct instead. The macro is the same rule: `N * 4` reads `3 * 4`
 as one operand, so the multiplication holds part of `N`'s expansion, and
-ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9 makes a bit-field valid
-and p13 an anonymous member, and neither is read yet. 6.7.9 p11 lets a scalar's initializer be a
+ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9 makes a bit-field valid,
+and it is not read yet; p13's anonymous member is read (#1207). 6.7.9 p11 lets a scalar's initializer be a
 single expression "optionally enclosed in braces", so it is valid with no
 designator and no nested list in it; unwrapping the braces is only correct
 where the declared type is scalar, and the parser does not know the type.
 
-The bit-field and the anonymous member are `SC0207`, the code for valid C the
+The bit-field is `SC0207`, the code for valid C the
 parser does not read yet, told apart from C it cannot parse where the parse
 failed. A compound literal, a prefixed string literal and the other constructs
 the parser does not read are reported under it too, each naming the clause

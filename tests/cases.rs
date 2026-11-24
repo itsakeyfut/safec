@@ -58,9 +58,10 @@ cases! {
         // (#1207), so the memory check reads it there as any other: written
         // and read through the same member, a number read back as it, and a
         // use after a free are each asked, and none is answered safe.
-        // Mutation: lower a member of an anonymous member as the anonymous
-        // member itself in `Lowering::member`; `number_read_as_pointer`
-        // reads the union as a pointer and this changes.
+        // Mutation: keep only the first step of `path` in
+        // `Lowering::member`; the places in this case's IR change. Its
+        // reports do not, since the wrong place is the same bytes: the run
+        // table's case is the one that tells the values apart.
         a_pointer_in_an_anonymous_member_is_checked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every member of a union is the same bytes at offset 0, so a
         // pointer written as one member is read back through another as
@@ -8554,10 +8555,27 @@ cases! {
         // An anonymous member's members are its container's (C17 6.7.2.1
         // p13, #1207): `t->number` reaches into an anonymous union and
         // `t->high` into the anonymous struct inside it, a name declared
-        // twice across them is a redeclaration, and one in none of them is
-        // no member. Mutation: skip anonymous members in
-        // `Checker::find_member`; `read` is `SC0316`. Mutation: check the
-        // names written in `check_members` alone; `Twice` is accepted.
+        // twice across them is a redeclaration, said once, and one in none
+        // of them is no member. A member an anonymous one brings in counts as
+        // named before a flexible array member, so `Tail` is accepted.
+        // Mutation: skip anonymous members in `Checker::find_member`; `read`
+        // is `SC0316`. Mutation: check the names written in `check_members`
+        // alone; `Twice` is accepted. Mutation: read only the names one
+        // level down in `member_names`; `Siblings` and `Deep` are accepted.
+        // Mutation: report every clash there; `Inner` is said twice.
+        //
+        // A typedef of an untagged struct written as a member with no
+        // declarator is no anonymous member, since p13 asks for a structure
+        // specifier, and it declares nothing (p2), which `clang` lays out off
+        // MSVC by leaving it out. Mutation: drop `Parser::tag_written` from
+        // the anonymous member's guard; that case is accepted.
+        // A tagged struct with a body and no declarator declares a tag and
+        // no member, which C17 6.7.2.1 p2 forbids in a member list; p13's
+        // anonymous member has no tag (#1207). Mutation: drop `tag: None`
+        // from the anonymous member's guard in `Parser::members`; this is
+        // accepted.
+        a_tagged_struct_with_no_member_name_declares_nothing: ["--emit", "ast"],
+        a_typedef_of_an_untagged_struct_is_no_anonymous_member: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         an_anonymous_member_is_reached_through_its_container: ["--emit", "ast"],
         // A union is read as a structure type of its own (#1203): its
         // `sizeof` the largest member rounded to the strictest alignment, a

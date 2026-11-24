@@ -1195,29 +1195,31 @@ impl Resolver<'_> {
             // ones written here, however deep. Mutation: check the names
             // written here alone; `an_anonymous_member_is_reached_through_its_container`'s
             // `Twice` is accepted.
-            for name in member_names(ast, member) {
+            //
+            // **Each clash once**: names that clash inside one anonymous
+            // member were reported where its own list was checked, so only a
+            // clash with a member before it is said here. Mutation: report
+            // every clash; `Inner` is said twice.
+            let declared = member_names(ast, member);
+            for &name in &declared {
                 let spelled = self.sources.snippet(name);
-                match names.get(spelled) {
-                    Some(&first) => diagnostics.report(redefined(
-                        spelled,
-                        name,
-                        first,
-                        "declared",
-                        "C17 6.7 p3",
-                    )),
-                    None => {
-                        names.insert(spelled, name);
-                    }
+                if let Some(&first) = names.get(spelled) {
+                    diagnostics.report(redefined(spelled, name, first, "declared", "C17 6.7 p3"));
                 }
+            }
+            for name in declared {
+                names.entry(self.sources.snippet(name)).or_insert(name);
             }
 
             let flexible = !union
                 && index + 1 == members.len()
                 && matches!(ast.ty(member.ty), Type::Array { length: None, element, .. }
                     if self.resolution.complete(ast, *element))
+                // A member an anonymous one brings in is named too (p13).
+                // Mutation: ask `name` alone; `Tail` is refused.
                 && members[..index]
                     .iter()
-                    .any(|earlier| earlier.name.is_some());
+                    .any(|earlier| !member_names(ast, earlier).is_empty());
             if matches!(ast.ty(member.ty), Type::Function { .. }) {
                 diagnostics.report(unfit_member(
                     self.sources,

@@ -140,8 +140,9 @@ programs! {
     /// The members of an anonymous struct inside an anonymous union are
     /// their container's, at their offsets within it: `low` and `high` share
     /// `whole`'s bytes beside `kind`, read through `.` and `->` (#1207).
-    /// Mutation: lower a member of an anonymous member as the anonymous
-    /// member itself in `Lowering::member`; `high` reads `low`'s bytes and
-    /// this fails.
+    /// Mutation: keep only the first step of `path` in `Lowering::member`;
+    /// `high` reads the union's first bytes and this fails. Mutation: append
+    /// each step in `Checker::find_member` rather than prepend it; `low`'s
+    /// path is reversed and this fails.
     an_anonymous_member_is_reached_through_its_container,
 }

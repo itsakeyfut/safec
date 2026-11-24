@@ -1,0 +1,8 @@
+error[SC0206]: this member declares nothing
+   ╭─[ a_tagged_struct_with_no_member_name_declares_nothing.c:2:5 ]
+   │
+ 2 │     struct Inner {
+   │     ───┬──  
+   │        ╰──── a tag, and no member's name
+───╯
+  = note: C17 6.7.2.1 p2

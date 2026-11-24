@@ -24,3 +24,35 @@ struct Twice {
 int missing(struct Tagged t) {
     return t.nowhere;
 }
+
+struct Inner {
+    union {
+        int a;
+        int a;
+    };
+};
+
+struct Tail {
+    struct {
+        int count;
+    };
+    int rest[];
+};
+
+struct Siblings {
+    struct {
+        int x;
+    };
+    struct {
+        int x;
+    };
+};
+
+struct Deep {
+    struct {
+        struct {
+            int y;
+        };
+    };
+    int y;
+};

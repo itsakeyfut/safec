@@ -790,6 +790,7 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         names: vec![Scope::default()],
         declaring: false,
         enumerated: false,
+        tag_written: false,
     }
     .run(diagnostics)
 }
@@ -864,6 +865,11 @@ struct Parser<'a> {
     /// Whether the last [`Parser::specifiers`] read an enumeration, so that
     /// `enum E { A };` declares something with no declarator (C17 6.7 p2).
     enumerated: bool,
+    /// Whether the last [`Parser::specifiers`] wrote a struct or union
+    /// specifier, rather than naming one through a typedef: what tells an
+    /// anonymous member from `T;` with `T` a typedef of an untagged struct,
+    /// which C17 6.7.2.1 p13 does not make one (#1207 review).
+    tag_written: bool,
 }
 
 impl Parser<'_> {
@@ -1586,6 +1592,7 @@ impl Parser<'_> {
         // outer declaration's answer: an `enum` with a list here, which is
         // what set it last.
         self.enumerated = enumerated;
+        self.tag_written = tagged.is_some();
         let ty = match (tagged, named, words.ty()) {
             (Some((tagged, _)), _, _) => tagged,
             (None, Some(named), _) => named,
@@ -1988,7 +1995,8 @@ impl Parser<'_> {
     /// The member declarations of a struct through its `}`.
     ///
     /// Each is C17 6.7.2.1 p1's `struct-declaration`: specifiers and at least
-    /// one named declarator, with no initializer. A bit-field's `:` and an
+    /// one named declarator, with no initializer, or an untagged struct or
+    /// union specifier with none at all, p13's anonymous member (#1207). A bit-field's `:` and an
     /// `=` are refused as the `;` they are not, and so is a `}` before any
     /// member, since the grammar asks for one and `clang -pedantic-errors`
     /// calls `struct S {};` a GNU extension.
@@ -2014,16 +2022,22 @@ impl Parser<'_> {
                 // **An anonymous member** (#1207): a struct or union with
                 // neither a tag nor a declarator, C17 6.7.2.1 p13, whose
                 // members are the containing one's. A member with no name,
-                // whose type is the anonymous one.
+                // whose type is the anonymous one. **Written here**: `T;`
+                // with `T` a typedef of an untagged struct is not one, and
+                // declares nothing, which `clang` lays out so off MSVC.
+                // Mutation: drop `tag_written`;
+                // `a_typedef_of_an_untagged_struct_is_no_anonymous_member` is
+                // accepted.
                 Specified::Tag(base)
-                    if matches!(
-                        self.ast.ty(base),
-                        Type::Struct {
-                            tag: None,
-                            members: Some(_),
-                            ..
-                        }
-                    ) =>
+                    if self.tag_written
+                        && matches!(
+                            self.ast.ty(base),
+                            Type::Struct {
+                                tag: None,
+                                members: Some(_),
+                                ..
+                            }
+                        ) =>
                 {
                     let end = self.previous().span;
                     members.push(Declaration {

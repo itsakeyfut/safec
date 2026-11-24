@@ -255,7 +255,8 @@ pub struct Types {
 ///
 /// Self-contained, so that a stage reading it needs neither the resolution
 /// nor a second lookup by spelling: `ast.ty(definition)` is a struct with
-/// members, and `path` is in range of them.
+/// members, `path[0]` is in range of them, and each later step is in range
+/// of the members of the anonymous struct or union the step before names.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Member {
     /// The struct type whose `{ ... }` declares the member, or declares the
@@ -2256,8 +2257,8 @@ impl Checker<'_> {
     /// Where the member spelled `name` is among `members`, as a path of
     /// indices, and its type: a named member's own index, or an anonymous
     /// member's followed by the path within it (C17 6.7.2.1 p13, #1207).
-    /// The first match in the order written; the resolver has refused a
-    /// name declared twice across them.
+    /// The first match in the order written; a name declared twice across
+    /// them was reported by the resolver, which does not stop this check.
     ///
     /// A recursion, bounded by how deep the parser nests a member list.
     /// Mutation: skip anonymous members; `an_anonymous_member_is_reached_through_its_container`'s
