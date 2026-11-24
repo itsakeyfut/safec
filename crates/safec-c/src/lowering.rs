@@ -5097,9 +5097,23 @@ impl Lowering<'_> {
                             );
                             return None;
                         }
-                        if self.is_promoted_by_default(argument) {
-                            let int = self.unit.push_type(Ty::INT);
-                            let promoted = builder.function.push_local(int);
+                        // **And a constant of any type but `int` as that
+                        // type**: an `Operand::Constant` carries none, and
+                        // the backend can only write one as `int`, so
+                        // `1234567890123LL` crossed as 32 bits. A local of
+                        // its own type says what it is. Mutation: leave
+                        // constants as they are; `a_variadic_call_passes_a_char_as_an_int`
+                        // passes `i32` for the `long long`.
+                        let passed = if self.is_promoted_by_default(argument) {
+                            Some(self.unit.push_type(Ty::INT))
+                        } else if matches!(arguments[index], Operand::Constant(_)) {
+                            let ty = self.ty_of(argument, diagnostics)?;
+                            (self.unit.ty(ty) != Ty::INT).then_some(ty)
+                        } else {
+                            None
+                        };
+                        if let Some(ty) = passed {
+                            let promoted = builder.function.push_local(ty);
                             builder.push(Operation {
                                 place: Place::local(promoted),
                                 value: Rvalue::Use(arguments[index].clone()),
