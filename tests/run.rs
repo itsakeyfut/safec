@@ -188,9 +188,11 @@ programs! {
     /// member, called through and by `(*f)()`, compared with a function and
     /// with null, passed and returned, and a struct passed and returned by
     /// value through one; and a designator called through `*` and `&`
-    /// (#1212). Mutation: pass a call through a pointer the arguments
-    /// without the struct ABI's classification in `Emitter::call`; this
-    /// exits with another value.
+    /// (#1212). Mutation: give a designator no value of its own in
+    /// `Lowering::begin_value`; this does not build. The struct ABI of a call
+    /// through a pointer is held by
+    /// `a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says`, since
+    /// Win64 passes these structs through memory however it is classified.
     a_function_pointer_is_stored_called_and_compared,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its

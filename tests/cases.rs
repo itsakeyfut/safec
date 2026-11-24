@@ -10336,6 +10336,13 @@ cases! {
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
     }
     "codegen" => {
+        // A struct returned and one passed by value through function
+        // pointers, on a target whose C ABI puts both in memory: the call
+        // through the pointer carries `sret` and `byval`, as a direct call
+        // does, since the pointer's signature is laid out as a declaration's
+        // parameters are (#1212). Mutation: give `Callable::signed` every
+        // parameter as `Passes::Value`; both attributes go.
+        a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
         // `extern struct O g;` with `O` defined nowhere, and `&g`, are C
         // (C17 6.2.5 p22): declared as an `i8`, since only its definition
         // elsewhere has a size (#1202 review). Mutation: spell it from a
