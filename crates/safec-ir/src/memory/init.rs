@@ -393,8 +393,9 @@ impl Allocations<'_> {
                     }) => false,
                     Some(Ty::Void | Ty::Pointer(_) | Ty::Array { .. }) => false,
                     // No store writes a struct whole yet (#1201); one that
-                    // did would be bytes, as a copy is.
-                    Some(Ty::Struct(_)) => true,
+                    // did would be bytes, as a copy is. Nor a function, which
+                    // no place has: answered as bytes too.
+                    Some(Ty::Struct(_) | Ty::Function(_)) => true,
                 }
             }
             StoreKind::Copy => true,
@@ -717,7 +718,9 @@ impl Allocations<'_> {
                             },
                         )
                     }
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => Vec::new(),
+                    Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_)) | None => {
+                        Vec::new()
+                    }
                 };
                 // **What it writes, only where its destination may land**: the
                 // blocks its landing names and, where it may land where this
@@ -795,7 +798,9 @@ impl Allocations<'_> {
                     }
                     // A destination that is no place keeps what the exposure
                     // says, as it did.
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+                    Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_)) | None => {
+                        None
+                    }
                 };
                 // **What it copies may be indeterminate**: bytes nothing wrote
                 // in the source are bytes nothing wrote where they land, so a
@@ -869,7 +874,9 @@ impl Allocations<'_> {
                             });
                         (false, maybe)
                     }
-                    Some(Operand::Copy(_) | Operand::Constant(_)) | None => (false, false),
+                    Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_)) | None => {
+                        (false, false)
+                    }
                 };
                 // Whether the destination may land in no block, nor anywhere
                 // code this check cannot read can name: a local is the only
@@ -887,7 +894,8 @@ impl Allocations<'_> {
                         {
                             Some(source.local)
                         }
-                        Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+                        Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_))
+                        | None => None,
                     },
                     by: Carrier::Copy,
                 };
@@ -930,7 +938,8 @@ impl Allocations<'_> {
                         {
                             value.points_to[dest.local].position.at
                         }
-                        Some(Operand::Copy(_) | Operand::Constant(_)) | None => At::Unknown,
+                        Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_))
+                        | None => At::Unknown,
                     };
                     let covers_whole = |value: &Known, site: Site| {
                         value.covers_whole(Storage::Heap(site), dest_at, bytes)

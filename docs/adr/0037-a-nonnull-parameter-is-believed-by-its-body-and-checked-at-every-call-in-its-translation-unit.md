@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its sentence on a call through a function pointer superseded by ADR-0125)"
 date: 2026-09-26
 decision-makers: itsakeyfut
 ---

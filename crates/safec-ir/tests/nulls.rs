@@ -607,7 +607,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
         Block {
             elements: vec![],
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![Operand::Copy(Place::new(p, vec![Projection::Deref]))],
                 destination: Some(Place::local(p)),
                 then: Some(after),
@@ -1588,7 +1588,7 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
         Block {
             elements: vec![],
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![],
                 destination: None,
                 then: Some(after),
@@ -1661,7 +1661,7 @@ fn a_comparison_before_a_goto_into_the_branch_refines_it_and_one_before_a_call_d
         })];
         let into_branch = if through_a_call {
             Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![],
                 destination: None,
                 then: Some(branch),
@@ -1912,7 +1912,7 @@ fn a_null_handed_to_a_function_named_memcpy(defined: bool) -> Vec<nullability::F
                 origin: Origin::Written(at),
             })],
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![
                     Operand::Copy(Place::local(d)),
                     Operand::Copy(Place::local(d)),
@@ -1991,7 +1991,7 @@ fn a_library_name_declared_with_another_shape_is_read_as_any_call() {
                 origin: Origin::Written(at),
             })],
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![Operand::Copy(Place::local(x))],
                 destination: None,
                 then: Some(exit),
@@ -2050,7 +2050,7 @@ fn a_library_call_declared_over_a_char_is_read_by_its_row() {
                 origin: Origin::Written(at),
             })],
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: vec![
                     Operand::Copy(Place::local(d)),
                     Operand::Constant(0),

@@ -40,8 +40,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, Solution, solve};
 use crate::ir::{
-    BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
-    Projection, Promise, Rvalue, Shape, Terminator, TranslationUnit, UnOp,
+    BinOp, Block, BlockId, Called, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand,
+    Place, Projection, Promise, Rvalue, Shape, Terminator, TranslationUnit, UnOp,
 };
 use crate::reads::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::{SourceMap, Span};
@@ -201,6 +201,16 @@ pub enum Asked {
     /// not. Asked as a dereference is, since what settles it is the same test.
     /// See ADR-0084.
     Arithmetic,
+    /// Whether a function with a `_Nonnull` parameter has its address taken
+    /// (#1212): a call through the pointer is not checked against the
+    /// annotation, which a pointer's type does not carry, and the function's
+    /// body still believes it. Always `Unknown`, where the address is taken.
+    /// See ADR-0125.
+    AddressOfNonnull {
+        /// The parameter's promise, which the call through the pointer is
+        /// not checked against.
+        promise: Promise,
+    },
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
         /// What the parameter promised, which is what this argument is
@@ -248,6 +258,9 @@ impl Asked {
             // frontend refuses. See ADR-0084.
             (Self::Arithmetic, Self::Arithmetic) => true,
             (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
+            (Self::AddressOfNonnull { promise }, Self::AddressOfNonnull { promise: other }) => {
+                promise == other
+            }
             (
                 Self::Return {
                     promise: _,
@@ -262,6 +275,7 @@ impl Asked {
                 Self::Dereference { through_memory: _ }
                 | Self::Arithmetic
                 | Self::Argument { promise: _ }
+                | Self::AddressOfNonnull { promise: _ }
                 | Self::Return {
                     promise: _,
                     reached_end: _,
@@ -424,7 +438,11 @@ impl Nullability<'_> {
         let Terminator::Call { callee, .. } = terminator else {
             return Vec::new();
         };
-        crate::library::read_as_library(self.unit, self.sources, *callee)
+        // A call through a pointer names no library function.
+        let Some(callee) = callee.direct() else {
+            return Vec::new();
+        };
+        crate::library::read_as_library(self.unit, self.sources, callee)
             .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
             .unwrap_or_default()
     }
@@ -444,7 +462,7 @@ impl Nullability<'_> {
                     through = through.deref();
                     Some(through)
                 }
-                Some(Operand::Constant(_)) | None => None,
+                Some(Operand::Constant(_) | Operand::Function(_)) | None => None,
             })
             .collect()
     }
@@ -942,6 +960,9 @@ impl Nullability<'_> {
             // Any other constant reaching a pointer needs a cast this subset does
             // not have, so nothing is claimed about it.
             Rvalue::Use(Operand::Constant(_)) => Nullness::Unknown,
+            // A function's address, which C17 6.3.2.3 p3 makes unequal to
+            // every null pointer.
+            Rvalue::Use(Operand::Function(_)) => Nullness::NonNull,
             // A pointer made from an integer, which this does not follow:
             // C17 6.3.2.3 p5 leaves what it points at to the implementation.
             Rvalue::Reinterpret(_) => Nullness::Unknown,
@@ -1131,12 +1152,16 @@ impl Analysis for Nullability<'_> {
             ..
         } = terminator
         {
-            let name = self.unit.function(*callee).spelled(self.sources);
-            if DOES_NOT_RETURN
-                .iter()
-                .any(|&(reserved, _)| reserved == name)
-            {
-                value.path = Path::Ending;
+            // A call through a pointer is believed to return, as the memory
+            // check believes it.
+            if let Some(callee) = callee.direct() {
+                let name = self.unit.function(callee).spelled(self.sources);
+                if DOES_NOT_RETURN
+                    .iter()
+                    .any(|&(reserved, _)| reserved == name)
+                {
+                    value.path = Path::Ending;
+                }
             }
         }
         let value = &mut value.of;
@@ -1144,6 +1169,11 @@ impl Analysis for Nullability<'_> {
         // where the call is reached and the destination is written when it
         // returns.
         met(dereferenced_in_terminator(terminator), value);
+        // **And the pointer called through**, which the call dereferences:
+        // a call through null traps as `*f` does, so past it `f` is not null.
+        if let Some((at, called)) = called_through(terminator) {
+            met(Some((at, vec![&called])), value);
+        }
         // **And what a library function read or wrote through**, as a
         // dereference that did not trap: a null one made the call undefined
         // and was asked at it. See ADR-0072.
@@ -1182,7 +1212,12 @@ impl Analysis for Nullability<'_> {
                         Shape::Local => true,
                         Shape::Deref(_) | Shape::Indexed => false,
                     } {
-                        value[place.local.index()] = match self.unit.function(*callee).promised() {
+                        // A call through a pointer names no function to
+                        // promise anything of what it returns.
+                        value[place.local.index()] = match callee
+                            .direct()
+                            .and_then(|callee| self.unit.function(callee).promised())
+                        {
                             Some(_) => Nullness::NonNull,
                             None => Nullness::Unknown,
                         };
@@ -1415,7 +1450,9 @@ fn moved_in_element<'e>(
         Operand::Copy(place) => {
             pointer_typed(unit, function, place.local) && place.steps().is_empty()
         }
-        Operand::Constant(_) => false,
+        // No difference reaches a function's address: the type check
+        // refuses one (C17 6.5.6 p3).
+        Operand::Constant(_) | Operand::Function(_) => false,
     };
     if *op == BinOp::Sub && pointer(lhs) && pointer(rhs) {
         return Some((operation.origin.span(), Vec::new()));
@@ -1431,7 +1468,7 @@ fn moved_in_element<'e>(
             {
                 Some(place)
             }
-            Operand::Copy(_) | Operand::Constant(_) => None,
+            Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
         })
         .collect();
     Some((operation.origin.span(), moved))
@@ -1450,8 +1487,69 @@ fn own_local(operand: &Operand) -> Option<LocalId> {
         {
             Some(place.local)
         }
-        Operand::Copy(_) | Operand::Constant(_) => None,
+        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
     }
+}
+
+/// Every function whose address a block takes, and where: each
+/// [`Operand::Function`] its elements and its terminator read.
+fn function_addresses(block: &Block) -> Vec<(FuncId, Span)> {
+    let mut taken = Vec::new();
+    let mut add = |operand: &Operand, at: Span| {
+        if let Operand::Function(id) = operand {
+            taken.push((*id, at));
+        }
+    };
+    for element in &block.elements {
+        let Element::Assign(operation) = element else {
+            continue;
+        };
+        let at = operation.origin.span();
+        match &operation.value {
+            Rvalue::Use(operand) | Rvalue::Unary { operand, .. } | Rvalue::Reinterpret(operand) => {
+                add(operand, at);
+            }
+            Rvalue::Binary { lhs, rhs, .. } => {
+                add(lhs, at);
+                add(rhs, at);
+            }
+            Rvalue::Address(_) | Rvalue::Static(_) => {}
+        }
+    }
+    match &block.terminator {
+        Terminator::Call {
+            callee,
+            arguments,
+            destination: _,
+            then: _,
+            origin,
+        } => {
+            for operand in arguments.iter().chain(callee.operand()) {
+                add(operand, origin.span());
+            }
+        }
+        Terminator::Branch {
+            condition, origin, ..
+        } => add(condition, origin.span()),
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { .. } => {}
+    }
+    taken
+}
+
+/// The place a call through a pointer dereferences, `*f`, and where: what
+/// [`report`] and [`met`] ask as they ask a written `*f`, since calling
+/// through a null pointer is undefined as reading through one is. `None`
+/// for a direct call. See ADR-0125.
+fn called_through(terminator: &Terminator) -> Option<(Span, Place)> {
+    let Terminator::Call {
+        callee: Called::Through(Operand::Copy(place)),
+        origin,
+        ..
+    } = terminator
+    else {
+        return None;
+    };
+    Some((origin.span(), place.clone().deref()))
 }
 
 /// Whether a place dereferences a pointer that was read out of memory.
@@ -1537,7 +1635,13 @@ fn report_arguments(
         | Terminator::Abnormal { to: _ } => return,
     };
 
-    let callee = analysis.unit.function(*callee);
+    // **A call through a pointer is asked nothing here**: its pointee's type
+    // carries no `_Nonnull`, and a function with a `_Nonnull` parameter is
+    // doubted where its address is taken instead. See ADR-0125.
+    let Some(callee) = callee.direct() else {
+        return;
+    };
+    let callee = analysis.unit.function(callee);
     for (index, parameter) in callee.parameters().enumerate() {
         let Some(promise) = callee.nonnull(parameter) else {
             continue;
@@ -1717,6 +1821,39 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             continue;
         }
 
+        // **A function with a `_Nonnull` parameter whose address is taken** is
+        // `Unknown` where it is taken, on any path, since what is asked is the
+        // code and not a value: a call through the pointer cannot be checked
+        // against an annotation the pointer's type does not carry, and the body
+        // still believes it. See ADR-0125. Mutation: skip this;
+        // `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
+        // `nonnull_address_taken` goes silent.
+        for block in function.blocks() {
+            for (taken, at) in function_addresses(block) {
+                let declared = unit.function(taken);
+                // A promise the program made, and not the one this compiler
+                // makes for the pointer a struct passed by value crosses as,
+                // which every caller keeps however it calls.
+                let Some(promise) = declared
+                    .parameters()
+                    .filter_map(|parameter| declared.nonnull(parameter))
+                    .find(|promise| !matches!(promise, Promise::Made(_)))
+                else {
+                    continue;
+                };
+                findings.push((
+                    Finding {
+                        function: func,
+                        conclusion: Conclusion::Unknown,
+                        at,
+                        asked: Asked::AddressOfNonnull { promise },
+                        local: None,
+                    },
+                    About::Question,
+                ));
+            }
+        }
+
         let cfg = Cfg::of(function);
         let analysis = Nullability {
             sources,
@@ -1800,6 +1937,21 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 func,
                 false,
             );
+            // **A call through a pointer is a dereference of it**, asked as
+            // `*f` is: a call through one that may be null is `SC0403`. See
+            // ADR-0125. Mutation: skip this;
+            // `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
+            // `through_a_pointer_that_may_be_null` goes silent.
+            if let Some((at, called)) = called_through(&block.terminator) {
+                report(
+                    &analysis,
+                    &mut findings,
+                    Some((at, vec![&called])),
+                    &known.of,
+                    func,
+                    false,
+                );
+            }
             report_arguments(&analysis, &mut findings, &block.terminator, &known.of, func);
             report_library(&analysis, &mut findings, &block.terminator, &known.of, func);
             report_return(

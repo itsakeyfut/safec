@@ -4988,9 +4988,10 @@ impl Checker<'_> {
     /// `target`, C17 6.5.16.1 p1.
     ///
     /// `None` where this stage does not answer: a `void` target, an array or a
-    /// function target, and a function source, is a different constraint, and
-    /// 6.5.16 p2's requirement that the place be a modifiable lvalue is
-    /// another. An array source is answered as the pointer it converts to.
+    /// function target, is a different constraint, and 6.5.16 p2's
+    /// requirement that the place be a modifiable lvalue is another. An array
+    /// source and a function source are answered as the pointers they convert
+    /// to.
     /// Answering `false` for them would be reporting them badly. A `void`
     /// source onto an object type is answered, `false`, since a `void`
     /// expression has no value to be assigned.
@@ -5019,12 +5020,23 @@ impl Checker<'_> {
             // every qualifier of what the source points to, so a conversion
             // never discards `const`. The pointers' own qualifiers are not
             // asked: p1 takes the left operand's unqualified type.
-            (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => Some(
-                (!ast.is_const(*source_pointee) || ast.is_const(*target_pointee))
-                    && (self.compatible_unqualified(ast, *target_pointee, *source_pointee)
-                        || matches!(ast.ty(*target_pointee), Type::Void)
-                        || matches!(ast.ty(*source_pointee), Type::Void)),
-            ),
+            //
+            // **The `void *` half is for a pointer to an object only**: a
+            // function is no object type (6.2.5 p1), so a pointer to one and
+            // a `void *` convert only by a cast. Accepted, `void *v = f;` and
+            // `int (*g)(int) = v;` built in silence, and `g` was called as
+            // whatever `v` held (#1212).
+            (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => {
+                let function = |pointee: TypeId| matches!(ast.ty(pointee), Type::Function { .. });
+                Some(
+                    (!ast.is_const(*source_pointee) || ast.is_const(*target_pointee))
+                        && (self.compatible_unqualified(ast, *target_pointee, *source_pointee)
+                            || (matches!(ast.ty(*target_pointee), Type::Void)
+                                && !function(*source_pointee))
+                            || (matches!(ast.ty(*source_pointee), Type::Void)
+                                && !function(*target_pointee))),
+                )
+            }
             // 6.3.2.3 p3: only a null pointer constant may be assigned to a
             // pointer from an integer.
             (
@@ -5074,8 +5086,25 @@ impl Checker<'_> {
                 | Type::Struct { .. },
                 Type::Array { .. },
             ) => Some(false),
-            (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
-            | (_, Type::Function { .. }) => None,
+            // **A function source is the pointer to it it has become**
+            // (6.3.2.1 p4), as an array source is above, so p1 asks that
+            // pointer: a function of another type assigned to a function
+            // pointer is a call through the wrong type later, and a function
+            // assigned to an integer or a struct is no assignment p1 lists.
+            // Left unanswered, `int (*g)(int *) = h;` with `h` taking `int`
+            // built in silence (#1212).
+            (Type::Pointer(target_pointee), Type::Function { .. }) => {
+                Some(self.compatible_unqualified(ast, *target_pointee, source))
+            }
+            (
+                Type::Integer {
+                    rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
+                    sign: _,
+                }
+                | Type::Struct { .. },
+                Type::Function { .. },
+            ) => Some(false),
+            (Type::Void | Type::Array { .. } | Type::Function { .. }, _) => None,
             // p1: a structure type compatible with the target's, which two
             // structs are when they are one tag, and nothing else.
             (Type::Struct { .. }, Type::Struct { .. }) => {

@@ -63,13 +63,17 @@ pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&P
 pub(crate) fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
     match terminator {
         Terminator::Call {
-            callee: _,
+            callee,
             arguments,
             destination,
             then: _,
             origin,
         } => {
-            let mut places: Vec<&Place> = arguments.iter().flat_map(dereferenced_in).collect();
+            let mut places: Vec<&Place> = arguments
+                .iter()
+                .chain(callee.operand())
+                .flat_map(dereferenced_in)
+                .collect();
             if let Some(destination) = destination {
                 places.extend(projected(destination));
             }
@@ -148,7 +152,9 @@ pub(crate) fn operated_on_in_element<'e>(
                     Operand::Copy(place) => unit
                         .place_ty(function, place)
                         .is_some_and(|ty| unit.ty(ty).is_pointer()),
-                    Operand::Constant(_) => false,
+                    // A function's address is never freed, so nothing here
+                    // reads it as moving a freed pointer.
+                    Operand::Constant(_) | Operand::Function(_) => false,
                 }) =>
                 {
                     named(lhs).into_iter().chain(named(rhs)).collect()
@@ -221,7 +227,7 @@ fn named(operand: &Operand) -> Option<&Place> {
         {
             Some(place)
         }
-        Operand::Copy(_) | Operand::Constant(_) => None,
+        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
     }
 }
 
@@ -251,7 +257,7 @@ fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
 fn dereferenced_in(operand: &Operand) -> Vec<&Place> {
     match operand {
         Operand::Copy(place) => projected(place),
-        Operand::Constant(_) => Vec::new(),
+        Operand::Constant(_) | Operand::Function(_) => Vec::new(),
     }
 }
 
@@ -410,13 +416,17 @@ pub(crate) fn read_out_of_memory_in_terminator(
 ) -> Option<(Span, Vec<Place>)> {
     match terminator {
         Terminator::Call {
-            callee: _,
+            callee,
             arguments,
             destination,
             then: _,
             origin,
         } => {
-            let mut places: Vec<Place> = arguments.iter().flat_map(read_in).collect();
+            let mut places: Vec<Place> = arguments
+                .iter()
+                .chain(callee.operand())
+                .flat_map(read_in)
+                .collect();
             if let Some(destination) = destination {
                 places.extend(first_of_two_derefs(destination));
             }
@@ -436,7 +446,7 @@ pub(crate) fn read_out_of_memory_in_terminator(
 fn read_in(operand: &Operand) -> Vec<Place> {
     match operand {
         Operand::Copy(place) => read_as_value(place),
-        Operand::Constant(_) => Vec::new(),
+        Operand::Constant(_) | Operand::Function(_) => Vec::new(),
     }
 }
 

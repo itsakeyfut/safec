@@ -1,0 +1,413 @@
+Target "x86_64-pc-windows-msvc"
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:1:5 "one"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "a"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:2:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:5:5 "narrow"
+  Local "_0" "int" return
+  Local "_1" "short" parameter "a"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:6:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:9:5 "unprototyped" declared
+  Local "_0" "int" return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:11:5 "later" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "a"
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:14:5 "through_an_unprototyped_pointer"
+  Local "_0" "int" return
+  Local "_1" "int (*)()" "f"
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:15:11 written
+      Destination "_1"
+      Use
+        Function "one"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:15:18 generated
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:16:12 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:16:12 written through "bb1"
+      Copy "_1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:16:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:16:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:19:5 "promoted_through_unprototyped"
+  Local "_0" "int" return
+  Local "_1" "int (*)()" "f"
+  Local "_2" "int (*)()"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:20:18 written
+      Destination "_2"
+      Use
+        Function "narrow"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:20:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:20:18 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:21:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:21:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:24:5 "unprototyped_designator"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int)" "f"
+  Local "_2" "int (*)()" "g"
+  Local "_3" "int (*)(int)" "h"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:25:11 written
+      Destination "_1"
+      Use
+        Function "unprototyped"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:25:21 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:26:11 written
+      Destination "_2"
+      Use
+        Function "one"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:26:18 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:27:11 written
+      Destination "_3"
+      Use
+        Function "later"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:27:21 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:12 written through "bb1"
+      Copy "_1"
+      Destination "_4"
+      Constant 1
+  Block "bb1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:20 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:12 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_4"
+        Copy "_5"
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:30 written through "bb2"
+      Copy "_3"
+      Destination "_7"
+      Constant 1
+  Block "bb2"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:12 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_6"
+        Copy "_7"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:28:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:31:5 "read_through_a_pointer_to_a_pointer"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int)" "f"
+  Local "_2" "void *" "v"
+  Local "_3" "int (**)(int)"
+  Local "_4" "int (**)(int *)" "pp"
+  Local "_5" "int (*)(int *)" "g"
+  Local "_6" "int" "x"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:32:11 written
+      Destination "_1"
+      Use
+        Function "one"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:32:21 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:33:15 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:33:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:33:15 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:34:12 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:34:25 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:35:11 written
+      Destination "_5"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:35:23 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:36:9 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:36:13 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:37:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:37:9 written "bb1" "bb2"
+      Copy "_7"
+  Block "bb1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:37:9 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:38:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:38:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:37:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:39:14 written
+      Destination "_8"
+      Address
+        Place "_6"
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:39:12 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:39:12 written through "bb4"
+      Copy "_5"
+      Destination "_9"
+      Copy "_8"
+  Block "bb4"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:39:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:39:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:42:5 "parameters_differ"
+  Local "_0" "int" return
+  Local "_1" "int (*)(long)" "f"
+  Local "_2" "int (*)(long)"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:43:22 written
+      Destination "_2"
+      Use
+        Function "one"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:43:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:43:22 generated
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:44:12 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:44:12 written through "bb1"
+      Copy "_1"
+      Destination "_3"
+      Constant 1
+  Block "bb1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:44:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:44:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:47:5 "from_a_pointer_to_data"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int (*)(int)" "f"
+  Local "_3" "int (*)(int)"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:48:21 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:48:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:48:21 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:49:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:49:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:49:9 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:50:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:50:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:49:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:51:12 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:51:12 written through "bb4"
+      Copy "_2"
+      Destination "_5"
+      Constant 1
+  Block "bb4"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:51:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:51:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:54:5 "from_a_pointer_parameter"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int)" parameter "g"
+  Local "_2" "long (*)(int)" "h"
+  Local "_3" "long (*)(int)"
+  Local "_4" "int"
+  Local "_5" "long"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:55:22 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:55:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:55:22 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:56:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:56:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:56:9 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:57:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:57:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:56:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:58:17 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:58:17 written through "bb4"
+      Copy "_2"
+      Destination "_5"
+      Constant 1
+  Block "bb4"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:58:12 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:58:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:58:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:61:5 "more_parameters"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int)" parameter "g"
+  Local "_2" "int (*)(int, int)" "h"
+  Local "_3" "int (*)(int, int)"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:62:26 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:62:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:62:26 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:63:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:63:9 written "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:63:9 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:64:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:64:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:63:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:65:12 generated
+    Call a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:65:12 written through "bb4"
+      Copy "_2"
+      Destination "_5"
+      Constant 1
+      Constant 2
+  Block "bb4"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:65:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:65:12 generated
+    Return
+Function a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:68:5 "same_type"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int)" parameter "g"
+  Local "_2" "int (*)(int)" "h"
+  Local "_3" "int (**)(int)" "pp"
+  Local "_4" "int (**)(int)"
+  Local "_5" "int (**)(int)" "qq"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:69:11 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:69:21 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:70:23 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:70:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:70:23 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:71:12 written
+      Destination "_5"
+      Use
+        Copy "_3"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:71:23 generated
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:72:12 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_5"
+        Copy "_3"
+    Operation a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:72:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:72:12 generated
+    Return

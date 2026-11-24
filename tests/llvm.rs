@@ -39,6 +39,10 @@ const PROGRAMS: &[(&str, &str)] = &[
         "armv7-unknown-linux-gnueabihf",
     ),
     (
+        "a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says",
+        "x86_64-unknown-linux-gnu",
+    ),
+    (
         "llvm_ir_of_conversions_and_a_constant_condition",
         "x86_64-pc-windows-msvc",
     ),

@@ -1875,6 +1875,10 @@ impl Held {
                 // at. What sets it apart is only that a block carries it to a
                 // load whole (`Cell::taken_by_a_load`). See `Why::Forged`.
                 Why::Forged => unrecorded.lost = true,
+                // **A lost value too**: a function is no object, so nothing
+                // this check names is what its address points at, and a read
+                // or a write through it as data is doubted. See ADR-0125.
+                Why::Function => unrecorded.lost = true,
             }
         }
         if unrecorded.any() {

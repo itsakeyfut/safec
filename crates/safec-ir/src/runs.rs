@@ -175,6 +175,8 @@ fn head_test(
     let mut written: Vec<(LocalId, Option<i128>)> = Vec::new();
     let value = |written: &[(LocalId, Option<i128>)], operand: &Operand| match operand {
         Operand::Constant(c) => small(*c),
+        // An address, which no loop counts with.
+        Operand::Function(_) => None,
         Operand::Copy(place)
             if (match place.shape() {
                 Shape::Local => true,

@@ -83,6 +83,32 @@ fn a_pointer_is_a_pointer_and_an_array_of_pointers_is_not() {
     }
 }
 
+/// One signature pushed twice is one id, so two function types compare as
+/// their ids do, as two types do, and one that differs is another id.
+///
+/// Mutation: push every signature as a new one in `push_signature`; the
+/// first assertion fails.
+#[test]
+fn a_signature_pushed_twice_is_one_function_type() {
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::INT);
+    let signature = Signature {
+        returns: int,
+        parameters: vec![(int, Passes::Value)],
+        prototyped: true,
+        variadic: false,
+    };
+    let first = unit.push_signature(signature.clone());
+    assert_eq!(unit.push_signature(signature.clone()), first);
+    assert_ne!(
+        unit.push_signature(Signature {
+            prototyped: false,
+            ..signature
+        }),
+        first
+    );
+}
+
 /// What a type is worth is the target's answer, and `void` has none.
 ///
 /// Mutation: answer `Some` for a pointer or for `void`. The last two
@@ -273,7 +299,7 @@ fn every_terminator_says_where_control_can_go() {
         ),
         (
             Terminator::Call {
-                callee: FuncId(0),
+                callee: Called::Direct(FuncId(0)),
                 arguments: Vec::new(),
                 destination: Some(Place::local(LocalId(0))),
                 then: Some(two),
@@ -283,7 +309,7 @@ fn every_terminator_says_where_control_can_go() {
         ),
         (
             Terminator::Call {
-                callee: FuncId(0),
+                callee: Called::Direct(FuncId(0)),
                 arguments: Vec::new(),
                 destination: None,
                 then: None,
@@ -572,7 +598,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
     let call = caller.push_block(Block {
         elements: Vec::new(),
         terminator: Terminator::Call {
-            callee: free,
+            callee: Called::Direct(free),
             arguments: vec![Operand::Copy(Place::local(p))],
             destination: None,
             then: Some(after),
@@ -591,7 +617,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
     };
     assert_eq!(*destination, None);
     assert_eq!(origin.span(), at);
-    assert_eq!(callee.index(), 0);
+    assert_eq!(callee.direct().map(FuncId::index), Some(0));
 }
 
 /// A function whose body is elsewhere is not a function with no blocks.

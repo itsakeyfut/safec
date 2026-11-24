@@ -259,11 +259,13 @@ impl Watch {
                     // arguments, are followed; its length, and anything
                     // handed to any other call, is not.
                     for (index, argument) in arguments.iter().enumerate() {
-                        if Some(*callee) == memcpy && index < 2 {
+                        if callee.direct().is_some() && callee.direct() == memcpy && index < 2 {
                             continue;
                         }
                         lost.extend(escapes(argument));
                     }
+                    // A pointer called through is a use this does not follow.
+                    lost.extend(callee.operand().and_then(escapes));
                     if let Some(place) = destination {
                         if place.steps().is_empty() {
                             lost.extend(held(place.local));
@@ -312,7 +314,7 @@ impl Watch {
         else {
             return None;
         };
-        if Some(*callee) != self.memcpy {
+        if callee.direct().is_none() || callee.direct() != self.memcpy {
             return None;
         }
         Some((arguments.first()?, arguments.get(1)?, origin.span()))
@@ -475,13 +477,19 @@ pub(super) fn terminator_reads(terminator: &Terminator) -> Vec<(LocalId, Span)> 
         Terminator::Branch {
             condition, origin, ..
         } => operand_reads(condition, origin.span(), &mut reads),
+        // **And the pointer a call goes through**, read as a dereference
+        // reads it: a call through a pointer nothing assigned is the read
+        // 6.3.2.1 p2 makes undefined. See ADR-0125. Mutation: read the
+        // arguments alone; `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
+        // `through_an_unassigned_pointer` goes silent.
         Terminator::Call {
+            callee,
             arguments,
             destination,
+            then: _,
             origin,
-            ..
         } => {
-            for argument in arguments {
+            for argument in arguments.iter().chain(callee.operand()) {
                 operand_reads(argument, origin.span(), &mut reads);
             }
             if let Some(place) = destination {
@@ -640,7 +648,11 @@ fn reaches_certainly(
         let terminator = &function.block(id).terminator;
         let ends = match terminator {
             Terminator::Return => true,
-            Terminator::Call { callee, then, .. } => then.is_none() || ends_here(*callee),
+            // A call through a pointer is believed to return, as any call
+            // this check cannot name is.
+            Terminator::Call { callee, then, .. } => {
+                then.is_none() || callee.direct().is_some_and(ends_here)
+            }
             Terminator::Goto(_) | Terminator::Branch { .. } | Terminator::Abnormal { .. } => false,
         };
         if ends {

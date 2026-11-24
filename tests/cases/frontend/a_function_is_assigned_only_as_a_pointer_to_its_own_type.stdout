@@ -1,0 +1,79 @@
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:1:1 "k" "int (int)"
+  Parameter a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:1:7 "a" "int"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:1:14
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:2:5
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:2:12 "a"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:5:1 "zero" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:5:16
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:6:5
+      Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:6:12 "0"
+Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:9:1 "wr" "void (int *)"
+  Parameter a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:9:9 "p" "int *"
+Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:10:1 "callit" "int (int (*)(int *))"
+  Parameter a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:10:12 "f" "int (*)(int *)"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:12:1 "initialized" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:12:23
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:13:5 "g" "int (*)(int *)"
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:13:23 "k"
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:14:5
+      Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:14:12 "0"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:17:1 "passed" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:17:18
+    Expression a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:18:5
+      Call a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:18:5
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:18:5 "wr"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:18:8 "zero"
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:19:5
+      Call a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:19:12
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:19:12 "callit"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:19:19 "k"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:22:1 "returned" "int (*(void))(int *)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:22:30
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:23:5
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:23:12 "k"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:26:1 "as_an_integer" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:26:25
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:27:5 "i" "int"
+    Expression a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:28:5
+      Assign a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:28:5 "="
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:28:5 "i"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:28:9 "zero"
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:29:5
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:29:12 "i"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:32:1 "through_void" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:32:24
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:33:5 "v" "void *"
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:33:15 "zero"
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:34:5 "f" "int (*)(void)"
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:34:22 "v"
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:35:5
+      Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:35:12 "0"
+Function a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:38:1 "its_own_type" "int (void)"
+  Compound a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:38:24
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:39:5 "f" "int (*)(int)"
+      Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:39:21 "k"
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:40:5 "g" "int (*)(int)"
+      Unary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:40:21 "&"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:40:22 "k"
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:41:5 "h" "int (*)(int)"
+      Unary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:41:21 "*"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:41:22 "k"
+    Declaration a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:42:5 "v" "void *"
+      Unary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:42:15 "&"
+        Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:42:16 "f"
+    Return a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:5
+      Binary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:12 "+"
+        Binary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:12 "+"
+          Binary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:12 "+"
+            Call a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:12
+              Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:12 "f"
+              Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:14 "1"
+            Call a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:19
+              Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:19 "g"
+              Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:21 "1"
+          Call a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:26
+            Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:26 "h"
+            Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:28 "1"
+        Binary a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:34 "!="
+          Identifier a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:34 "v"
+          Number a_function_is_assigned_only_as_a_pointer_to_its_own_type.c:43:39 "0"

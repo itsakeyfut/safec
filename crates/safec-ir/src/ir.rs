@@ -187,6 +187,41 @@ impl StructId {
     }
 }
 
+/// Which function type, within one [`TranslationUnit`]: the [`Signature`]
+/// a [`Ty::Function`] names. Interned as a type is, so two equal signatures
+/// are one id and two function types compare as their ids do (#1212).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SignatureId(u32);
+
+impl SignatureId {
+    /// The index this handle refers to, for printing and for a side table.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// What a function takes and returns, as a call through a pointer to it
+/// has to pass them: the shape [`Function`] lays out for a declaration,
+/// held where no [`Function`] is named (#1212).
+///
+/// **Lowered, not as written**: a struct returned by value is a pointer
+/// parameter first and `void` returned, and a struct parameter is the
+/// address of the caller's copy, each marked by its [`Passes`], so the
+/// backend reads a call through a pointer as it reads a direct one.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Signature {
+    /// What it returns, after a struct result is moved into a parameter.
+    pub returns: TyId,
+    /// Each parameter's type and how it is passed, in order.
+    pub parameters: Vec<(TyId, Passes)>,
+    /// Whether the parameters were declared. `false` for `()`, which C17
+    /// 6.7.6.3 p14 makes say nothing about them, so a call through a
+    /// pointer to one passes its arguments as they are.
+    pub prototyped: bool,
+    /// Whether it takes `...` after its parameters. Never set before #1213.
+    pub variadic: bool,
+}
+
 /// A struct as the target lays it out: each member's type and byte offset,
 /// and the whole's size and alignment. Worked out once, by
 /// [`TranslationUnit::push_struct`], and the one answer the backend and the
@@ -433,6 +468,13 @@ pub enum Ty {
     /// (#1201). A member is reached through its address, a
     /// [`Projection::Field`] under `Rvalue::Address`.
     Struct(StructId),
+    /// A function of the type its [`Signature`] says, which is what a
+    /// function pointer points at (#1212).
+    ///
+    /// **Never a value**, as an array is not: a function is no object (C17
+    /// 6.2.5 p1), so no place has this type and no operation reads or writes
+    /// one. It is reached only as a [`Ty::Pointer`]'s pointee.
+    Function(SignatureId),
 }
 
 impl Ty {
@@ -456,7 +498,8 @@ impl Ty {
             }
             | Ty::Void
             | Ty::Array { .. }
-            | Ty::Struct(_) => false,
+            | Ty::Struct(_)
+            | Ty::Function(_) => false,
         }
     }
 }
@@ -543,6 +586,7 @@ impl Operand {
         match self {
             Self::Copy(_) => "Copy",
             Self::Constant(_) => "Constant",
+            Self::Function(_) => "Function",
         }
     }
 }
@@ -665,6 +709,51 @@ pub enum Operand {
     /// Wide enough for every integer constant C can write, and not narrowed to
     /// a target's width, for the reason [`Ty`] gives.
     Constant(i128),
+    /// The address of a function: a function designator converted to a
+    /// pointer to it (C17 6.3.2.1 p4), to the function type
+    /// [`TranslationUnit::designator_signature`] gives. A function is no object, so
+    /// this names nothing the memory check follows. See ADR-0125.
+    Function(FuncId),
+}
+
+/// What a call calls (#1212).
+///
+/// **One terminator for both**, so that what a call does with its
+/// arguments, its result and its continuation is one body whichever way the
+/// callee is named, and every reader of a callee answers both arms. See
+/// ADR-0125.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Called {
+    /// A function this unit names. Also what a call through a pointer that
+    /// is a function designator is: the lowering never writes
+    /// `Through(Operand::Function(_))`.
+    Direct(FuncId),
+    /// Whatever function the pointer this operand holds points at, whose
+    /// type is the pointer's pointee, a [`Ty::Function`]. Read by the memory
+    /// check as a call to code it cannot read.
+    Through(Operand),
+}
+
+impl Called {
+    /// The function this names, where it names one. A reader that asks this
+    /// answers a call through a pointer as one it cannot name, and says why
+    /// that is enough where it does.
+    pub fn direct(&self) -> Option<FuncId> {
+        match self {
+            Called::Direct(id) => Some(*id),
+            Called::Through(_) => None,
+        }
+    }
+
+    /// The pointer a call through one reads, which every reader of what a
+    /// call reads asks beside its arguments: calling through a pointer reads
+    /// it as a dereference would.
+    pub fn operand(&self) -> Option<&Operand> {
+        match self {
+            Called::Direct(_) => None,
+            Called::Through(operand) => Some(operand),
+        }
+    }
 }
 
 /// An operator with one operand.
@@ -1252,8 +1341,9 @@ pub enum Terminator {
     },
     /// Enter another function, and come back.
     Call {
-        /// Which function.
-        callee: FuncId,
+        /// What it calls: a function this unit names, or one through a
+        /// pointer.
+        callee: Called,
         /// What it is passed.
         arguments: Vec<Operand>,
         /// Where its result is written, or nothing where the value is
@@ -1421,7 +1511,7 @@ pub struct Parameter {
 /// one the caller handed over. The backend reads this and writes each
 /// target's C ABI, where a struct may travel in registers instead: see
 /// `safec_llvm::abi`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Passes {
     /// The parameter itself.
     Value,
@@ -1526,6 +1616,10 @@ pub struct Function {
     /// read as one, `unp((char **)&c)` asked the cast's reader at the
     /// operand's levels and was believed (#1158). See ADR-0123.
     carried_levels: Vec<(LocalId, u32)>,
+    /// Whether its parameters were declared: `false` for `()`, which says
+    /// nothing about them (C17 6.7.6.3 p14). What [`Signature::prototyped`]
+    /// is made from.
+    prototyped: bool,
     body: Body,
 }
 
@@ -1583,8 +1677,21 @@ impl Function {
             returns_reads_only: false,
             const_levels: Vec::new(),
             carried_levels: Vec::new(),
+            prototyped: true,
             body: Body::Defined(Vec::new()),
         }
+    }
+
+    /// This function, declared with `()`, which says nothing about its
+    /// parameters (C17 6.7.6.3 p14).
+    pub fn unprototyped(mut self) -> Self {
+        self.prototyped = false;
+        self
+    }
+
+    /// Whether its parameters were declared. See [`Self::unprototyped`].
+    pub fn prototyped(&self) -> bool {
+        self.prototyped
     }
 
     /// This function, as a hatch.
@@ -2124,6 +2231,10 @@ pub struct TranslationUnit {
     structs: Vec<Option<StructLayout>>,
     /// Which of [`Self::structs`] are unions. See [`Ty::Struct`].
     unions: HashSet<StructId>,
+    /// Every function type's signature, by [`SignatureId`].
+    signatures: Vec<Signature>,
+    /// So that one signature has one id, as [`Self::interned`] is for types.
+    interned_signatures: HashMap<Signature, SignatureId>,
 }
 
 impl TranslationUnit {
@@ -2137,6 +2248,45 @@ impl TranslationUnit {
             interned: HashMap::new(),
             structs: Vec::new(),
             unions: HashSet::new(),
+            signatures: Vec::new(),
+            interned_signatures: HashMap::new(),
+        }
+    }
+
+    /// The id of this signature, the one it already has if it has one.
+    pub fn push_signature(&mut self, signature: Signature) -> SignatureId {
+        if let Some(id) = self.interned_signatures.get(&signature) {
+            return *id;
+        }
+        let id = SignatureId(self.signatures.len() as u32);
+        self.signatures.push(signature.clone());
+        self.interned_signatures.insert(signature, id);
+        id
+    }
+
+    /// The signature `id` names.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`TranslationUnit`].
+    pub fn signature(&self, id: SignatureId) -> &Signature {
+        &self.signatures[id.index()]
+    }
+
+    /// The function type of `function`, which [`Operand::Function`] points
+    /// at: built from its declaration, so a pointer to it is converted as
+    /// the function it names was declared.
+    pub fn designator_signature(&self, function: FuncId) -> Signature {
+        let declared = &self.functions[function.0 as usize];
+        Signature {
+            returns: declared.locals[0],
+            parameters: declared
+                .parameters()
+                .enumerate()
+                .map(|(index, local)| (declared.locals[local.index()], declared.passes(index)))
+                .collect(),
+            prototyped: declared.prototyped,
+            variadic: false,
         }
     }
 
@@ -2311,6 +2461,9 @@ impl TranslationUnit {
             Ty::Void => None,
             Ty::Array { element, .. } => self.align_of(element),
             Ty::Struct(layout) => Some(self.layout_of(layout)?.align),
+            // A function is no object, so it has none (C17 6.5.3.4 p1 keeps
+            // `_Alignof` from a function type).
+            Ty::Function(_) => None,
         }
     }
 
@@ -2352,9 +2505,9 @@ impl TranslationUnit {
     pub fn integer(&self, id: TyId) -> Option<Integer> {
         match self.ty(id) {
             Ty::Integer { rank, sign } => Some(self.target.integer(rank, sign)),
-            // No array or struct is a value, so none is converted or
-            // range-checked.
-            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } | Ty::Struct(_) => None,
+            // No array, struct or function is a value, so none is converted
+            // or range-checked.
+            Ty::Void | Ty::Pointer(_) | Ty::Array { .. } | Ty::Struct(_) | Ty::Function(_) => None,
         }
     }
 
@@ -2399,6 +2552,9 @@ impl TranslationUnit {
             }
             // Its members and their padding, laid out once.
             Ty::Struct(layout) => return Some(self.layout_of(layout)?.size),
+            // A function is no object, and `sizeof` of one is a constraint
+            // violation (C17 6.5.3.4 p1), so the memory check measures none.
+            Ty::Function(_) => return None,
         };
         // In C's bytes, which are `char`s (C17 6.5.3.4 p4), so a `char` is
         // one whatever its width.

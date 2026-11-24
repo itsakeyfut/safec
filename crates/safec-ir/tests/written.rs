@@ -593,7 +593,7 @@ fn a_local_a_call_writes_is_written_after_it() {
         Block {
             elements: vec![],
             terminator: Terminator::Call {
-                callee: called,
+                callee: safec_ir::ir::Called::Direct(called),
                 arguments: vec![],
                 destination: Some(Place::local(a)),
                 then: Some(after),

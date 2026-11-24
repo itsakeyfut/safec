@@ -241,7 +241,7 @@ pub(super) fn built_from(
                 Shape::Deref(_) | Shape::Indexed => false,
             }) && (may_be_pointer(source) || reads_a_byte(source))
         }
-        Operand::Constant(_) => false,
+        Operand::Constant(_) | Operand::Function(_) => false,
     });
     if read_here {
         reached.read_out_of_memory();
@@ -541,7 +541,7 @@ pub(super) fn is_array(unit: &TranslationUnit, function: &Function, index: Local
         .nth(index.index())
         .is_some_and(|local| match unit.ty(function.local(local)) {
             Ty::Array { .. } | Ty::Struct(_) => true,
-            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) => false,
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) | Ty::Function(_) => false,
         })
 }
 

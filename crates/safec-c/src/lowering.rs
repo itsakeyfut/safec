@@ -39,9 +39,10 @@ use crate::sema::{Resolution, TagId};
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
-    Between, BinOp, Bits, Block, BlockId, Declared, Element, FuncId, Function, Length, Linkage,
-    LocalId, Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue,
-    Shape, Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Between, BinOp, Bits, Block, BlockId, Called, Declared, Element, FuncId, Function, Length,
+    Linkage, LocalId, Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise,
+    Rvalue, Shape, Signature, Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit,
+    Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -1401,6 +1402,9 @@ impl Lowering<'_> {
                 return;
             };
             let mut declared = Function::declaration_with_parameters(name, returns, lowered);
+            if !self.standing_prototyped(name, &parameters) {
+                declared = declared.unprototyped();
+            }
             // **And at which levels each parameter points at `const`**, as a
             // definition's are, so a call to a body this unit does not have
             // asks what it hands below the first level by the same type
@@ -1420,6 +1424,24 @@ impl Lowering<'_> {
             let id = self.unit.push_function(declared);
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
+        }
+    }
+
+    /// Whether `name`'s standing declaration declares its parameters, or
+    /// `own`, the list in hand, where there is no standing function.
+    ///
+    /// **The standing one, as the signature is**: `int f(); int f(int);`
+    /// is one function with a prototype, and a pointer to it is converted
+    /// as one. Mutation: answer `true`; `unprototyped_designator` in
+    /// `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+    /// is reported as converted.
+    fn standing_prototyped(&self, name: Span, own: &Parameters) -> bool {
+        let standing = self.resolution.declared(self.sources.snippet(name));
+        match standing.map(|ty| self.ast.ty(ty)) {
+            Some(Type::Function { parameters, .. }) => {
+                matches!(parameters, Parameters::Prototype(_))
+            }
+            _ => matches!(own, Parameters::Prototype(_)),
         }
     }
 
@@ -1681,7 +1703,7 @@ impl Lowering<'_> {
         let from = self.struct_address_of(builder, from, at);
         let then = builder.function.reserve_block();
         builder.end(Terminator::Call {
-            callee: memcpy,
+            callee: Called::Direct(memcpy),
             arguments: vec![into, from, Operand::Constant(i128::from(size))],
             destination: None,
             then: Some(then),
@@ -2091,6 +2113,9 @@ impl Lowering<'_> {
         let returns_const_levels = self.const_levels(returns);
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
         let mut function = Function::with_parameters(name, returns, lowered);
+        if !self.standing_prototyped(name, &parameters) {
+            function = function.unprototyped();
+        }
         if returns_reads_only {
             function.mark_returns_reads_only();
         }
@@ -2620,6 +2645,30 @@ impl Lowering<'_> {
                         !behind_a_pointer,
                         diagnostics,
                     )?);
+                }
+                // **A function behind a pointer is its signature** (#1212),
+                // laid out as a declaration's parameters are, so a call
+                // through the pointer passes what a direct call would. A
+                // function type anywhere else is no object's type, and is
+                // refused below as before. See ADR-0125.
+                Type::Function {
+                    returns,
+                    parameters,
+                } if matches!(derivations.last(), Some(None)) => {
+                    let (returns, parameters) = (*returns, parameters.clone());
+                    let prototyped = matches!(parameters, Parameters::Prototype(_));
+                    let (returns, lowered) =
+                        self.signature(at, returns, &parameters, diagnostics)?;
+                    let signature = Signature {
+                        returns,
+                        parameters: lowered
+                            .iter()
+                            .map(|parameter| (parameter.ty, parameter.passes))
+                            .collect(),
+                        prototyped,
+                        variadic: false,
+                    };
+                    break Ty::Function(self.unit.push_signature(signature));
                 }
                 // #74, which is the issue for what the IR cannot say, is about
                 // storage duration rather than about these.
@@ -4105,6 +4154,39 @@ impl Lowering<'_> {
         let at_root = self.top_level;
         self.descend(id, tasks);
 
+        // **A function designator is its address** (C17 6.3.2.1 p4), `*` of
+        // a function pointer is a designator again and `&` of a designator
+        // its address (6.5.3.2 p3 and p4), so each of these is the value of
+        // what it applies to and reads no place (#1212). See ADR-0125.
+        // Mutation: give a designator no value of its own;
+        // `a_function_pointer_is_stored_called_and_compared` in
+        // `tests/run.rs` does not build.
+        if let Some(function) = self.designated(id) {
+            if matches!(self.ast.expr(id), Expr::Identifier { .. }) {
+                values.push(Operand::Function(function));
+                return Some(());
+            }
+        }
+        match self.ast.expr(id) {
+            Expr::Unary {
+                op: AstUnOp::Deref,
+                operand,
+                ..
+            } if self.is_function(id) => {
+                tasks.push(Task::Value(*operand));
+                return Some(());
+            }
+            Expr::Unary {
+                op: AstUnOp::AddrOf,
+                operand,
+                ..
+            } if self.is_function(*operand) => {
+                tasks.push(Task::Value(*operand));
+                return Some(());
+            }
+            _ => {}
+        }
+
         match self.ast.expr(id) {
             Expr::Number { .. }
             | Expr::Enumerator { .. }
@@ -4191,9 +4273,11 @@ impl Lowering<'_> {
                 tasks.push(Task::Value(*condition));
             }
             Expr::Call {
-                arguments, span, ..
+                callee,
+                arguments,
+                span,
             } => {
-                let span = *span;
+                let (callee, span) = (*callee, *span);
                 tasks.push(Task::Finish(id));
                 // C17 6.5.2.2 p10, first sentence: a sequence point after the
                 // arguments and before the call. Popped after every argument
@@ -4230,6 +4314,16 @@ impl Lowering<'_> {
                     } else {
                         tasks.push(Task::Value(argument));
                     }
+                }
+                // **A pointer called through is lowered first**, a value
+                // below the arguments that the call takes back off when it
+                // finishes (#1212). A pointer in a place is that place, read
+                // where the call reads it, after the arguments, as an operand
+                // of `g + f()` is read after `f()`: C17 6.5.2.2 p10 leaves the
+                // order of the callee and the arguments unspecified, so
+                // either is one C allows.
+                if self.designated(callee).is_none() && !self.names_a_refused_function(callee) {
+                    tasks.push(Task::Value(callee));
                 }
             }
             Expr::Comma { lhs, rhs, .. } => {
@@ -4409,6 +4503,8 @@ impl Lowering<'_> {
     fn decayed_ty(&mut self, ty: TyId) -> TyId {
         match self.unit.ty(ty) {
             Ty::Array { element, .. } => self.unit.push_type(Ty::Pointer(element)),
+            // And a pointer to a function for a function (C17 6.3.2.1 p4).
+            Ty::Function(_) => self.unit.push_type(Ty::Pointer(ty)),
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
@@ -4925,12 +5021,31 @@ impl Lowering<'_> {
                 let copies = self
                     .argument_copies
                     .split_off(self.argument_copies.len() - copied);
-                let called = self.callee(callee, diagnostics)?;
+                // **A function this unit names, or the one a pointer holds**
+                // (#1212). The pointer is the value under the arguments; one
+                // that is a designator after all, `(0, f)()`, is a direct
+                // call. See ADR-0125.
+                // **A call to a function whose declaration was refused says
+                // nothing more**: the declaration is where the problem is,
+                // and was reported there. Mutation: lower its name as a
+                // pointer to call through;
+                // `a_call_to_a_refused_function_is_not_reported_twice` fails.
+                if self.designated(callee).is_none() && self.names_a_refused_function(callee) {
+                    return None;
+                }
+                let called = match self.designated(callee) {
+                    Some(function) => Called::Direct(function),
+                    None => match values.pop() {
+                        Some(Operand::Function(function)) => Called::Direct(function),
+                        Some(pointer) => Called::Through(pointer),
+                        None => unreachable!("a call through a pointer pushed the pointer first"),
+                    },
+                };
                 // **A struct result goes into a temporary the caller makes**,
                 // its address passed first, and the temporary is the call's
                 // value: a place `Task::Placed` takes where one is asked
                 // (#1201).
-                if self.unit.function(called).returns_a_struct() {
+                if self.returns_a_struct(&builder.function, &called) {
                     let ty = self.ty_of(id, diagnostics)?;
                     let result = builder.function.push_local(ty);
                     let pointer = self.unit.push_type(Ty::Pointer(ty));
@@ -4942,7 +5057,7 @@ impl Lowering<'_> {
                     });
                     arguments.insert(0, Operand::Copy(Place::local(address)));
                     let then = builder.function.reserve_block();
-                    let returns = self.root != Some(id) || !self.does_not_return(called);
+                    let returns = self.root != Some(id) || !self.does_not_return(&called);
                     builder.end(Terminator::Call {
                         callee: called,
                         arguments,
@@ -4978,7 +5093,7 @@ impl Lowering<'_> {
                 // of `*p` into `then` and ask nothing about it, where C17 6.5
                 // p3 lets it happen first. Keeping the edge there costs a
                 // report about code that may not run, which a reader can see.
-                let returns = self.root != Some(id) || !self.does_not_return(called);
+                let returns = self.root != Some(id) || !self.does_not_return(&called);
                 builder.end(Terminator::Call {
                     callee: called,
                     arguments,
@@ -5145,6 +5260,20 @@ impl Lowering<'_> {
     ) -> Option<Place> {
         match operand {
             Operand::Copy(place) => Some(place),
+            // `*f` of a designator is the designator, which `begin_value`
+            // answers before any place is asked, so none arrives here; one
+            // that did would be a function read as an object.
+            Operand::Function(_) => {
+                diagnostics.report(
+                    Diagnostic::error("a function is not an object to reach")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            self.ast.expr(id).span(),
+                            "this designates a function",
+                        )),
+                );
+                None
+            }
             Operand::Constant(_) => {
                 diagnostics.report(
                     Diagnostic::error("a constant does not point at anything")
@@ -6289,6 +6418,8 @@ impl Lowering<'_> {
             Ty::Struct(_) => unreachable!(
                 "a struct reached a compound assignment, `++` or `--`, which the type check refuses"
             ),
+            // No place has a function's type: a function is no object.
+            Ty::Function(_) => unreachable!("a place of a function's type, which nothing builds"),
         })
     }
 
@@ -6568,14 +6699,16 @@ impl Lowering<'_> {
         if let Some((local, place, value)) = store {
             let pointer = match self.unit.ty(function.local(local)) {
                 Ty::Pointer(_) => true,
-                // No whole array is written, so none is a pointer written twice.
+                // No whole array is written, so none is a pointer written
+                // twice; nor is a function, which no local is.
                 Ty::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
                 | Ty::Void
                 | Ty::Array { .. }
-                | Ty::Struct(_) => false,
+                | Ty::Struct(_)
+                | Ty::Function(_) => false,
             };
             let unordered = self
                 .unordered_writes(value)
@@ -6624,7 +6757,8 @@ impl Lowering<'_> {
                     }
                     | Ty::Void
                     | Ty::Array { .. }
-                    | Ty::Struct(_) => false,
+                    | Ty::Struct(_)
+                    | Ty::Function(_) => false,
                 };
                 if !write || !pointer || said.contains(&local) {
                     continue;
@@ -6739,36 +6873,90 @@ impl Lowering<'_> {
         found
     }
 
-    /// The function a call names.
-    ///
-    /// Nothing reaches the report below today, and the path that would is worth
-    /// naming: a callee this stage cannot resolve is a pointer to a function,
-    /// and a pointer to a function is a type [`Lowering::ty`] refuses where it
-    /// is declared, so the function holding the call is already refused by
-    /// then. The report is here because the day `Ty` grows a function type is
-    /// the day this becomes reachable, and a `None` returned in silence would
-    /// be a function dropped with nothing said.
-    fn callee(&mut self, callee: ExprId, diagnostics: &mut DiagnosticSink) -> Option<FuncId> {
-        let span = self.ast.expr(callee).span();
-        let named = self
-            .resolution
-            .resolved(callee)
-            .map(|binding| self.resolution.binding(binding).name)
-            .and_then(|name| self.functions.get(self.sources.snippet(name)).copied());
-
-        if named.is_none() && !self.refused.contains(self.sources.snippet(span)) {
-            diagnostics.report(
-                Diagnostic::error("cannot compile this call yet")
-                    .with_code(LOWERING)
-                    .with_label(Label::primary(
-                        span,
-                        "this is not a function this compiler found",
-                    ))
-                    .with_note("a call through a function pointer is not supported so far"),
-            );
+    /// The function an expression designates, where it designates one: a
+    /// function's name, or `*` or `&` of one. Anything else a call calls is
+    /// a pointer, called through (#1212). See ADR-0125.
+    fn designated(&self, id: ExprId) -> Option<FuncId> {
+        match self.ast.expr(id) {
+            // **Not a name a local or a static shadows**: the table is
+            // keyed by spelling, and a local `f` beside a function `f` is
+            // the local.
+            Expr::Identifier { .. } => {
+                if self.named(id).is_some() || self.static_named(id).is_some() {
+                    return None;
+                }
+                self.resolution
+                    .resolved(id)
+                    .map(|binding| self.resolution.binding(binding).name)
+                    .and_then(|name| self.functions.get(self.sources.snippet(name)).copied())
+            }
+            // `*f` and `&f` of a designator are that designator's function
+            // (C17 6.5.3.2 p3 and p4), so `(*f)()` is a direct call.
+            Expr::Unary {
+                op: AstUnOp::Deref | AstUnOp::AddrOf,
+                operand,
+                ..
+            } => self.designated(*operand),
+            _ => None,
         }
+    }
 
-        named
+    /// Whether `id` is the name of a function whose declaration was refused,
+    /// which is no local, no static and no function the unit holds, or `*`
+    /// or `&` of one, as [`Self::designated`] reads them.
+    ///
+    /// Mutation: drop the `static_named` test; `a_static_named_like_a_refused_function_is_called`
+    /// fails, the call dropped with its caller's body.
+    fn names_a_refused_function(&self, id: ExprId) -> bool {
+        match self.ast.expr(id) {
+            Expr::Identifier { span, .. } => {
+                self.named(id).is_none()
+                    && self.static_named(id).is_none()
+                    && self.refused.contains(self.sources.snippet(*span))
+            }
+            Expr::Unary {
+                op: AstUnOp::Deref | AstUnOp::AddrOf,
+                operand,
+                ..
+            } => self.names_a_refused_function(*operand),
+            _ => false,
+        }
+    }
+
+    /// Whether the expression `id` has a function type: a designator, or
+    /// `*` of a pointer to a function.
+    fn is_function(&self, id: ExprId) -> bool {
+        self.types
+            .of(id)
+            .is_some_and(|ty| matches!(self.ast.ty(ty), Type::Function { .. }))
+    }
+
+    /// Whether what `called` calls returns a struct by value, which it then
+    /// writes where its first argument says: a function's own record, or
+    /// the signature of what a pointer called through points at (#1212).
+    fn returns_a_struct(&self, function: &Function, called: &Called) -> bool {
+        match called {
+            Called::Direct(id) => self.unit.function(*id).returns_a_struct(),
+            Called::Through(Operand::Copy(place)) => self
+                .unit
+                .place_ty(function, place)
+                .and_then(|ty| match self.unit.ty(ty) {
+                    Ty::Pointer(pointee) => match self.unit.ty(pointee) {
+                        Ty::Function(signature) => Some(signature),
+                        _ => None,
+                    },
+                    _ => None,
+                })
+                .is_some_and(|signature| {
+                    self.unit
+                        .signature(signature)
+                        .parameters
+                        .first()
+                        .map(|&(_, passes)| passes)
+                        == Some(Passes::StructReturn)
+                }),
+            Called::Through(Operand::Constant(_) | Operand::Function(_)) => false,
+        }
     }
 
     /// Whether a call to `called` is one C says does not return.
@@ -6777,7 +6965,13 @@ impl Lowering<'_> {
     /// here, because names refuses the definition, so whatever defines it
     /// elsewhere is a program C does not define and is not asked about. See
     /// ADR-0051.
-    fn does_not_return(&self, called: FuncId) -> bool {
+    ///
+    /// A call through a pointer is believed to return, as the checks believe
+    /// it: nothing here names which function it is.
+    fn does_not_return(&self, called: &Called) -> bool {
+        let Some(called) = called.direct() else {
+            return false;
+        };
         let name = self.unit.function(called).spelled(self.sources);
         DOES_NOT_RETURN
             .iter()

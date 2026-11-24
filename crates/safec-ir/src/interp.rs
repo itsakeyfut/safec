@@ -412,6 +412,14 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 then,
                 origin,
             } => {
+                // A function's address is no value here (see `operand`), so
+                // no pointer this runs can name one to call through.
+                let callee = callee.direct().ok_or_else(|| {
+                    Trap::new(
+                        "a call through a function pointer, which this interpreter does not run",
+                    )
+                    .at(origin.span())
+                })?;
                 let mut passed = Vec::new();
                 for argument in &arguments {
                     passed.push(
@@ -802,6 +810,11 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
 fn operand(frames: &Stack, current: usize, operand: &Operand) -> Result<Value, Trap> {
     match operand {
         Operand::Constant(value) => Ok(Value::Int(*value)),
+        // No `Value` is a function: the interpreter runs the programs its
+        // callers build, and none of them takes a function's address.
+        Operand::Function(_) => Err(Trap::new(
+            "a function's address, which this interpreter does not hold",
+        )),
         Operand::Copy(place) => {
             let at = resolve(frames, current, place)?;
             let value = load(frames, at)?;
@@ -1351,7 +1364,7 @@ mod tests {
             Block {
                 elements: Vec::new(),
                 terminator: Terminator::Call {
-                    callee,
+                    callee: crate::ir::Called::Direct(callee),
                     arguments: Vec::new(),
                     destination,
                     then: Some(after),
@@ -1420,7 +1433,7 @@ mod tests {
         caller.push_block(Block {
             elements: Vec::new(),
             terminator: Terminator::Call {
-                callee,
+                callee: crate::ir::Called::Direct(callee),
                 arguments: Vec::new(),
                 destination: None,
                 then: None,

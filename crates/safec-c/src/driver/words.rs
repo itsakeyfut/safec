@@ -67,6 +67,14 @@ const NULL_RETURN: Code = Code::new("SC0408");
 /// See ADR-0037.
 const NULL_ARGUMENT: Code = Code::new("SC0405");
 
+/// The address of a function with a parameter promised not null, taken
+/// where a call through it cannot be checked against the promise (#1212).
+///
+/// Not `NULL_ARGUMENT`'s, because nothing null was passed: what is doubted
+/// is every call the pointer will make, and the fix is where the address is
+/// taken. See ADR-0125.
+const NONNULL_ADDRESS: Code = Code::new("SC0420");
+
 /// A pointer to an allocation that was freed, handed back by a `return`, or
 /// a live one to memory that may hold one.
 ///
@@ -140,6 +148,14 @@ const VARIABLE_LENGTH: Code = Code::new("SC0418");
 /// fix is in what the pointers are made from. See
 /// `memory::Kind::ComparedApart`.
 const COMPARED_APART: Code = Code::new("SC0419");
+
+/// `memory::Kind::FunctionConverted`: a pointer to a function converted
+/// to or from a pointer of another type (#1212).
+///
+/// Not `REINTERPRETED`'s, which is about a pointer made from an integer:
+/// this one may name a real function, and what is undefined is calling it
+/// as another type (C17 6.3.2.3 p8). See ADR-0125.
+const FUNCTION_CONVERTED: Code = Code::new("SC0421");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -971,6 +987,21 @@ pub(super) fn memory_finding(
             "nothing about what this points at is proved from here",
             "keep the value a pointer, or a `void *` where its type has to change",
         ),
+        // Built only `Unknown`, at the conversion, as the rows above are.
+        (Kind::FunctionConverted, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            FUNCTION_CONVERTED,
+            "this converts a pointer to a function of another type".to_owned(),
+            "a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds",
+            "keep the pointer the function's own type, or call through a pointer of that type",
+        ),
+        // The conversion's code, since it is the same question: whether
+        // the function a pointer reaches has the type it is called as.
+        (Kind::CalledUnprototyped, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            FUNCTION_CONVERTED,
+            "this calls through a pointer whose type does not declare the function's parameters".to_owned(),
+            "a call whose arguments do not agree with the function it reaches is undefined, and no type says what it takes",
+            "declare the parameters in the pointer's type",
+        ),
         // Built only `Unknown`, at the subtraction, as the rows above are.
         // The comparison's code, since it is the same question (#638).
         (Kind::SubtractedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (
@@ -1661,6 +1692,9 @@ pub(super) fn nullability_finding(
         (Asked::Argument { promise }, conclusion) => {
             return passed(finding.at, conclusion, promise, name);
         }
+        (Asked::AddressOfNonnull { promise }, conclusion) => {
+            return address_of_nonnull(finding.at, conclusion, promise);
+        }
         (
             Asked::Return {
                 promise,
@@ -1678,6 +1712,49 @@ pub(super) fn nullability_finding(
             .with_code(code)
             .with_safety_level(SafetyLevel::Memory)
             .with_label(Label::primary(finding.at, label)),
+    )
+}
+
+/// What the nullability check concluded about a function with a `_Nonnull`
+/// parameter whose address is taken, as what a user reads (#1212).
+///
+/// Always `Unknown`: nothing was passed yet, and what is doubted is every
+/// call through the pointer. See ADR-0125.
+fn address_of_nonnull(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnostic> {
+    let (promised_at, promise_label, level) = match promise {
+        Promise::Declared(written) => (
+            written,
+            "the parameter is declared `_Nonnull` here",
+            SafetyLevel::Memory,
+        ),
+        Promise::Defaulted(name) => (
+            name,
+            "at level 5 this parameter is not null, because it is not written `_Nullable`",
+            SafetyLevel::Strict,
+        ),
+        // The nullability check never asks this of the pointer a struct
+        // crosses as, which every caller keeps however it calls.
+        Promise::Made(name) => (
+            name,
+            "this compiler passes this struct through a pointer it makes",
+            SafetyLevel::Memory,
+        ),
+    };
+    Some(
+        Diagnostic::concluded(
+            conclusion,
+            "this takes the address of a function with a `_Nonnull` parameter".to_owned(),
+            Remedy::new(
+                "call the function by its name, or have it test the parameter against null itself",
+            ),
+        )?
+        .with_code(NONNULL_ADDRESS)
+        .with_safety_level(level)
+        .with_label(Label::primary(
+            at,
+            "a call through this pointer is not checked against the promise, and the function's body still believes it",
+        ))
+        .with_label(Label::secondary(promised_at, promise_label)),
     )
 }
 
