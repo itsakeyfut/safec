@@ -6875,13 +6875,25 @@ impl Lowering<'_> {
     }
 
     /// Whether `id` is the name of a function whose declaration was refused,
-    /// which is no local and no function the unit holds.
+    /// which is no local, no static and no function the unit holds, or `*`
+    /// or `&` of one, as [`Self::designated`] reads them.
+    ///
+    /// Mutation: drop the `static_named` test; `a_static_named_like_a_refused_function_is_called`
+    /// fails, the call dropped with its caller's body.
     fn names_a_refused_function(&self, id: ExprId) -> bool {
-        matches!(self.ast.expr(id), Expr::Identifier { .. })
-            && self.named(id).is_none()
-            && self
-                .refused
-                .contains(self.sources.snippet(self.ast.expr(id).span()))
+        match self.ast.expr(id) {
+            Expr::Identifier { span, .. } => {
+                self.named(id).is_none()
+                    && self.static_named(id).is_none()
+                    && self.refused.contains(self.sources.snippet(*span))
+            }
+            Expr::Unary {
+                op: AstUnOp::Deref | AstUnOp::AddrOf,
+                operand,
+                ..
+            } => self.names_a_refused_function(*operand),
+            _ => false,
+        }
     }
 
     /// Whether the expression `id` has a function type: a designator, or

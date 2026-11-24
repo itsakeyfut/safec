@@ -1670,8 +1670,25 @@ fn a_parameter_whose_array_length_is_a_positive_constant_lowers() {
 /// fails.
 #[test]
 fn a_call_to_a_refused_function_is_not_reported_twice() {
-    let lowered = lowered("int g(int n, int (*a)[n]);\n\nint f(void) {\n    return g(1, 0);\n}\n");
+    let lowered = lowered(
+        "int g(int n, int (*a)[n]);\n\nint f(void) {\n    return g(1, 0) + (*g)(1, 0) + (&g)(1, 0);\n}\n",
+    );
     assert_eq!(codes(&lowered), ["SC0304"]);
+}
+
+/// A block-scope static named like a function whose declaration was refused
+/// is the static, and a call through it is lowered.
+///
+/// Mutation: drop the `static_named` test from
+/// `Lowering::names_a_refused_function`; the call is taken for one to the
+/// refused function, `f` has no body, and this fails.
+#[test]
+fn a_static_named_like_a_refused_function_is_called() {
+    let lowered = lowered(
+        "int g(int n, int (*a)[n]);\n\nint f(void) {\n    static int (*g)(void);\n    if (g)\n        return g();\n    return 0;\n}\n",
+    );
+    assert_eq!(codes(&lowered), ["SC0304"]);
+    assert!(function(&lowered, "f").is_defined());
 }
 
 /// A call in a parameter's length keeps its edge to what follows, even one
