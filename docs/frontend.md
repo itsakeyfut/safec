@@ -770,8 +770,17 @@ through one as the target's C ABI says. The memory check reads a call
 through one as a call to code it cannot read, the nullability and assigned
 checks read the pointer as a dereference reads it, and a conversion to or
 from a pointer to a function is doubted where it is written (`SC0421`), as
-is taking the address of a function with a `_Nonnull` parameter
-(`SC0420`). See ADR-0125. The interpreter refuses a call through one.
+are a conversion into a pointer to a function pointer of another type and
+a call through a pointer to `()`, and taking the address of a function
+with a `_Nonnull` parameter (`SC0420`). A function pointer is not asked
+whether it is live where it leaves the function. The type check holds a
+function designator to the pointer it becomes, and a function pointer and
+`void *` convert only by a cast. See ADR-0125. The interpreter refuses a
+call through one.
+
+Two spellings are still refused by the backend: a call with arguments
+through a pointer to `()`, and the address of a function declared with an
+incomplete struct parameter.
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and

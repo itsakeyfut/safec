@@ -82,7 +82,18 @@ options:
   function pointer and any other pointer or an integer, concludes `Unknown`
   where it is written, because a call through a pointer to a function of
   another type is undefined (C17 6.3.2.3 p8) and the check does not follow
-  which function a pointer holds.
+  which function a pointer holds. Two types are compatible as C17 6.7.6.3
+  p15 says, and the same holds one level down: a conversion into a pointer
+  to a function pointer of another type concludes `Unknown` too, since the
+  function pointer read through it is called as that type with no
+  conversion of its own;
+* a call through a pointer to `()` concludes `Unknown` at the call, since
+  whether its arguments agree with the function it reaches is undefined to
+  get wrong (C17 6.5.2.2 p6) and no type says;
+* a function pointer is not asked whether it is live where it leaves the
+  function, by a return, a store or a call: a function is never freed, and
+  an allocation's address reaches such a pointer only by a conversion the
+  rule above already doubts.
 
 ### Confirmation
 
@@ -97,7 +108,19 @@ in `tests/cases/memory/` that it fails:
 * the nullability report skipping `called_through`:
   `through_a_pointer_that_may_be_null` goes silent;
 * the `_Nonnull` pass skipped: `nonnull_address_taken` goes silent;
-* `converted_function` skipped: `converted` goes silent.
+* `converted_function` skipped: `converted` goes silent;
+* `points_at_code` answering `false`: `callback_leaves` is reported at
+  each door it leaves by.
+
+And of `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+in the same directory:
+
+* `called_unprototyped` skipped: `through_an_unprototyped_pointer` goes
+  silent;
+* `compatible_functions` answering `true` where one type is `()`:
+  `promoted_through_unprototyped` goes silent;
+* `reaches_a_function` answering `false`:
+  `read_through_a_pointer_to_a_pointer` goes silent.
 
 The program `a_function_pointer_is_stored_called_and_compared` in
 `tests/run/` builds and runs each spelling. `Called` gaining a variant is
