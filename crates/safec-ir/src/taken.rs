@@ -15,7 +15,9 @@ use crate::ir::{Element, Function, Operation, Projection, Rvalue};
 /// name instead, since it does follow one. One answer for both, so that a
 /// local whose address is taken is asked by that check alone (#640); one
 /// whose address is never taken is asked there first, and by that check
-/// only for its doubt (ADR-0075).
+/// only for its doubt (ADR-0075). The lowering's own address of a struct
+/// local is counted here too; `memory::assigned` follows that one itself
+/// and watches the struct again (#1302).
 pub(crate) fn address_taken(function: &Function) -> Bits<LocalIdx> {
     let mut taken = Bits::new(function.locals().len());
     for block in function.blocks() {

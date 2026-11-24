@@ -1,4 +1,5 @@
-//! Whether a pointer local has been assigned before it is read.
+//! Whether a pointer local, or a struct local holding a pointer, has been
+//! assigned before it is read.
 //!
 //! A local's initial value is indeterminate (C17 6.2.4 p6), and reading a
 //! local whose address is never taken while it is indeterminate is undefined
@@ -38,6 +39,27 @@
 //! read on a later turn of a loop are doubted, as programs C may define; the
 //! edge above is what this analysis adds, a place to say why. See ADR-0075.
 //!
+//! **A struct or union local is watched too** (#1302), where it holds a
+//! pointer somewhere and the program never takes its address, nor a
+//! member's. The lowering writes `u = t`, passing `t` by value and
+//! `return t` each as a `memcpy` from an address of `t` that it makes
+//! itself (`Origin::Generated`), and it reaches a member through such an
+//! address too. An address only the compiler takes is not one that 6.3.2.1
+//! p2's "could have been declared with the `register` storage class"
+//! counts, so `t` is still held to p2. `taken::address_taken` still counts
+//! those addresses, since the other checks that ask it do not follow them;
+//! this check follows them itself and adds the structs back.
+//!
+//! [`Watch`] says which structs, and what each use of the lowering's
+//! addresses is. The `memcpy`'s source is a read of `t` whole. Its
+//! destination is a write. A write into a member is an assignment
+//! performed into `t`, which is the reading the design settled on: a
+//! struct with one member written is not reported when it is copied.
+//! Taking
+//! a member's address writes nothing, since a member read goes through it
+//! too. Any other use of such an address lets it go where this does not
+//! follow it, and `t` is not watched.
+//!
 //! **A loop's own test is such a branch as of its first turn**, unless
 //! `runs::shown_to_run` shows the loop runs (#783): its edge out of the loop
 //! is asked against what arrived from before the loop, since the turns that
@@ -49,10 +71,11 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
-    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place, Projection,
-    Rvalue, Shape, Terminator, TranslationUnit,
+    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Origin, Place,
+    Projection, Rvalue, Shape, Terminator, TranslationUnit, Ty,
 };
 use crate::source::{SourceMap, Span};
+use std::collections::HashMap;
 
 use super::bits::Bits;
 use super::index::LocalIdx;
@@ -65,9 +88,261 @@ struct Assigned {
     /// parameter, and with no `&` taken of them anywhere in the function. A
     /// write through an address is not followed here, so a local whose address
     /// is taken may be assigned where this cannot see, and 6.3.2.1 p2 is about
-    /// the locals whose address is not taken in any case.
+    /// the locals whose address is not taken in any case. And the struct
+    /// locals [`Watch`] follows, whose only addresses are the lowering's.
     watched: Bits<LocalIdx>,
     locals: usize,
+    /// The watched struct locals, by the generated addresses that reach
+    /// them. See [`Watch::structs`].
+    structs: Watch,
+}
+
+/// The struct locals watched here, and the temporaries the lowering reaches
+/// each through (#1302). See the module comment.
+///
+/// **Two kinds of temporary.** `whole` holds the lowering's own address of
+/// a watched struct, `&t`, which it makes for a struct copy and for a
+/// member's access. `member` holds an address of one of its members taken
+/// through one of those, `&(*_3).p`, which the lowering writes into a
+/// temporary of its own. A program that keeps such an address, `int **q =
+/// &t.p;`, copies it out of that temporary, a use this does not follow, so
+/// `t` is not watched. A write through either, or a
+/// struct copy into either, is an assignment performed into the struct; a
+/// copy out of a `whole` one is a read of it whole; and taking a member's
+/// address assigns nothing, since a member read goes through it too.
+/// Mutation: count a member's address as an assignment;
+/// `a_struct_local_nothing_wrote_is_reported_where_it_is_copied`'s
+/// `member_read_first` goes silent.
+#[derive(Default)]
+struct Watch {
+    /// Each generated temporary holding a watched struct's own address.
+    whole: HashMap<LocalId, LocalId>,
+    /// Each temporary holding an address of a member of a watched struct,
+    /// taken through one of `whole` or of these.
+    member: HashMap<LocalId, LocalId>,
+    /// The function the lowering's struct copy calls, where the unit has
+    /// one: found by name, and the one the program declares, since the
+    /// lowering calls that one (a definition of it is refused).
+    memcpy: Option<FuncId>,
+}
+
+impl Watch {
+    /// The struct locals of `function` to watch, and how each is reached:
+    /// named, not a parameter, of struct or union type holding a pointer
+    /// somewhere, every address of it the lowering's own, and every use of
+    /// every such temporary one followed here. Mutation: watch none; the
+    /// case `a_struct_local_nothing_wrote_is_reported_where_it_is_copied`
+    /// goes silent.
+    fn structs(unit: &TranslationUnit, sources: &SourceMap, function: &Function) -> Watch {
+        let memcpy = unit
+            .functions()
+            .find(|&id| unit.function(id).spelled(sources) == "memcpy");
+        let parameters: Vec<LocalId> = function.parameters().collect();
+        // Each candidate, and whether it is still one.
+        let mut candidates: HashMap<LocalId, bool> = function
+            .locals()
+            .filter(|&local| {
+                function.name_of(local).is_some()
+                    && !parameters.contains(&local)
+                    && matches!(unit.ty(function.local(local)), Ty::Struct(_))
+                    && crate::layout::stored_pointer(unit, function.local(local)).is_some()
+            })
+            .map(|local| (local, true))
+            .collect();
+        let mut watch = Watch {
+            memcpy,
+            ..Watch::default()
+        };
+        if candidates.is_empty() {
+            return watch;
+        }
+        let through_a_pointer = |place: &Place| {
+            place.steps().iter().any(|step| match step {
+                Projection::Deref => true,
+                Projection::Index(_) | Projection::Field(_) => false,
+            })
+        };
+        // Every address of a candidate: the lowering's, of the whole, into
+        // a temporary, or it is no candidate; and every member's address
+        // through one of those, into a temporary, or the address has left
+        // where this follows it. Until nothing more is found,
+        // since a member's address may be taken through another's.
+        loop {
+            let mut grown = false;
+            for block in function.blocks() {
+                for element in &block.elements {
+                    let Element::Assign(operation) = element else {
+                        continue;
+                    };
+                    let Rvalue::Address(place) = &operation.value else {
+                        continue;
+                    };
+                    let into = operation.place.local;
+                    let whole = operation.place.steps().is_empty();
+                    if let Some(keep) = candidates.get_mut(&place.local) {
+                        if through_a_pointer(place) {
+                            continue;
+                        }
+                        let generated = matches!(operation.origin, Origin::Generated(_));
+                        if generated && place.steps().is_empty() && whole {
+                            grown |= watch.whole.insert(into, place.local).is_none();
+                        } else {
+                            *keep = false;
+                        }
+                        continue;
+                    }
+                    let Some(&of) = watch
+                        .whole
+                        .get(&place.local)
+                        .or_else(|| watch.member.get(&place.local))
+                    else {
+                        continue;
+                    };
+                    if whole {
+                        grown |= watch.member.insert(into, of).is_none();
+                    } else {
+                        candidates.insert(of, false);
+                    }
+                }
+            }
+            if !grown {
+                break;
+            }
+        }
+        // And every use of such a temporary one followed here: a place
+        // through it, or the source or destination of the struct copy.
+        // Any other lets the address go where this does not follow it.
+        let held = |local: LocalId| {
+            watch
+                .whole
+                .get(&local)
+                .or_else(|| watch.member.get(&local))
+                .copied()
+        };
+        let escapes = |operand: &Operand| match operand {
+            Operand::Copy(place) if place.steps().is_empty() => held(place.local),
+            _ => None,
+        };
+        let mut lost = Vec::new();
+        for block in function.blocks() {
+            for element in &block.elements {
+                let Element::Assign(operation) = element else {
+                    continue;
+                };
+                // Written again after the address that made it.
+                if operation.place.steps().is_empty()
+                    && !matches!(operation.value, Rvalue::Address(_))
+                {
+                    lost.extend(held(operation.place.local));
+                }
+                match &operation.value {
+                    Rvalue::Use(operand)
+                    | Rvalue::Unary { operand, .. }
+                    | Rvalue::Reinterpret(operand) => {
+                        lost.extend(escapes(operand));
+                    }
+                    Rvalue::Binary { lhs, rhs, .. } => {
+                        lost.extend(escapes(lhs));
+                        lost.extend(escapes(rhs));
+                    }
+                    Rvalue::Address(_) | Rvalue::Static(_) => {}
+                }
+            }
+            match &block.terminator {
+                Terminator::Call {
+                    callee,
+                    arguments,
+                    destination,
+                    ..
+                } => {
+                    // The copy's destination and source, its first two
+                    // arguments, are followed; its length, and anything
+                    // handed to any other call, is not.
+                    for (index, argument) in arguments.iter().enumerate() {
+                        if Some(*callee) == memcpy && index < 2 {
+                            continue;
+                        }
+                        lost.extend(escapes(argument));
+                    }
+                    if let Some(place) = destination {
+                        if place.steps().is_empty() {
+                            lost.extend(held(place.local));
+                        }
+                    }
+                }
+                Terminator::Branch { condition, .. } => lost.extend(escapes(condition)),
+                Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { .. } => {}
+            }
+        }
+        for local in lost {
+            candidates.insert(local, false);
+        }
+        let kept = |local: &LocalId| candidates.get(local).copied().unwrap_or(false);
+        watch.whole.retain(|_, local| kept(local));
+        watch.member.retain(|_, local| kept(local));
+        watch
+    }
+
+    /// Every struct watched.
+    fn watched(&self) -> impl Iterator<Item = LocalId> + '_ {
+        self.whole.values().copied()
+    }
+
+    /// The struct a write to `place` assigns, where it is one through a
+    /// temporary of either kind: `(*_3).p = ...` or `*_4 = ...`.
+    fn written(&self, place: &Place) -> Option<LocalId> {
+        if place.steps().is_empty() {
+            return None;
+        }
+        self.whole
+            .get(&place.local)
+            .or_else(|| self.member.get(&place.local))
+            .copied()
+    }
+
+    /// The `memcpy` the lowering's struct copy is, and its destination and
+    /// source temporaries.
+    fn copy<'t>(&self, terminator: &'t Terminator) -> Option<(&'t Operand, &'t Operand, Span)> {
+        let Terminator::Call {
+            callee,
+            arguments,
+            origin,
+            ..
+        } = terminator
+        else {
+            return None;
+        };
+        if Some(*callee) != self.memcpy {
+            return None;
+        }
+        Some((arguments.first()?, arguments.get(1)?, origin.span()))
+    }
+
+    /// The struct the lowering's copy reads whole at `terminator`, and
+    /// where: its source is the struct's own address.
+    fn copied_from(&self, terminator: &Terminator) -> Option<(LocalId, Span)> {
+        let (_, source, at) = self.copy(terminator)?;
+        match source {
+            Operand::Copy(place) if place.steps().is_empty() => {
+                self.whole.get(&place.local).map(|&local| (local, at))
+            }
+            _ => None,
+        }
+    }
+
+    /// The struct the lowering's copy writes at `terminator`, whole or a
+    /// member of it.
+    fn copied_into(&self, terminator: &Terminator) -> Option<LocalId> {
+        let (destination, _, _) = self.copy(terminator)?;
+        match destination {
+            Operand::Copy(place) if place.steps().is_empty() => self
+                .whole
+                .get(&place.local)
+                .or_else(|| self.member.get(&place.local))
+                .copied(),
+            _ => None,
+        }
+    }
 }
 
 /// Per local: assigned on some path that reaches here.
@@ -98,6 +373,14 @@ impl Analysis for Assigned {
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut State) {
+        // A watched struct written through a temporary that reaches it,
+        // whole or a member: an assignment performed (#1302). A member's
+        // address taken is not one; what is then written through it is.
+        if let Element::Assign(operation) = element {
+            if let Some(local) = self.structs.written(&operation.place) {
+                value[local.index()] = true;
+            }
+        }
         match element {
             Element::Assign(operation)
                 if (match operation.place.shape() {
@@ -118,6 +401,9 @@ impl Analysis for Assigned {
     }
 
     fn terminator(&self, _function: &Function, terminator: &Terminator, value: &mut State) {
+        if let Some(local) = self.structs.copied_into(terminator) {
+            value[local.index()] = true;
+        }
         if let Terminator::Call {
             destination: Some(place),
             ..
@@ -230,21 +516,31 @@ type At = (BlockId, usize);
 
 /// Whether `local` is assigned at `position` in `function`: an assignment to
 /// the plain local, or a call's destination.
-fn assigns(function: &Function, (block, index): At, local: LocalId) -> bool {
+///
+/// **And a watched struct written through the lowering's temporaries**, as
+/// the transfer counts it (#1302): the doubt walk and the analysis are to
+/// agree, or a struct both arms wrote is doubted on the arm that wrote it.
+/// Mutation: ask only the local itself here;
+/// `a_struct_local_nothing_wrote_is_reported_where_it_is_copied`'s
+/// `written_on_both_arms` is doubted.
+fn assigns(function: &Function, structs: &Watch, (block, index): At, local: LocalId) -> bool {
     let block = function.block(block);
     match block.elements.get(index) {
         Some(Element::Assign(operation)) => {
-            (match operation.place.shape() {
+            ((match operation.place.shape() {
                 Shape::Local => true,
                 Shape::Deref(_) | Shape::Indexed => false,
-            }) && operation.place.local == local
+            }) && operation.place.local == local)
+                || structs.written(&operation.place) == Some(local)
         }
         Some(_) => false,
-        None => matches!(
-            &block.terminator,
-            Terminator::Call { destination: Some(place), .. }
-                if (match place.shape() { Shape::Local => true, Shape::Deref(_) | Shape::Indexed => false }) && place.local == local
-        ),
+        None => {
+            matches!(
+                &block.terminator,
+                Terminator::Call { destination: Some(place), .. }
+                    if (match place.shape() { Shape::Local => true, Shape::Deref(_) | Shape::Indexed => false }) && place.local == local
+            ) || structs.copied_into(&block.terminator) == Some(local)
+        }
     }
 }
 
@@ -273,6 +569,7 @@ fn reachable(function: &Function, from: BlockId) -> Vec<bool> {
 /// the blocks and cost seconds at the size the memory check still reads.
 fn assigned_between(
     function: &Function,
+    structs: &Watch,
     order: &[BlockId],
     reach: &[Vec<bool>],
     target: BlockId,
@@ -286,7 +583,7 @@ fn assigned_between(
             return false;
         }
         (0..=block.elements.len()).any(|index| {
-            if !assigns(function, (id, index), local) {
+            if !assigns(function, structs, (id, index), local) {
                 return false;
             }
             if id == read.0 && index < read.1 {
@@ -364,7 +661,7 @@ fn reaches_certainly(
 /// analysis asks the same question this one answers. See #895.
 pub(super) use crate::taken::address_taken;
 
-/// Every read of a watched pointer local that no path to it assigned, each a
+/// Every read of a watched local that no path to it assigned, each a
 /// proof, and every read some path assigned that a branch edge certainly
 /// leads to unassigned, each `Unknown`. See the module comment.
 pub(super) fn findings(
@@ -388,10 +685,18 @@ pub(super) fn findings(
     for local in address_taken(function).ones() {
         watched.remove(local);
     }
+    let structs = Watch::structs(unit, sources, function);
+    for local in structs.watched() {
+        watched.set(LocalIdx::of(local));
+    }
     if !watched.any() {
         return;
     }
-    let analysis = Assigned { watched, locals };
+    let analysis = Assigned {
+        watched,
+        locals,
+        structs,
+    };
     let cfg = Cfg::of(function);
     let solution = solve(&analysis, function, &cfg);
     let mut said: Vec<(LocalId, Span)> = Vec::new();
@@ -471,7 +776,11 @@ pub(super) fn findings(
                 analysis.element(function, element, turn);
             }
         }
-        for (local, at) in terminator_reads(&block.terminator) {
+        let copied = analysis.structs.copied_from(&block.terminator);
+        for (local, at) in terminator_reads(&block.terminator)
+            .into_iter()
+            .chain(copied)
+        {
             if value[local.index()] {
                 doubted.push((local, at, (id, block.elements.len())));
             }
@@ -569,8 +878,15 @@ pub(super) fn findings(
                 .into_iter()
                 .filter(|&(target, _)| every_edge || Some(target) == first_turn)
                 .find(|&(target, _)| {
-                    !assigned_between(function, cfg.order(), &reach, target, read, local)
-                        && reaches_certainly(unit, sources, function, target, read.0)
+                    !assigned_between(
+                        function,
+                        &analysis.structs,
+                        cfg.order(),
+                        &reach,
+                        target,
+                        read,
+                        local,
+                    ) && reaches_certainly(unit, sources, function, target, read.0)
                 })
                 .map(|(_, taken)| (origin.span(), taken))
         });

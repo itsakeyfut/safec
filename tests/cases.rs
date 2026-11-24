@@ -54,6 +54,29 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A struct local the program never took the address of, read whole
+        // while nothing was written into it, is C17 6.3.2.1 p2's undefined
+        // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
+        // `a_union`, `into_a_block`, `passed` and `member_read_first`, whose
+        // member read assigns nothing, are `SC0411`, and
+        // `assigned_on_one_arm` is doubted on its false edge. A member
+        // written is an assignment performed, so `one_member_written` and
+        // `written_on_both_arms` are silent, and so are `address_taken`,
+        // `member_address_taken` and `address_unused`, which p2 does not
+        // cover, `integers`, which holds no pointer, and `copied_on`, each
+        // copy filling what the next one reads. Mutations in
+        // `memory::assigned`: watch no struct, and the first six go silent;
+        // count no address as the lowering's (`generated`), and the same;
+        // count every address as the lowering's, and `address_unused`
+        // reports; watch a struct holding no pointer, and `integers`
+        // reports; count no copy as a write, and `copied_on` reports; count
+        // only a whole write, and `one_member_written` reports;
+        // count a member's address as a write, and `member_read_first` goes
+        // silent; follow a copy of a member's address as if it stayed in
+        // the lowering's temporary, and `member_address_taken` reports; ask
+        // `assigns` only of the local
+        // itself, and `written_on_both_arms` is doubted.
+        a_struct_local_nothing_wrote_is_reported_where_it_is_copied: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.6 p9 defines a pointer minus a pointer only between
         // elements of one array, narrower than the one object 6.5.8 p5 asks
         // of an ordering, and `compared_apart` asks it (#638). `one` is

@@ -1,0 +1,95 @@
+error[SC0411]: `t` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:23:14 ]
+    │
+ 23 │     struct S u = t;
+    │              ──┬──  
+    │                ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `t` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:28:5 ]
+    │
+ 28 │     u = t;
+    │     ──┬──  
+    │       ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `t` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:33:13 ]
+    │
+ 33 │     union U u = t;
+    │             ──┬──  
+    │               ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `t` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:38:5 ]
+    │
+ 38 │     *h = t;
+    │     ───┬──  
+    │        ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: this copies bytes that may not have been written into memory that code outside this function reads as a pointer
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:38:5 ]
+    │
+ 38 │     *h = t;
+    │     ───┬──  
+    │        ╰──── copied here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: write what is copied on every path before the copy
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:43:5 ]
+    │
+ 43 │     g(t);
+    │     ──┬─  
+    │       ╰─── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0411]: `t` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:43:7 ]
+    │
+ 43 │     g(t);
+    │       ┬  
+    │       ╰── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `o` is read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:63:14 ]
+    │
+ 63 │     struct O w = o;
+    │              ──┬──  
+    │                ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `t` may be read before anything was assigned to it
+    ╭─[ a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:86:14 ]
+    │
+ 84 │     if (c)
+    │         ┬  
+    │         ╰── when this is false
+    │ 
+ 86 │     struct S u = t;
+    │              ──┬──  
+    │                ╰──── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
