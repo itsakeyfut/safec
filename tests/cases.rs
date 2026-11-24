@@ -57,13 +57,19 @@ cases! {
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
-        // `a_union`, `into_a_block` and `passed` are `SC0411`. A member
-        // written is an assignment performed, so `one_member_written` is
-        // silent, and so is `address_taken`, which p2 does not cover.
-        // Mutations in `memory::assigned`: watch no struct, and the first
-        // five go silent; count the lowering's own address of `t` as the
-        // program's, and the same; count only a whole write, and
-        // `one_member_written` reports.
+        // `a_union`, `into_a_block`, `passed` and `member_read_first`, whose
+        // member read assigns nothing, are `SC0411`, and
+        // `assigned_on_one_arm` is doubted on its false edge. A member
+        // written is an assignment performed, so `one_member_written` and
+        // `written_on_both_arms` are silent, and so are `address_taken` and
+        // `member_address_taken`, which p2 does not cover. Mutations in
+        // `memory::assigned`: watch no struct, and the first six go silent;
+        // count the lowering's own address of `t` as the program's, and the
+        // same; count only a whole write, and `one_member_written` reports;
+        // count a member's address as a write, and `member_read_first` goes
+        // silent; let a member's address into a named local, and
+        // `member_address_taken` reports; ask `assigns` only of the local
+        // itself, and `written_on_both_arms` is doubted.
         a_struct_local_nothing_wrote_is_reported_where_it_is_copied: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.6 p9 defines a pointer minus a pointer only between
         // elements of one array, narrower than the one object 6.5.8 p5 asks

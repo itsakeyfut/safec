@@ -1,91 +1,91 @@
 Target "x86_64-pc-windows-msvc"
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:10:6 "g" declared
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:15:6 "g" declared
   Local "_0" "void" return
   Local "_1" "struct #0 *" parameter _Nonnull made struct-copy "s"
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:12:6 "copied"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:17:6 "copied"
   Local "_0" "void" return
   Local "_1" "struct #0" "t"
   Local "_2" "struct #0" "u"
   Local "_3" "struct #0 *"
   Local "_4" "struct #0 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:14:14 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:14 generated
       Destination "_3"
       Address
         Place "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:14:14 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:14 generated
       Destination "_4"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:14:14 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:14 written "memcpy" "bb1"
       Copy "_3"
       Copy "_4"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:14:18 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:18 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:17:6 "assigned_whole"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:22:6 "assigned_whole"
   Local "_0" "void" return
   Local "_1" "struct #0" "t"
   Local "_2" "struct #0" "u"
   Local "_3" "struct #0 *"
   Local "_4" "struct #0 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:5 generated
       Destination "_3"
       Address
         Place "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:5 generated
       Destination "_4"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:5 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:5 written "memcpy" "bb1"
       Copy "_3"
       Copy "_4"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:5 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:5 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:22:6 "a_union"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:27:6 "a_union"
   Local "_0" "void" return
   Local "_1" "union #1" "t"
   Local "_2" "union #1" "u"
   Local "_3" "union #1 *"
   Local "_4" "union #1 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:13 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:13 generated
       Destination "_3"
       Address
         Place "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:13 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:13 generated
       Destination "_4"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:13 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:13 written "memcpy" "bb1"
       Copy "_3"
       Copy "_4"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:24:17 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:17 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:27:6 "into_a_block"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:32:6 "into_a_block"
   Local "_0" "void" return
   Local "_1" "struct #0 *" parameter _Nonnull "h"
   Local "_2" "struct #0" "t"
   Local "_3" "struct #0 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 generated
       Destination "_3"
       Address
         Place "_2"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:5 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 written "memcpy" "bb1"
       Copy "_1"
       Copy "_3"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:29:5 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:32:6 "passed"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:37:6 "passed"
   Local "_0" "void" return
   Local "_1" "struct #0" "t"
   Local "_2" "struct #0"
@@ -93,32 +93,32 @@ Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:32:6 "pas
   Local "_4" "struct #0 *"
   Local "_5" "struct #0 *"
   Block "bb0" entry
-    StorageLive a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:7 generated "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:7 generated
+    StorageLive a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:7 generated "_2"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:7 generated
       Destination "_3"
       Address
         Place "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:7 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:7 generated
       Destination "_4"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:7 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:7 written "memcpy" "bb1"
       Copy "_3"
       Copy "_4"
       Constant 8
   Block "bb1"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:7 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:7 generated
       Destination "_5"
       Address
         Place "_2"
-    ArgumentsEvaluated a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 generated
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 written "g" "bb2"
+    ArgumentsEvaluated a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:5 generated
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:5 written "g" "bb2"
       Copy "_5"
   Block "bb2"
-    StorageDead a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 generated "_2"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:34:5 generated
+    StorageDead a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:5 generated "_2"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:39:5 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:37:6 "one_member_written"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:42:6 "one_member_written"
   Local "_0" "void" return
   Local "_1" "struct #0" "t"
   Local "_2" "struct #0" "u"
@@ -127,39 +127,39 @@ Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:37:6 "one
   Local "_5" "struct #0 *"
   Local "_6" "struct #0 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:40:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:45:5 generated
       Destination "_3"
       Address
         Place "_1"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:40:5 written
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:45:5 written
       Destination "_4"
       Address
         Place "_3"
           Deref
             Field
               Member 0
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:40:5 written
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:45:5 written
       Destination "_4"
         Deref
       Use
         Constant 0
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:40:5 generated
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:41:5 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:45:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:5 generated
       Destination "_5"
       Address
         Place "_2"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:41:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:5 generated
       Destination "_6"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:41:5 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:5 written "memcpy" "bb1"
       Copy "_5"
       Copy "_6"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:41:5 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:5 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:44:6 "address_taken"
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:49:6 "address_taken"
   Local "_0" "void" return
   Local "_1" "struct #0" "t"
   Local "_2" "struct #0 *" "a"
@@ -168,32 +168,251 @@ Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:44:6 "add
   Local "_5" "struct #0 *"
   Local "_6" "struct #0 *"
   Block "bb0" entry
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:19 written
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:51:19 written
       Destination "_3"
       Address
         Place "_1"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:15 written
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:51:15 written
       Destination "_2"
       Use
         Copy "_3"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:46:19 generated
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:47:14 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:51:19 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:52:14 generated
       Destination "_5"
       Address
         Place "_4"
-    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:47:14 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:52:14 generated
       Destination "_6"
       Address
         Place "_1"
-    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:47:14 written "memcpy" "bb1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:52:14 written "memcpy" "bb1"
       Copy "_5"
       Copy "_6"
       Constant 8
   Block "bb1"
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:47:18 generated
-    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:48:5 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:52:18 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:53:5 generated
     Return
-Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:14:14 "memcpy" declared
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:56:6 "member_read_first"
+  Local "_0" "void" return
+  Local "_1" "struct #2" "o"
+  Local "_2" "struct #0" "v"
+  Local "_3" "struct #2 *"
+  Local "_4" "struct #0 *"
+  Local "_5" "struct #0 *"
+  Local "_6" "struct #2" "w"
+  Local "_7" "struct #2 *"
+  Local "_8" "struct #2 *"
+  Block "bb0" entry
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:58:18 generated
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:58:18 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:58:14 generated
+      Destination "_5"
+      Address
+        Place "_2"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:58:14 written "memcpy" "bb1"
+      Copy "_5"
+      Copy "_4"
+      Constant 8
+  Block "bb1"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:58:18 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:59:14 generated
+      Destination "_7"
+      Address
+        Place "_6"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:59:14 generated
+      Destination "_8"
+      Address
+        Place "_1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:59:14 written "memcpy" "bb2"
+      Copy "_7"
+      Copy "_8"
+      Constant 16
+  Block "bb2"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:59:18 generated
+    Return
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:62:6 "member_address_taken"
+  Local "_0" "void" return
+  Local "_1" "struct #0" "t"
+  Local "_2" "struct #0" "u"
+  Local "_3" "struct #0 *"
+  Local "_4" "struct #0 *"
+  Local "_5" "int **" "q"
+  Local "_6" "struct #0 *"
+  Local "_7" "int **"
+  Block "bb0" entry
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:64:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:64:5 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:64:5 written "memcpy" "bb1"
+      Copy "_3"
+      Copy "_4"
+      Constant 8
+  Block "bb1"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:64:5 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:65:16 generated
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:65:16 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:65:11 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:65:15 generated
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:66:5 generated
+    Return
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:69:6 "written_on_both_arms"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "struct #0" "t"
+  Local "_3" "struct #0" "u"
+  Local "_4" "struct #0 *"
+  Local "_5" "int **"
+  Local "_6" "struct #0 *"
+  Local "_7" "int **"
+  Local "_8" "struct #0 *"
+  Local "_9" "struct #0 *"
+  Block "bb0" entry
+    Branch a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:71:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:71:9 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:72:9 generated
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:72:9 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:72:9 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:72:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:71:9 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:74:9 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:74:9 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:74:9 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:74:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:75:5 generated
+      Destination "_8"
+      Address
+        Place "_3"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:75:5 generated
+      Destination "_9"
+      Address
+        Place "_2"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:75:5 written "memcpy" "bb4"
+      Copy "_8"
+      Copy "_9"
+      Constant 8
+  Block "bb4"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:75:5 generated
+    Return
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:78:6 "assigned_on_one_arm"
+  Local "_0" "void" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "struct #0 *" parameter _Nonnull made struct-copy "v"
+  Local "_3" "struct #0"
+  Local "_4" "struct #0 *"
+  Local "_5" "struct #0" "t"
+  Local "_6" "struct #0 *"
+  Local "_7" "struct #0 *"
+  Local "_8" "struct #0" "u"
+  Local "_9" "struct #0 *"
+  Local "_10" "struct #0 *"
+  Block "bb0" entry
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:78:42 generated
+      Destination "_4"
+      Address
+        Place "_3"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:78:42 written "memcpy" "bb1"
+      Copy "_4"
+      Copy "_2"
+      Constant 8
+  Block "bb1"
+    Branch a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:80:9 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:80:9 generated
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:81:9 generated
+      Destination "_6"
+      Address
+        Place "_5"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:81:9 generated
+      Destination "_7"
+      Address
+        Place "_3"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:81:9 written "memcpy" "bb5"
+      Copy "_6"
+      Copy "_7"
+      Constant 8
+  Block "bb3"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:80:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:82:14 generated
+      Destination "_9"
+      Address
+        Place "_8"
+    Operation a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:82:14 generated
+      Destination "_10"
+      Address
+        Place "_5"
+    Call a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:82:14 written "memcpy" "bb6"
+      Copy "_9"
+      Copy "_10"
+      Constant 8
+  Block "bb5"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:81:9 generated
+    Goto "bb4"
+  Block "bb6"
+    Sequenced a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:82:18 generated
+    Return
+Function a_struct_local_nothing_wrote_is_reported_where_it_is_copied.c:19:14 "memcpy" declared
   Local "_0" "void *" return
   Local "_1" "void *" parameter
   Local "_2" "void *" parameter

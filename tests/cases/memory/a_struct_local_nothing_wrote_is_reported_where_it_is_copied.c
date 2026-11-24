@@ -7,6 +7,11 @@ union U {
     long n;
 };
 
+struct O {
+    struct S s;
+    int *q;
+};
+
 void g(struct S s);
 
 void copied(void) {
@@ -46,4 +51,33 @@ void address_taken(void) {
     struct S *a = &t;
     struct S u = t;
     (void)a;
+}
+
+void member_read_first(void) {
+    struct O o;
+    struct S v = o.s;
+    struct O w = o;
+}
+
+void member_address_taken(void) {
+    struct S t, u;
+    u = t;
+    int **q = &t.p;
+    (void)q;
+}
+
+void written_on_both_arms(int c) {
+    struct S t, u;
+    if (c)
+        t.p = 0;
+    else
+        t.p = 0;
+    u = t;
+}
+
+void assigned_on_one_arm(int c, struct S v) {
+    struct S t;
+    if (c)
+        t = v;
+    struct S u = t;
 }
