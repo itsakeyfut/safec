@@ -103,8 +103,10 @@ struct Assigned {
 /// **Two kinds of temporary.** `whole` holds the lowering's own address of
 /// a watched struct, `&t`, which it makes for a struct copy and for a
 /// member's access. `member` holds an address of one of its members taken
-/// through one of those, `&(*_3).p`, which the lowering writes into an
-/// unnamed temporary and only dereferences. A write through either, or a
+/// through one of those, `&(*_3).p`, which the lowering writes into a
+/// temporary of its own. A program that keeps such an address, `int **q =
+/// &t.p;`, copies it out of that temporary, a use this does not follow, so
+/// `t` is not watched. A write through either, or a
 /// struct copy into either, is an assignment performed into the struct; a
 /// copy out of a `whole` one is a read of it whole; and taking a member's
 /// address assigns nothing, since a member read goes through it too.
@@ -115,8 +117,8 @@ struct Assigned {
 struct Watch {
     /// Each generated temporary holding a watched struct's own address.
     whole: HashMap<LocalId, LocalId>,
-    /// Each unnamed temporary holding an address of a member of a watched
-    /// struct, taken through one of `whole`.
+    /// Each temporary holding an address of a member of a watched struct,
+    /// taken through one of `whole` or of these.
     member: HashMap<LocalId, LocalId>,
     /// The function the lowering's struct copy calls, where the unit has
     /// one: found by name, and the one the program declares, since the
@@ -162,8 +164,8 @@ impl Watch {
         };
         // Every address of a candidate: the lowering's, of the whole, into
         // a temporary, or it is no candidate; and every member's address
-        // through one of those, into an unnamed temporary, or the address
-        // has left where this follows it. Until nothing more is found,
+        // through one of those, into a temporary, or the address has left
+        // where this follows it. Until nothing more is found,
         // since a member's address may be taken through another's.
         loop {
             let mut grown = false;
@@ -196,7 +198,7 @@ impl Watch {
                     else {
                         continue;
                     };
-                    if whole && function.name_of(into).is_none() {
+                    if whole {
                         grown |= watch.member.insert(into, of).is_none();
                     } else {
                         candidates.insert(of, false);

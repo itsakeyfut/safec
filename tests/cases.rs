@@ -67,8 +67,9 @@ cases! {
         // count the lowering's own address of `t` as the program's, and the
         // same; count only a whole write, and `one_member_written` reports;
         // count a member's address as a write, and `member_read_first` goes
-        // silent; let a member's address into a named local, and
-        // `member_address_taken` reports; ask `assigns` only of the local
+        // silent; follow a copy of a member's address as if it stayed in
+        // the lowering's temporary, and `member_address_taken` reports; ask
+        // `assigns` only of the local
         // itself, and `written_on_both_arms` is doubted.
         a_struct_local_nothing_wrote_is_reported_where_it_is_copied: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.6 p9 defines a pointer minus a pointer only between
