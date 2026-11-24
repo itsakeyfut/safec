@@ -1959,13 +1959,19 @@ impl Resolver<'_> {
     /// What [`Standing`] records of the declaration `id`, worked out once
     /// rather than at every later declaration it is compared with.
     fn standing(&self, id: BindingId, ty: TypeId, definition: bool) -> Standing {
+        // C17 6.7.6.3 p15: a prototype is compatible with `()` only where it
+        // has no `...` and no parameter the promotions change (#1213).
         let accepts_no_prototype = match self.ast.ty(called(self.ast, ty)) {
             Type::Function {
                 parameters: Parameters::Prototype(parameters),
+                variadic,
                 ..
-            } => parameters
-                .iter()
-                .all(|parameter| !self.ast.is_promoted_by_default(parameter.ty)),
+            } => {
+                !variadic
+                    && parameters
+                        .iter()
+                        .all(|parameter| !self.ast.is_promoted_by_default(parameter.ty))
+            }
             _ => true,
         };
         Standing {
@@ -1994,10 +2000,12 @@ impl Resolver<'_> {
                 Type::Function {
                     returns: left_returns,
                     parameters: Parameters::Prototype(prototype),
+                    variadic: _,
                 },
                 Type::Function {
                     returns: right_returns,
                     parameters: Parameters::Unspecified,
+                    variadic: _,
                 },
             ) if pointers(self.ast, earlier) == pointers(self.ast, ty) => {
                 self.ast.compatible(*left_returns, *right_returns, &|a, b| {

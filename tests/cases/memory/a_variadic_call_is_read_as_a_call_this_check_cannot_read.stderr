@@ -1,0 +1,73 @@
+error[SC0304]: cannot compile the definition of a variadic function yet
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:42:5 ]
+    │
+ 42 │ int defined(int a, ...) {
+    │     ───┬───  
+    │        ╰───── defined with `...` here
+────╯
+  = note: a variadic function can be declared and called; defining one is not read yet
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:12:5 ]
+    │
+  7 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 12 │     printf("%d", *p);
+    │     ────────┬───────  
+    │             ╰───────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0407]: this passes `p`, which points to an allocation that was freed
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:21:5 ]
+    │
+ 17 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 20 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 21 │     printf("%p", p);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it
+error[SC0402]: this uses `p`, which may have been freed
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:37:9 ]
+    │
+ 37 │     int v = *p;
+    │         ───┬──  
+    │            ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `p`, which may have been freed already
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:38:5 ]
+    │
+ 38 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0405]: this passes a null pointer to a parameter declared `_Nonnull`
+    ╭─[ a_variadic_call_is_read_as_a_call_this_check_cannot_read.c:27:5 ]
+    │
+  4 │ int keep(int *_Nonnull p, ...);
+    │               ────┬───  
+    │                   ╰───── the parameter is declared `_Nonnull` here
+    │ 
+ 27 │     keep(0, &x, 2);
+    │     ───────┬──────  
+    │            ╰──────── this is null when it is passed
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer to an object here, or remove `_Nonnull` from the parameter

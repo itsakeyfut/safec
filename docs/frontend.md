@@ -782,6 +782,14 @@ Two spellings are still refused by the backend: a call with arguments
 through a pointer to `()`, and the address of a function declared with an
 incomplete struct parameter.
 
+A variadic function can be declared and called (#1213): `, ...` after at
+least one parameter is part of the function type, a declaration without
+it or with `()` conflicts with it (C17 6.7.6.3 p15), and a call passes
+each argument past the parameters after the default argument promotions,
+a `char` or a `short` as an `int` (6.5.2.2 p7). The memory check reads
+such a call as any call to code it cannot read. Defining one is refused
+until #1214, and so is a struct passed past the parameters.
+
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and
 `*(p + 0)` are still folded to `*p` by the lowering (ADR-0021). The

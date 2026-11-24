@@ -109,6 +109,17 @@ cases! {
         // declaration is the one asked (answer `true` in
         // `standing_prototyped`, and `f` is reported).
         a_function_pointer_s_type_is_asked_where_it_is_converted_or_called: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call to a variadic function hands every argument past the
+        // parameters as it hands the others, to a callee this check cannot
+        // read (#1213, ADR-0066): `read_after_free` is `SC0402`,
+        // `handed_after_free` `SC0407`, and `handed_then_read` doubts what
+        // the call was handed. `null_to_the_nonnull_parameter` is `SC0405`
+        // at the parameter's argument alone, and the readers that walk the
+        // parameters beside the arguments stop at the last parameter
+        // without a panic. `defined` is refused: defining one is #1214's.
+        // Mutation: drop the arguments past the parameters from the call in
+        // the lowering; `handed_after_free` goes silent.
+        a_variadic_call_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
@@ -9925,6 +9936,13 @@ cases! {
         // goes; let `void *` stand for a pointer to a function, and
         // `through_void`'s go.
         a_function_is_assigned_only_as_a_pointer_to_its_own_type: ["--emit", "ast"],
+        // A variadic prototype is one function type (#1213): a declaration
+        // without the `...`, and `()` (C17 6.7.6.3 p15), conflict with it;
+        // a call passes at least its parameters; a `void` argument past them
+        // is no argument; and `int (int, ...)` is no `int (int)`. Mutation:
+        // ignore `...` in `Ast::compatible_parameters`; `f`'s conflict and
+        // `converted`'s mismatch go.
+        a_variadic_prototype_is_held_to_its_parameters_and_its_declarations: ["--emit", "ast"],
         // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
         // of the function's type, and one on what a pointer points to is.
         // Mutation: have `compatible` not ask `Ast::is_const`; the second pair
@@ -10396,6 +10414,11 @@ cases! {
         // `--allow-unknown`. Mutation: write the `ptrtoint` at `i32`; the
         // line changes.
         a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu", "--allow-unknown"],
+        // A call to `printf` names its type, `i32 (ptr, ...)`, and passes a
+        // `char` and a `short` past the parameters as `i32` (C17 6.5.2.2
+        // p7), directly and through a pointer (#1213). Mutation: pass them
+        // as they are in the lowering; they cross as `i8` and `i16`.
+        a_variadic_call_passes_a_char_as_an_int: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu", "--allow-unknown"],
         // `extern struct O g;` with `O` defined nowhere, and `&g`, are C
         // (C17 6.2.5 p22): declared as an `i8`, since only its definition
         // elsewhere has a size (#1202 review). Mutation: spell it from a

@@ -190,6 +190,11 @@ pub enum Type {
         returns: TypeId,
         /// What it was written to take.
         parameters: Parameters,
+        /// Whether a prototype ends in `, ...`, which C17 6.7.6.3 p9 makes
+        /// a function taking further arguments of no declared type. Only a
+        /// prototype can (`Parameters::Unspecified` never is), and one with
+        /// at least one parameter (6.7.6.3's `parameter-type-list`).
+        variadic: bool,
     },
     /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
     /// `struct { ... }`.
@@ -1529,14 +1534,20 @@ impl Ast {
                 Type::Function {
                     returns: left,
                     parameters: left_parameters,
+                    variadic: left_variadic,
                 },
                 Type::Function {
                     returns: right,
                     parameters: right_parameters,
+                    variadic: right_variadic,
                 },
             ) => {
                 self.compatible(*left, *right, same_tag)
-                    && self.compatible_parameters(left_parameters, right_parameters, same_tag)
+                    && self.compatible_parameters(
+                        (left_parameters, *left_variadic),
+                        (right_parameters, *right_variadic),
+                        same_tag,
+                    )
             }
             // Written out rather than `_ => false`, so that a variant added to
             // `Type` has to be answered for here: `error[E0004]` is what says
@@ -1650,24 +1661,41 @@ impl Ast {
     /// all three, measured. Answering `false` for every one of them, which is
     /// what reading p10 and p14 alone gives, rejected `int (*p)(void) = q`
     /// where `q` is `int (*)()`: a program `clang` compiles.
+    ///
+    /// **And on `...`**: two prototypes agree on it, and one against `()`
+    /// has none, since p15 asks that "the parameter type list shall not
+    /// have an ellipsis terminator" (#1213). Mutation: ignore it; a
+    /// variadic declaration and one without the `...` are one function,
+    /// and `two_declarations_disagree_on_the_ellipsis` in
+    /// `a_variadic_prototype_is_held_to_its_parameters_and_its_declarations`
+    /// builds.
     fn compatible_parameters(
         &self,
-        left: &Parameters,
-        right: &Parameters,
+        (left, left_variadic): (&Parameters, bool),
+        (right, right_variadic): (&Parameters, bool),
         same_tag: &impl Fn(TypeId, TypeId) -> bool,
     ) -> bool {
         match (left, right) {
             (Parameters::Prototype(left), Parameters::Prototype(right)) => {
-                left.len() == right.len()
+                left_variadic == right_variadic
+                    && left.len() == right.len()
                     && left.iter().zip(right).all(|(left, right)| {
                         self.compatible_unqualified(left.ty, right.ty, same_tag)
                     })
             }
             (Parameters::Unspecified, Parameters::Unspecified) => true,
-            (Parameters::Prototype(parameters), Parameters::Unspecified)
-            | (Parameters::Unspecified, Parameters::Prototype(parameters)) => parameters
-                .iter()
-                .all(|parameter| !self.is_promoted_by_default(parameter.ty)),
+            (Parameters::Prototype(parameters), Parameters::Unspecified) => {
+                !left_variadic
+                    && parameters
+                        .iter()
+                        .all(|parameter| !self.is_promoted_by_default(parameter.ty))
+            }
+            (Parameters::Unspecified, Parameters::Prototype(parameters)) => {
+                !right_variadic
+                    && parameters
+                        .iter()
+                        .all(|parameter| !self.is_promoted_by_default(parameter.ty))
+            }
         }
     }
 
@@ -1786,8 +1814,13 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             Type::Function {
                 returns,
                 parameters,
+                variadic,
             } => {
-                inner = format!("{inner}({})", spell_parameters(sources, ast, parameters));
+                let ellipsis = if *variadic { ", ..." } else { "" };
+                inner = format!(
+                    "{inner}({}{ellipsis})",
+                    spell_parameters(sources, ast, parameters)
+                );
                 id = *returns;
                 continue;
             }

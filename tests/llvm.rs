@@ -43,6 +43,10 @@ const PROGRAMS: &[(&str, &str)] = &[
         "x86_64-unknown-linux-gnu",
     ),
     (
+        "a_variadic_call_passes_a_char_as_an_int",
+        "x86_64-unknown-linux-gnu",
+    ),
+    (
         "llvm_ir_of_conversions_and_a_constant_condition",
         "x86_64-pc-windows-msvc",
     ),

@@ -1338,6 +1338,7 @@ impl Lowering<'_> {
         let Type::Function {
             returns,
             parameters,
+            ..
         } = self.ast.ty(ty)
         else {
             // A declaration of an object is the ordinary case here and is
@@ -1405,6 +1406,9 @@ impl Lowering<'_> {
             if !self.standing_prototyped(name, &parameters) {
                 declared = declared.unprototyped();
             }
+            if self.standing_variadic(name) {
+                declared = declared.variadic();
+            }
             // **And at which levels each parameter points at `const`**, as a
             // definition's are, so a call to a body this unit does not have
             // asks what it hands below the first level by the same type
@@ -1445,6 +1449,21 @@ impl Lowering<'_> {
         }
     }
 
+    /// Whether `name`'s standing declaration ends its parameters in `, ...`.
+    /// Two declarations that disagree on it are a conflict the frontend
+    /// refuses (C17 6.7.6.3 p15), so the standing one answers for both.
+    ///
+    /// Mutation: answer `false`; `printf` is declared without its `...` and
+    /// `a_variadic_function_is_called_with_its_arguments_promoted` in
+    /// `tests/run.rs` is refused by the backend.
+    fn standing_variadic(&self, name: Span) -> bool {
+        let standing = self.resolution.declared(self.sources.snippet(name));
+        matches!(
+            standing.map(|ty| self.ast.ty(ty)),
+            Some(Type::Function { variadic: true, .. })
+        )
+    }
+
     /// The signature of `name`'s standing declaration, or `own`, the one in
     /// hand, where the standing declaration is not a function or is this one.
     ///
@@ -1460,6 +1479,7 @@ impl Lowering<'_> {
         let Some(Type::Function {
             returns,
             parameters,
+            ..
         }) = standing.map(|ty| self.ast.ty(ty))
         else {
             return Some(own);
@@ -1955,6 +1975,7 @@ impl Lowering<'_> {
                 Type::Function {
                     returns,
                     parameters,
+                    ..
                 } => {
                     if let Parameters::Prototype(parameters) = parameters {
                         for parameter in parameters {
@@ -2103,10 +2124,23 @@ impl Lowering<'_> {
         let Type::Function {
             returns,
             parameters,
+            variadic,
         } = self.ast.ty(ty)
         else {
             return None;
         };
+        // **Defining one is #1214's**: a body reads what was passed past its
+        // parameters through `va_arg`, which nothing here lowers yet. A
+        // declaration is read, and called (#1213).
+        if *variadic {
+            diagnostics.report(
+                Diagnostic::error("cannot compile the definition of a variadic function yet")
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(name, "defined with `...` here"))
+                    .with_note("a variadic function can be declared and called; defining one is not read yet"),
+            );
+            return None;
+        }
         let (returns, parameters) = (*returns, parameters.clone());
         let returns_reads_only =
             matches!(self.ast.ty(returns), Type::Pointer(pointee) if self.read_only(*pointee));
@@ -2654,7 +2688,9 @@ impl Lowering<'_> {
                 Type::Function {
                     returns,
                     parameters,
+                    variadic,
                 } if matches!(derivations.last(), Some(None)) => {
+                    let variadic = *variadic;
                     let (returns, parameters) = (*returns, parameters.clone());
                     let prototyped = matches!(parameters, Parameters::Prototype(_));
                     let (returns, lowered) =
@@ -2666,7 +2702,7 @@ impl Lowering<'_> {
                             .map(|parameter| (parameter.ty, parameter.passes))
                             .collect(),
                         prototyped,
-                        variadic: false,
+                        variadic,
                     };
                     break Ty::Function(self.unit.push_signature(signature));
                 }
@@ -5033,6 +5069,46 @@ impl Lowering<'_> {
                 if self.designated(callee).is_none() && self.names_a_refused_function(callee) {
                     return None;
                 }
+                // **Past a variadic prototype's parameters, each argument is
+                // passed promoted** (C17 6.5.2.2 p7): a `char` or a `short`
+                // as an `int`, since nothing declares a type to convert it
+                // to (#1213). Mutation: pass it as it is;
+                // `a_variadic_call_passes_a_char_as_an_int` in
+                // `tests/cases/codegen` passes an `i8`.
+                if let Some(fixed) = self.variadic_after(callee) {
+                    let all: &[ExprId] = match self.ast.expr(id) {
+                        Expr::Call { arguments, .. } => arguments,
+                        _ => unreachable!("a call finishes as a call"),
+                    };
+                    for (index, &argument) in all.iter().enumerate().skip(fixed) {
+                        // A struct crosses a variadic call as the target's
+                        // convention for `va_arg` of it says, which nothing
+                        // here lays out yet (#1213).
+                        if self.is_struct(argument) {
+                            diagnostics.report(
+                                Diagnostic::error(
+                                    "cannot compile a struct passed past a variadic function's parameters yet",
+                                )
+                                .with_code(LOWERING)
+                                .with_label(Label::primary(
+                                    self.ast.expr(argument).span(),
+                                    "passed to `...` here",
+                                )),
+                            );
+                            return None;
+                        }
+                        if self.is_promoted_by_default(argument) {
+                            let int = self.unit.push_type(Ty::INT);
+                            let promoted = builder.function.push_local(int);
+                            builder.push(Operation {
+                                place: Place::local(promoted),
+                                value: Rvalue::Use(arguments[index].clone()),
+                                origin: Origin::Generated(self.ast.expr(argument).span()),
+                            });
+                            arguments[index] = Operand::Copy(Place::local(promoted));
+                        }
+                    }
+                }
                 let called = match self.designated(callee) {
                     Some(function) => Called::Direct(function),
                     None => match values.pop() {
@@ -6929,6 +7005,32 @@ impl Lowering<'_> {
         self.types
             .of(id)
             .is_some_and(|ty| matches!(self.ast.ty(ty), Type::Function { .. }))
+    }
+
+    /// How many parameters the function `callee` calls declares, where its
+    /// prototype ends in `, ...`: the arguments from there on take no
+    /// declared type. `None` for any other callee.
+    fn variadic_after(&self, callee: ExprId) -> Option<usize> {
+        let mut ty = self.types.of(callee)?;
+        if let Type::Pointer(pointee) = self.ast.ty(ty) {
+            ty = *pointee;
+        }
+        match self.ast.ty(ty) {
+            Type::Function {
+                parameters: Parameters::Prototype(parameters),
+                variadic: true,
+                ..
+            } => Some(parameters.len()),
+            _ => None,
+        }
+    }
+
+    /// Whether the default argument promotions change the type of `id`, a
+    /// `char` or a `short` (C17 6.5.2.2 p6).
+    fn is_promoted_by_default(&self, id: ExprId) -> bool {
+        self.types
+            .of(id)
+            .is_some_and(|ty| self.ast.is_promoted_by_default(ty))
     }
 
     /// Whether what `called` calls returns a struct by value, which it then

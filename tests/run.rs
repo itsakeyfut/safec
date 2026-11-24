@@ -194,6 +194,13 @@ programs! {
     /// `a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says`, since
     /// Win64 passes these structs through memory however it is classified.
     a_function_pointer_is_stored_called_and_compared,
+    /// `snprintf` called with an `int`, a string, a `char`, a `short`, an
+    /// `unsigned char` and a `long long` past its parameters, directly and
+    /// through a pointer to it, its output compared (#1213). Mutation: refuse
+    /// `...` again as `SC0207`; this does not build. Pass a `char` past the
+    /// parameters as it is; the second line is wrong on targets that read an
+    /// `int` there.
+    a_variadic_function_is_called_with_its_arguments_promoted,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

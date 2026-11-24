@@ -218,7 +218,8 @@ pub struct Signature {
     /// 6.7.6.3 p14 makes say nothing about them, so a call through a
     /// pointer to one passes its arguments as they are.
     pub prototyped: bool,
-    /// Whether it takes `...` after its parameters. Never set before #1213.
+    /// Whether it takes `...` after its parameters, so a call through a
+    /// pointer to it passes the arguments past them promoted (#1213).
     pub variadic: bool,
 }
 
@@ -1620,6 +1621,10 @@ pub struct Function {
     /// nothing about them (C17 6.7.6.3 p14). What [`Signature::prototyped`]
     /// is made from.
     prototyped: bool,
+    /// Whether its prototype ends in `, ...`, so a call may pass arguments
+    /// past its parameters, each after the default argument promotions
+    /// (C17 6.5.2.2 p7). What [`Signature::variadic`] is made from (#1213).
+    variadic: bool,
     body: Body,
 }
 
@@ -1678,8 +1683,21 @@ impl Function {
             const_levels: Vec::new(),
             carried_levels: Vec::new(),
             prototyped: true,
+            variadic: false,
             body: Body::Defined(Vec::new()),
         }
+    }
+
+    /// This function, declared with `, ...` after its parameters (#1213).
+    pub fn variadic(mut self) -> Self {
+        self.variadic = true;
+        self
+    }
+
+    /// Whether a call may pass arguments past its parameters. See
+    /// [`Self::variadic`].
+    pub fn is_variadic(&self) -> bool {
+        self.variadic
     }
 
     /// This function, declared with `()`, which says nothing about its
@@ -2286,7 +2304,7 @@ impl TranslationUnit {
                 .map(|(index, local)| (declared.locals[local.index()], declared.passes(index)))
                 .collect(),
             prototyped: declared.prototyped,
-            variadic: false,
+            variadic: declared.variadic,
         }
     }
 

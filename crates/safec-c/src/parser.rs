@@ -6,7 +6,7 @@
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members, anonymous ones and bit-fields too, and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is casts,
-//! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
+//! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`,
 //! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
@@ -324,8 +324,8 @@ enum Derivation {
         /// p7): `int a[const]` is an `int *const a`.
         constant: bool,
     },
-    /// C17 6.7.6.3.
-    Function(Parameters),
+    /// C17 6.7.6.3: the parameters, and whether the list ends in `, ...`.
+    Function(Parameters, bool),
 }
 
 /// What one identifier names in one scope, as far as the parser has to know
@@ -2430,10 +2430,10 @@ impl Parser<'_> {
                 self.spend();
                 self.advance();
 
-                let parameters = self.parameters(diagnostics)?;
+                let (parameters, variadic) = self.parameters(diagnostics)?;
 
                 self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
-                suffixes.push(Derivation::Function(parameters));
+                suffixes.push(Derivation::Function(parameters, variadic));
             } else {
                 break;
             }
@@ -2565,10 +2565,11 @@ impl Parser<'_> {
         Some((constant, Some(length), Some(written)))
     }
 
-    /// What a function declarator wrote between its parentheses.
-    fn parameters(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+    /// What a function declarator wrote between its parentheses, and whether
+    /// it ended in `, ...`.
+    fn parameters(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Parameters, bool)> {
         if self.check(TokenKind::Punct(Punct::RightParen)) {
-            return Some(Parameters::Unspecified);
+            return Some((Parameters::Unspecified, false));
         }
 
         // A parameter's own type nests inside this one's, so the list takes a
@@ -2580,7 +2581,7 @@ impl Parser<'_> {
         )
     }
 
-    fn parameter_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+    fn parameter_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Parameters, bool)> {
         // **A prototype is a scope of its own** (C17 6.2.1 p4), in which each
         // parameter's name hides a typedef name from the end of its
         // declarator: `int g(int T, T y)` is not C where `T` is a typedef
@@ -2593,8 +2594,9 @@ impl Parser<'_> {
 
     /// The parameters of a list, in the scope [`Parser::parameter_list`]
     /// opened.
-    fn parameter_items(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+    fn parameter_items(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Parameters, bool)> {
         let mut parameters: Vec<Declaration> = Vec::new();
+        let mut variadic = false;
 
         loop {
             // C17 6.7.6.3's `parameter-type-list` puts `, ...` after at least
@@ -2605,19 +2607,20 @@ impl Parser<'_> {
             let only_void = parameters.len() == 1
                 && parameters[0].name.is_none()
                 && matches!(self.ast.ty(parameters[0].ty), Type::Void);
+            //
+            // **Read, and recorded on the type** (#1213): a call passes the
+            // arguments past the parameters after the default argument
+            // promotions (6.5.2.2 p7). Mutation: refuse it again as
+            // `SC0207`; `a_variadic_function_is_called_with_its_arguments_promoted`
+            // in `tests/run.rs` does not build.
             if !parameters.is_empty()
                 && !only_void
                 && self.check(TokenKind::Punct(Punct::Ellipsis))
                 && self.peek_at(1).kind == TokenKind::Punct(Punct::RightParen)
             {
-                self.report_unread(
-                    Unread {
-                        what: "a variadic function's `...`",
-                        clause: "6.7.6.3",
-                    },
-                    diagnostics,
-                );
-                return None;
+                self.advance();
+                variadic = true;
+                break;
             }
             let start = self.peek().span;
             let base = self.specifiers(Position::Parameter, diagnostics)?;
@@ -2704,10 +2707,10 @@ impl Parser<'_> {
                 );
                 return None;
             }
-            return Some(Parameters::Prototype(Vec::new()));
+            return Some((Parameters::Prototype(Vec::new()), false));
         }
 
-        Some(Parameters::Prototype(parameters))
+        Some((Parameters::Prototype(parameters), variadic))
     }
 
     /// Fold the derivations a declarator collected onto the base type.
@@ -2783,9 +2786,10 @@ impl Parser<'_> {
                     length,
                     written,
                 },
-                Derivation::Function(parameters) => Type::Function {
+                Derivation::Function(parameters, variadic) => Type::Function {
                     returns: ty,
                     parameters,
+                    variadic,
                 },
             });
         }
@@ -2818,7 +2822,7 @@ impl Parser<'_> {
     ) -> Option<Option<Nullability>> {
         let last = derivations.len().saturating_sub(1);
         let declares_a_function = declares == Declares::FileScope
-            && matches!(derivations.last(), Some(Derivation::Function(_)));
+            && matches!(derivations.last(), Some(Derivation::Function(..)));
         let mut returns = None;
 
         for (index, derivation) in derivations.iter().enumerate() {
@@ -2842,7 +2846,7 @@ impl Parser<'_> {
                         "this is not the pointer a parameter holds or a function returns",
                     )),
                 },
-                Derivation::Function(Parameters::Prototype(parameters))
+                Derivation::Function(Parameters::Prototype(parameters), _)
                     if !(own && declares == Declares::FileScope) =>
                 {
                     // A parameter whose own type is a function, `int g(int *
@@ -2864,7 +2868,7 @@ impl Parser<'_> {
                     constant: _,
                 }
                 | Derivation::Array { .. }
-                | Derivation::Function(_) => None,
+                | Derivation::Function(..) => None,
             };
 
             if let Some((written, label)) = refused {

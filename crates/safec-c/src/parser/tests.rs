@@ -601,7 +601,7 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// outside a loop. Mutation: drop any of those checks; its control fails.
 ///
 /// Mutations: delete any row of `unread_keyword`, change the clause of any
-/// token pair, or drop any of the character, string, cast, `...`,
+/// token pair, or drop any of the character, string, cast,
 /// bracket, `[*]` or pointer-qualifier checks, or any one qualifier from
 /// either qualifier check. A row in the first list fails. Let a `...` come
 /// first, `static` into brackets outside a parameter, or a character
@@ -726,11 +726,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "int main(void) { return sizeof(int){0}; }\n",
             "a compound literal",
             "6.5.2.5",
-        ),
-        (
-            "int f(int, ...);\n",
-            "a variadic function's `...`",
-            "6.7.6.3",
         ),
     ];
     let malformed = [

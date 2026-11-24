@@ -31,6 +31,8 @@ struct Callable {
     returns: TyId,
     /// Each parameter's type and how it is passed.
     parameters: Vec<(TyId, Passes)>,
+    /// Whether arguments past the parameters are passed, as `...` (#1213).
+    variadic: bool,
 }
 
 impl Callable {
@@ -43,6 +45,7 @@ impl Callable {
                 .enumerate()
                 .map(|(index, local)| (function.local(local), function.passes(index)))
                 .collect(),
+            variadic: function.is_variadic(),
         }
     }
 
@@ -52,6 +55,7 @@ impl Callable {
         Self {
             returns: signature.returns,
             parameters: signature.parameters.clone(),
+            variadic: signature.variadic,
         }
     }
 }
@@ -1685,7 +1689,12 @@ impl Emitter<'_> {
         let returns = callable.returns;
         let parameters: Vec<TyId> = callable.parameters.iter().map(|&(ty, _)| ty).collect();
 
-        if arguments.len() != parameters.len() {
+        let fits = if callable.variadic {
+            arguments.len() >= parameters.len()
+        } else {
+            arguments.len() == parameters.len()
+        };
+        if !fits {
             return self.refuse(format!(
                 "a call passing {} arguments to a function of {} parameters",
                 arguments.len(),
@@ -1738,6 +1747,46 @@ impl Emitter<'_> {
                 }
             }
         }
+        // **Past a variadic function's parameters, each argument as it is**,
+        // since the lowering has promoted it (C17 6.5.2.2 p7), and the call
+        // names the function's type, which LLVM asks of every call to a
+        // variadic one: `call i32 (ptr, ...) @printf(...)` (#1213).
+        let mut callee_type = String::new();
+        if callable.variadic {
+            let mut fixed = Vec::with_capacity(parameters.len() + 1);
+            for &(ty, passes) in &callable.parameters {
+                if passes != Passes::Value || returned_into.is_some() {
+                    return self.refuse("a struct crossing a call to a variadic function");
+                }
+                fixed.push(self.spell(ty));
+            }
+            fixed.push("...".to_owned());
+            callee_type = format!(" ({})", fixed.join(", "));
+            for argument in &arguments[parameters.len()..] {
+                let spelled = match argument {
+                    Operand::Constant(_) => {
+                        let int = self.unit.target().integer(Rank::Int, Sign::Signed);
+                        format!("i{}", int.bits())
+                    }
+                    Operand::Function(_) => "ptr".to_owned(),
+                    Operand::Copy(place) => match unit.place_ty(function, place) {
+                        Some(ty) if self.unit.integer(ty).is_some() || self.unit.ty(ty).is_pointer() => {
+                            self.spell(ty)
+                        }
+                        _ => return self.refuse("an argument past a variadic function's parameters that is no integer and no pointer"),
+                    },
+                };
+                let value = match argument {
+                    Operand::Constant(value) => {
+                        let int = self.unit.target().integer(Rank::Int, Sign::Signed);
+                        int.convert(*value).to_string()
+                    }
+                    Operand::Function(id) => self.symbol(*id)?,
+                    Operand::Copy(place) => self.read(function, place, out)?.0,
+                };
+                passed.push(format!("{spelled} {value}"));
+            }
+        }
         let passed = passed.join(", ");
 
         if let Some((into, pieces, together)) = returned_into {
@@ -1761,11 +1810,15 @@ impl Emitter<'_> {
         // one appears, beside `define` and `declare`.
         let spelled = self.result(returns);
         if spelled == "void" {
-            writeln!(out, "  call void {name}({passed})").expect("writing to a string cannot fail");
+            writeln!(out, "  call void{callee_type} {name}({passed})")
+                .expect("writing to a string cannot fail");
         } else {
             let result = self.temp();
-            writeln!(out, "  {result} = call {spelled} {name}({passed})")
-                .expect("writing to a string cannot fail");
+            writeln!(
+                out,
+                "  {result} = call {spelled}{callee_type} {name}({passed})"
+            )
+            .expect("writing to a string cannot fail");
             self.deliver(function, result, returns, destination, out)?;
         }
 
@@ -1881,7 +1934,16 @@ impl Emitter<'_> {
 
         out.push('\n');
 
-        let declared = format!("declare {returns} {name}({})\n", parameters.join(", "));
+        // `...` after the parameters, which LLVM reads as C's (#1213).
+        let ellipsis = match (function.is_variadic(), parameters.is_empty()) {
+            (false, _) => "",
+            (true, true) => "...",
+            (true, false) => ", ...",
+        };
+        let declared = format!(
+            "declare {returns} {name}({}{ellipsis})\n",
+            parameters.join(", ")
+        );
         if !function.is_defined() {
             out.push_str(&declared);
             return;

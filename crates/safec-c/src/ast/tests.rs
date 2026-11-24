@@ -63,6 +63,7 @@ fn two_types_are_compatible_when_c_says_they_are() {
         ast.push_type(Type::Function {
             returns,
             parameters,
+            variadic: false,
         })
     };
     let int_of_int = of(&mut ast, int, Parameters::Prototype(vec![unnamed(int)]));
@@ -188,7 +189,8 @@ fn two_types_are_compatible_when_c_says_they_are() {
 /// another compiler prints and not what this one happens to.
 ///
 /// Mutation: drop the parentheses from the pointer arm of `spell_type`, or
-/// change where the space goes. This fails.
+/// change where the space goes, or drop the `, ...` of a variadic one. This
+/// fails.
 #[test]
 fn every_type_is_spelled_the_way_c_declares_it() {
     let mut sources = SourceMap::new();
@@ -233,6 +235,7 @@ fn every_type_is_spelled_the_way_c_declares_it() {
     let takes_int = |returns| Type::Function {
         returns,
         parameters: Parameters::Prototype(vec![unnamed(int)]),
+        variadic: false,
     };
     let returns_int = ast.push_type(takes_int(int));
     let returns_pointer = ast.push_type(takes_int(pointer_to_int));
@@ -240,10 +243,17 @@ fn every_type_is_spelled_the_way_c_declares_it() {
     let takes_nothing = ast.push_type(Type::Function {
         returns: int,
         parameters: Parameters::Prototype(Vec::new()),
+        variadic: false,
     });
     let unspecified = ast.push_type(Type::Function {
         returns: int,
         parameters: Parameters::Unspecified,
+        variadic: false,
+    });
+    let variadic = ast.push_type(Type::Function {
+        returns: int,
+        parameters: Parameters::Prototype(vec![unnamed(pointer_to_char)]),
+        variadic: true,
     });
 
     for (ty, spelling) in [
@@ -263,6 +273,7 @@ fn every_type_is_spelled_the_way_c_declares_it() {
         (pointer_to_function, "int (*)(int)"),
         (takes_nothing, "int (void)"),
         (unspecified, "int ()"),
+        (variadic, "int (char *, ...)"),
     ] {
         assert_eq!(spell_type(&sources, &ast, ty), spelling, "{ty:?}");
     }
