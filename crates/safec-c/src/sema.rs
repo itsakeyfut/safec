@@ -572,6 +572,7 @@ pub fn resolve(
         sources,
         ast,
         memory_checked,
+        typedef_walked: HashSet::new(),
         resolution: Resolution {
             bindings: Vec::new(),
             resolved: HashMap::new(),
@@ -636,6 +637,9 @@ struct Resolver<'a> {
     /// nothing. The names that do not return are refused whatever runs,
     /// since the lowering itself believes them (ADR-0051).
     memory_checked: bool,
+    /// The types typedefs declared, walked where each typedef is and passed
+    /// over after. See [`Resolver::typedefs`].
+    typedef_walked: HashSet<TypeId>,
     /// Shared, and held in a field rather than passed per method.
     ///
     /// That is what lets `let ast = self.ast;` free the walk below to borrow
@@ -753,6 +757,7 @@ impl Resolver<'_> {
             }
             Item::Declaration {
                 declarators,
+                typedefs,
                 specified,
                 enumerators,
                 storage,
@@ -760,6 +765,7 @@ impl Resolver<'_> {
             } => {
                 self.specified(declarators, *specified, diagnostics);
                 self.enumerators(enumerators, diagnostics);
+                self.typedefs(typedefs, diagnostics);
                 self.declarators(declarators, diagnostics);
                 self.defined_objects(declarators, diagnostics);
                 for declarator in declarators {
@@ -819,6 +825,23 @@ impl Resolver<'_> {
     /// resolve the second, which is the direction that stays quiet and is the
     /// wrong one here: nothing about it is valid C, and accepting it would make
     /// this compiler the only reader that thinks so.
+    /// Walk each typedef's type where the typedef is, so that a name in an
+    /// array length, `typedef int T[n]`, is the `n` in scope there (C17
+    /// 6.7.8 p3), and is resolved whether or not anything is declared with
+    /// the type (#1294). The type is then walked as a typedef's and not
+    /// again: [`Resolver::walk`] passes over it where an object of the type
+    /// is declared, which would otherwise resolve the same length a second
+    /// time in the object's scope, a shadowing `n` in an inner block
+    /// included. Mutation: walk nothing here; the run of
+    /// `a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is`
+    /// takes the shadowing `n`.
+    fn typedefs(&mut self, typedefs: &[TypeId], diagnostics: &mut DiagnosticSink) {
+        for &ty in typedefs {
+            self.walk_type(ty, diagnostics);
+            self.typedef_walked.insert(ty);
+        }
+    }
+
     fn declarators(&mut self, declarators: &[InitDeclarator], diagnostics: &mut DiagnosticSink) {
         for declarator in declarators {
             self.declaration(&declarator.declaration, diagnostics);
@@ -1039,6 +1062,8 @@ impl Resolver<'_> {
         push_declarator(ast, root, &mut pending);
         while let Some(step) = pending.pop() {
             let ty = match step {
+                // A typedef's own type was walked where the typedef is.
+                Step::Type(ty) if self.typedef_walked.contains(&ty) => continue,
                 Step::Type(ty) => ty,
                 Step::Close(definition) => {
                     self.close_definition(definition, diagnostics);
@@ -1286,6 +1311,7 @@ impl Resolver<'_> {
             }
             Stmt::Declaration {
                 declarators,
+                typedefs,
                 specified,
                 enumerators,
                 storage,
@@ -1293,6 +1319,7 @@ impl Resolver<'_> {
             } => {
                 self.specified(declarators, *specified, diagnostics);
                 self.enumerators(enumerators, diagnostics);
+                self.typedefs(typedefs, diagnostics);
                 if *storage == Some(Storage::Extern) {
                     self.linking = Some(self.scopes.len() - 1);
                 }

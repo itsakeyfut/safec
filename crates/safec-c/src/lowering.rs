@@ -397,6 +397,7 @@ pub fn lower(
         refused_structs: HashSet::new(),
         memcpy: None,
         vla_types: HashMap::new(),
+        typedef_lengths: HashMap::new(),
         argument_copies: Vec::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
@@ -440,6 +441,11 @@ struct Lowering<'a> {
     /// `LocalId` means a local of one function only, as `Builder::bit_fields`
     /// learned (#1206 review).
     vla_types: HashMap<LocalId, TyId>,
+    /// The local each variable length array type a typedef declared has its
+    /// length worked out into, keyed by the array's type node, and where the
+    /// typedef is: what an object or a `sizeof` of the type reads (#1294).
+    /// **Emptied where each function begins**, as `vla_types` is.
+    typedef_lengths: HashMap<TypeId, (LocalId, Span)>,
     /// The scopes that are open, innermost last, each holding the locals it
     /// declared directly: a compound statement's, and a `for`'s whose first
     /// clause is a declaration (C17 6.8.5 p5).
@@ -2168,6 +2174,7 @@ impl Lowering<'_> {
         // loses its `SC0401`.
         self.argument_copies.clear();
         self.vla_types.clear();
+        self.typedef_lengths.clear();
         for (written, ty, pointer) in struct_parameters {
             let at = written.unwrap_or(name);
             let lowered = self.ty(at, ty, diagnostics)?;
@@ -2866,10 +2873,14 @@ impl Lowering<'_> {
             }
             Stmt::Declaration {
                 declarators,
+                typedefs,
                 specified,
                 ..
             } => {
                 let specified = *specified;
+                for &ty in typedefs {
+                    self.typedef_lengths_of(builder, ty, diagnostics)?;
+                }
                 for declarator in declarators {
                     let (name, ty, span) = (
                         declarator.declaration.name,
@@ -3500,9 +3511,15 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         let (ended, begun) = markers(from, to, |local| self.vla_types.contains_key(&local));
+        let typedef_at = |local: LocalId| {
+            self.typedef_lengths
+                .values()
+                .find(|&&(held, _)| held == local)
+                .map(|&(_, at)| at)
+        };
         if let Some(&skipped) = begun
             .iter()
-            .find(|local| self.vla_types.contains_key(local))
+            .find(|&&local| self.vla_types.contains_key(&local) || typedef_at(local).is_some())
         {
             let mut diagnostic = Diagnostic::error(
                 "this jumps into the scope of a variable length array",
@@ -3510,7 +3527,7 @@ impl Lowering<'_> {
             .with_code(INTO_VARIABLE_SCOPE)
             .with_label(Label::primary(caret, "this jumps past its declaration"))
             .with_note("C17 6.8.6.1 p1 and 6.8.4.2 p2: no jump may enter the scope of a variable length array from outside it");
-            if let Some(name) = builder.function.name_of(skipped) {
+            if let Some(name) = builder.function.name_of(skipped).or(typedef_at(skipped)) {
                 diagnostic =
                     diagnostic.with_label(Label::secondary(name, "its length is worked out here"));
             }
@@ -4528,7 +4545,36 @@ impl Lowering<'_> {
                 });
                 values.push(Operand::Copy(Place::local(into)));
             }
-            Expr::SizeofType { span, .. } => return refuse_run_time_sizeof(*span, diagnostics),
+            // **`sizeof` of a type a typedef worked the length of out** is
+            // that length times the element's size (#1294): `T` names the
+            // typedef's own array node. Any other is refused as before.
+            // Mutation: refuse every one; the run of
+            // `a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is`
+            // is refused.
+            Expr::SizeofType { ty, span } => {
+                let (ty, span) = (*ty, *span);
+                let Some(&(held, _)) = self.typedef_lengths.get(&ty) else {
+                    return refuse_run_time_sizeof(span, diagnostics);
+                };
+                let Type::Array { element, .. } = *self.ast.ty(ty) else {
+                    unreachable!("a typedef's length is an array's");
+                };
+                let element = self.ty(span, element, diagnostics)?;
+                let Some(element) = self.unit.size_of(element) else {
+                    return refuse_run_time_sizeof(span, diagnostics);
+                };
+                let into = self.temporary(builder, id, diagnostics)?;
+                builder.push(Operation {
+                    place: Place::local(into),
+                    value: Rvalue::Binary {
+                        op: BinOp::Mul,
+                        lhs: Operand::Copy(Place::local(held)),
+                        rhs: Operand::Constant(i128::from(element)),
+                    },
+                    origin: Origin::Written(span),
+                });
+                values.push(Operand::Copy(Place::local(into)));
+            }
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
@@ -5541,6 +5587,63 @@ impl Lowering<'_> {
         }
     }
 
+    /// Work out every array length with no constant value in the type a
+    /// typedef declared, `ty`, where the typedef is reached (C17 6.7.8 p3,
+    /// #1294): each into a local of `size_t`, recorded in `typedef_lengths`
+    /// for what reads the type later, outermost first.
+    ///
+    /// Through arrays and pointers, and **not into a function's
+    /// parameters**, whose lengths 6.7.6.2 p5 treats as `*`. A typedef none
+    /// of whose lengths needs working out writes nothing.
+    ///
+    /// **Each local is a variably modified identifier's** for what a jump
+    /// asks: it is in its scope's list, and begins there, so a jump past the
+    /// typedef into its scope is refused under `SC0323` (6.8.6.1 p1), as one
+    /// past an array's declaration is. Mutation: leave it out of the list;
+    /// `a_jump_into_the_scope_of_a_variable_length_typedef_is_refused` is
+    /// accepted.
+    fn typedef_lengths_of(
+        &mut self,
+        builder: &mut Builder,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let mut current = ty;
+        loop {
+            match *self.ast.ty(current) {
+                Type::Array {
+                    element,
+                    length: Some(length),
+                    ..
+                } => {
+                    if self.types.value(length).is_none() {
+                        let at = self.ast.expr(length).span();
+                        let counted = self.value(builder, length, diagnostics)?;
+                        let (rank, sign) = self.unit.target().size_type();
+                        let size = self.unit.push_type(Ty::Integer { rank, sign });
+                        let held = builder.function.push_local(size);
+                        let scope = self.scopes.last_mut().expect("a scope is open");
+                        scope.declared.push(held);
+                        builder.element(Element::StorageLive {
+                            local: held,
+                            origin: Origin::Generated(at),
+                        });
+                        builder.push(Operation {
+                            place: Place::local(held),
+                            value: Rvalue::Use(counted),
+                            origin: Origin::Generated(at),
+                        });
+                        self.typedef_lengths.insert(current, (held, at));
+                    }
+                    current = element;
+                }
+                Type::Array { element, .. } => current = element,
+                Type::Pointer(pointee) => current = pointee,
+                _ => return Some(()),
+            }
+        }
+    }
+
     /// The IR type of a variable length array declared with type `ty`, its
     /// length worked out into a local of `size_t` here, where the
     /// declaration is reached (C17 6.7.6.2 p5, #1209), or `None` where `ty`
@@ -5553,13 +5656,17 @@ impl Lowering<'_> {
     /// one instead, since it cannot show the length is above zero:
     /// `a_variable_length_array_is_doubted_where_its_length_is_unknown`.
     ///
-    /// **An array type a typedef named is refused** (`specified`, what the
-    /// declaration's specifiers wrote, is `ty` itself). C17 6.7.8 p3 works its
-    /// length out once, where the typedef is reached, and a typedef leaves
-    /// nothing in the tree to hold that value: working it out here, at each
-    /// object, gave a different size wherever the length had changed since.
-    /// Mutation: drop the refusal; `a_typedef_of_a_variable_length_array_is_refused`
-    /// is accepted.
+    /// **An array type a typedef named takes the length the typedef worked
+    /// out** (`specified`, what the declaration's specifiers wrote, is `ty`
+    /// itself, and `typedef_lengths` holds it): C17 6.7.8 p3 works it out
+    /// once, where the typedef is reached, and working it out again here, at
+    /// each object, gave a different size wherever the length had changed
+    /// since (#1294). Copied into the object's own local, so a later pass
+    /// over the typedef, in a loop, cannot resize an object still alive.
+    /// Mutation: evaluate the length here instead; the run of
+    /// `a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is`
+    /// gives the later size. One the table does not hold, which no typedef
+    /// this function reached declared, is refused as before.
     fn variable_length(
         &mut self,
         builder: &mut Builder,
@@ -5583,7 +5690,10 @@ impl Lowering<'_> {
         if self.types.value(length).is_some() {
             return Some(None);
         }
-        if ty == specified {
+        let typedef = (ty == specified)
+            .then(|| self.typedef_lengths.get(&ty).copied())
+            .flatten();
+        if ty == specified && typedef.is_none() {
             diagnostics.report(
                 Diagnostic::error("cannot compile an object of a variable length array type a typedef named yet")
                     .with_code(LOWERING)
@@ -5593,7 +5703,10 @@ impl Lowering<'_> {
             return None;
         }
         let element = self.ty(span, element, diagnostics)?;
-        let counted = self.value(builder, length, diagnostics)?;
+        let counted = match typedef {
+            Some((from, _)) => Operand::Copy(Place::local(from)),
+            None => self.value(builder, length, diagnostics)?,
+        };
         let (rank, sign) = self.unit.target().size_type();
         let size = self.unit.push_type(Ty::Integer { rank, sign });
         let held = builder.function.push_local(size);

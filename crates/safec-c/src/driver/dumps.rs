@@ -146,6 +146,9 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
         }
         Item::Declaration {
             declarators,
+            // What a typedef declared is not dumped: the names it
+            // introduces are resolved, and the dump shows what uses them.
+            typedefs: _,
             specified,
             enumerators,
             storage,
@@ -373,6 +376,9 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
         }
         Stmt::Declaration {
             declarators,
+            // What a typedef declared is not dumped: the names it
+            // introduces are resolved, and the dump shows what uses them.
+            typedefs: _,
             specified,
             enumerators,
             storage,

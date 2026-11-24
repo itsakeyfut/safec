@@ -75,32 +75,89 @@ Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:7:5 "a
     Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:10:12 generated
     StorageDead a_variable_length_array_is_doubted_where_its_length_is_unknown.c:10:5 generated "_3"
     Return
-Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:13:5 "main"
+Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:13:5 "through_a_typedef"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "unsigned long long"
+  Local "_3" "unsigned long long"
+  Local "_4" "int[_3]" "a"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Block "bb0" entry
+    StorageLive a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:19 generated "_2"
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:19 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:19 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    StorageLive a_variable_length_array_is_doubted_where_its_length_is_unknown.c:15:5 generated "_4"
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:16:5 generated
+      Destination "_5"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:16:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:16:5 generated
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:17:12 generated
+      Destination "_6"
+      Address
+        Place "_4"
+          Index
+            Constant 0
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:17:12 generated
+    StorageDead a_variable_length_array_is_doubted_where_its_length_is_unknown.c:17:5 generated "_4"
+    StorageDead a_variable_length_array_is_doubted_where_its_length_is_unknown.c:17:5 generated "_2"
+    Return
+Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:20:5 "main"
   Local "_0" "int" return
   Local "_1" "int"
   Local "_2" "int"
   Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
   Block "bb0" entry
-    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:13:5 generated
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:20:5 generated
       Destination "_0"
       Use
         Constant 0
-    Call a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:12 written "first" "bb1"
+    Call a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:12 written "first" "bb1"
       Destination "_1"
       Constant 3
   Block "bb1"
-    Call a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:23 written "at_its_length" "bb2"
+    Call a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:23 written "at_its_length" "bb2"
       Destination "_2"
       Constant 3
   Block "bb2"
-    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:12 written
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:12 written
       Destination "_3"
       Binary "Add"
         Copy "_1"
         Copy "_2"
-    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:5 written
+    Call a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:42 written "through_a_typedef" "bb3"
+      Destination "_4"
+      Constant 3
+  Block "bb3"
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Operation a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:5 written
       Destination "_0"
       Use
-        Copy "_3"
-    Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:14:12 generated
+        Copy "_5"
+    Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:21:12 generated
     Return

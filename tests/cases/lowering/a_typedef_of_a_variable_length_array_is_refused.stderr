@@ -1,8 +1,0 @@
-error[SC0304]: cannot compile an object of a variable length array type a typedef named yet
-   ╭─[ a_typedef_of_a_variable_length_array_is_refused.c:4:5 ]
-   │
- 4 │     T a;
-   │     ─┬─  
-   │      ╰─── declared here
-───╯
-  = note: a gap in this compiler: such a type's length is worked out where the typedef is, and nothing holds it from there yet; write the array's length here instead

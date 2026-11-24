@@ -1,0 +1,8 @@
+error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
+   ╭─[ a_variable_length_typedef_at_file_scope_is_refused.c:2:15 ]
+   │
+ 2 │ typedef int T[n];
+   │               ┬  
+   │               ╰── this is not a constant
+───╯
+  = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
