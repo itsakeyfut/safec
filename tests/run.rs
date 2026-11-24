@@ -173,4 +173,9 @@ programs! {
     /// keeps every pass's 4096 bytes and the program dies of a stack
     /// overflow (`0xC00000FD` on Windows).
     a_variable_length_array_is_sized_when_declared,
+    /// `<`, `<=`, `>` and `>=` of pointers into one array, each answered
+    /// both ways, and a walk up to one past its end, built and run (#1211).
+    /// Mutation: put back the backend's refusal of a relational comparison
+    /// of two pointers; this is refused with `SC0801`.
+    a_comparison_of_pointers_into_one_object_runs,
 }

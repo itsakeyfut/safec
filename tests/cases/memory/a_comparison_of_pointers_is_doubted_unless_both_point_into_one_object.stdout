@@ -1,0 +1,1034 @@
+Target "x86_64-pc-windows-msvc"
+Static "whole" "int[4]" external zero
+Static "other" "int[4]" external zero
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:1:5 "one"
+  Local "_0" "int" return
+  Local "_1" "int[4]" "a"
+  Local "_2" "int *" "end"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int" "n"
+  Local "_6" "int *" "p"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int *"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:3:16 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:3:16 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 4
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:3:10 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:3:16 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:4:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:4:13 generated
+    StorageLive a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:10 generated "_6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:19 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:15 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:19 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:22 written
+      Destination "_8"
+      Binary "Lt"
+        Copy "_6"
+        Copy "_2"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:22 written "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:22 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:6:9 written
+      Destination "_9"
+      Use
+        Copy "_5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:6:9 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:6:9 written
+      Destination "_5"
+      Use
+        Copy "_10"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:6:9 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:31 written
+      Destination "_11"
+      Use
+        Copy "_6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:31 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:31 written
+      Destination "_6"
+      Use
+        Copy "_12"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:31 generated
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:5:22 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:7:5 generated "_6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:8:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:11:5 "past_its_end"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:14 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:14 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:22 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:22 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 2
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:13 written
+      Destination "_6"
+      Binary "Le"
+        Copy "_3"
+        Copy "_5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:32 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:32 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 2
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:41 generated
+      Destination "_9"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:32 written
+      Destination "_10"
+      Binary "Gt"
+        Copy "_8"
+        Copy "_9"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:12 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_6"
+        Copy "_10"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:13:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:16:5 "apart"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int[2]" "b"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:13 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:21 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:12 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_3"
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:22:5 "either"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int[2]" "a"
+  Local "_3" "int[2]" "b"
+  Local "_4" "int *" "p"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 written "bb2" "bb3"
+      Copy "_1"
+  Block "bb1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:26:17 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:26:12 written
+      Destination "_9"
+      Binary "Ge"
+        Copy "_4"
+        Copy "_8"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:26:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:26:12 generated
+    Return
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:18 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:22 generated
+      Destination "_7"
+      Address
+        Place "_3"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:25:14 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Goto "bb1"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:29:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "size"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:31:5 "made_each_turn"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "char *" "before"
+  Local "_3" "int" "r"
+  Local "_4" "int" "i"
+  Local "_5" "int"
+  Local "_6" "char *" "p"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:32:11 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:32:20 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:33:9 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:33:13 generated
+    StorageLive a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:10 generated "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:14 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:21 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Copy "_1"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:21 written "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:21 generated
+    StorageLive a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:35:9 generated "_6"
+    ArgumentsEvaluated a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:35:19 generated
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:35:19 written "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:21 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:43:5 generated "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:44:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:44:12 generated
+    Return
+  Block "bb4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:35:15 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:35:19 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:36:13 written
+      Destination "_8"
+      Unary "Not"
+        Copy "_6"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:36:13 written "bb5" "bb6"
+      Copy "_8"
+  Block "bb5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:36:13 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:37:13 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:37:20 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:37:13 generated "_6"
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:37:13 generated "_4"
+    Return
+  Block "bb6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:36:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:39:13 written "bb8" "bb9"
+      Copy "_2"
+  Block "bb8"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:39:13 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:40:18 written
+      Destination "_9"
+      Binary "Lt"
+        Copy "_6"
+        Copy "_2"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:40:13 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_3"
+        Copy "_9"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:40:13 written
+      Destination "_3"
+      Use
+        Copy "_10"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:40:13 generated
+    Goto "bb10"
+  Block "bb9"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:39:13 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:42:9 written
+      Destination "_2"
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:42:9 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:43:5 generated "_6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:28 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:28 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:28 written
+      Destination "_4"
+      Use
+        Copy "_12"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:34:28 generated
+    Goto "bb1"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:47:5 "read_out_of_memory"
+  Local "_0" "int" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int"
+  Local "_3" "int *" "p"
+  Local "_4" "int *" "q"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:48:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:48:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:48:9 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:49:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:49:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:48:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:51:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:51:14 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:52:10 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:52:14 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:53:12 written
+      Destination "_5"
+      Binary "Gt"
+        Copy "_3"
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:53:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:53:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:56:5 "one_or_another"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int[2]" "b"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:13 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:22 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:12 written
+      Destination "_5"
+      Binary "Le"
+        Copy "_3"
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:67:5 "through_fields"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int[2]" "b"
+  Local "_3" "struct #0" "v"
+  Local "_4" "struct #0 *"
+  Local "_5" "int **"
+  Local "_6" "int *"
+  Local "_7" "struct #0 *"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "struct #0 *"
+  Local "_11" "int **"
+  Local "_12" "struct #0 *"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:71:5 generated
+      Destination "_4"
+      Address
+        Place "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:71:5 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:71:16 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:71:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:71:5 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:72:5 generated
+      Destination "_7"
+      Address
+        Place "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:72:5 written
+      Destination "_8"
+      Address
+        Place "_7"
+          Deref
+            Field
+              Member 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:72:17 generated
+      Destination "_9"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:72:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_9"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:72:5 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:12 generated
+      Destination "_10"
+      Address
+        Place "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:12 written
+      Destination "_11"
+      Address
+        Place "_10"
+          Deref
+            Field
+              Member 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:22 generated
+      Destination "_12"
+      Address
+        Place "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:22 written
+      Destination "_13"
+      Address
+        Place "_12"
+          Deref
+            Field
+              Member 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:12 written
+      Destination "_14"
+      Binary "Lt"
+        Copy "_11"
+          Deref
+        Copy "_13"
+          Deref
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:5 written
+      Destination "_0"
+      Use
+        Copy "_14"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:79:5 "one_static"
+  Local "_0" "int" return
+  Local "_1" "int (*)[4]"
+  Local "_2" "int *"
+  Local "_3" "int (*)[4]"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:13 generated
+      Destination "_1"
+      Static "whole"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:13 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:25 generated
+      Destination "_3"
+      Static "whole"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:25 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:25 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 3
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_2"
+        Copy "_5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:80:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:83:5 "two_statics"
+  Local "_0" "int" return
+  Local "_1" "int (*)[4]"
+  Local "_2" "int *"
+  Local "_3" "int (*)[4]"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:13 generated
+      Destination "_1"
+      Static "whole"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:13 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:25 generated
+      Destination "_3"
+      Static "other"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:25 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:12 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_2"
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:87:5 "maybe_null"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int[2]" "a"
+  Local "_3" "int *" "p"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:89:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:89:14 generated
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:90:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:90:9 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:91:13 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:91:9 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:91:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:90:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:16 generated
+      Destination "_5"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:16 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:12 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_3"
+        Copy "_6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:96:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "p"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:98:5 "maybe_freed"
+  Local "_0" "int" return
+  Local "_1" "char *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char *" "end"
+  Local "_5" "char *"
+  Local "_6" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:99:15 generated
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:99:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:99:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:99:15 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:100:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:100:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:100:9 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:101:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:101:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:100:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:103:17 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 8
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:103:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:103:17 generated
+    ArgumentsEvaluated a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:104:5 generated
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:104:5 written "release" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:104:5 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:105:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_1"
+        Copy "_4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:105:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:105:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:108:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:110:5 "within_one_turn"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "int" "r"
+  Local "_3" "int" "i"
+  Local "_4" "int"
+  Local "_5" "char *" "p"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "char *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:111:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:111:13 generated
+    StorageLive a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:10 generated "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:14 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:18 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:21 written
+      Destination "_4"
+      Binary "Lt"
+        Copy "_3"
+        Copy "_1"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:21 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:21 generated
+    StorageLive a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:113:9 generated "_5"
+    ArgumentsEvaluated a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:113:19 generated
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:113:19 written "malloc" "bb4"
+      Destination "_6"
+      Constant 8
+  Block "bb3"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:21 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:119:5 generated "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:120:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:120:12 generated
+    Return
+  Block "bb4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:113:15 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:113:19 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:114:13 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:114:13 written "bb5" "bb6"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:114:13 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:115:13 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:115:20 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:115:13 generated "_5"
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:115:13 generated "_3"
+    Return
+  Block "bb6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:114:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:18 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:14 written
+      Destination "_9"
+      Binary "Lt"
+        Copy "_5"
+        Copy "_8"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:9 written
+      Destination "_10"
+      Binary "Add"
+        Copy "_2"
+        Copy "_9"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:9 written
+      Destination "_2"
+      Use
+        Copy "_10"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:9 generated
+    ArgumentsEvaluated a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:118:9 generated
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:118:9 written "free" "bb8"
+      Copy "_5"
+  Block "bb8"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:118:9 generated
+    StorageDead a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:119:5 generated "_5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:28 written
+      Destination "_11"
+      Use
+        Copy "_3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:28 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:28 written
+      Destination "_3"
+      Use
+        Copy "_12"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:28 generated
+    Goto "bb1"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:123:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int"
+  Local "_20" "int"
+  Local "_21" "int"
+  Local "_22" "int"
+  Local "_23" "int"
+  Local "_24" "int"
+  Local "_25" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:123:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written "one" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:20 written "past_its_end" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:37 written "apart" "bb3"
+      Destination "_4"
+  Block "bb3"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:47 written "either" "bb4"
+      Destination "_6"
+      Constant 1
+  Block "bb4"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:59 written "made_each_turn" "bb5"
+      Destination "_8"
+      Constant 2
+  Block "bb5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_7"
+        Copy "_8"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:79 written "read_out_of_memory" "bb6"
+      Destination "_10"
+      Constant 0
+  Block "bb6"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_9"
+        Copy "_10"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:11 written "one_or_another" "bb7"
+      Destination "_12"
+  Block "bb7"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_11"
+        Copy "_12"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:30 written "through_fields" "bb8"
+      Destination "_14"
+  Block "bb8"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_15"
+      Binary "Add"
+        Copy "_13"
+        Copy "_14"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:49 written "one_static" "bb9"
+      Destination "_16"
+  Block "bb9"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_15"
+        Copy "_16"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:64 written "two_statics" "bb10"
+      Destination "_18"
+  Block "bb10"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_19"
+      Binary "Add"
+        Copy "_17"
+        Copy "_18"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:80 written "maybe_null" "bb11"
+      Destination "_20"
+      Constant 0
+  Block "bb11"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_21"
+      Binary "Add"
+        Copy "_19"
+        Copy "_20"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:126:11 written "maybe_freed" "bb12"
+      Destination "_22"
+  Block "bb12"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_23"
+      Binary "Add"
+        Copy "_21"
+        Copy "_22"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:126:27 written "within_one_turn" "bb13"
+      Destination "_24"
+      Constant 2
+  Block "bb13"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+      Destination "_25"
+      Binary "Add"
+        Copy "_23"
+        Copy "_24"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:5 written
+      Destination "_0"
+      Use
+        Copy "_25"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 generated
+    Return

@@ -429,14 +429,20 @@ fn a_pointer_moved_by_an_unsigned_count_widens_it_without_a_sign() {
     assert!(out.contains(" = zext i8 %t1 to i64\n"), "{out}");
 }
 
-/// Each relational comparison of two pointers is refused in the words that
-/// say what it is, C17 6.5.8 p5, and not as arithmetic on a pointer.
+/// Each relational comparison of two pointers is written as the unsigned
+/// `icmp` of its own direction, since an address has no sign and C17 6.5.8
+/// p5 orders pointers into one object by where they are in it (#1211).
 ///
-/// Mutation: send only `Lt` to that refusal. `Gt`, `Le` and `Ge` take the
-/// arithmetic refusal's words and this fails.
+/// Mutation: write `slt` for `Lt`, or swap `ugt` and `ult`; this fails on
+/// that operator.
 #[test]
-fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
-    for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
+fn every_relational_comparison_of_two_pointers_is_an_unsigned_icmp() {
+    for (op, predicate) in [
+        (BinOp::Lt, "ult"),
+        (BinOp::Gt, "ugt"),
+        (BinOp::Le, "ule"),
+        (BinOp::Ge, "uge"),
+    ] {
         let (sources, at) = named("f");
         let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
         let int = unit.push_type(Ty::INT);
@@ -457,15 +463,12 @@ fn every_relational_comparison_of_two_pointers_is_refused_as_one() {
         });
         unit.push_function(f);
 
-        let (_, refusals) = module(&sources, &unit);
+        let (out, refusals) = module(&sources, &unit);
 
-        assert_eq!(
-            refusals,
-            vec![Refusal {
-                why: "a relational comparison of two pointers".to_owned(),
-                at: Some(at),
-            }],
-            "{op:?}"
+        assert_eq!(refusals, vec![], "{op:?}: {out}");
+        assert!(
+            out.contains(&format!(" = icmp {predicate} ptr ")),
+            "{op:?}: {out}"
         );
     }
 }

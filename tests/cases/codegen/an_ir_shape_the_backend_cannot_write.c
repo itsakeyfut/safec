@@ -1,7 +1,8 @@
-int main() {
-    int n;
-    int *p;
-    n = 1;
-    p = &n;
-    return p < p;
+struct pair {
+    int first;
+    int second;
+};
+
+int first_of(struct pair given) {
+    return given.first;
 }

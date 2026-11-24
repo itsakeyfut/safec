@@ -54,6 +54,29 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // C17 6.5.8 p5 orders pointers into one object only, and
+        // `compared_apart` answers one object only where each pointer may
+        // name the one same live referent and not null (#1211). Silent:
+        // `one` walks an array to its end, `past_its_end` compares one past
+        // it, `one_static` two elements of a static. `SC0419`, with the
+        // mutation in `compared_apart` that silences each:
+        // - `apart` (`<`) and `one_or_another` (`<=`), two arrays: answer
+        //   one object whenever both name something, or drop `Le` from the
+        //   operators;
+        // - `either` (`>=`), a pointer that may be either array: count no
+        //   second name;
+        // - `through_fields`, two pointers read out of one struct: follow a
+        //   projected place as its local;
+        // - `two_statics`: take every static as one;
+        // - `maybe_null`, `a` or null: ask nothing of `may_be_null`;
+        // - `maybe_freed`, a block a call this check cannot read may have
+        //   freed: ask nothing of the site's state;
+        // - `within_one_turn`, `p < p + 1` over a block made each turn, a
+        //   doubt of one block the site cannot tell from another: take
+        //   every site as one block.
+        // `made_each_turn` and `read_out_of_memory` are doubted for what
+        // each pointer may name besides, before those arms are asked.
+        a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A variable length array's size is its length local's value, which
         // this check does not know, so an index into one is doubted, the
         // first element as much as one at its length, and nothing is
@@ -10259,7 +10282,11 @@ cases! {
         // The text and whether the text is LLVM are two claims.
         a_narrow_unsigned_value_is_extended_without_a_sign: ["--emit", "llvm-ir", "--target", "armv7-unknown-linux-gnueabihf"],
         a_narrow_value_is_extended_where_the_target_asks: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
-        an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A struct passed by value on `i686`, whose C ABI the backend does
+        // not write yet: a refusal the frontend cannot see, so the module
+        // keeps a declaration in the function's place. It held `p < p` until
+        // #1211 wrote that.
+        an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "i686-unknown-linux-gnu"],
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],

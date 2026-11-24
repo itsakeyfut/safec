@@ -85,8 +85,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, Length, LocalId, Operation, Place, Rvalue,
-    StaticId, Terminator, TranslationUnit, Ty,
+    Between, BinOp, BlockId, Element, FuncId, Function, Length, LocalId, Operand, Operation, Place,
+    Rvalue, StaticId, Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -104,6 +104,94 @@ use report::{
     reported, returned, stored_away, used, used_before, used_by_value,
 };
 use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_terminator};
+
+/// Where `element` orders two pointers this check cannot show point into
+/// one object (C17 6.5.8 p5, #1211), or `None` where it orders none or the
+/// two certainly share it.
+///
+/// **One object is one live referent each operand may name, and the
+/// same**, read off the operand's own local:
+///
+/// - nothing else in either may-set, so a pointer that may be either of two
+///   arrays, or that holds what this check does not model
+///   (`Referent::Unknown`), is not shown to share anything;
+/// - **and not null**, which a may-set does not record: `p = 0; if (c) p =
+///   a;` may name `a` alone and still point into nothing, which p5 leaves
+///   undefined (`Held::may_be_null`);
+/// - **and an allocation that is live** on every path here, since one a
+///   call may have freed is no object any more, and **that stands for one
+///   block** (`Allocations::made_once`), since one made on each turn of a
+///   loop is many objects under one name. So `p < p + 1` over a block made
+///   in a loop is doubted, though it is one block: the site cannot tell its
+///   turns apart;
+/// - **a place through a projection is not followed**: what `v.a` or `*pp`
+///   names is not what the local `v` or `pp` names.
+///
+/// Arithmetic keeps what a pointer may name, so `p < a + n` over `a` is one
+/// object, one past its end included, which p5 allows. Each line is held
+/// by `a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object`,
+/// a function per line, and its comment says the mutation. The arm for an
+/// unknown referent alone is reached by no program measured: such a value
+/// names a second site or a lost block as well, and is doubted first.
+fn compared_apart(
+    unit: &TranslationUnit,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    element: &Element,
+    known: &known::Known,
+) -> Option<Span> {
+    let Element::Assign(operation) = element else {
+        return None;
+    };
+    let Rvalue::Binary {
+        op: BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge,
+        lhs,
+        rhs,
+    } = &operation.value
+    else {
+        return None;
+    };
+    // A constant is no pointer here: the type check refuses ordering a
+    // pointer against an integer, a null pointer constant included (6.5.8
+    // p2), so only an equality ever meets one.
+    let pointer = |operand: &Operand| match operand {
+        Operand::Copy(place) => unit
+            .place_ty(function, place)
+            .is_some_and(|ty| unit.ty(ty).is_pointer()),
+        Operand::Constant(_) => false,
+    };
+    if !pointer(lhs) || !pointer(rhs) {
+        return None;
+    }
+    let one = |operand: &Operand| -> Option<index::Referent> {
+        let Operand::Copy(place) = operand else {
+            return None;
+        };
+        if !place.steps().is_empty() {
+            return None;
+        }
+        let held = &known.points_to[index::LocalIdx::of(place.local)];
+        if held.may_be_null {
+            return None;
+        }
+        let mut named = held.names.ones();
+        let referent = named.next()?;
+        if named.next().is_some() {
+            return None;
+        }
+        match referent {
+            index::Referent::Local(_) | index::Referent::Static(_) => Some(referent),
+            index::Referent::Heap(site) => (analysis.made_once[site.local()]
+                && matches!(known.state[site], parts::SiteState::Live(_)))
+            .then_some(referent),
+            index::Referent::Unknown(_) => None,
+        }
+    };
+    match (one(lhs), one(rhs)) {
+        (Some(left), Some(right)) if left == right => None,
+        _ => Some(operation.origin.span()),
+    }
+}
 
 /// The library call that carried bytes nothing wrote into a place, and the
 /// local it read them through, for the report about a read of them (#752).
@@ -258,6 +346,11 @@ pub enum Kind {
     /// of an integer, so it is every such array. Always `Unknown`, at the
     /// declaration (#1209).
     VariableLength,
+    /// `p < q`, `<=`, `>` or `>=` of two pointers this check cannot show
+    /// point into one object, which C17 6.5.8 p5 defines only between
+    /// pointers into one array (or one past its end) or one struct. Always
+    /// `Unknown`, at the comparison (#1211).
+    ComparedApart,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1154,6 +1247,20 @@ fn findings_within(
                             unproven: None,
                         });
                     }
+                }
+                // An ordering of two pointers, asked before the transfer,
+                // of what each held as it was compared.
+                if let Some(at) = compared_apart(unit, &analysis, function, element, &known) {
+                    findings.push(Finding {
+                        function: func,
+                        kind: Kind::ComparedApart,
+                        conclusion: Conclusion::Unknown,
+                        at,
+                        local: None,
+                        freed: None,
+                        made: None,
+                        unproven: None,
+                    });
                 }
                 if let Element::Assign(operation) = element {
                     if let Rvalue::Reinterpret(_) = operation.value {

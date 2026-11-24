@@ -8,9 +8,9 @@
 //!
 //! What this refuses is what the interpreter refuses, so that two consumers of
 //! one IR do not disagree about which programs it can express, **except
-//! arrays and pointer arithmetic**: this writes both (#621), and the
-//! interpreter, whose pointer is a local with no element in it, refuses both
-//! until it is given arrays of its own. Where the *reason* for a refusal is
+//! arrays, pointer arithmetic and ordering two pointers**: this writes all
+//! three (#621, #1211), and the interpreter, whose pointer is a local with no
+//! element in it, refuses them until it is given arrays of its own. Where the *reason* for a refusal is
 //! the same it is said in the same words, and where it is not it is not.
 
 use safec_ir::ir::{Rank, Sign};
@@ -1065,12 +1065,16 @@ impl Emitter<'_> {
                 BinOp::Add | BinOp::Sub => {
                     return self.moved(function, op, lhs, rhs, to, out);
                 }
-                // C17 6.5.8 p5 defines these only between pointers into one
-                // object, which is a question this does not answer yet, and the
-                // reason is not a width.
-                BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => {
-                    return self.refuse("a relational comparison of two pointers");
-                }
+                // **Unsigned, as an address is** (#1211): C17 6.5.8 p5 orders
+                // pointers into one object by where they are in it, and the
+                // memory check doubts one that may be between two objects
+                // rather than this deciding what that means. Mutation: put the
+                // refusal back; `a_comparison_of_pointers_into_one_object_runs`
+                // is refused.
+                BinOp::Lt => "ult",
+                BinOp::Le => "ule",
+                BinOp::Gt => "ugt",
+                BinOp::Ge => "uge",
                 _ => {
                     return self
                         .refuse("arithmetic on a pointer other than moving it by an integer");

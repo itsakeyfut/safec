@@ -11,3 +11,13 @@ error[SC0402]: this uses `p` after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
+error[SC0419]: this compares pointers that may point into different objects
+   ╭─[ a_freed_pointer_ordered_against_another_is_reported.c:3:71 ]
+   │
+ 3 │ int f(int *x) { int *p = malloc(4); if (!p) return 0; free(p); return p < x; }
+   │                                                                       ──┬──  
+   │                                                                         ╰──── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead

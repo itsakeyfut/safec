@@ -56,7 +56,7 @@ const PROGRAMS: &[(&str, &str)] = &[
     ),
     (
         "an_ir_shape_the_backend_cannot_write",
-        "x86_64-pc-windows-msvc",
+        "i686-unknown-linux-gnu",
     ),
 ];
 
