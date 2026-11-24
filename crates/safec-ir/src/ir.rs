@@ -287,6 +287,41 @@ pub struct Bits {
     pub width: u32,
 }
 
+/// How many elements an array has: a count known when the program is
+/// compiled, or the local that holds it when the array is declared, which a
+/// variable length array's is (C17 6.7.6.2 p4, #1209).
+///
+/// **A local of the function the array is declared in**, so an array type
+/// with one is read in that function alone, as every local is. The length is
+/// worked out once, where the declaration is reached (p5), and the local
+/// holds it from there; nothing writes it again. A type whose length is a
+/// local has no size this unit can give ([`TranslationUnit::size_of`] says
+/// `None`), so every check that counts against a size concludes nothing
+/// about one rather than something wrong.
+///
+/// **A type with one means something only beside its function.** Types are
+/// interned for the whole unit, so `int[_2]` in two functions is one
+/// [`TyId`] naming a different local in each. Only a local's own type holds
+/// one today; a signature, a static or a struct member that did would hand
+/// a caller a local of another function.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Length {
+    /// This many elements.
+    Constant(u64),
+    /// As many as this local holds where the array is declared.
+    Local(LocalId),
+}
+
+impl Length {
+    /// The count, where it is known when the program is compiled.
+    pub fn constant(self) -> Option<u64> {
+        match self {
+            Length::Constant(length) => Some(length),
+            Length::Local(_) => None,
+        }
+    }
+}
+
 /// Which block, within one [`Function`].
 ///
 /// Meaningless in another function, the way an index into one arena is
@@ -361,11 +396,12 @@ pub enum Ty {
     /// A pointer to the type this id names.
     Pointer(TyId),
     /// `length` objects of the type `element` names, one after another,
-    /// which is what C17 6.2.5 p20 makes an array. `length` is zero only for
-    /// a flexible array member, as the field says: the lowering builds any
-    /// other only for a constant length the type check gave a positive
-    /// value, and 6.7.6.2 p1 makes any other constant length a constraint
-    /// violation.
+    /// which is what C17 6.2.5 p20 makes an array. A constant `length` is
+    /// zero only for a flexible array member, as the field says: the lowering
+    /// builds any other only for a constant length the type check gave a
+    /// positive value, and 6.7.6.2 p1 makes any other constant length a
+    /// constraint violation. A variable length array's is a local, worked
+    /// out where it is declared (#1209): see [`Length`].
     ///
     /// **Never a value.** C reads an array only by converting it to a pointer
     /// to its first element (6.3.2.1 p3) and gives it no assignment, so no
@@ -379,8 +415,8 @@ pub enum Ty {
         /// (C17 6.7.2.1 p18, #1208), the last member of a struct, which takes
         /// no bytes of it and whose elements are as many as were allocated
         /// past it: the memory check bounds a walk through one by the
-        /// allocation rather than by the member.
-        length: u64,
+        /// allocation rather than by the member. See [`Length`].
+        length: Length,
     },
     /// A struct, laid out in [`TranslationUnit::struct_layout`], or a union.
     ///
@@ -953,13 +989,22 @@ pub enum Element {
     /// the declaration, and ends it when "execution of that block ends in any
     /// way", so each iteration of a loop is a fresh lifetime and this is what
     /// the second one starts from.
+    ///
+    /// **A variable length array's storage is made here** (#1209), as large
+    /// as its [`Length::Local`] holds, since p7 begins its lifetime at the
+    /// declaration: the backend reads that local at this marker. So a
+    /// producer writes the length before this marker on every path to it,
+    /// and pairs it with a [`Self::StorageDead`] on every way out of its
+    /// scope and on every jump back to before it, which is where the
+    /// backend gives the storage back.
     StorageLive {
         /// Whose storage.
         local: LocalId,
         /// Where the declaration that asked for it is written.
         origin: Origin,
     },
-    /// This local's storage is gone from here on.
+    /// This local's storage is gone from here on. For a variable length
+    /// array, the stack it was made on is given back (#1209).
     StorageDead {
         /// What ended the storage, which is where control left the scope.
         ///
@@ -2328,9 +2373,11 @@ impl TranslationUnit {
             Ty::Void => return None,
             // `length` elements and no padding between them, C17 6.5.3.4 p7.
             // `None` on overflow, which the memory check reads as an object
-            // it knows nothing of the size of, and so `Unknown`.
+            // it knows nothing of the size of, and so `Unknown`; and `None`
+            // for a variable length array, whose size is its length local's
+            // value, known only when it runs (#1209). See `Length`.
             Ty::Array { element, length } => {
-                return self.size_of(element)?.checked_mul(length);
+                return self.size_of(element)?.checked_mul(length.constant()?);
             }
             // Its members and their padding, laid out once.
             Ty::Struct(layout) => return Some(self.layout_of(layout)?.size),

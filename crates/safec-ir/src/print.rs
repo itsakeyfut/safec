@@ -18,7 +18,7 @@
 //! from inside a dump. The renderer asks the same question of a message, so
 //! the answer is one function and this is the crate both sides can reach.
 
-use crate::ir::{Passes, Rank};
+use crate::ir::{Length, Passes, Rank};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
@@ -473,11 +473,15 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                 };
                 current = pointee;
             }
-            // The length as a number, since the IR holds no other: `int a[1 +
-            // 2]` is `int[1 + 2]` in `--emit ast`, which spells what was
-            // written, and `int[3]` here.
+            // A constant length as its number: `int a[1 + 2]` is `int[1 + 2]`
+            // in `--emit ast`, which spells what was written, and `int[3]`
+            // here. A variable length array's length by the local that holds
+            // it, which is how the dump names every local (#1209).
             Ty::Array { element, length } => {
-                inner = format!("{inner}[{length}]");
+                inner = match length {
+                    Length::Constant(length) => format!("{inner}[{length}]"),
+                    Length::Local(local) => format!("{inner}[_{}]", local.index()),
+                };
                 current = element;
             }
             // By its number in the unit, since the IR keeps no tag: the

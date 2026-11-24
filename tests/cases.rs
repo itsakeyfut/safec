@@ -54,6 +54,14 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A variable length array's size is its length local's value, which
+        // this check does not know, so an index into one is doubted, the
+        // first element as much as one at its length, and nothing is
+        // answered safe (#1209). Each declaration is doubted too, `SC0418`,
+        // since nothing shows its length is above zero (C17 6.7.6.2 p5).
+        // Mutation: give such an array the size of one element in
+        // `TranslationUnit::size_of`; `first`'s `SC0412` goes silent.
+        a_variable_length_array_is_doubted_where_its_length_is_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A flexible array member takes no bytes of its struct, and its
         // elements are what was allocated past it (C17 6.7.2.1 p18, #1208):
         // `fits` writes the last of four allocated and is silent, `past`
@@ -8833,6 +8841,11 @@ cases! {
         // `Checker::check_static_initializers`; the initializer is dropped
         // unread and the program builds.
         an_extern_in_a_block_cannot_be_initialized: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `sizeof` of a variable length array has no value, so it is no
+        // constant where one is asked for, and is said to be none rather
+        // than to overflow; and one over arrays of them is refused where the
+        // type check sizes it (#1209). Mutations are in `types.rs`.
+        a_sizeof_of_a_variable_length_array_is_no_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.9 p4 holds a block-scope `static` to a constant as it
         // holds a global. Mutation: walk only file-scope declarations in
         // `Checker::check_static_initializers`; nothing is reported here, and
@@ -10316,12 +10329,39 @@ cases! {
         // `abi::classify`; each changes.
         a_struct_with_a_flexible_array_member_crosses_in_memory: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_with_a_flexible_array_member_crosses_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
+        // A variable length array is made where it is declared, `n`
+        // elements' bytes after the stack is kept, and given back where its
+        // scope ends; `sizeof` is its length times its element's size, when
+        // it runs (#1209). Mutation: skip the restore at `StorageDead`;
+        // `stackrestore` goes from the text.
+        a_variable_length_array_is_made_and_given_back: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // On `i686`, where `size_t` is 32 bits, the length is widened to the
+        // `alloca`'s count, and the storage is as many of the element as it
+        // holds, so a `long long` is aligned as LLVM aligns one (eight, as
+        // `clang` gives) and a struct by its layout (four) (#1209).
+        // Mutations: widen with `sext`, or write `align 1`; the text changes.
+        a_variable_length_array_is_aligned_as_its_element_on_i686: ["--emit", "llvm-ir", "--safety", "off", "--target", "i686-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "lowering" => {
+        // A jump into the scope of a variable length array is a constraint
+        // violation (C17 6.8.6.1 p1, 6.8.4.2 p2), refused with `SC0323` for
+        // a `goto` into a block, a `switch` past one to a `case`, and a
+        // `goto` past one in the function's own body (#1209). Mutations are
+        // on `Lowering::jump` and the declaration.
+        a_jump_into_the_scope_of_a_variable_length_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A typedef's array length is worked out where the typedef is (C17
+        // 6.7.8 p3), which nothing holds yet, so an object of that type is
+        // refused rather than given a length worked out again (#1209).
+        a_typedef_of_a_variable_length_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Only `sizeof` of a variable length array's own name is worked out
+        // when it runs; `sizeof(int[n])` and `sizeof *&a` are refused, not
+        // answered (#1209). Mutation: report nothing in
+        // `refuse_run_time_sizeof`; both refusals go.
+        a_sizeof_worked_out_when_it_runs_is_refused_where_it_is_not_of_a_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A program that defines `memcpy` before its first struct copy has
         // the copy call it, as one defining it after does: what defining a
         // library name means is C17 7.1.3 p2's, which the safety check
@@ -10461,11 +10501,12 @@ cases! {
         // block that only jumps appears.
         a_do_body_that_cannot_fall_through_leaves_its_condition_unreached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_for_declaration_lives_across_the_whole_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `f`'s `for` cannot be lowered, since a variable length array has no
-        // IR yet, and its scope is closed all the same, so `g`, lowered by the
-        // same `Lowering`, opens with only its body's scope and `x` gets no
-        // storage marker. The array is chosen for what the lowering cannot do
-        // and stops testing this the day it can. Mutation: close the `for`'s
+        // `f`'s `for` cannot be lowered, since a variable length array of
+        // variable length arrays has no IR yet (#1209 lowers one of a sized
+        // element), and its scope is closed all the same, so `g`, lowered by
+        // the same `Lowering`, opens with only its body's scope and `x` gets
+        // no storage marker. The array is chosen for what the lowering cannot
+        // do and stops testing this the day it can. Mutation: close the `for`'s
         // scope only when the loop was lowered; `g` gains a `StorageLive`.
         a_for_that_cannot_be_lowered_leaves_no_scope_open: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local array converts to the address of its first element and an

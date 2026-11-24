@@ -246,7 +246,7 @@ fn verdict(
         Kind::TooLarge { .. } | Kind::TooLong { .. } | Kind::EnteredInside => true,
         // Never asked: it is built from its element in `memory.rs`, about no
         // free.
-        Kind::Reinterpreted => true,
+        Kind::Reinterpreted | Kind::VariableLength => true,
         // Never asked: it is built by `memory::read_only`, about no free.
         Kind::WritesReadOnly => true,
         // Never asked: it is built by `memory::assigned` from where a local

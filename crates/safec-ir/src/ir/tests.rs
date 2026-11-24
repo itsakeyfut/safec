@@ -75,7 +75,7 @@ fn a_pointer_is_a_pointer_and_an_array_of_pointers_is_not() {
     assert!(Ty::Pointer(int).is_pointer());
     let pointers = Ty::Array {
         element: int,
-        length: 2,
+        length: crate::ir::Length::Constant(2),
     };
     assert!(!pointers.is_pointer());
     for scalar in [Ty::INT, Ty::CHAR, Ty::Void] {
@@ -832,7 +832,7 @@ fn an_array_s_element_is_what_an_index_reaches_and_its_size_is_its_elements() {
     let int = unit.push_type(Ty::INT);
     let array = unit.push_type(Ty::Array {
         element: int,
-        length: 4,
+        length: crate::ir::Length::Constant(4),
     });
 
     let (_sources, at) = spans();
@@ -861,11 +861,11 @@ fn an_array_too_large_to_count_has_no_size() {
     let char = unit.push_type(Ty::CHAR);
     let row = unit.push_type(Ty::Array {
         element: char,
-        length: 1 << 40,
+        length: crate::ir::Length::Constant(1 << 40),
     });
     let array = unit.push_type(Ty::Array {
         element: row,
-        length: 1 << 40,
+        length: crate::ir::Length::Constant(1 << 40),
     });
 
     assert_eq!(unit.size_of(row), Some(1 << 40));

@@ -18,8 +18,9 @@ use std::fmt::Write as _;
 
 use crate::abi::{self, Class, Piece};
 use safec_ir::ir::{
-    BinOp, BlockId, Element, FuncId, Function, Linkage, Operand, Operation, Passes, Place,
-    Projection, Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, Length, Linkage, LocalId, Operand, Operation,
+    Passes, Place, Projection, Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId,
+    UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::{Extend, Integer, Target};
@@ -112,6 +113,7 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         next_temp: 0,
         at: None,
         returned_in: None,
+        stack_saved: false,
     };
 
     for id in unit.statics() {
@@ -122,7 +124,25 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         emitter.function(id, out);
     }
 
+    // Once a variable length array has been made: the module holds one
+    // unit, so once here is once in the module.
+    if emitter.stack_saved {
+        out.push_str("\ndeclare ptr @llvm.stacksave.p0()\n");
+        out.push_str("declare void @llvm.stackrestore.p0(ptr)\n");
+    }
+
     emitter.refusals
+}
+
+/// Whether `ty` is a variable length array, whose length is a local.
+fn is_variable(unit: &TranslationUnit, ty: TyId) -> bool {
+    matches!(
+        unit.ty(ty),
+        Ty::Array {
+            length: Length::Local(_),
+            ..
+        }
+    )
 }
 
 /// What one [`BinOp`] becomes, which is two different shapes.
@@ -158,6 +178,9 @@ struct Emitter<'a> {
     /// registers, and the pieces it returns it as, set by the prologue
     /// `Emitter::body` writes for each function and read at its `return`s.
     returned_in: Option<(String, Vec<Piece>, bool)>,
+    /// Whether a variable length array's storage was made, so the module
+    /// needs `llvm.stacksave` and `llvm.stackrestore` declared (#1209).
+    stack_saved: bool,
 }
 
 /// What a struct parameter or result crosses a call as, with the struct's
@@ -186,7 +209,10 @@ fn holds_flexible_array(unit: &TranslationUnit, layout: &safec_ir::ir::StructLay
         .members
         .iter()
         .any(|member| match unit.ty(member.ty) {
-            Ty::Array { length: 0, .. } => true,
+            Ty::Array {
+                length: Length::Constant(0),
+                ..
+            } => true,
             Ty::Struct(inner) => unit
                 .layout_of(inner)
                 .is_some_and(|inner| holds_flexible_array(unit, inner)),
@@ -413,7 +439,21 @@ impl Emitter<'_> {
             }
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
-            Ty::Array { element, length } => format!("[{length} x {}]", self.spell(element)),
+            Ty::Array {
+                element,
+                length: Length::Constant(length),
+            } => format!("[{length} x {}]", self.spell(element)),
+            // **A variable length array has no LLVM type, and none is
+            // asked** (#1209): its local is a pointer to storage made where
+            // it is declared (`Emitter::begin_variable`), spelled by `body`
+            // without asking here, and an index into it starts at that
+            // pointer. Anything else that asks, a step of a pointer to one
+            // above all, would be given a size that is not its own, so it
+            // stops here rather than being given `ptr`'s.
+            Ty::Array {
+                length: Length::Local(_),
+                ..
+            } => unreachable!("a variable length array's type is spelled nowhere"),
             // **Bytes, and no LLVM struct type**: the IR lays a struct out and
             // nothing else does, so its storage is its size in bytes and a
             // member is reached at its offset into them. See ADR-0124.
@@ -580,6 +620,16 @@ impl Emitter<'_> {
     fn address(&mut self, function: &Function, place: &Place, out: &mut String) -> Refuses<String> {
         let mut address = format!("%_{}", place.local.index());
         let mut ty = function.local(place.local);
+        // **A variable length array is where its local points** (#1209):
+        // its storage is made where it is declared, and the local holds the
+        // address. Mutation: take the local's own slot; the run of
+        // `a_variable_length_array_is_sized_when_declared` fails.
+        if is_variable(self.unit, ty) {
+            let loaded = self.temp();
+            writeln!(out, "  {loaded} = load ptr, ptr {address}")
+                .expect("writing to a string cannot fail");
+            address = loaded;
+        }
 
         for projection in place.steps() {
             match projection {
@@ -600,6 +650,14 @@ impl Emitter<'_> {
                 // below writes. Any other index would need its own scaling and
                 // nothing builds one; the interpreter refuses every index.
                 Projection::Index(Operand::Constant(0)) => match self.unit.ty(ty) {
+                    // A variable length array's first element is where it
+                    // starts, and it has no type to step through.
+                    Ty::Array {
+                        element,
+                        length: Length::Local(_),
+                    } => {
+                        ty = element;
+                    }
                     Ty::Array { element, .. } => {
                         let spelled = self.spell(ty);
                         let first = self.temp();
@@ -1129,15 +1187,106 @@ impl Emitter<'_> {
             // begins again keeps its `alloca` and so keeps its value, which no
             // defined C program can observe: C17 6.2.4 p6 gives the second
             // lifetime an indeterminate value, and reading one is undefined.
-            Element::StorageLive {
-                local: _,
-                origin: _,
+            //
+            // **Except for a variable length array** (#1209), which is the
+            // one local these do write something for, since they make and
+            // end its storage: the stack as it was is kept where it begins,
+            // storage of its length's elements is made there, and the stack
+            // is put back where it ends, so one in a loop, or reached again
+            // by a jump back, takes no more each time round. The stack and
+            // not the heap, as C has it and `clang` does it: nothing to free
+            // on a path that leaves by `return` or a jump, and nothing to
+            // fail on but the stack itself. Mutation: skip the restore;
+            // `a_variable_length_array_is_made_and_given_back` loses its
+            // `stackrestore`, and the loop in
+            // `a_variable_length_array_is_sized_when_declared` overflows the
+            // stack.
+            Element::StorageLive { local, origin: _ } => {
+                if is_variable(self.unit, function.local(*local)) {
+                    self.begin_variable(function, *local, out)?;
+                }
+                Ok(())
             }
-            | Element::StorageDead {
-                origin: _,
-                local: _,
-            } => Ok(()),
+            Element::StorageDead { origin: _, local } => {
+                if is_variable(self.unit, function.local(*local)) {
+                    // `%_saved{N}`, which `body` made beside the local and
+                    // `begin_variable` wrote.
+                    let saved = self.temp();
+                    writeln!(out, "  {saved} = load ptr, ptr %_saved{}", local.index())
+                        .expect("writing to a string cannot fail");
+                    writeln!(out, "  call void @llvm.stackrestore.p0(ptr {saved})")
+                        .expect("writing to a string cannot fail");
+                }
+                Ok(())
+            }
         }
+    }
+
+    /// Make the storage of the variable length array `local`, where its
+    /// declaration is reached: keep the stack as it is in `%_saved{N}`, then
+    /// make room for as many elements as its length local holds, and put
+    /// the address in the local's own slot, `%_{N}` (#1209). Both slots are
+    /// `body`'s, made at entry; the length is the lowering's, written before
+    /// this marker on every path to it (see `Element::StorageLive`).
+    ///
+    /// **As many of the element's own type**, not bytes, so that LLVM aligns
+    /// the storage as it aligns one of them, which is what `clang` gives: a
+    /// `long long` on `i686` gets eight where its ABI alignment is four. A
+    /// struct is bytes here, so its alignment is written out, and where the
+    /// target sets a floor (`Target::variable_array_align`) that is written
+    /// instead. Mutation: write `align 1`;
+    /// `a_variable_length_array_is_made_and_given_back` changes.
+    fn begin_variable(
+        &mut self,
+        function: &Function,
+        local: LocalId,
+        out: &mut String,
+    ) -> Refuses<()> {
+        let Ty::Array {
+            element,
+            length: Length::Local(held),
+        } = self.unit.ty(function.local(local))
+        else {
+            unreachable!("asked of a variable length array");
+        };
+        if self.unit.size_of(element).is_none() {
+            return self.refuse("a variable length array of elements with no size");
+        }
+        let align = match self.unit.target().variable_array_align() {
+            Some(floor) => {
+                format!(
+                    ", align {}",
+                    floor.max(self.unit.align_of(element).unwrap_or(1))
+                )
+            }
+            None => self.struct_align(element),
+        };
+        self.stack_saved = true;
+        let saved = self.temp();
+        writeln!(out, "  {saved} = call ptr @llvm.stacksave.p0()")
+            .expect("writing to a string cannot fail");
+        writeln!(out, "  store ptr {saved}, ptr %_saved{}", local.index())
+            .expect("writing to a string cannot fail");
+        // The length is a `size_t`, which the lowering made it; widened to
+        // the `i64` the count of an `alloca` is written in, where it is
+        // narrower, as it is on a 32-bit target.
+        let spelled = self.spell(function.local(held));
+        let (count, _) = self.read(function, &Place::local(held), out)?;
+        let count = if spelled == "i64" {
+            count
+        } else {
+            let wide = self.temp();
+            writeln!(out, "  {wide} = zext {spelled} {count} to i64")
+                .expect("writing to a string cannot fail");
+            wide
+        };
+        let storage = self.temp();
+        let spelled = self.spell(element);
+        writeln!(out, "  {storage} = alloca {spelled}, i64 {count}{align}")
+            .expect("writing to a string cannot fail");
+        writeln!(out, "  store ptr {storage}, ptr %_{}", local.index())
+            .expect("writing to a string cannot fail");
+        Ok(())
     }
 
     /// A place, and what is written into it.
@@ -1582,6 +1731,15 @@ impl Emitter<'_> {
         for local in function.locals() {
             let ty = function.local(local);
             if matches!(self.unit.ty(ty), Ty::Void) {
+                continue;
+            }
+            if is_variable(self.unit, ty) {
+                writeln!(
+                    &mut body,
+                    "  %_{0} = alloca ptr\n  %_saved{0} = alloca ptr",
+                    local.index()
+                )
+                .expect("writing to a string cannot fail");
                 continue;
             }
             let spelled = self.spell(ty);

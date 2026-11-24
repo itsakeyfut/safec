@@ -2128,7 +2128,13 @@ impl Checker<'_> {
             Expr::Cast { ty, operand, .. } => {
                 matches!(ast.ty(ty), Type::Integer { .. }) && known(operand)
             }
-            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => true,
+            // A `sizeof` asked here has no value, which is one of a variable
+            // length array, sized when it runs: no constant at all (6.6 p6
+            // excepts it), rather than one with an undefined value (#1209).
+            // Mutation: answer `true`;
+            // `a_sizeof_of_a_variable_length_array_is_no_constant` says its
+            // `static` initializer overflows.
+            Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => false,
             Expr::Conditional {
                 condition,
                 then,
@@ -2894,6 +2900,25 @@ impl Checker<'_> {
                     .with_note("C17 6.5.3.4 p1"),
             );
             return None;
+        }
+        // **A variable length array is sized when it runs** (C17 6.5.3.4
+        // p2, #1209): an array whose length is no constant and whose element
+        // has a size, so `sizeof` has `size_t`'s type and no value here, and
+        // the lowering multiplies the length it holds by the element's size.
+        // Mutation: refuse it as before; the run of
+        // `a_variable_length_array_is_sized_when_declared` fails, its
+        // `sizeof` refused with `SC0304`. Mutation: drop the element's
+        // size from the test; `a_sizeof_of_a_variable_length_array_is_no_constant`
+        // loses its refusal of `sizeof` over `int[n][n]`.
+        if let Type::Array {
+            element,
+            length: Some(length),
+            ..
+        } = *ast.ty(ty)
+        {
+            if self.values[length.index()].is_none() && self.bytes_of(ast, element).is_some() {
+                return Some(self.integer_type(ast, self.target.size_type()));
+            }
         }
         let Some(bytes) = self.bytes_of(ast, ty) else {
             diagnostics.report(

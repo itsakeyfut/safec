@@ -1,8 +1,8 @@
 error[SC0304]: cannot compile something of type `int[n]` yet
    ╭─[ a_for_that_cannot_be_lowered_leaves_no_scope_open.c:2:10 ]
    │
- 2 │     for (int a[n]; 0;) {
-   │          ────┬───  
-   │              ╰───── declared here
+ 2 │     for (int a[n][n]; 0;) {
+   │          ─────┬─────  
+   │               ╰─────── declared here
 ───╯
-  = note: the integer types, `void`, structs, and pointers to them and arrays of them with a constant length are all this compiler holds so far
+  = note: the integer types, `void`, structs, pointers to them, arrays of them with a constant length, and a variable length array of them declared as an object are all this compiler holds so far

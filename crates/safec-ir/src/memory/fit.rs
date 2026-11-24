@@ -761,7 +761,7 @@ mod tests {
         let char = unit.push_type(Ty::CHAR);
         let pair = unit.push_type(Ty::Array {
             element: int,
-            length: 2,
+            length: crate::ir::Length::Constant(2),
         });
         let ptr = unit.push_type(Ty::Pointer(int));
         let mut function = Function::new(Span::new(file, 0, 1), int, []);

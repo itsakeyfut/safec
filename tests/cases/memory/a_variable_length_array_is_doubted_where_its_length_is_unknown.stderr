@@ -1,0 +1,50 @@
+error[SC0418]: this may make a variable length array of no elements or of a negative count
+   ╭─[ a_variable_length_array_is_doubted_where_its_length_is_unknown.c:2:5 ]
+   │
+ 2 │     int a[n];
+   │     ────┬───  
+   │         ╰───── nothing shows its length is above zero, which C17 6.7.6.2 p5 asks
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: give the array a constant length, or allocate it with `malloc`
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_variable_length_array_is_doubted_where_its_length_is_unknown.c:3:5 ]
+   │
+ 3 │     a[0] = 1;
+   │     ────┬───  
+   │         ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_variable_length_array_is_doubted_where_its_length_is_unknown.c:4:5 ]
+   │
+ 4 │     return a[0];
+   │     ──────┬─────  
+   │           ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0418]: this may make a variable length array of no elements or of a negative count
+   ╭─[ a_variable_length_array_is_doubted_where_its_length_is_unknown.c:8:5 ]
+   │
+ 8 │     int a[n];
+   │     ────┬───  
+   │         ╰───── nothing shows its length is above zero, which C17 6.7.6.2 p5 asks
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: give the array a constant length, or allocate it with `malloc`
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_variable_length_array_is_doubted_where_its_length_is_unknown.c:9:5 ]
+   │
+ 9 │     a[n] = 1;
+   │     ────┬───  
+   │         ╰───── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

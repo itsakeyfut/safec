@@ -1,0 +1,58 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @sized(i32 %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca i32
+  %_3 = alloca i64
+  %_4 = alloca ptr
+  %_saved4 = alloca ptr
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca i64
+  %_8 = alloca i32
+  %_9 = alloca i32
+  store i32 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_2
+  %t0 = load i32, ptr %_1
+  %t1 = sext i32 %t0 to i64
+  store i64 %t1, ptr %_3
+  %t2 = call ptr @llvm.stacksave.p0()
+  store ptr %t2, ptr %_saved4
+  %t3 = load i64, ptr %_3
+  %t4 = alloca i8, i64 %t3, align 16
+  store ptr %t4, ptr %_4
+  %t5 = load ptr, ptr %_4
+  store ptr %t5, ptr %_5
+  %t6 = load ptr, ptr %_5
+  store i8 1, ptr %t6
+  %t7 = load ptr, ptr %_4
+  store ptr %t7, ptr %_6
+  %t8 = load i64, ptr %_3
+  %t9 = mul i64 %t8, 1
+  store i64 %t9, ptr %_7
+  %t10 = load i64, ptr %_7
+  %t11 = trunc i64 %t10 to i32
+  store i32 %t11, ptr %_8
+  %t12 = load ptr, ptr %_6
+  %t13 = load i8, ptr %t12
+  %t14 = sext i8 %t13 to i32
+  %t15 = load i32, ptr %_8
+  %t16 = add nsw i32 %t14, %t15
+  store i32 %t16, ptr %_9
+  %t17 = load i32, ptr %_9
+  store i32 %t17, ptr %_2
+  %t18 = load ptr, ptr %_saved4
+  call void @llvm.stackrestore.p0(ptr %t18)
+  %t19 = load i32, ptr %_2
+  store i32 %t19, ptr %_0
+  %t20 = load i32, ptr %_0
+  ret i32 %t20
+}
+
+declare ptr @llvm.stacksave.p0()
+declare void @llvm.stackrestore.p0(ptr)

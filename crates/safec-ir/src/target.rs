@@ -383,6 +383,19 @@ impl Target {
         u64::from(bits / self.character.bits())
     }
 
+    /// The least alignment a variable length array's storage is given
+    /// here, whatever its element asks, or `None` where it is its element's
+    /// (#1209).
+    ///
+    /// Measured with `clang 22.1.8 --target=<triple> -S -emit-llvm -O0` on
+    /// `char a[n]`, `double d[n]` and arrays of structs: `align 16` on every
+    /// one for the three `x86_64` triples and `wasm32`, and the element's
+    /// own alignment on `aarch64`, `armv7` and `i686`. C asks neither; a
+    /// program that loads sixteen bytes at a time from one is what sees it.
+    pub fn variable_array_align(self) -> Option<u64> {
+        (self.triple.starts_with("x86_64-") || self.triple.starts_with("wasm32-")).then_some(16)
+    }
+
     /// How many bits a pointer takes here: what an object holding one is
     /// worth when the memory check asks whether an access fits it. See
     /// ADR-0060.

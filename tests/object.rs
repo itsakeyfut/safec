@@ -1293,7 +1293,7 @@ int main(void) {
 }
 
 int f(int n) {
-    int xs[n];
+    int xs[n][n];
     return 0;
 }
 ",
@@ -1595,7 +1595,7 @@ fn a_unit_the_frontend_reported_on_never_reaches_clang() {
     let scratch = Scratch::new("reported_on");
     scratch.source(
         "array.c",
-        "int f(int n) {\n    int xs[n];\n    return 0;\n}\n\nint main(void) {\n    return f(1);\n}\n",
+        "int f(int n) {\n    int xs[n][n];\n    return 0;\n}\n\nint main(void) {\n    return f(1);\n}\n",
     );
 
     for kind in ["object", "executable"] {
