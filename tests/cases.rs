@@ -61,11 +61,16 @@ cases! {
         // member read assigns nothing, are `SC0411`, and
         // `assigned_on_one_arm` is doubted on its false edge. A member
         // written is an assignment performed, so `one_member_written` and
-        // `written_on_both_arms` are silent, and so are `address_taken` and
-        // `member_address_taken`, which p2 does not cover. Mutations in
+        // `written_on_both_arms` are silent, and so are `address_taken`,
+        // `member_address_taken` and `address_unused`, which p2 does not
+        // cover, `integers`, which holds no pointer, and `copied_on`, each
+        // copy filling what the next one reads. Mutations in
         // `memory::assigned`: watch no struct, and the first six go silent;
-        // count the lowering's own address of `t` as the program's, and the
-        // same; count only a whole write, and `one_member_written` reports;
+        // count no address as the lowering's (`generated`), and the same;
+        // count every address as the lowering's, and `address_unused`
+        // reports; watch a struct holding no pointer, and `integers`
+        // reports; count no copy as a write, and `copied_on` reports; count
+        // only a whole write, and `one_member_written` reports;
         // count a member's address as a write, and `member_read_first` goes
         // silent; follow a copy of a member's address as if it stayed in
         // the lowering's temporary, and `member_address_taken` reports; ask

@@ -12,6 +12,10 @@ struct O {
     int *q;
 };
 
+struct I {
+    int a;
+};
+
 void g(struct S s);
 
 void copied(void) {
@@ -80,4 +84,22 @@ void assigned_on_one_arm(int c, struct S v) {
     if (c)
         t = v;
     struct S u = t;
+}
+
+void integers(void) {
+    struct I t;
+    struct I u = t;
+}
+
+void address_unused(void) {
+    struct S t;
+    (void)&t;
+    struct S u = t;
+}
+
+void copied_on(struct S *_Nonnull src) {
+    struct S a, b, c;
+    a = *src;
+    b = a;
+    c = b;
 }
