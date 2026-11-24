@@ -1402,6 +1402,9 @@ impl Lowering<'_> {
                 return;
             };
             let mut declared = Function::declaration_with_parameters(name, returns, lowered);
+            if !self.standing_prototyped(name, &parameters) {
+                declared = declared.unprototyped();
+            }
             // **And at which levels each parameter points at `const`**, as a
             // definition's are, so a call to a body this unit does not have
             // asks what it hands below the first level by the same type
@@ -1421,6 +1424,24 @@ impl Lowering<'_> {
             let id = self.unit.push_function(declared);
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
+        }
+    }
+
+    /// Whether `name`'s standing declaration declares its parameters, or
+    /// `own`, the list in hand, where there is no standing function.
+    ///
+    /// **The standing one, as the signature is**: `int f(); int f(int);`
+    /// is one function with a prototype, and a pointer to it is converted
+    /// as one. Mutation: answer `true`; `unprototyped_designator` in
+    /// `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+    /// is reported as converted.
+    fn standing_prototyped(&self, name: Span, own: &Parameters) -> bool {
+        let standing = self.resolution.declared(self.sources.snippet(name));
+        match standing.map(|ty| self.ast.ty(ty)) {
+            Some(Type::Function { parameters, .. }) => {
+                matches!(parameters, Parameters::Prototype(_))
+            }
+            _ => matches!(own, Parameters::Prototype(_)),
         }
     }
 
@@ -2092,6 +2113,9 @@ impl Lowering<'_> {
         let returns_const_levels = self.const_levels(returns);
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
         let mut function = Function::with_parameters(name, returns, lowered);
+        if !self.standing_prototyped(name, &parameters) {
+            function = function.unprototyped();
+        }
         if returns_reads_only {
             function.mark_returns_reads_only();
         }
@@ -4291,10 +4315,13 @@ impl Lowering<'_> {
                         tasks.push(Task::Value(argument));
                     }
                 }
-                // **A pointer called through is evaluated first**, a value
+                // **A pointer called through is lowered first**, a value
                 // below the arguments that the call takes back off when it
-                // finishes (#1212). C17 6.5.2.2 p10 leaves it unsequenced
-                // with them, so first is one order C allows.
+                // finishes (#1212). A pointer in a place is that place, read
+                // where the call reads it, after the arguments, as an operand
+                // of `g + f()` is read after `f()`: C17 6.5.2.2 p10 leaves the
+                // order of the callee and the arguments unspecified, so
+                // either is one C allows.
                 if self.designated(callee).is_none() && !self.names_a_refused_function(callee) {
                     tasks.push(Task::Value(callee));
                 }

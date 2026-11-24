@@ -72,6 +72,22 @@ cases! {
         // `_Nonnull` pass, and `nonnull_address_taken` does; skip
         // `converted_function`, and `converted` does.
         a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function pointer's type is asked where it is converted and where
+        // a call through it cannot say what it takes (#1212):
+        // `through_an_unprototyped_pointer` is `SC0421` at the call (skip
+        // `called_unprototyped`, and it goes silent);
+        // `promoted_through_unprototyped` at the conversion, since `short`
+        // is promoted (C17 6.7.6.3 p15; answer `true` for `()` in
+        // `compatible_functions`, and it goes silent);
+        // `read_through_a_pointer_to_a_pointer` where `void *` becomes a
+        // pointer to a function pointer (answer `false` in
+        // `reaches_a_function`, and it goes silent);
+        // and the four casts below it. `unprototyped_designator` and
+        // `same_type` are silent: `()` against a prototype whose parameters
+        // promotion leaves alone is compatible, and the standing
+        // declaration is the one asked (answer `true` in
+        // `standing_prototyped`, and `f` is reported).
+        a_function_pointer_s_type_is_asked_where_it_is_converted_or_called: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,

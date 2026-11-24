@@ -321,9 +321,12 @@ fn compared_apart(
 /// Where `element` converts a pointer to a function into a pointer of a type
 /// it is not compatible with, or another pointer into a pointer to a
 /// function: a copy whose destination's type and operand's type are pointers
-/// and differ in that way (#1212). Two function types are compatible where
-/// they return one type, take one list of parameters or say nothing of them
-/// (`()`, C17 6.7.6.3 p15), and agree on `...`. See ADR-0125.
+/// and differ in that way (#1212). Two function types are compatible as
+/// [`compatible_functions`] says. A pointer through which a function type is
+/// reached below the first level, `int (**)(int)`, is converted into only
+/// from its own type, since a pointer to a function pointer read as another
+/// type is a call through the wrong type that no conversion of the function
+/// pointer itself shows. See ADR-0125.
 fn converted_function(
     unit: &TranslationUnit,
     function: &Function,
@@ -335,53 +338,120 @@ fn converted_function(
     let Rvalue::Use(operand) = &operation.value else {
         return None;
     };
-    // What a pointer type points at, where it is a pointer: the function's
-    // signature for a pointer to a function, `None` for any other pointer.
-    let pointee = |ty: TyId| -> Option<Option<crate::ir::Signature>> {
-        match unit.ty(ty) {
-            Ty::Pointer(pointee) => Some(match unit.ty(pointee) {
-                Ty::Function(signature) => Some(unit.signature(signature).clone()),
-                Ty::Integer { .. }
-                | Ty::Void
-                | Ty::Pointer(_)
-                | Ty::Array { .. }
-                | Ty::Struct(_) => None,
-            }),
-            Ty::Integer { .. } | Ty::Void | Ty::Array { .. } | Ty::Struct(_) | Ty::Function(_) => {
-                None
-            }
-        }
+    let pointee = |ty: TyId| -> Option<Pointee> {
+        let Ty::Pointer(pointee) = unit.ty(ty) else {
+            return None;
+        };
+        Some(match unit.ty(pointee) {
+            Ty::Function(signature) => Pointee::Function(unit.signature(signature).clone()),
+            _ if reaches_a_function(unit, pointee) => Pointee::Below(ty),
+            _ => Pointee::Data,
+        })
     };
     let from = match operand {
         Operand::Copy(place) => pointee(unit.place_ty(function, place)?)?,
-        // A designator's own type, as `TranslationUnit::function_pointer`
-        // builds it.
-        Operand::Function(id) => {
-            let declared = unit.function(*id);
-            Some(crate::ir::Signature {
-                returns: declared.local(declared.return_place()),
-                parameters: declared
-                    .parameters()
-                    .enumerate()
-                    .map(|(index, local)| (declared.local(local), declared.passes(index)))
-                    .collect(),
-                prototyped: declared.prototyped(),
-                variadic: false,
-            })
-        }
+        Operand::Function(id) => Pointee::Function(unit.designator_signature(*id)),
         Operand::Constant(_) => return None,
     };
     let into = pointee(unit.place_ty(function, &operation.place)?)?;
     let compatible = match (&from, &into) {
-        (None, None) => true,
-        (Some(from), Some(into)) => {
-            from.returns == into.returns
-                && from.variadic == into.variadic
-                && (!from.prototyped || !into.prototyped || from.parameters == into.parameters)
+        (Pointee::Data, Pointee::Data) => true,
+        (Pointee::Function(from), Pointee::Function(into)) => {
+            compatible_functions(unit, from, into)
         }
-        (Some(_), None) | (None, Some(_)) => false,
+        // Types are interned, so two equal pointer types are one id.
+        (Pointee::Below(from), Pointee::Below(into)) => from == into,
+        // Into a pointer to data, `void *` the common case, nothing is
+        // called through: the conversion back is where a type is chosen.
+        (Pointee::Below(_), Pointee::Data) => true,
+        (Pointee::Data | Pointee::Function(_) | Pointee::Below(_), _) => false,
     };
     (!compatible).then(|| operation.origin.span())
+}
+
+/// Where `terminator` calls through a pointer to a function whose parameters
+/// its type does not declare, `int (*)()` (#1212).
+fn called_unprototyped(
+    unit: &TranslationUnit,
+    function: &Function,
+    terminator: &Terminator,
+) -> Option<Span> {
+    let Terminator::Call {
+        callee: crate::ir::Called::Through(Operand::Copy(pointer)),
+        origin,
+        ..
+    } = terminator
+    else {
+        return None;
+    };
+    let Ty::Pointer(pointee) = unit.ty(unit.place_ty(function, pointer)?) else {
+        return None;
+    };
+    let Ty::Function(signature) = unit.ty(pointee) else {
+        return None;
+    };
+    (!unit.signature(signature).prototyped).then(|| origin.span())
+}
+
+/// What a pointer converted by [`converted_function`] points at.
+enum Pointee {
+    /// A function of this type.
+    Function(crate::ir::Signature),
+    /// Something through which a function type is reached, by pointers and
+    /// array elements: the converted pointer's own type.
+    Below(TyId),
+    /// Anything else.
+    Data,
+}
+
+/// Whether a function type is reached from `ty` through pointers and array
+/// elements.
+///
+/// Mutation: answer `false`; `read_through_a_pointer_to_a_pointer` in
+/// `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+/// goes silent.
+fn reaches_a_function(unit: &TranslationUnit, ty: TyId) -> bool {
+    match unit.ty(ty) {
+        Ty::Function(_) => true,
+        Ty::Pointer(below) => reaches_a_function(unit, below),
+        Ty::Array { element, .. } => reaches_a_function(unit, element),
+        Ty::Integer { .. } | Ty::Void | Ty::Struct(_) => false,
+    }
+}
+
+/// Whether two function types are compatible, C17 6.7.6.3 p15: one return
+/// type, and parameters that agree where both are declared. Where one says
+/// nothing of them, `()`, the other may take no `...` and no parameter the
+/// default argument promotions change, since a call through `()` passes
+/// each argument promoted.
+///
+/// Mutation: answer `true` where one is `()`; `promoted_through_unprototyped`
+/// in `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+/// goes silent.
+fn compatible_functions(
+    unit: &TranslationUnit,
+    from: &crate::ir::Signature,
+    into: &crate::ir::Signature,
+) -> bool {
+    let unchanged_by_promotion = |signature: &crate::ir::Signature| {
+        !signature.variadic
+            && signature.parameters.iter().all(|&(ty, _)| {
+                !matches!(
+                    unit.ty(ty),
+                    Ty::Integer {
+                        rank: crate::ir::Rank::Char | crate::ir::Rank::Short,
+                        ..
+                    }
+                )
+            })
+    };
+    from.returns == into.returns
+        && match (from.prototyped, into.prototyped) {
+            (true, true) => from.variadic == into.variadic && from.parameters == into.parameters,
+            (false, true) => unchanged_by_promotion(into),
+            (true, false) => unchanged_by_promotion(from),
+            (false, false) => true,
+        }
 }
 
 /// Whether the pointer `local` holds only ever moved as its own type, so a
@@ -630,6 +700,11 @@ pub enum Kind {
     /// 6.3.2.3 p8), and this check does not follow which function a pointer
     /// holds. Always `Unknown`, at the conversion (#1212). See ADR-0125.
     FunctionConverted,
+    /// A call through a pointer to a function whose type declares no
+    /// parameters, `int (*)()`: whether the arguments agree with the function
+    /// it reaches is undefined to get wrong (C17 6.5.2.2 p6) and no type
+    /// says. Always `Unknown`, at the call (#1212). See ADR-0125.
+    CalledUnprototyped,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1606,6 +1681,25 @@ fn findings_within(
                     func,
                 );
                 analysis.element(function, element, &mut known);
+            }
+
+            // A call through a pointer to `()`: nothing says what the
+            // function it reaches takes, so whether the arguments agree
+            // with it is a question no type answers (C17 6.5.2.2 p6).
+            // Mutation: skip this; `through_an_unprototyped_pointer` in
+            // `a_function_pointer_s_type_is_asked_where_it_is_converted_or_called`
+            // goes silent.
+            if let Some(at) = called_unprototyped(unit, function, &block.terminator) {
+                findings.push(Finding {
+                    function: func,
+                    kind: Kind::CalledUnprototyped,
+                    conclusion: Conclusion::Unknown,
+                    at,
+                    local: None,
+                    freed: None,
+                    made: None,
+                    unproven: None,
+                });
             }
 
             // Before the call runs, as every question about what it is

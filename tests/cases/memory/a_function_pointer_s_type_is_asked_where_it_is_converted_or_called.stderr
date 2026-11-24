@@ -1,0 +1,70 @@
+error[SC0421]: this calls through a pointer whose type does not declare the function's parameters
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:16:12 ]
+    │
+ 16 │     return f();
+    │            ─┬─  
+    │             ╰─── a call whose arguments do not agree with the function it reaches is undefined, and no type says what it takes
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: declare the parameters in the pointer's type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:20:18 ]
+    │
+ 20 │     int (*f)() = (int (*)())narrow;
+    │                  ────────┬────────  
+    │                          ╰────────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:34:12 ]
+    │
+ 34 │     int (**pp)(int *) = v;
+    │            ───────┬──────  
+    │                   ╰──────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:43:22 ]
+    │
+ 43 │     int (*f)(long) = (int (*)(long))one;
+    │                      ─────────┬────────  
+    │                               ╰────────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:48:21 ]
+    │
+ 48 │     int (*f)(int) = (int (*)(int))p;
+    │                     ───────┬───────  
+    │                            ╰───────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:55:22 ]
+    │
+ 55 │     long (*h)(int) = (long (*)(int))g;
+    │                      ────────┬───────  
+    │                              ╰───────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_function_pointer_s_type_is_asked_where_it_is_converted_or_called.c:62:26 ]
+    │
+ 62 │     int (*h)(int, int) = (int (*)(int, int))g;
+    │                          ──────────┬─────────  
+    │                                    ╰─────────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type

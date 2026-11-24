@@ -83,6 +83,32 @@ fn a_pointer_is_a_pointer_and_an_array_of_pointers_is_not() {
     }
 }
 
+/// One signature pushed twice is one id, so two function types compare as
+/// their ids do, as two types do, and one that differs is another id.
+///
+/// Mutation: push every signature as a new one in `push_signature`; the
+/// first assertion fails.
+#[test]
+fn a_signature_pushed_twice_is_one_function_type() {
+    let mut unit = TranslationUnit::new(a_target());
+    let int = unit.push_type(Ty::INT);
+    let signature = Signature {
+        returns: int,
+        parameters: vec![(int, Passes::Value)],
+        prototyped: true,
+        variadic: false,
+    };
+    let first = unit.push_signature(signature.clone());
+    assert_eq!(unit.push_signature(signature.clone()), first);
+    assert_ne!(
+        unit.push_signature(Signature {
+            prototyped: false,
+            ..signature
+        }),
+        first
+    );
+}
+
 /// What a type is worth is the target's answer, and `void` has none.
 ///
 /// Mutation: answer `Some` for a pointer or for `void`. The last two

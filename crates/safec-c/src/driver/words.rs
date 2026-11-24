@@ -994,6 +994,14 @@ pub(super) fn memory_finding(
             "a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds",
             "keep the pointer the function's own type, or call through a pointer of that type",
         ),
+        // The conversion's code, since it is the same question: whether
+        // the function a pointer reaches has the type it is called as.
+        (Kind::CalledUnprototyped, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            FUNCTION_CONVERTED,
+            "this calls through a pointer whose type does not declare the function's parameters".to_owned(),
+            "a call whose arguments do not agree with the function it reaches is undefined, and no type says what it takes",
+            "declare the parameters in the pointer's type",
+        ),
         // Built only `Unknown`, at the subtraction, as the rows above are.
         // The comparison's code, since it is the same question (#638).
         (Kind::SubtractedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (

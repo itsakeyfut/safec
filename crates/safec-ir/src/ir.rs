@@ -710,8 +710,8 @@ pub enum Operand {
     /// a target's width, for the reason [`Ty`] gives.
     Constant(i128),
     /// The address of a function: a function designator converted to a
-    /// pointer to it (C17 6.3.2.1 p4), whose type is
-    /// [`TranslationUnit::function_pointer`]. A function is no object, so
+    /// pointer to it (C17 6.3.2.1 p4), to the function type
+    /// [`TranslationUnit::designator_signature`] gives. A function is no object, so
     /// this names nothing the memory check follows. See ADR-0125.
     Function(FuncId),
 }
@@ -2273,12 +2273,12 @@ impl TranslationUnit {
         &self.signatures[id.index()]
     }
 
-    /// The type of a pointer to `function`, which is what
-    /// [`Operand::Function`] is: built from its declaration, so a call
-    /// through it passes what a direct call would.
-    pub fn function_pointer(&mut self, function: FuncId) -> TyId {
+    /// The function type of `function`, which [`Operand::Function`] points
+    /// at: built from its declaration, so a pointer to it is converted as
+    /// the function it names was declared.
+    pub fn designator_signature(&self, function: FuncId) -> Signature {
         let declared = &self.functions[function.0 as usize];
-        let signature = Signature {
+        Signature {
             returns: declared.locals[0],
             parameters: declared
                 .parameters()
@@ -2287,10 +2287,7 @@ impl TranslationUnit {
                 .collect(),
             prototyped: declared.prototyped,
             variadic: false,
-        };
-        let id = self.push_signature(signature);
-        let pointee = self.push_type(Ty::Function(id));
-        self.push_type(Ty::Pointer(pointee))
+        }
     }
 
     /// Lay out a struct of these members, in order, and say which it is.
