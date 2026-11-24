@@ -907,17 +907,52 @@ impl Emitter<'_> {
     /// A function's address, as the pointer type `want` names: its symbol,
     /// which LLVM's `ptr` holds as it is (#1212).
     fn function_address(&mut self, id: FuncId, want: TyId) -> Refuses<String> {
+        if !self.unit.ty(want).is_pointer() {
+            return self
+                .refuse("a function's address converted to something that is not a pointer");
+        }
+        self.symbol(id)
+    }
+
+    /// A function's symbol, which is its address.
+    fn symbol(&mut self, id: FuncId) -> Refuses<String> {
         let function = self.unit.function(id);
         // **One left out of the module has no symbol to take**: see
         // `Self::function`, which declares nothing for it.
         if !function.is_defined() && takes_an_incomplete_struct(self.unit, function) {
             return self.refuse("the address of a function whose struct parameter is incomplete");
         }
-        if !self.unit.ty(want).is_pointer() {
-            return self
-                .refuse("a function's address converted to something that is not a pointer");
-        }
         Ok(self.name(function))
+    }
+
+    /// An operand compared as an address: a pointer's value, a function's
+    /// symbol, or the null pointer constant. A function's address has no
+    /// pointer type in the unit to be read at, so `!g` and `g == h` ask
+    /// this rather than [`Self::operand`] (#1212). Mutation: answer a
+    /// function as `Self::operand` does; `a_function_pointer_is_stored_called_and_compared`
+    /// is refused.
+    fn compared_address(
+        &mut self,
+        function: &Function,
+        operand: &Operand,
+        out: &mut String,
+    ) -> Refuses<String> {
+        match operand {
+            Operand::Function(id) => self.symbol(*id),
+            Operand::Constant(0) => Ok("null".to_owned()),
+            Operand::Constant(value) => {
+                self.refuse(format!("the constant {value} compared with a pointer"))
+            }
+            Operand::Copy(_) => match self.pointer(function, operand) {
+                Some(ty) => self.operand(function, operand, ty, out),
+                None => self.refuse("something that is not a pointer compared with one"),
+            },
+        }
+    }
+
+    /// Whether `operand` is an address: a pointer, or a function's.
+    fn is_address(&self, function: &Function, operand: &Operand) -> bool {
+        matches!(operand, Operand::Function(_)) || self.pointer(function, operand).is_some()
     }
 
     /// A constant, as the type `want` names.
@@ -982,11 +1017,9 @@ impl Emitter<'_> {
         // 0 for it because nothing in its model is a null pointer; that is a
         // limit of the model rather than a disagreement about C, and a
         // compiled program has real null pointers to compare against.
-        if op == UnOp::Not {
-            if let Some(ty) = self.pointer(function, operand) {
-                let value = self.operand(function, operand, ty, out)?;
-                return self.widen(format!("icmp eq ptr {value}, null"), to, out);
-            }
+        if op == UnOp::Not && self.is_address(function, operand) {
+            let value = self.compared_address(function, operand, out)?;
+            return self.widen(format!("icmp eq ptr {value}, null"), to, out);
         }
 
         let wanted = self.spell(to);
@@ -1183,10 +1216,7 @@ impl Emitter<'_> {
         // `getelementptr` over the element's type is what scales it, so no
         // width reaches `ir::Ty` (ADR-0013). The interpreter still refuses
         // every one, which is its own change.
-        let pointer = self
-            .pointer(function, lhs)
-            .or_else(|| self.pointer(function, rhs));
-        if let Some(ty) = pointer {
+        if self.is_address(function, lhs) || self.is_address(function, rhs) {
             let predicate = match op {
                 BinOp::Eq => "eq",
                 BinOp::Ne => "ne",
@@ -1208,8 +1238,8 @@ impl Emitter<'_> {
                         .refuse("arithmetic on a pointer other than moving it by an integer");
                 }
             };
-            let left = self.operand(function, lhs, ty, out)?;
-            let right = self.operand(function, rhs, ty, out)?;
+            let left = self.compared_address(function, lhs, out)?;
+            let right = self.compared_address(function, rhs, out)?;
             return self.widen(format!("icmp {predicate} ptr {left}, {right}"), to, out);
         }
 
@@ -1608,7 +1638,7 @@ impl Emitter<'_> {
         // **A function this unit names, or the one a pointer points at**,
         // read as one shape so both cross the call as the target's C ABI
         // says (#1212). A call through a pointer calls the pointer's value,
-        // read before the arguments are passed, and its type is the
+        // read here, after every argument was evaluated, and its type is the
         // pointee's signature, which the lowering lays out as it lays out a
         // function's own parameters.
         let (name, callable) = match callee {

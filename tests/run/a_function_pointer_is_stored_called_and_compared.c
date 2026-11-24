@@ -29,6 +29,25 @@ long long sum(struct big b) {
     return b.a + b.b + b.c;
 }
 
+int shadowed(int x) {
+    return x + 100;
+}
+
+// A local and a static named like a function are the local and the static.
+int shadows(void) {
+    int wrong = 0;
+    {
+        int (*shadowed)(int) = twice;
+        wrong += shadowed(1) == 2 ? 0 : 1;
+    }
+    {
+        static int (*shadowed)(int);
+        shadowed = twice;
+        wrong += shadowed(2) == 4 ? 0 : 1;
+    }
+    return wrong;
+}
+
 int apply(int (*f)(int), int v) {
     return f(v);
 }
@@ -69,5 +88,16 @@ int main(void) {
 
     // A designator called through `*` and `&`.
     wrong += (*twice)(1) + (&twice)(1) == 4 ? 0 : 1;
+
+    // Designators compared and tested as the addresses they are.
+    wrong += twice == shadowed ? 1 : 0;
+    wrong += twice != shadowed ? 0 : 1;
+    wrong += twice == 0 ? 1 : 0;
+    wrong += 0 != twice ? 0 : 1;
+    wrong += !twice ? 1 : 0;
+    wrong += twice && f ? 0 : 1;
+    wrong += twice || 0 ? 0 : 1;
+
+    wrong += shadows();
     return wrong;
 }
