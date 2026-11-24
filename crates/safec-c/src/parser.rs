@@ -270,6 +270,10 @@ enum Specified {
     /// C17 6.7 p2 allows: `struct S;` and `struct S { int x; };`. The type
     /// is what they named.
     Tag(TypeId),
+    /// A `:` where a member's declarator would be, after specifiers of this
+    /// type: an unnamed bit-field, `int : 3;` (C17 6.7.2.1 p1), whose width
+    /// is next.
+    Unnamed(TypeId),
 }
 
 /// What a declarator declares, which is what decides whether a nullability
@@ -1066,6 +1070,10 @@ impl Parser<'_> {
 
         let declared = match self.declared(Declares::FileScope, diagnostics) {
             Some(Specified::Named(declared)) => declared,
+            // Asked for only in a member list, which this is not.
+            Some(Specified::Unnamed(_)) => {
+                unreachable!("an unnamed bit-field outside a member list")
+            }
             Some(Specified::Tag(specified)) => {
                 // A hatch is a function definition, and this is not one.
                 if let Some(attribute) = attribute {
@@ -1243,8 +1251,7 @@ impl Parser<'_> {
         }
         // A bit-field with no name, `int : 3;`, before a name is asked for.
         if declares == Declares::Member && self.check(TokenKind::Punct(Punct::Colon)) {
-            self.unread_bit_field(diagnostics);
-            return None;
+            return Some(Specified::Unnamed(base));
         }
         // Before asking for a name, so that `int;` is told what it is rather
         // than that a name is missing. `int *;` has a declarator and goes on,
@@ -1370,6 +1377,7 @@ impl Parser<'_> {
                     // The pointer a function declared at file scope returns,
                     // the one place besides a parameter `apply` allows one.
                     nullability: returns,
+                    width: None,
                 },
                 init,
                 span: own,
@@ -2046,6 +2054,7 @@ impl Parser<'_> {
                         written: base,
                         span: self.declaration_span(at, at, end, diagnostics),
                         nullability: None,
+                        width: None,
                     });
                     self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
                     continue;
@@ -2053,6 +2062,20 @@ impl Parser<'_> {
                 Specified::Tag(_) => {
                     self.declares_no_member(at, diagnostics);
                     return None;
+                }
+                Specified::Unnamed(base) => {
+                    let width = self.bit_width(diagnostics)?;
+                    let end = self.previous().span;
+                    members.push(Declaration {
+                        name: None,
+                        ty: base,
+                        written: base,
+                        span: self.declaration_span(at, at, end, diagnostics),
+                        nullability: None,
+                        width,
+                    });
+                    self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
+                    continue;
                 }
             };
             let Declared {
@@ -2068,6 +2091,7 @@ impl Parser<'_> {
                 // `typedef` here.
                 typedef: _,
             } = declared;
+            let width = self.bit_width(diagnostics)?;
             let end = self.previous().span;
             members.push(Declaration {
                 name: Some(name),
@@ -2075,10 +2099,12 @@ impl Parser<'_> {
                 written: ty,
                 span: self.declaration_span(start, declarator, end, diagnostics),
                 nullability: return_nullability,
+                width,
             });
             while self.eat(TokenKind::Punct(Punct::Comma)) {
                 let at = self.peek().span;
                 let (name, ty, returns) = self.named_declarator(at, base, declares, diagnostics)?;
+                let width = self.bit_width(diagnostics)?;
                 let end = self.previous().span;
                 members.push(Declaration {
                     name: Some(name),
@@ -2086,11 +2112,8 @@ impl Parser<'_> {
                     written: ty,
                     span: self.declaration_span(start, at, end, diagnostics),
                     nullability: returns,
+                    width,
                 });
-            }
-            if self.check(TokenKind::Punct(Punct::Colon)) {
-                self.unread_bit_field(diagnostics);
-                return None;
             }
             self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
         }
@@ -2111,15 +2134,15 @@ impl Parser<'_> {
         self.report_built(at, built, diagnostics);
     }
 
-    /// Refuse a bit-field, at its `:`: valid C, not read yet.
-    fn unread_bit_field(&mut self, diagnostics: &mut DiagnosticSink) {
-        self.report_noted(
-            UNREAD,
-            "a bit-field is not read yet",
-            "a bit-field's width",
-            "C17 6.7.2.1 p9 makes it valid; this compiler does not read one yet",
-            diagnostics,
-        );
+    /// A bit-field's width, `: constant-expression` (C17 6.7.2.1 p1), where
+    /// a `:` follows a member's declarator, and `None` where none does
+    /// (#1206). Read as a conditional expression, as a `case` label's is;
+    /// that it is a constant, and fits, is the type check's to say.
+    fn bit_width(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Option<ExprId>> {
+        if !self.eat(TokenKind::Punct(Punct::Colon)) {
+            return Some(None);
+        }
+        Some(Some(self.infix_from(CONDITIONAL, diagnostics)))
     }
 
     /// A declarator, and the derivations it applies to the base type.
@@ -2642,6 +2665,7 @@ impl Parser<'_> {
                 written,
                 span,
                 nullability,
+                width: None,
             });
 
             if !self.eat(TokenKind::Punct(Punct::Comma)) {
@@ -2937,6 +2961,10 @@ impl Parser<'_> {
 
         let declared = match self.declared(Declares::BlockScope, diagnostics) {
             Some(Specified::Named(declared)) => declared,
+            // Asked for only in a member list, which this is not.
+            Some(Specified::Unnamed(_)) => {
+                unreachable!("an unnamed bit-field outside a member list")
+            }
             Some(Specified::Tag(specified)) => {
                 self.advance();
                 let span = self.join(start, self.previous().span, diagnostics);

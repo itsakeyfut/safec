@@ -310,6 +310,11 @@ fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, o
     if let Some(written) = declaration.nullability {
         write!(out, " {}", written.specifier.spelling()).expect("writing to a string cannot fail");
     }
+    // A bit-field's width as written, after the type it narrows (#1206).
+    if let Some(width) = declaration.width {
+        write!(out, " : {:?}", quoted(sources, ast.expr(width).span()))
+            .expect("writing to a string cannot fail");
+    }
     out.push('\n');
 }
 

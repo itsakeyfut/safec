@@ -13,7 +13,7 @@
 
 use std::process::{Command, Stdio};
 
-use safec_ir::ir::{Rank, Sign, StructId, TranslationUnit, Ty, TyId};
+use safec_ir::ir::{Declared, Rank, Sign, StructId, TranslationUnit, Ty, TyId};
 use safec_ir::target::Target;
 
 /// One member's type, as both the C below and the IR spell it.
@@ -323,8 +323,8 @@ fn clang_layouts(triple: &str, shapes: &[Vec<Member>]) -> Option<Vec<(Vec<u64>, 
 }
 
 /// Mutation: place each member at the end of the one before it in
-/// `safec_ir::ir::lay_out`; this fails at the first shape with padding. Size
-/// a union as its first member in `lay_out_union`; this fails at the second
+/// `safec_ir::record::lay_out_itanium`; this fails at the first shape with padding. Size
+/// a union as its first member in `record::lay_out_union`; this fails at the second
 /// union.
 #[test]
 fn the_layout_of_every_struct_shape_is_clangs() {
@@ -361,6 +361,333 @@ fn the_layout_of_every_struct_shape_is_clangs() {
             assert_eq!(laid, offsets, "{triple}: offsets of {spelled:?}");
             assert_eq!(layout.size, size, "{triple}: size of {spelled:?}");
             assert_eq!(layout.align, align, "{triple}: alignment of {spelled:?}");
+        }
+    }
+}
+
+/// One member of a bit-field shape: its integer type's rank and sign, its
+/// width where it is a bit-field, and whether it is named.
+type BitMember = (Rank, Sign, Option<u64>, bool);
+
+/// The bit-field shapes, each a struct or a union, chosen for where the
+/// three packing conventions part (#1206): a bit-field that would straddle
+/// its type's unit, one of another type's size after it, a zero-width one
+/// with and without a unit open, an unnamed one, an ordinary member between
+/// bit-fields, `i686`'s `long long` aligned to 4 and taking 8, and unions of
+/// bit-fields, named and not.
+fn bit_shapes() -> Vec<(bool, Vec<BitMember>)> {
+    use Rank::{Char, Int, Long, LongLong, Short};
+    use Sign::{Signed, Unsigned};
+    let s = |members: Vec<BitMember>| (false, members);
+    let u = |members: Vec<BitMember>| (true, members);
+    vec![
+        s(vec![
+            (Int, Signed, Some(3), true),
+            (Int, Unsigned, Some(5), true),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (Int, Signed, Some(3), true),
+            (Char, Signed, None, true),
+        ]),
+        s(vec![
+            (Int, Signed, Some(30), true),
+            (Int, Signed, Some(5), true),
+        ]),
+        s(vec![
+            (Char, Signed, Some(3), true),
+            (Int, Signed, Some(7), true),
+            (Char, Signed, Some(2), true),
+        ]),
+        s(vec![
+            (Int, Signed, Some(3), true),
+            (Int, Signed, Some(0), false),
+            (Int, Signed, Some(4), true),
+        ]),
+        s(vec![
+            (Char, Signed, Some(3), true),
+            (Int, Signed, Some(0), false),
+            (Char, Signed, Some(4), true),
+        ]),
+        s(vec![
+            (Char, Signed, Some(1), true),
+            (Int, Signed, Some(3), false),
+            (Char, Signed, None, true),
+        ]),
+        s(vec![
+            (Short, Signed, Some(9), true),
+            (Short, Signed, Some(9), true),
+        ]),
+        s(vec![
+            (LongLong, Signed, Some(40), true),
+            (Int, Signed, Some(20), true),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (LongLong, Signed, Some(3), true),
+        ]),
+        s(vec![
+            (Int, Signed, Some(0), false),
+            (Char, Signed, Some(1), true),
+        ]),
+        s(vec![
+            (Char, Signed, Some(7), true),
+            (Short, Signed, Some(7), true),
+            (Int, Signed, Some(7), true),
+        ]),
+        s(vec![
+            (LongLong, Signed, Some(3), true),
+            (Char, Signed, None, true),
+        ]),
+        s(vec![
+            (Char, Signed, Some(2), true),
+            (Char, Signed, Some(0), false),
+            (Char, Signed, Some(3), true),
+            (Int, Signed, Some(0), false),
+            (Short, Signed, Some(1), true),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (Short, Signed, Some(4), false),
+            (Char, Signed, None, true),
+        ]),
+        s(vec![
+            (Int, Signed, Some(31), true),
+            (Char, Signed, Some(2), true),
+        ]),
+        s(vec![
+            (LongLong, Signed, Some(33), true),
+            (LongLong, Signed, Some(33), true),
+            (Char, Signed, None, true),
+        ]),
+        s(vec![
+            (Int, Unsigned, Some(1), true),
+            (LongLong, Signed, Some(1), true),
+            (Short, Signed, Some(1), true),
+        ]),
+        s(vec![
+            (Int, Signed, Some(5), true),
+            (Char, Signed, None, true),
+            (Int, Signed, Some(5), true),
+        ]),
+        s(vec![
+            (Long, Signed, Some(3), true),
+            (Int, Signed, Some(5), true),
+        ]),
+        s(vec![
+            (Char, Unsigned, Some(8), true),
+            (Char, Unsigned, Some(8), true),
+            (Char, Unsigned, Some(1), true),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (LongLong, Signed, Some(60), true),
+            (LongLong, Signed, Some(10), true),
+        ]),
+        s(vec![
+            (Short, Signed, None, true),
+            (LongLong, Signed, Some(48), true),
+            (Short, Signed, Some(15), true),
+        ]),
+        u(vec![
+            (Int, Signed, Some(3), true),
+            (Char, Signed, None, true),
+        ]),
+        u(vec![(Char, Signed, Some(3), true)]),
+        u(vec![
+            (LongLong, Signed, Some(3), true),
+            (Char, Signed, None, true),
+        ]),
+        u(vec![
+            (Char, Signed, None, true),
+            (Int, Signed, Some(3), false),
+        ]),
+        u(vec![
+            (Char, Signed, None, true),
+            (Int, Signed, Some(0), false),
+        ]),
+        u(vec![
+            (Short, Signed, Some(12), true),
+            (Char, Signed, Some(2), true),
+        ]),
+    ]
+}
+
+/// The C spelling of an integer type.
+fn integer(rank: Rank, sign: Sign) -> String {
+    let name = match rank {
+        Rank::Char => "char",
+        Rank::Short => "short",
+        Rank::Int => "int",
+        Rank::Long => "long",
+        Rank::LongLong => "long long",
+    };
+    match sign {
+        Sign::Unsigned => format!("unsigned {name}"),
+        _ => name.to_owned(),
+    }
+}
+
+/// One shape as `clang` lays it out: each named member's first bit and
+/// its width where it is a bit-field, and the whole's size and alignment.
+type BitLayout = (Vec<(u64, Option<u64>)>, u64, u64);
+
+/// What `clang`'s record layout dump says each bit-field shape is on
+/// `triple`, in the order given.
+fn clang_bit_layouts(triple: &str, shapes: &[(bool, Vec<BitMember>)]) -> Vec<BitLayout> {
+    let mut source = String::new();
+    for (n, (union, members)) in shapes.iter().enumerate() {
+        let keyword = if *union { "union" } else { "struct" };
+        source.push_str(&format!("{keyword} B{n} {{"));
+        for (k, &(rank, sign, width, named)) in members.iter().enumerate() {
+            let name = if named {
+                format!(" m{k}")
+            } else {
+                String::new()
+            };
+            let width = width.map_or(String::new(), |width| format!(" : {width}"));
+            source.push_str(&format!(" {}{name}{width};", integer(rank, sign)));
+        }
+        source.push_str(&format!(" }};\nint z{n} = sizeof({keyword} B{n});\n"));
+    }
+    let dir = std::env::temp_dir().join(format!("safec_bits_{triple}_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the temporary directory is writable");
+    let file = dir.join("bits.c");
+    std::fs::write(&file, source).expect("the temporary directory is writable");
+    let output = Command::new("clang")
+        .args([
+            "-std=c17",
+            "-w",
+            "-fsyntax-only",
+            "-Xclang",
+            "-fdump-record-layouts-complete",
+        ])
+        .arg(format!("--target={triple}"))
+        .arg(&file)
+        .output()
+        .expect("clang runs");
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+        output.status.success(),
+        "clang read the bit-field shapes for {triple}"
+    );
+    let dump = String::from_utf8_lossy(&output.stdout);
+    let mut found: Vec<Option<BitLayout>> = vec![None; shapes.len()];
+    for block in dump.split("*** Dumping AST Record Layout").skip(1) {
+        let mut lines = block.trim().lines();
+        let header = lines.next().unwrap_or_default();
+        let named_shape = header.contains("struct B") || header.contains("union B");
+        let Some(n) = header
+            .rsplit(" B")
+            .next()
+            .filter(|_| named_shape)
+            .and_then(|n| n.trim().parse::<usize>().ok())
+        else {
+            continue;
+        };
+        let mut members = Vec::new();
+        let mut whole = (0, 0);
+        for line in lines {
+            let Some((at, rest)) = line.split_once('|') else {
+                continue;
+            };
+            let rest = rest.trim();
+            if let Some(sizes) = rest.strip_prefix("[sizeof=") {
+                let numbers: Vec<u64> = sizes
+                    .split(|c: char| !c.is_ascii_digit())
+                    .filter_map(|n| n.parse().ok())
+                    .collect();
+                whole = (numbers[0], *numbers.last().expect("an alignment"));
+                continue;
+            }
+            let named = rest
+                .rsplit(' ')
+                .next()
+                .is_some_and(|name| name.starts_with('m') && name[1..].parse::<u64>().is_ok());
+            if !named {
+                continue;
+            }
+            let at = at.trim();
+            members.push(match at.split_once(':') {
+                Some((byte, range)) => {
+                    let (low, high) = range.split_once('-').expect("a bit range");
+                    let low: u64 = low.parse().expect("a bit");
+                    let high: u64 = high.parse().expect("a bit");
+                    let byte: u64 = byte.parse().expect("a byte");
+                    (byte * 8 + low, Some(high - low + 1))
+                }
+                None => (at.parse::<u64>().expect("a byte") * 8, None),
+            });
+        }
+        found[n] = Some((members, whole.0, whole.1));
+    }
+    found
+        .into_iter()
+        .map(|shape| shape.expect("clang dumped every shape"))
+        .collect()
+}
+
+/// Every bit-field shape is laid out by the IR as `clang` lays it out, on
+/// every target (#1206): each named bit-field's first bit and width, each
+/// ordinary member's offset, and the whole's size and alignment. Mutation:
+/// let a bit-field straddle its unit in `record::lay_out_itanium`; this
+/// fails at `B2`. Mutation: let a Microsoft unit hold bit-fields of another
+/// size; this fails at `B3`.
+#[test]
+fn the_layout_of_every_bit_field_shape_is_clangs() {
+    let clang_is_here = Command::new("clang")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok();
+    if !clang_is_here {
+        assert!(
+            std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+            "SAFEC_REQUIRE_LLVM is set and there is no `clang` to compare a layout with"
+        );
+        eprintln!("no `clang` on this machine: no layout was compared");
+        return;
+    }
+    let shapes = bit_shapes();
+    for &target in Target::ALL {
+        let triple = target.triple();
+        let expected = clang_bit_layouts(triple, &shapes);
+        for (n, ((union, members), (want, size, align))) in shapes.iter().zip(expected).enumerate()
+        {
+            let mut unit = TranslationUnit::new(target);
+            let declared: Vec<Declared> = members
+                .iter()
+                .map(|&(rank, sign, width, named)| Declared {
+                    ty: unit.push_type(Ty::Integer { rank, sign }),
+                    width,
+                    named,
+                })
+                .collect();
+            let id = if *union {
+                unit.declare_union()
+            } else {
+                unit.declare_struct()
+            };
+            unit.complete_record(id, &declared)
+                .expect("every bit-field shape is laid out");
+            let layout = unit.struct_layout(id);
+            let laid: Vec<(u64, Option<u64>)> = members
+                .iter()
+                .zip(&layout.members)
+                .filter(|((_, _, _, named), _)| *named)
+                .map(|(_, member)| match member.bits {
+                    Some(bits) => (
+                        member.offset * 8 + u64::from(bits.at),
+                        Some(u64::from(bits.width)),
+                    ),
+                    None => (member.offset * 8, None),
+                })
+                .collect();
+            assert_eq!(laid, want, "{triple}: the members of B{n}");
+            assert_eq!(layout.size, size, "{triple}: the size of B{n}");
+            assert_eq!(layout.align, align, "{triple}: the alignment of B{n}");
         }
     }
 }

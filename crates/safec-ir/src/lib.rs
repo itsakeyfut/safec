@@ -33,6 +33,7 @@ pub mod memory;
 pub mod nullability;
 pub mod print;
 mod reads;
+pub mod record;
 mod runs;
 pub mod source;
 mod taken;

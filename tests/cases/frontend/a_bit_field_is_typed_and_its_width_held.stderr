@@ -1,0 +1,56 @@
+error[SC0306]: `&` cannot be applied to a bit-field
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:26:15 ]
+    │
+ 26 │     int *p = &f->a;
+    │               ──┬─  
+    │                 ╰─── this is a bit-field
+────╯
+  = note: C17 6.5.3.2 p1
+error[SC0306]: `sizeof` cannot be applied to a bit-field
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:27:19 ]
+    │
+ 27 │     return sizeof(f->a) + *p;
+    │                   ──┬─  
+    │                     ╰─── this is a bit-field
+────╯
+  = note: C17 6.5.3.4 p1
+error[SC0314]: this bit-field's width is 33, wider than its type's 32 bits
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:13:17 ]
+    │
+ 13 │     int wider : 33;
+    │                 ─┬  
+    │                  ╰── the width
+────╯
+  = note: C17 6.7.2.1 p4
+error[SC0314]: this bit-field's width is negative, -1
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:14:11 ]
+    │
+ 14 │     int : -1;
+    │           ─┬  
+    │            ╰── the width
+────╯
+  = note: C17 6.7.2.1 p4
+error[SC0314]: this bit-field's width is zero, and only a bit-field with no name may be
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:15:17 ]
+    │
+ 15 │     int named : 0;
+    │                 ┬  
+    │                 ╰── the width
+────╯
+  = note: C17 6.7.2.1 p4
+error[SC0314]: a bit-field cannot have type `int *`
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:16:10 ]
+    │
+ 16 │     int *pointer : 2;
+    │          ───┬───  
+    │             ╰───── a bit-field has an integer type
+────╯
+  = note: C17 6.7.2.1 p5
+error[SC0314]: this bit-field's width is not an integer constant
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:22:13 ]
+    │
+ 22 │     int x : n;
+    │             ┬  
+    │             ╰── the width
+────╯
+  = note: C17 6.7.2.1 p4

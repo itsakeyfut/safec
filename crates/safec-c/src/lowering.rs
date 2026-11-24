@@ -39,9 +39,9 @@ use crate::sema::{Resolution, TagId};
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
-    Between, BinOp, Block, BlockId, Element, FuncId, Function, Linkage, LocalId, Operand,
-    Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue, Shape, Static,
-    StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Between, BinOp, Bits, Block, BlockId, Declared, Element, FuncId, Function, Linkage, LocalId,
+    Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise, Rvalue, Shape,
+    Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -249,6 +249,22 @@ fn end_copies(builder: &mut Builder, copies: &[LocalId], span: Span) {
     }
 }
 
+/// A bit-field as an access reaches it: the place of its unit, the unit's
+/// unsigned type, which bits of it the bit-field takes, and whether it is
+/// read as signed. See `Lowering::bit_fields`.
+#[derive(Clone, Debug)]
+struct BitField {
+    unit: Place,
+    unit_ty: TyId,
+    bits: Bits,
+    signed: bool,
+}
+
+/// The lowest `bits` bits set, for a mask of up to 64 bits.
+fn mask(bits: u64) -> i128 {
+    (1i128 << bits) - 1
+}
+
 /// What a jump from `from` to `to` ends and begins, in the order
 /// [`Lowering::jump`] writes them. See there, and ADR-0114.
 fn markers(from: &Point, to: &Point) -> (Vec<LocalId>, Vec<LocalId>) {
@@ -341,6 +357,7 @@ pub fn lower(
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
+        bit_fields: HashMap::new(),
         argument_copies: Vec::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
@@ -446,6 +463,11 @@ struct Lowering<'a> {
     /// The `memcpy` a struct copy calls, made once. See
     /// [`Lowering::copy_struct`].
     memcpy: Option<FuncId>,
+    /// The temporaries a bit-field is taken into where it is accessed, and
+    /// where its bits are (#1206): a read reads the temporary, and a write
+    /// to it is put back into the unit by `Lowering::write_back`. Keyed by
+    /// the temporary, which is made fresh for each access.
+    bit_fields: HashMap<LocalId, BitField>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -2348,7 +2370,18 @@ impl Lowering<'_> {
                 break;
             }
             match self.ty(member.span, member.ty, diagnostics) {
-                Some(member) => lowered.push(member),
+                Some(ty) => lowered.push(Declared {
+                    ty,
+                    // The type check held every width to a constant that
+                    // fits, and a run it reported on stops before here.
+                    width: member.width.map(|width| {
+                        self.types
+                            .value(width)
+                            .and_then(|value| u64::try_from(value).ok())
+                            .expect("the type check gives every bit-field a width that fits")
+                    }),
+                    named: member.name.is_some(),
+                }),
                 None => {
                     refused = true;
                     break;
@@ -2358,7 +2391,7 @@ impl Lowering<'_> {
         self.laying_out.remove(&tag);
         // Only where nothing was refused: a layout of the members lowered
         // before a refused one would be a struct laid out short.
-        if !refused && self.unit.complete_struct(id, &lowered).is_none() {
+        if !refused && self.unit.complete_record(id, &lowered).is_none() {
             not_yet(
                 diagnostics,
                 "a struct too large to count in bytes is not laid out",
@@ -4411,6 +4444,7 @@ impl Lowering<'_> {
                             value: Rvalue::Use(Operand::Copy(Place::local(stepped))),
                             origin: Origin::Written(span),
                         });
+                        self.write_back(builder, &place, span);
                         // A prefix operator answers what the place holds after
                         // the write, and that is taken here for the reason the
                         // assignment above gives: what a call does to the same
@@ -4541,6 +4575,7 @@ impl Lowering<'_> {
                     value,
                     origin: Origin::Written(span),
                 });
+                self.write_back(builder, &place, span);
 
                 // **Nothing read back where the value is discarded**, an
                 // assignment that is a whole expression statement or a `for`
@@ -4922,8 +4957,27 @@ impl Lowering<'_> {
         let (definition, path) = (member.definition, member.path.clone());
         // Its struct laid out, which a pointer to it reached through `->`
         // did not ask for.
-        self.struct_of(self.ast.expr(id).span(), definition, true, diagnostics)?;
-        let member_ty = self.ty_of(id, diagnostics)?;
+        let mut within = self.struct_of(self.ast.expr(id).span(), definition, true, diagnostics)?;
+        // The layout of the member named, through each anonymous member on
+        // the way, for a bit-field's unit and bits.
+        let (last, through) = path.split_last().expect("a member's path is never empty");
+        for &index in through {
+            let Ty::Struct(inner) = self
+                .unit
+                .ty(self.unit.struct_layout(within).members[index].ty)
+            else {
+                unreachable!("an anonymous member is a struct or a union");
+            };
+            within = inner;
+        }
+        let laid = self.unit.struct_layout(within).members[*last];
+        // **A bit-field is reached through its unit** (#1206): the address is
+        // the unit's, of the unit's type, and the place is a temporary the
+        // bits are taken into. See `Lowering::bit_fields`.
+        let member_ty = match laid.bits {
+            Some(_) => laid.ty,
+            None => self.ty_of(id, diagnostics)?,
+        };
         // **One `Field` per step**, through each anonymous member to the one
         // named (#1207): the place is `(*pointer).anonymous.m`, and every
         // reader of a place already walks a step at a time.
@@ -4947,7 +5001,227 @@ impl Lowering<'_> {
             value: Rvalue::Address(Place::new(pointer, steps)),
             origin: Origin::Written(self.ast.expr(id).span()),
         });
-        Some(Place::local(address).deref())
+        let Some(bits) = laid.bits else {
+            return Some(Place::local(address).deref());
+        };
+        let declared = self.declared_member(definition, &path);
+        // A plain `int` bit-field is signed, as `clang` makes it (C17
+        // 6.7.2.1 p10 leaves it to the implementation), and `char` is as
+        // the target makes a plain `char`.
+        let signed = match self.ast.ty(declared) {
+            Type::Integer { rank, sign } => self.unit.target().integer(*rank, *sign).signed(),
+            _ => unreachable!("the type check holds a bit-field to an integer type"),
+        };
+        let field = BitField {
+            unit: Place::local(address).deref(),
+            unit_ty: laid.ty,
+            bits,
+            signed,
+        };
+        let value = self.temporary(builder, id, diagnostics)?;
+        self.extract(builder, &field, value, self.ast.expr(id).span());
+        self.bit_fields.insert(value, field);
+        Some(Place::local(value))
+    }
+
+    /// The type the member at `path` of `definition` was declared with: a
+    /// bit-field's, which its unit is not.
+    fn declared_member(&self, definition: TypeId, path: &[usize]) -> TypeId {
+        let mut ty = definition;
+        for &index in path {
+            let Type::Struct {
+                members: Some(members),
+                ..
+            } = self.ast.ty(ty)
+            else {
+                unreachable!("a member's path goes through struct definitions");
+            };
+            ty = members[index].ty;
+        }
+        ty
+    }
+
+    /// Take the bit-field `field` out of its unit into `into`: shifted down
+    /// and masked where it is unsigned, and where it is signed shifted to the
+    /// unit's top and back down at the unit's signed type, so its sign is
+    /// carried down (#1206). Every step at the unit's own width, the value
+    /// converted to `into`'s type where it is stored there.
+    fn extract(&mut self, builder: &mut Builder, field: &BitField, into: LocalId, span: Span) {
+        let unit_bits = self.unit_bits(field);
+        let (at, width) = (u64::from(field.bits.at), u64::from(field.bits.width));
+        let read = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Use(Operand::Copy(field.unit.clone())),
+            span,
+        );
+        let value = if field.signed {
+            let up = self.bit_step(
+                builder,
+                field.unit_ty,
+                Rvalue::Binary {
+                    op: BinOp::Shl,
+                    lhs: Operand::Copy(Place::local(read)),
+                    rhs: Operand::Constant(i128::from(unit_bits - at - width)),
+                },
+                span,
+            );
+            let signed_ty = self.signed_of(field.unit_ty);
+            let as_signed = self.bit_step(
+                builder,
+                signed_ty,
+                Rvalue::Use(Operand::Copy(Place::local(up))),
+                span,
+            );
+            self.bit_step(
+                builder,
+                signed_ty,
+                Rvalue::Binary {
+                    op: BinOp::Shr,
+                    lhs: Operand::Copy(Place::local(as_signed)),
+                    rhs: Operand::Constant(i128::from(unit_bits - width)),
+                },
+                span,
+            )
+        } else {
+            let down = self.bit_step(
+                builder,
+                field.unit_ty,
+                Rvalue::Binary {
+                    op: BinOp::Shr,
+                    lhs: Operand::Copy(Place::local(read)),
+                    rhs: Operand::Constant(i128::from(at)),
+                },
+                span,
+            );
+            self.bit_step(
+                builder,
+                field.unit_ty,
+                Rvalue::Binary {
+                    op: BinOp::BitAnd,
+                    lhs: Operand::Copy(Place::local(down)),
+                    rhs: Operand::Constant(mask(width)),
+                },
+                span,
+            )
+        };
+        builder.push(Operation {
+            place: Place::local(into),
+            value: Rvalue::Use(Operand::Copy(Place::local(value))),
+            origin: Origin::Generated(span),
+        });
+    }
+
+    /// Where `written` is a bit-field's temporary, put what it now holds
+    /// back into the unit, the unit's other bits kept, and take the
+    /// bit-field out again, so the value the write leaves is what the
+    /// bit-field holds, cut to its width (C17 6.5.16 p3) (#1206). Asked after
+    /// every write to a place: an assignment, compound or not, and `++` and
+    /// `--`.
+    ///
+    /// Mutation: skip this; `a_bit_field_is_read_and_written_within_its_unit`
+    /// exits nonzero, nothing written reaching the struct.
+    fn write_back(&mut self, builder: &mut Builder, written: &Place, span: Span) {
+        if !written.steps().is_empty() {
+            return;
+        }
+        let Some(field) = self.bit_fields.get(&written.local).cloned() else {
+            return;
+        };
+        let unit_bits = self.unit_bits(&field);
+        let (at, width) = (u64::from(field.bits.at), u64::from(field.bits.width));
+        let kept = mask(unit_bits) ^ (mask(width) << at);
+        let read = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Use(Operand::Copy(field.unit.clone())),
+            span,
+        );
+        let cleared = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Binary {
+                op: BinOp::BitAnd,
+                lhs: Operand::Copy(Place::local(read)),
+                rhs: Operand::Constant(kept),
+            },
+            span,
+        );
+        let value = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Use(Operand::Copy(written.clone())),
+            span,
+        );
+        let cut = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Binary {
+                op: BinOp::BitAnd,
+                lhs: Operand::Copy(Place::local(value)),
+                rhs: Operand::Constant(mask(width)),
+            },
+            span,
+        );
+        let placed = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Binary {
+                op: BinOp::Shl,
+                lhs: Operand::Copy(Place::local(cut)),
+                rhs: Operand::Constant(i128::from(at)),
+            },
+            span,
+        );
+        let merged = self.bit_step(
+            builder,
+            field.unit_ty,
+            Rvalue::Binary {
+                op: BinOp::BitOr,
+                lhs: Operand::Copy(Place::local(cleared)),
+                rhs: Operand::Copy(Place::local(placed)),
+            },
+            span,
+        );
+        builder.push(Operation {
+            place: field.unit.clone(),
+            value: Rvalue::Use(Operand::Copy(Place::local(merged))),
+            origin: Origin::Generated(span),
+        });
+        self.extract(builder, &field, written.local, span);
+    }
+
+    /// A temporary of type `ty` holding `value`: one step of taking a
+    /// bit-field out of its unit or putting it back.
+    fn bit_step(&mut self, builder: &mut Builder, ty: TyId, value: Rvalue, span: Span) -> LocalId {
+        let local = builder.function.push_local(ty);
+        builder.push(Operation {
+            place: Place::local(local),
+            value,
+            origin: Origin::Generated(span),
+        });
+        local
+    }
+
+    /// How many bits `field`'s unit takes.
+    fn unit_bits(&self, field: &BitField) -> u64 {
+        u64::from(
+            self.unit
+                .integer(field.unit_ty)
+                .expect("a bit-field's unit is an integer")
+                .bits(),
+        )
+    }
+
+    /// The signed integer type of `ty`'s rank, `ty` being an unsigned one.
+    fn signed_of(&mut self, ty: TyId) -> TyId {
+        let Ty::Integer { rank, .. } = self.unit.ty(ty) else {
+            unreachable!("a bit-field's unit is an integer");
+        };
+        self.unit.push_type(Ty::Integer {
+            rank,
+            sign: safec_ir::ir::Sign::Signed,
+        })
     }
 
     /// The `const` levels of a pointer to an object of type `ty`: bit `0`

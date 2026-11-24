@@ -221,6 +221,10 @@ const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 /// `no member named 'b' in 'struct S'`.
 const NO_MEMBER: Code = Code::new("SC0316");
 
+/// A member whose type or width breaks C17 6.7.2.1: here, a bit-field's
+/// width or type (#1206). `sema.rs` holds the rest of the code's rules.
+const UNFIT_MEMBER: Code = Code::new("SC0314");
+
 /// An operand an operator writes to, or takes the address of, that cannot be
 /// written to or have its address taken: the left operand of an assignment
 /// and the operand of `++` or `--`, which want a modifiable lvalue (C17
@@ -412,6 +416,7 @@ pub fn check(
     // After every expression is typed, because a length's type and value are
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
+    checker.check_bit_fields(ast, diagnostics);
     checker.check_redeclared_lengths(ast, diagnostics);
     checker.check_complete_objects(ast, diagnostics);
     checker.check_definition_parameters(ast, diagnostics);
@@ -1846,7 +1851,7 @@ impl Checker<'_> {
 
     /// How many bytes an object of `ty` takes on the target, where this stage
     /// can say: an integer, a pointer, an array of a constant length, and a
-    /// struct, laid out by the IR's one rule (`safec_ir::ir::lay_out`, see
+    /// struct, laid out by the IR's one rule (`safec_ir::record::lay_out`, see
     /// ADR-0124). `None` for what is no object type, a struct with no
     /// definition, and an array of no constant length.
     fn bytes_of(&self, ast: &Ast, ty: TypeId) -> Option<u128> {
@@ -1883,18 +1888,25 @@ impl Checker<'_> {
         else {
             return None;
         };
-        let sized = members
+        let fields = members
             .iter()
-            .map(|member| self.size_and_align(ast, member.ty))
+            .map(|member| {
+                let (size, align) = self.size_and_align(ast, member.ty)?;
+                Some(safec_ir::record::Field {
+                    size,
+                    align,
+                    width: match member.width {
+                        Some(width) => Some(self.width_of(width)?),
+                        None => None,
+                    },
+                    named: member.name.is_some(),
+                })
+            })
             .collect::<Option<Vec<_>>>()?;
-        // The IR's rule for each, so `sizeof` and the layout the backend
-        // writes are one answer (ADR-0124).
-        let (_, size, align) = if *union {
-            safec_ir::ir::lay_out_union(sized)?
-        } else {
-            safec_ir::ir::lay_out(sized)?
-        };
-        Some((size, align))
+        // The IR's rule, so `sizeof` and the layout the backend writes are
+        // one answer (ADR-0124).
+        let laid = safec_ir::record::lay_out(self.target, *union, &fields)?;
+        Some((laid.size, laid.align))
     }
 
     /// The size and the alignment in bytes of `ty`, **each struct below it
@@ -2254,6 +2266,156 @@ impl Checker<'_> {
         Some(ty)
     }
 
+    /// The type an access to a member of type `ty` is typed at: `ty`, but
+    /// for a bit-field of `unsigned int` narrower than `int`, which C17
+    /// 6.3.1.1 p2 promotes to `int` (#1206). Nothing can tell the two apart
+    /// but promotion, since a bit-field has no address and no `sizeof`, so
+    /// the access is typed as what it promotes to and every rule that
+    /// promotes it gets it right without asking.
+    ///
+    /// Mutation: answer `ty`; `a_bit_field_is_read_and_written_within_its_unit`'s
+    /// `promoted` exits 1.
+    fn read_as(&mut self, ast: &mut Ast, id: ExprId, ty: TypeId) -> TypeId {
+        let Some(width) = self
+            .bit_field(ast, id)
+            .and_then(|width| self.width_of(width))
+        else {
+            return ty;
+        };
+        let narrower = matches!(
+            ast.ty(ty),
+            Type::Integer {
+                rank: Rank::Int,
+                sign: Sign::Unsigned,
+            }
+        ) && width < u64::from(self.target.integer(Rank::Int, Sign::Signed).bits());
+        if narrower {
+            ast.push_type(Type::INT)
+        } else {
+            ty
+        }
+    }
+
+    /// The width expression of the bit-field the member access `id` names,
+    /// or `None` where it names no bit-field or is no member access.
+    fn bit_field(&self, ast: &Ast, id: ExprId) -> Option<ExprId> {
+        let member = self.members[id.index()].as_ref()?;
+        let mut definition = member.definition;
+        let (last, through) = member.path.split_last()?;
+        for &index in through {
+            let Type::Struct {
+                members: Some(members),
+                ..
+            } = ast.ty(definition)
+            else {
+                return None;
+            };
+            definition = members[index].ty;
+        }
+        let Type::Struct {
+            members: Some(members),
+            ..
+        } = ast.ty(definition)
+        else {
+            return None;
+        };
+        members[*last].width
+    }
+
+    /// A bit-field's width, where its expression is a constant this check
+    /// worked out and it is not negative: `None` otherwise, which
+    /// `check_bit_fields` reports.
+    fn width_of(&self, width: ExprId) -> Option<u64> {
+        u64::try_from(self.values[width.index()]?).ok()
+    }
+
+    /// Refuse `what` applied to a bit-field, which `clause` forbids, and say
+    /// whether it was one (#1206).
+    fn refuse_bit_field(
+        &self,
+        ast: &Ast,
+        operand: ExprId,
+        what: &str,
+        clause: &str,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        if self.bit_field(ast, operand).is_none() {
+            return false;
+        }
+        diagnostics.report(
+            Diagnostic::error(format!("{what} cannot be applied to a bit-field"))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(
+                    ast.expr(operand).span(),
+                    "this is a bit-field",
+                ))
+                .with_note(clause.to_owned()),
+        );
+        true
+    }
+
+    /// Hold each bit-field's width to C17 6.7.2.1 p4 and p5 (#1206): an
+    /// integer constant expression, not negative, no wider than its type, and
+    /// zero only where the bit-field has no name; and its type an integer
+    /// type, which p5 leaves the integer types beyond `int` to the
+    /// implementation to allow, and `clang` allows.
+    fn check_bit_fields(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for ty in ast.type_ids() {
+            let Type::Struct {
+                members: Some(members),
+                ..
+            } = ast.ty(ty)
+            else {
+                continue;
+            };
+            for member in members {
+                let Some(width) = member.width else {
+                    continue;
+                };
+                let at = ast.expr(width).span();
+                let unfit = |why: String| {
+                    Diagnostic::error(format!("this bit-field's width {why}"))
+                        .with_code(UNFIT_MEMBER)
+                        .with_label(Label::primary(at, "the width"))
+                        .with_note("C17 6.7.2.1 p4")
+                };
+                let Some(bits) = integer_of(ast, member.ty)
+                    .map(|(rank, sign)| u64::from(self.target.integer(rank, sign).bits()))
+                else {
+                    let spelled = self.spelled(ast, member.ty);
+                    diagnostics.report(
+                        Diagnostic::error(format!("a bit-field cannot have type `{spelled}`"))
+                            .with_code(UNFIT_MEMBER)
+                            .with_label(Label::primary(
+                                member.name.unwrap_or(member.span),
+                                "a bit-field has an integer type",
+                            ))
+                            .with_note("C17 6.7.2.1 p5"),
+                    );
+                    continue;
+                };
+                match self.values[width.index()] {
+                    None if !self.reported_within[width.index()] => {
+                        diagnostics.report(unfit("is not an integer constant".to_owned()));
+                    }
+                    None => {}
+                    Some(value) if value < 0 => {
+                        diagnostics.report(unfit(format!("is negative, {value}")));
+                    }
+                    Some(value) if value > i128::from(bits) => diagnostics.report(unfit(format!(
+                        "is {value}, wider than its type's {bits} bits"
+                    ))),
+                    Some(0) if member.name.is_some() => {
+                        diagnostics.report(unfit(
+                            "is zero, and only a bit-field with no name may be".to_owned(),
+                        ));
+                    }
+                    Some(_) => {}
+                }
+            }
+        }
+    }
+
     /// Where the member spelled `name` is among `members`, as a path of
     /// indices, and its type: a named member's own index, or an anonymous
     /// member's followed by the path within it (C17 6.7.2.1 p13, #1207).
@@ -2544,6 +2706,7 @@ impl Checker<'_> {
                 span,
             } => {
                 let ty = self.member(ast, id, (base, member, arrow, span), diagnostics)?;
+                let ty = self.read_as(ast, id, ty);
                 // C17 6.5.2.3 p3 and p4: a member of a `const` structure is
                 // `const`, through `.` and through `->` alike, so `s.a = 1`
                 // with `const struct S s` writes what may not be written.
@@ -2636,6 +2799,9 @@ impl Checker<'_> {
             // evaluated (6.5.3.4 p2): nothing lowers it.
             Expr::SizeofExpr { operand, span } => {
                 let ty = self.types[operand.index()]?;
+                if self.refuse_bit_field(ast, operand, "`sizeof`", "C17 6.5.3.4 p1", diagnostics) {
+                    return None;
+                }
                 self.sizeof(ast, id, ty, span, diagnostics)
             }
             Expr::Cast { ty, operand, span } => self.cast(ast, ty, operand, span, diagnostics),
@@ -2791,6 +2957,10 @@ impl Checker<'_> {
             // &g().arr` reported again as a pointer of the wrong type.
             UnOp::AddrOf => {
                 if self.refuse_unaddressable(ast, operand, diagnostics) {
+                    return None;
+                }
+                // p1 again: a bit-field has no address (#1206).
+                if self.refuse_bit_field(ast, operand, "`&`", "C17 6.5.3.2 p1", diagnostics) {
                     return None;
                 }
                 Some(ast.push_type(Type::Pointer(operand_ty?)))

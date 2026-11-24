@@ -75,8 +75,8 @@ to point into one object, against not asked and named as a silence.
   `tests/layout.rs` compiles each shape with `clang` on every target and
   compares `TranslationUnit::push_struct`'s offsets, size and alignment.
   Mutation: place each member at the end of the one before it in
-  `ir::lay_out`; it fails. `sizeof` in the type check asks the same
-  `lay_out`.
+  `record::lay_out`; it fails. `sizeof` in the type check asks the same
+  `record::lay_out`.
 * **A member is a slot of its object** (#1200): `Projection::Field` is an
   `E0004` at every reader of a place's steps, and the memory check reads
   `&(*p).m` as `p` moved by the member's offset.
@@ -104,7 +104,15 @@ to point into one object, against not asked and named as a silence.
   offset 0 and the whole its largest member rounded to the strictest
   alignment: `the_layout_of_every_struct_shape_is_clangs` holds union shapes
   beside the structs on every target. Mutation: size a union as its first
-  member in `lay_out_union`; it fails.
+  member in `record::lay_out_union`; it fails.
+* **A bit-field is packed as `clang` packs it** (#1206), by the Microsoft,
+  Itanium or AAPCS convention its target follows:
+  `the_layout_of_every_bit_field_shape_is_clangs` holds structs and unions
+  of bit-fields against `clang`'s record layout dump on every target. A
+  bit-field is read and written through its unit, a member of the unit's
+  unsigned type, so it is a slot of its object as any member is.
+  Mutation: let a bit-field straddle its unit in
+  `record::lay_out_itanium`; it fails.
 * Still unguarded, because comparing pointers is not lowered yet: a corpus
   case for the comparison's code, which its sub-issue of #614 adds as it
   lands.

@@ -54,6 +54,13 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A bit-field is read and written through its unit, so the memory
+        // check sees an integer read and written beside a pointer member
+        // and asks nothing new, and one reached through a freed pointer is
+        // `SC0402` as any member is (#1206). Mutation: give a bit-field its
+        // declared type rather than its unit's in `Lowering::member`; the
+        // unit reads in this case's IR change.
+        a_bit_field_is_read_and_written_within_its_unit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer kept in an anonymous union is the container's member
         // (#1207), so the memory check reads it there as any other: written
         // and read through the same member, a number read back as it, and a
@@ -71,7 +78,7 @@ cases! {
         // narrower member `SC0413`, a number written into an element of an
         // array of unions `SC0413`, and a union handed to a call after one
         // that may write it `SC0413`. None is answered safe. Mutation: lay a
-        // union out as a struct in `lay_out_union`; `number_read_as_pointer`
+        // union out as a struct in `record::lay_out_union`; `number_read_as_pointer`
         // no longer reads the number it wrote and says `SC0411` instead.
         a_union_holds_its_members_at_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct copied is a library copy, so a freed pointer it carries,
@@ -9118,12 +9125,14 @@ cases! {
         // both struct types spelled. Mutation: answer every struct pair
         // compatible in `Ast::compatible`; the conflict goes silent.
         declarations_of_one_name_as_two_struct_types_conflict: ["--emit", "ast"],
-        // Valid C that is not read yet, each told so with the paragraph that
-        // makes it valid: a bit-field, named or not (C17 6.7.2.1 p9).
-        // Mutation: drop either `:` check; that bit-field is `expected`
-        // something instead.
-        a_bit_field_is_not_read_yet: ["--emit", "ast"],
-        a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
+        // A bit-field's width is a constant, here an enumerator, and `Fine`
+        // is sized by the target's packing; each rule C17 6.7.2.1 p4 and p5
+        // set on a width and a type is held, and `&` and `sizeof` of a
+        // bit-field are refused (6.5.3.2 p1, 6.5.3.4 p1) (#1206). Mutations:
+        // drop the width check in `Checker::check_bit_fields`, and `Unfit`
+        // is accepted; drop `refuse_bit_field` from `&`, and `address`'s
+        // `&f->a` is accepted.
+        a_bit_field_is_typed_and_its_width_held: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // A `switch` with nothing in it is read and goes straight past its
         // body, and a `case` with no `switch` around it breaks 6.8.1 p2's
         // constraint, so it is not C and says where C allows it. Mutation:

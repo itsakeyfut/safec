@@ -44,6 +44,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::record;
 use crate::source::{SourceMap, Span};
 use crate::target::{Integer, Target};
 
@@ -200,66 +201,73 @@ pub struct StructLayout {
     pub align: u64,
 }
 
-/// Where each member of a struct goes, given each one's size and alignment
-/// in bytes, in order: each one's offset, and the whole's size and
-/// alignment. `None` where a count overflows a `u64`.
-///
-/// C17 6.7.2.1 p15 and p17: each member at the first offset after the one
-/// before it that its alignment divides, and the whole rounded up to the
-/// strictest alignment, so that an array of them keeps each aligned.
-///
-/// **The one rule for a struct's layout** (ADR-0124), asked by
-/// [`TranslationUnit::push_struct`] and by the type check for `sizeof`,
-/// which is a constant before any IR exists. Mutation: place each member at
-/// the end of the one before it; `the_layout_of_every_struct_shape_is_clangs`
-/// fails.
-pub fn lay_out(members: impl IntoIterator<Item = (u64, u64)>) -> Option<(Vec<u64>, u64, u64)> {
-    let mut offsets = Vec::new();
-    let mut end: u64 = 0;
-    let mut align: u64 = 1;
-    for (size, member_align) in members {
-        let offset = end.checked_next_multiple_of(member_align)?;
-        offsets.push(offset);
-        end = offset.checked_add(size)?;
-        align = align.max(member_align);
-    }
-    Some((offsets, end.checked_next_multiple_of(align)?, align))
+/// One member as [`TranslationUnit::complete_record`] takes it: its
+/// declared type, its width where it is a bit-field, and whether it has a
+/// name, which an unnamed bit-field may not.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Declared {
+    /// The type it was declared with.
+    pub ty: TyId,
+    /// Its width in bits where it is a bit-field.
+    pub width: Option<u64>,
+    /// Whether it has a name.
+    pub named: bool,
 }
 
-/// A layout rule, [`lay_out`] or [`lay_out_union`]: each member's size and
-/// alignment in, each one's offset and the whole's size and alignment out.
-type LayoutRule = fn(Vec<(u64, u64)>) -> Option<(Vec<u64>, u64, u64)>;
-
-/// Where each member of a union goes, given each one's size and alignment
-/// in bytes, in order: every offset 0, and the whole the largest member
-/// rounded up to the strictest alignment (C17 6.7.2.1 p6 and p16). `None`
-/// where the size overflows a `u64`.
+/// Where a bit-field of `width` bits starting at bit `bit` is read and
+/// written: the narrowest of 1, 2, 4 and 8 bytes, on a boundary of its own
+/// size or of the whole's alignment `align` where that is smaller, that
+/// holds it whole and ends inside a whole of `size` bytes. See [`Bits`]. Its
+/// byte offset and its size in bytes.
 ///
-/// **The one rule for a union's layout**, asked by
-/// [`TranslationUnit::push_union`] and by the type check for `sizeof`, as
-/// [`lay_out`] is for a struct. Mutation: place each member after the one
-/// before it; `the_layout_of_every_struct_shape_is_clangs` fails.
-pub fn lay_out_union(
-    members: impl IntoIterator<Item = (u64, u64)>,
-) -> Option<(Vec<u64>, u64, u64)> {
-    let mut offsets = Vec::new();
-    let mut largest: u64 = 0;
-    let mut align: u64 = 1;
-    for (size, member_align) in members {
-        offsets.push(0);
-        largest = largest.max(size);
-        align = align.max(member_align);
+/// The whole's alignment for `i686`, whose `long long` is aligned to 4 and
+/// takes 8, so a bit-field of one may span bytes 4 to 8, which no unit on a
+/// boundary of 8 holds.
+fn access_unit(bit: u64, width: u64, size: u64, align: u64) -> (u64, u64) {
+    for unit in [1, 2, 4, 8] {
+        let boundary = unit.min(align);
+        let offset = bit / (boundary * 8) * boundary;
+        if bit + width <= (offset + unit) * 8 && offset + unit <= size {
+            return (offset, unit);
+        }
     }
-    Some((offsets, largest.checked_next_multiple_of(align)?, align))
+    // A layout above never asks for more: every target packs a bit-field
+    // into a unit of its type's size on a boundary of its alignment, and
+    // the whole is a multiple of that alignment. Said rather than guessed.
+    panic!(
+        "no unit of 8 bytes or fewer holds a bit-field at bit {bit}, {width} wide, in {size} bytes"
+    )
 }
 
 /// One member of a [`StructLayout`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MemberLayout {
-    /// Its type.
+    /// Its type: for a bit-field, the unsigned integer it is read and
+    /// written through, its unit, and not the type it was declared with.
     pub ty: TyId,
-    /// Where it starts, in bytes from the start of the struct.
+    /// Where it starts, in bytes from the start of the struct: for a
+    /// bit-field, where its unit starts.
     pub offset: u64,
+    /// Which bits of its unit a bit-field is (#1206), `None` for any other
+    /// member. See [`Bits`].
+    pub bits: Option<Bits>,
+}
+
+/// The bits of its unit a bit-field takes: `width` of them, from bit `at`
+/// counted from the unit's least significant, which is where every target
+/// here starts a unit's first bit-field.
+///
+/// **A bit-field is read and written through its unit**, the narrowest
+/// unsigned integer on a boundary of its own size that holds the bit-field
+/// whole and stays inside the struct: so it is a slot of its object as any
+/// member is (ADR-0124), a write of one is a read of its unit and a write
+/// of it with the other bits kept, and no access reaches past the struct.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Bits {
+    /// The first bit, from the unit's least significant.
+    pub at: u32,
+    /// How many bits; `0` for a zero-width bit-field, which nothing reads.
+    pub width: u32,
 }
 
 /// Which block, within one [`Function`].
@@ -2050,7 +2058,7 @@ impl TranslationUnit {
     /// Lay out a struct of these members, in order, and say which it is.
     /// `None` where a member has no size or alignment this unit can give,
     /// which the lowering refuses before it asks. The layout is
-    /// [`lay_out`]'s.
+    /// [`record::lay_out`]'s.
     pub fn push_struct(&mut self, members: &[TyId]) -> Option<StructId> {
         let id = self.declare_struct();
         self.complete_struct(id, members)?;
@@ -2058,7 +2066,7 @@ impl TranslationUnit {
     }
 
     /// Lay out a union of these members, and say which it is: as
-    /// [`Self::push_struct`], by [`lay_out_union`].
+    /// [`Self::push_struct`], by [`record::lay_out`].
     pub fn push_union(&mut self, members: &[TyId]) -> Option<StructId> {
         let id = self.declare_union();
         self.complete_struct(id, members)?;
@@ -2066,7 +2074,7 @@ impl TranslationUnit {
     }
 
     /// A union with no members yet: as [`Self::declare_struct`], and laid
-    /// out by [`lay_out_union`] when [`Self::complete_struct`] gives it
+    /// out by [`record::lay_out`] when [`Self::complete_struct`] gives it
     /// members.
     pub fn declare_union(&mut self) -> StructId {
         let id = self.declare_struct();
@@ -2092,7 +2100,7 @@ impl TranslationUnit {
     }
 
     /// Lay out the declared struct `id` with these members, in order, by
-    /// [`lay_out`], or by [`lay_out_union`] where it was declared a union.
+    /// [`record::lay_out`], as a union where it was declared one.
     /// `None` where a member has no size or alignment this unit can give, the
     /// struct staying incomplete.
     ///
@@ -2100,29 +2108,76 @@ impl TranslationUnit {
     ///
     /// If `id` already has members: one struct is laid out once.
     pub fn complete_struct(&mut self, id: StructId, members: &[TyId]) -> Option<()> {
-        let rule: LayoutRule = if self.is_union(id) {
-            lay_out_union
-        } else {
-            lay_out
-        };
+        let members: Vec<Declared> = members
+            .iter()
+            .map(|&ty| Declared {
+                ty,
+                width: None,
+                named: true,
+            })
+            .collect();
+        self.complete_record(id, &members)
+    }
+
+    /// Lay out the declared struct `id` with these members, bit-fields
+    /// among them, by [`record::lay_out`]: as [`Self::complete_struct`].
+    ///
+    /// # Panics
+    ///
+    /// If `id` already has members.
+    pub fn complete_record(&mut self, id: StructId, members: &[Declared]) -> Option<()> {
         assert!(
             self.structs[id.0 as usize].is_none(),
             "struct {} is already laid out",
             id.0
         );
-        let sized = members
+        let fields = members
             .iter()
-            .map(|&ty| Some((self.size_of(ty)?, self.align_of(ty)?)))
+            .map(|member| {
+                Some(record::Field {
+                    size: self.size_of(member.ty)?,
+                    align: self.align_of(member.ty)?,
+                    width: member.width,
+                    named: member.named,
+                })
+            })
             .collect::<Option<Vec<_>>>()?;
-        let (offsets, size, align) = rule(sized)?;
+        let laid = record::lay_out(self.target, self.is_union(id), &fields)?;
+        let mut placed = Vec::with_capacity(members.len());
+        for (member, &bit) in members.iter().zip(&laid.bits) {
+            placed.push(match member.width {
+                None => MemberLayout {
+                    ty: member.ty,
+                    offset: u64::try_from(bit / 8).expect("an offset inside the whole"),
+                    bits: None,
+                },
+                Some(width) => {
+                    let bit = u64::try_from(bit).ok()?;
+                    let (offset, unit) = access_unit(bit, width, laid.size, laid.align);
+                    let rank = [Rank::Char, Rank::Short, Rank::Int, Rank::LongLong]
+                        .into_iter()
+                        .find(|&rank| {
+                            u64::from(self.target.integer(rank, Sign::Unsigned).bits()) == unit * 8
+                        })
+                        .expect("every target has an integer of 1, 2, 4 and 8 bytes");
+                    MemberLayout {
+                        ty: self.push_type(Ty::Integer {
+                            rank,
+                            sign: Sign::Unsigned,
+                        }),
+                        offset,
+                        bits: Some(Bits {
+                            at: u32::try_from(bit - offset * 8).expect("within a unit of 8 bytes"),
+                            width: u32::try_from(width).expect("no wider than its type"),
+                        }),
+                    }
+                }
+            });
+        }
         self.structs[id.0 as usize] = Some(StructLayout {
-            members: members
-                .iter()
-                .zip(offsets)
-                .map(|(&ty, offset)| MemberLayout { ty, offset })
-                .collect(),
-            size,
-            align,
+            members: placed,
+            size: laid.size,
+            align: laid.align,
         });
         Some(())
     }

@@ -1035,6 +1035,10 @@ impl Resolver<'_> {
                     self.close_scope();
                     continue;
                 }
+                Step::Width(width) => {
+                    self.expr(width, diagnostics);
+                    continue;
+                }
                 Step::Parameters(function) => {
                     self.open_parameters(function, &mut pending);
                     continue;
@@ -1101,6 +1105,11 @@ impl Resolver<'_> {
                             // one of them, nested definitions included.
                             pending.push(Step::Close(ty));
                             for member in members.iter().rev() {
+                                // A bit-field's width after its type, since
+                                // the stack takes it first.
+                                if let Some(width) = member.width {
+                                    pending.push(Step::Width(width));
+                                }
                                 push_declarator(ast, member.written, &mut pending);
                             }
                         }
@@ -2215,6 +2224,9 @@ fn push_declarator(ast: &Ast, root: TypeId, pending: &mut Vec<Step>) {
 /// once the type it was written with is walked.
 enum Step {
     Type(TypeId),
+    /// A bit-field's width, an expression whose names are looked up where
+    /// the member is (#1206).
+    Width(ExprId),
     Close(TypeId),
     Parameters(TypeId),
     CloseScope,
