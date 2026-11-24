@@ -222,7 +222,10 @@ const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 const NO_MEMBER: Code = Code::new("SC0316");
 
 /// A member whose type or width breaks C17 6.7.2.1: here, a bit-field's
-/// width or type (#1206). `sema.rs` holds the rest of the code's rules.
+/// width or type (#1206). The same code as `sema.rs`'s `INCOMPLETE_MEMBER`,
+/// on purpose: both are a constraint on the member itself, and a width can
+/// only be judged once it is a constant, which is this stage's to work out,
+/// so the one code is answered in two places.
 const UNFIT_MEMBER: Code = Code::new("SC0314");
 
 /// An operand an operator writes to, or takes the address of, that cannot be
@@ -2267,14 +2270,21 @@ impl Checker<'_> {
     }
 
     /// The type an access to a member of type `ty` is typed at: `ty`, but
-    /// for a bit-field of `unsigned int` narrower than `int`, which C17
-    /// 6.3.1.1 p2 promotes to `int` (#1206). Nothing can tell the two apart
+    /// for a bit-field, the type it promotes to (#1206). C17 6.3.1.1 p2
+    /// promotes one of `int`, `signed int` or `unsigned int` whose values
+    /// all fit an `int` to `int`, and otherwise to `unsigned int`, and
+    /// leaves one of any other type to the implementation: `clang` promotes
+    /// any integer bit-field narrower than `int` to `int`, one exactly as
+    /// wide to `unsigned int` where it is unsigned, and a wider one not at
+    /// all, and this does as `clang` does, since a program built here is
+    /// linked with ones built there. Nothing can tell the two types apart
     /// but promotion, since a bit-field has no address and no `sizeof`, so
     /// the access is typed as what it promotes to and every rule that
-    /// promotes it gets it right without asking.
+    /// promotes it gets it right without asking. A `const` one stays `const`.
     ///
-    /// Mutation: answer `ty`; `a_bit_field_is_read_and_written_within_its_unit`'s
-    /// `promoted` exits 1.
+    /// Mutation: answer `ty`; `a_bit_field_is_read_and_written_within_its_unit`
+    /// in `tests/run.rs` fails at `promoted`. Mutation: promote only
+    /// `unsigned int`; it fails at `promoted_wide`.
     fn read_as(&mut self, ast: &mut Ast, id: ExprId, ty: TypeId) -> TypeId {
         let Some(width) = self
             .bit_field(ast, id)
@@ -2282,17 +2292,25 @@ impl Checker<'_> {
         else {
             return ty;
         };
-        let narrower = matches!(
-            ast.ty(ty),
-            Type::Integer {
+        let Some((rank, sign)) = integer_of(ast, ty) else {
+            return ty;
+        };
+        let int_bits = u64::from(self.target.integer(Rank::Int, Sign::Signed).bits());
+        let unsigned = !self.target.integer(rank, sign).signed();
+        let promoted = match width.cmp(&int_bits) {
+            std::cmp::Ordering::Less => Type::INT,
+            std::cmp::Ordering::Equal if unsigned => Type::Integer {
                 rank: Rank::Int,
                 sign: Sign::Unsigned,
-            }
-        ) && width < u64::from(self.target.integer(Rank::Int, Sign::Signed).bits());
-        if narrower {
-            ast.push_type(Type::INT)
+            },
+            std::cmp::Ordering::Equal => Type::INT,
+            std::cmp::Ordering::Greater => return ty,
+        };
+        let promoted = ast.push_type(promoted);
+        if ast.is_const(ty) {
+            ast.push_const(promoted)
         } else {
-            ty
+            promoted
         }
     }
 

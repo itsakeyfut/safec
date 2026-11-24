@@ -215,15 +215,29 @@ pub struct Declared {
 }
 
 /// Where a bit-field of `width` bits starting at bit `bit` is read and
-/// written: the narrowest of 1, 2, 4 and 8 bytes, on a boundary of its own
-/// size or of the whole's alignment `align` where that is smaller, that
-/// holds it whole and ends inside a whole of `size` bytes. See [`Bits`]. Its
-/// byte offset and its size in bytes.
+/// written, as its byte offset and its size in bytes: the narrowest of 1,
+/// 2, 4 and 8 bytes that holds it whole, ends inside a whole of `size`
+/// bytes, and starts on a boundary of its own size or of the whole's
+/// alignment `align`, whichever is smaller. See [`Bits`].
 ///
-/// The whole's alignment for `i686`, whose `long long` is aligned to 4 and
-/// takes 8, so a bit-field of one may span bytes 4 to 8, which no unit on a
-/// boundary of 8 holds.
+/// **The whole's alignment where it is smaller** for `i686`, whose `long
+/// long` is aligned to 4 and takes 8: a bit-field of one may span bytes 4
+/// to 8, which no unit on a boundary of 8 holds.
+///
+/// # Panics
+///
+/// Where no unit of 8 bytes or fewer holds a bit-field that is read, which
+/// no layout of [`record::lay_out`] gives: each packs a bit-field into a
+/// unit of its type's size on a boundary of its alignment.
 fn access_unit(bit: u64, width: u64, size: u64, align: u64) -> (u64, u64) {
+    // **A bit-field nothing reads, zero-width or unnamed,** may stand at the
+    // very end of the whole, or be wider than it, where no unit fits: a byte
+    // inside it is all it needs to name (#1206 review). Mutation: ask it for
+    // a unit like any other; `the_layout_of_every_bit_field_shape_is_clangs`
+    // panics at the first shape that ends in one.
+    if width == 0 {
+        return ((bit / 8).min(size.saturating_sub(1)), 1);
+    }
     for unit in [1, 2, 4, 8] {
         let boundary = unit.min(align);
         let offset = bit / (boundary * 8) * boundary;
@@ -258,15 +272,18 @@ pub struct MemberLayout {
 /// here starts a unit's first bit-field.
 ///
 /// **A bit-field is read and written through its unit**, the narrowest
-/// unsigned integer on a boundary of its own size that holds the bit-field
-/// whole and stays inside the struct: so it is a slot of its object as any
+/// unsigned integer that holds the bit-field whole and stays inside the
+/// struct, on a boundary of its own size or of the struct's alignment where
+/// that is smaller (`access_unit`): so it is a slot of its object as any
 /// member is (ADR-0124), a write of one is a read of its unit and a write
 /// of it with the other bits kept, and no access reaches past the struct.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Bits {
     /// The first bit, from the unit's least significant.
     pub at: u32,
-    /// How many bits; `0` for a zero-width bit-field, which nothing reads.
+    /// How many bits; `0` for a zero-width bit-field. A zero-width or an
+    /// unnamed one is read by nothing, and its unit is any byte in the
+    /// whole, which `at` may lie past.
     pub width: u32,
 }
 
@@ -2153,7 +2170,12 @@ impl TranslationUnit {
                 },
                 Some(width) => {
                     let bit = u64::try_from(bit).ok()?;
-                    let (offset, unit) = access_unit(bit, width, laid.size, laid.align);
+                    // An unnamed bit-field is read by nothing, as a
+                    // zero-width one is, and may be wider than the whole
+                    // around it: `union { char a : 5; long long : 11; }`
+                    // takes one byte on Itanium (#1206 review).
+                    let reads = if member.named { width } else { 0 };
+                    let (offset, unit) = access_unit(bit, reads, laid.size, laid.align);
                     let rank = [Rank::Char, Rank::Short, Rank::Int, Rank::LongLong]
                         .into_iter()
                         .find(|&rank| {

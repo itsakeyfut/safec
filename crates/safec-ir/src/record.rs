@@ -9,8 +9,9 @@
 //! straddle one, and its order within one to the implementation, and a
 //! struct laid out otherwise is a different struct from the one every other
 //! object on the target was built with. There are three conventions among
-//! the targets here, and each is a `match` arm, so a target added later
-//! answers for which it follows:
+//! the targets here, chosen by triple in `packing`, where a target added
+//! later falls to Itanium unless it is named; the layout test walks
+//! `Target::ALL` against `clang`, so one that packs otherwise fails it:
 //!
 //! - **Microsoft** (`x86_64-pc-windows-msvc`): consecutive bit-fields of one
 //!   type's size share a unit of that size while they fit; another size, or
@@ -134,7 +135,7 @@ fn lay_out_itanium(aapcs: bool, fields: &[Field]) -> Option<Record> {
         let width = u128::from(width);
         let boundary = bits_of(field.align);
         if width == 0 {
-            at = up_bits(at, boundary as u64)?;
+            at = up_bits(at, field.align * 8)?;
         } else {
             // It fits where a unit of its type's size, starting on a
             // boundary of its type's alignment, holds it whole. On `i686` a
@@ -142,7 +143,7 @@ fn lay_out_itanium(aapcs: bool, fields: &[Field]) -> Option<Record> {
             // a boundary of 8.
             let start = at / boundary * boundary;
             if at + width > start + bits_of(field.size) {
-                at = up_bits(at, boundary as u64)?;
+                at = up_bits(at, field.align * 8)?;
             }
         }
         bits.push(at);
@@ -218,23 +219,30 @@ fn lay_out_microsoft(fields: &[Field]) -> Option<Record> {
 /// Every member of a union starts at 0. An ordinary member takes its size
 /// and its alignment. A bit-field takes, on Itanium and AAPCS, its width
 /// rounded up to its type's alignment, and that alignment, except that on
-/// Itanium an unnamed one takes nothing; on Microsoft, its type's whole size
+/// Itanium an unnamed one takes the bytes its width needs and no alignment; on Microsoft, its type's whole size
 /// and no alignment. A zero-width one takes nothing, but on AAPCS its
-/// alignment.
+/// alignment, and on Microsoft after a bit-field of some width its type's
+/// size.
 fn lay_out_union(packing: Packing, fields: &[Field]) -> Option<Record> {
     let mut largest: u64 = 0;
     let mut align: u64 = 1;
+    // Whether a bit-field of some width came before: on Microsoft a
+    // zero-width one after it takes its type's size, and one before any
+    // takes nothing (#1206 review).
+    let mut after_bits = false;
     for field in fields {
         let (size, aligns) = match (field.width, packing) {
             (None, _) => (field.size, true),
+            (Some(0), Packing::Microsoft) if after_bits => (field.size, false),
             (Some(0), Packing::Microsoft | Packing::Itanium) => (0, false),
             (Some(0), Packing::Aapcs) => (0, true),
             (Some(_), Packing::Microsoft) => (field.size, false),
-            (Some(_), Packing::Itanium) if !field.named => (0, false),
+            (Some(width), Packing::Itanium) if !field.named => (bytes(u128::from(width))?, false),
             (Some(width), Packing::Itanium | Packing::Aapcs) => {
                 (up(bytes(u128::from(width))?, field.align)?, true)
             }
         };
+        after_bits |= field.width.is_some_and(|width| width > 0);
         largest = largest.max(size);
         if aligns {
             align = align.max(field.align);

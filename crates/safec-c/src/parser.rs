@@ -4,8 +4,8 @@
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
 //! `return`, an expression statement, `if`, `while`, `do` and both forms of `for`,
-//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members, anonymous ones too, and member access (6.7.2.1, 6.5.2.3). What
-//! it does not read yet is a bit-field, casts,
+//! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members, anonymous ones and bit-fields too, and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`, a variadic function's ellipsis,
 //! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]

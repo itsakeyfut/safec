@@ -1,15 +1,23 @@
-error[SC0306]: `&` cannot be applied to a bit-field
-    ╭─[ a_bit_field_is_typed_and_its_width_held.c:26:15 ]
+error[SC0318]: the left operand of `=` cannot be written to
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:36:5 ]
     │
- 26 │     int *p = &f->a;
+ 36 │     f->narrow = 1;
+    │     ────┬────  
+    │         ╰────── this is `const int`
+────╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0306]: `&` cannot be applied to a bit-field
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:40:15 ]
+    │
+ 40 │     int *p = &f->a;
     │               ──┬─  
     │                 ╰─── this is a bit-field
 ────╯
   = note: C17 6.5.3.2 p1
 error[SC0306]: `sizeof` cannot be applied to a bit-field
-    ╭─[ a_bit_field_is_typed_and_its_width_held.c:27:19 ]
+    ╭─[ a_bit_field_is_typed_and_its_width_held.c:41:19 ]
     │
- 27 │     return sizeof(f->a) + *p;
+ 41 │     return sizeof(f->a) + *p;
     │                   ──┬─  
     │                     ╰─── this is a bit-field
 ────╯

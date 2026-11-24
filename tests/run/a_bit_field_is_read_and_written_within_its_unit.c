@@ -8,6 +8,27 @@ struct Flags {
     unsigned last : 2;
 };
 
+struct Wide {
+    unsigned long long low : 3;
+    unsigned long flag : 1;
+    int : 0;
+};
+
+static int first(struct Flags *f) {
+    return f->ready;
+}
+
+/* A function after one that reaches a bit-field, whose `q` and `x` are
+   numbered as that one's unit address and temporary were: an assignment
+   here writes only `x`. */
+static int unrelated(int y, unsigned char *q, int x) {
+    if (!q) {
+        return 0;
+    }
+    x = 200;
+    return x == 200 && *q == 240 ? 0 : 1;
+}
+
 int main(void) {
     int wrong = 0;
     struct Flags f;
@@ -35,5 +56,17 @@ int main(void) {
     // this subtraction is below zero (C17 6.3.1.1 p2).
     int promoted = f.ready - 2 < 0;
     wrong += promoted ? 0 : 1;
+
+    // So does one of `unsigned long long` or `unsigned long`, as `clang`
+    // promotes any bit-field narrower than `int`.
+    struct Wide w;
+    w.low = 0;
+    w.flag = 0;
+    int promoted_wide = w.low - 1 < 0 && w.flag - 1 < 0;
+    wrong += promoted_wide ? 0 : 1;
+
+    unsigned char byte = 240;
+    wrong += first(&f) == 1 ? 0 : 1;
+    wrong += unrelated(0, &byte, 1);
     return wrong;
 }

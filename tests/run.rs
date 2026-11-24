@@ -148,8 +148,11 @@ programs! {
     /// Bit-fields packed into their units beside a `char` and a 40-bit
     /// `long long` one, each read and written with the other bits of its
     /// unit kept, a signed one carrying its sign, an assignment's value cut
-    /// to the width, a step that wraps, and an `unsigned` one promoted to
-    /// `int` (#1206). Mutation: drop the shift in `Lowering::extract`; the
-    /// reads come out of the wrong bits and this fails.
+    /// to the width, a step that wraps, an `unsigned` one promoted to `int`,
+    /// and `unsigned long long` and `unsigned long` ones promoted too, as
+    /// `clang` promotes them; and a function after one that reaches a
+    /// bit-field writing only its own local (#1206). Mutation: drop the shift
+    /// in `Lowering::extract`; the reads come out of the wrong bits and this
+    /// fails.
     a_bit_field_is_read_and_written_within_its_unit,
 }

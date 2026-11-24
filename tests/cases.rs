@@ -9128,10 +9128,14 @@ cases! {
         // A bit-field's width is a constant, here an enumerator, and `Fine`
         // is sized by the target's packing; each rule C17 6.7.2.1 p4 and p5
         // set on a width and a type is held, and `&` and `sizeof` of a
-        // bit-field are refused (6.5.3.2 p1, 6.5.3.4 p1) (#1206). Mutations:
-        // drop the width check in `Checker::check_bit_fields`, and `Unfit`
-        // is accepted; drop `refuse_bit_field` from `&`, and `address`'s
-        // `&f->a` is accepted.
+        // bit-field are refused (6.5.3.2 p1, 6.5.3.4 p1) (#1206). A struct
+        // ending in a zero-width bit-field is laid out, and a narrow `const`
+        // bit-field stays `const` where it is promoted, so `write_fixed` is
+        // refused as a write to it. Mutations: drop the width check in
+        // `Checker::check_bit_fields`, and `Unfit` is accepted; drop
+        // `refuse_bit_field` from `&`, and `address`'s `&f->a` is accepted;
+        // drop the `const` in `Checker::read_as`, and `write_fixed` is
+        // accepted.
         a_bit_field_is_typed_and_its_width_held: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // A `switch` with nothing in it is read and goes straight past its
         // body, and a `case` with no `switch` around it breaks 6.8.1 p2's

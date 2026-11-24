@@ -510,6 +510,43 @@ fn bit_shapes() -> Vec<(bool, Vec<BitMember>)> {
             (Short, Signed, Some(12), true),
             (Char, Signed, Some(2), true),
         ]),
+        // Found by review: a struct ending in a zero-width bit-field, which
+        // no unit fits; unions whose zero-width bit-field takes its type's
+        // size on Microsoft after another bit-field and not before; and an
+        // unnamed bit-field wider than its union.
+        s(vec![
+            (Int, Signed, None, true),
+            (Int, Signed, Some(0), false),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (Int, Signed, Some(0), false),
+        ]),
+        s(vec![
+            (Int, Signed, Some(3), true),
+            (Int, Signed, Some(0), false),
+        ]),
+        u(vec![
+            (Char, Signed, Some(3), true),
+            (LongLong, Signed, Some(0), false),
+        ]),
+        u(vec![
+            (Char, Signed, None, true),
+            (LongLong, Signed, Some(0), false),
+        ]),
+        u(vec![
+            (LongLong, Signed, Some(0), false),
+            (Char, Signed, Some(3), true),
+        ]),
+        u(vec![
+            (Char, Signed, Some(3), true),
+            (Int, Signed, Some(0), false),
+            (Char, Signed, None, true),
+        ]),
+        u(vec![
+            (Char, Unsigned, Some(5), true),
+            (LongLong, Unsigned, Some(11), false),
+        ]),
     ]
 }
 
@@ -628,9 +665,63 @@ fn clang_bit_layouts(triple: &str, shapes: &[(bool, Vec<BitMember>)]) -> Vec<Bit
         .collect()
 }
 
+/// This compiler's own `sizeof` of each bit-field shape on `triple`, which
+/// the type check works out apart from the IR's layout: the `@zN = global
+/// i32 ...` it writes for the globals `clang_bit_layouts` declares.
+fn our_sizes(triple: &str, shapes: &[(bool, Vec<BitMember>)]) -> Vec<u64> {
+    let mut source = String::new();
+    for (n, (union, members)) in shapes.iter().enumerate() {
+        let keyword = if *union { "union" } else { "struct" };
+        source.push_str(&format!("{keyword} B{n} {{"));
+        for (k, &(rank, sign, width, named)) in members.iter().enumerate() {
+            let name = if named {
+                format!(" m{k}")
+            } else {
+                String::new()
+            };
+            let width = width.map_or(String::new(), |width| format!(" : {width}"));
+            source.push_str(&format!(" {}{name}{width};", integer(rank, sign)));
+        }
+        source.push_str(&format!(" }};\nint z{n} = sizeof({keyword} B{n});\n"));
+    }
+    let dir = std::env::temp_dir().join(format!("safec_sizes_{triple}_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the temporary directory is writable");
+    let (file, module) = (dir.join("bits.c"), dir.join("bits.ll"));
+    std::fs::write(&file, source).expect("the temporary directory is writable");
+    let built = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args([
+            "--color", "never", "--safety", "off", "--emit", "llvm-ir", "--target", triple, "-o",
+        ])
+        .arg(&module)
+        .arg(&file)
+        .output()
+        .expect("safec runs");
+    assert!(
+        built.status.success(),
+        "safec read the bit-field shapes for {triple}:\n{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+    let written = std::fs::read_to_string(&module).expect("safec wrote the module");
+    let _ = std::fs::remove_dir_all(&dir);
+    (0..shapes.len())
+        .map(|n| {
+            let prefix = format!("@z{n} = global i32 ");
+            written
+                .lines()
+                .find_map(|line| line.strip_prefix(&prefix))
+                .and_then(|size| size.trim().parse().ok())
+                .unwrap_or_else(|| panic!("safec wrote `@z{n}` for {triple}"))
+        })
+        .collect()
+}
+
 /// Every bit-field shape is laid out by the IR as `clang` lays it out, on
 /// every target (#1206): each named bit-field's first bit and width, each
-/// ordinary member's offset, and the whole's size and alignment. Mutation:
+/// ordinary member's offset, and the whole's size and alignment; and this
+/// compiler's own `sizeof` of each, which the type check works out apart
+/// from the IR, is the same size. Mutation: count every member named in
+/// `Checker::struct_layout`; this fails at `B6` off MSVC. Mutation:
 /// let a bit-field straddle its unit in `record::lay_out_itanium`; this
 /// fails at `B2`. Mutation: let a Microsoft unit hold bit-fields of another
 /// size; this fails at `B3`.
@@ -654,6 +745,7 @@ fn the_layout_of_every_bit_field_shape_is_clangs() {
     for &target in Target::ALL {
         let triple = target.triple();
         let expected = clang_bit_layouts(triple, &shapes);
+        let sizes = our_sizes(triple, &shapes);
         for (n, ((union, members), (want, size, align))) in shapes.iter().zip(expected).enumerate()
         {
             let mut unit = TranslationUnit::new(target);
@@ -688,6 +780,7 @@ fn the_layout_of_every_bit_field_shape_is_clangs() {
             assert_eq!(laid, want, "{triple}: the members of B{n}");
             assert_eq!(layout.size, size, "{triple}: the size of B{n}");
             assert_eq!(layout.align, align, "{triple}: the alignment of B{n}");
+            assert_eq!(sizes[n], size, "{triple}: this compiler's `sizeof` of B{n}");
         }
     }
 }

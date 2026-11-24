@@ -22,6 +22,20 @@ struct NotConstant {
     int x : n;
 };
 
+struct Trailing {
+    int a;
+    int : 0;
+};
+
+struct Fixed {
+    const unsigned narrow : 3;
+    int other;
+};
+
+void write_fixed(struct Fixed *f) {
+    f->narrow = 1;
+}
+
 int address(struct Fine *f) {
     int *p = &f->a;
     return sizeof(f->a) + *p;

@@ -357,7 +357,6 @@ pub fn lower(
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
-        bit_fields: HashMap::new(),
         argument_copies: Vec::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
@@ -463,11 +462,6 @@ struct Lowering<'a> {
     /// The `memcpy` a struct copy calls, made once. See
     /// [`Lowering::copy_struct`].
     memcpy: Option<FuncId>,
-    /// The temporaries a bit-field is taken into where it is accessed, and
-    /// where its bits are (#1206): a read reads the temporary, and a write
-    /// to it is put back into the unit by `Lowering::write_back`. Keyed by
-    /// the temporary, which is made fresh for each access.
-    bit_fields: HashMap<LocalId, BitField>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -562,6 +556,19 @@ struct Builder {
     block: Option<BlockId>,
     /// What has been written into the block since it was opened.
     elements: Vec<Element>,
+    /// The temporaries a bit-field is taken into where it is accessed, and
+    /// where its bits are (#1206): a read reads the temporary, and a write
+    /// to it is put back into the unit by `Lowering::write_back`. Keyed by
+    /// the temporary, which is made fresh for each access.
+    ///
+    /// **Here, with the function's locals**, since a `LocalId` means a
+    /// local of one function only: kept on the whole unit, a temporary of
+    /// one function's bit-field was a plain local of the next, and an
+    /// assignment to it there was put back into memory it never named
+    /// (#1206 review). Mutation: keep one table for the unit;
+    /// `a_bit_field_is_read_and_written_within_its_unit` in `tests/run.rs`
+    /// fails at `unrelated`.
+    bit_fields: HashMap<LocalId, BitField>,
 }
 
 impl Builder {
@@ -2089,6 +2096,7 @@ impl Lowering<'_> {
             function,
             block: None,
             elements: Vec::new(),
+            bit_fields: HashMap::new(),
         };
         builder.open();
         self.labeled = false;
@@ -5005,12 +5013,19 @@ impl Lowering<'_> {
             return Some(Place::local(address).deref());
         };
         let declared = self.declared_member(definition, &path);
-        // A plain `int` bit-field is signed, as `clang` makes it (C17
-        // 6.7.2.1 p10 leaves it to the implementation), and `char` is as
-        // the target makes a plain `char`.
+        // A plain `int` bit-field is signed, as `clang` makes it (C17 6.7.2
+        // p5 leaves it to the implementation), and `char` is as the target
+        // makes a plain `char`. Every kind of type answered, so one added
+        // later is `error[E0004]` here.
         let signed = match self.ast.ty(declared) {
             Type::Integer { rank, sign } => self.unit.target().integer(*rank, *sign).signed(),
-            _ => unreachable!("the type check holds a bit-field to an integer type"),
+            Type::Void
+            | Type::Pointer(_)
+            | Type::Array { .. }
+            | Type::Function { .. }
+            | Type::Struct { .. } => {
+                unreachable!("the type check holds a bit-field to an integer type")
+            }
         };
         let field = BitField {
             unit: Place::local(address).deref(),
@@ -5020,7 +5035,7 @@ impl Lowering<'_> {
         };
         let value = self.temporary(builder, id, diagnostics)?;
         self.extract(builder, &field, value, self.ast.expr(id).span());
-        self.bit_fields.insert(value, field);
+        builder.bit_fields.insert(value, field);
         Some(Place::local(value))
     }
 
@@ -5041,11 +5056,14 @@ impl Lowering<'_> {
         ty
     }
 
-    /// Take the bit-field `field` out of its unit into `into`: shifted down
-    /// and masked where it is unsigned, and where it is signed shifted to the
-    /// unit's top and back down at the unit's signed type, so its sign is
-    /// carried down (#1206). Every step at the unit's own width, the value
-    /// converted to `into`'s type where it is stored there.
+    /// Take the bit-field `field` out of its unit into `into` (#1206).
+    ///
+    /// Unsigned, it is shifted down to bit 0 and masked to its width. Signed,
+    /// it is shifted up so its top bit is the unit's, read as the unit's
+    /// signed type, and shifted back down there, which copies that top bit
+    /// into every bit above the width: the sign, carried. Every step is at
+    /// the unit's own width; `into` has the type the access is typed at,
+    /// which may be another, and the last store converts to it.
     fn extract(&mut self, builder: &mut Builder, field: &BitField, into: LocalId, span: Span) {
         let unit_bits = self.unit_bits(field);
         let (at, width) = (u64::from(field.bits.at), u64::from(field.bits.width));
@@ -5120,12 +5138,12 @@ impl Lowering<'_> {
     /// `--`.
     ///
     /// Mutation: skip this; `a_bit_field_is_read_and_written_within_its_unit`
-    /// exits nonzero, nothing written reaching the struct.
+    /// in `tests/run.rs` fails, nothing written reaching the struct.
     fn write_back(&mut self, builder: &mut Builder, written: &Place, span: Span) {
         if !written.steps().is_empty() {
             return;
         }
-        let Some(field) = self.bit_fields.get(&written.local).cloned() else {
+        let Some(field) = builder.bit_fields.get(&written.local).cloned() else {
             return;
         };
         let unit_bits = self.unit_bits(&field);
