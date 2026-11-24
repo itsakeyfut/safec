@@ -1,0 +1,7 @@
+error[SC0304]: cannot compile a struct passed past a variadic function's parameters yet
+   ╭─[ a_struct_passed_past_a_variadic_function_s_parameters_is_refused.c:9:20 ]
+   │
+ 9 │     return tail(1, p);
+   │                    ┬  
+   │                    ╰── passed to `...` here
+───╯

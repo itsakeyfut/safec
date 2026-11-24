@@ -1,0 +1,126 @@
+target triple = "x86_64-unknown-linux-gnu"
+@.str.0 = private unnamed_addr constant [14 x i8] c"%c %d %lld %s\00"
+@.str.1 = private unnamed_addr constant [3 x i8] c"%c\00"
+@.str.2 = private unnamed_addr constant [11 x i8] c"%lld %d %p\00"
+
+declare i32 @printf(ptr, ...)
+
+define void @show(i8 signext %arg0, i16 signext %arg1, i64 %arg2, ptr %arg3) {
+entry:
+  %_1 = alloca i8
+  %_2 = alloca i16
+  %_3 = alloca i64
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca i32
+  %_8 = alloca i32
+  %_9 = alloca i32
+  store i8 %arg0, ptr %_1
+  store i16 %arg1, ptr %_2
+  store i64 %arg2, ptr %_3
+  store ptr %arg3, ptr %_4
+  br label %bb0
+
+bb0:
+  store ptr @.str.0, ptr %_5
+  %t0 = load ptr, ptr %_5
+  store ptr %t0, ptr %_6
+  %t1 = load i8, ptr %_1
+  %t2 = sext i8 %t1 to i32
+  store i32 %t2, ptr %_7
+  %t3 = load i16, ptr %_2
+  %t4 = sext i16 %t3 to i32
+  store i32 %t4, ptr %_8
+  %t5 = load ptr, ptr %_6
+  %t6 = load i32, ptr %_7
+  %t7 = load i32, ptr %_8
+  %t8 = load i64, ptr %_3
+  %t9 = load ptr, ptr %_4
+  %t10 = call i32 (ptr, ...) @printf(ptr %t5, i32 %t6, i32 %t7, i64 %t8, ptr %t9)
+  store i32 %t10, ptr %_9
+  br label %bb1
+
+bb1:
+  ret void
+}
+
+define void @through_a_pointer(i8 signext %arg0) {
+entry:
+  %_1 = alloca i8
+  %_2 = alloca ptr
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca i32
+  %_6 = alloca i32
+  store i8 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr @printf, ptr %_2
+  %t0 = load ptr, ptr %_2
+  %t1 = icmp ne ptr %t0, null
+  br i1 %t1, label %bb1, label %bb2
+
+bb1:
+  store ptr @.str.1, ptr %_3
+  %t2 = load ptr, ptr %_3
+  store ptr %t2, ptr %_4
+  %t3 = load i8, ptr %_1
+  %t4 = sext i8 %t3 to i32
+  store i32 %t4, ptr %_5
+  %t5 = load ptr, ptr %_2
+  %t6 = load ptr, ptr %_4
+  %t7 = load i32, ptr %_5
+  %t8 = call i32 (ptr, ...) %t5(ptr %t6, i32 %t7)
+  store i32 %t8, ptr %_6
+  br label %bb4
+
+bb2:
+  br label %bb3
+
+bb3:
+  ret void
+
+bb4:
+  br label %bb3
+}
+
+declare void @note(ptr, ...)
+
+declare i32 @narrow_fixed(i8 signext, ...)
+
+define void @constants_and_addresses(i8 signext %arg0) {
+entry:
+  %_1 = alloca i8
+  %_2 = alloca ptr
+  %_3 = alloca ptr
+  %_4 = alloca i64
+  %_5 = alloca i32
+  %_6 = alloca i32
+  store i8 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr @.str.2, ptr %_2
+  %t0 = load ptr, ptr %_2
+  store ptr %t0, ptr %_3
+  store i64 1234567890123, ptr %_4
+  %t1 = load ptr, ptr %_3
+  %t2 = load i64, ptr %_4
+  call void (ptr, ...) @note(ptr %t1, i64 %t2, i32 1, ptr @show)
+  br label %bb1
+
+bb1:
+  %t3 = load i8, ptr %_1
+  %t4 = sext i8 %t3 to i32
+  store i32 %t4, ptr %_5
+  %t5 = load i8, ptr %_1
+  %t6 = load i32, ptr %_5
+  %t7 = call i32 (i8, ...) @narrow_fixed(i8 signext %t5, i32 %t6)
+  store i32 %t7, ptr %_6
+  br label %bb2
+
+bb2:
+  ret void
+}

@@ -266,6 +266,30 @@ fn a_declaration_has_no_body() {
     assert!(!out.contains("define"), "{out}");
 }
 
+/// A variadic declaration is declared with `...` after its parameters, and
+/// with `...` alone where it has none: C needs a parameter before `...`,
+/// and a unit another frontend builds does not (#1213).
+///
+/// Mutation: write `, ...` whatever the parameters; the second declaration
+/// is `(, ...)`, which LLVM does not parse, and this fails on the text.
+#[test]
+fn a_variadic_declaration_ends_in_an_ellipsis() {
+    let (sources, at) = named("vf");
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::INT);
+    unit.push_function(Function::declaration(at, int, [int]).variadic());
+    let (out, refusals) = module(&sources, &unit);
+    assert_eq!(refusals, Vec::new());
+    assert!(out.ends_with("declare i32 @vf(i32, ...)\n"), "{out}");
+
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::INT);
+    unit.push_function(Function::declaration(at, int, []).variadic());
+    let (out, refusals) = module(&sources, &unit);
+    assert_eq!(refusals, Vec::new());
+    assert!(out.ends_with("declare i32 @vf(...)\n"), "{out}");
+}
+
 /// An edge no statement produced is refused, and the function it was in
 /// becomes a declaration rather than half a definition.
 ///

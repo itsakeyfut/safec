@@ -1288,10 +1288,12 @@ impl Checker<'_> {
                     Type::Function {
                         returns: left_returns,
                         parameters: left_parameters,
+                        ..
                     },
                     Type::Function {
                         returns: right_returns,
                         parameters: right_parameters,
+                        ..
                     },
                 ) => {
                     work.push((*left_returns, *right_returns));
@@ -1637,6 +1639,7 @@ impl Checker<'_> {
                     let Type::Function {
                         returns,
                         parameters,
+                        ..
                     } = ast.ty(function.ty)
                     else {
                         continue;
@@ -4763,6 +4766,7 @@ impl Checker<'_> {
         let Type::Function {
             returns,
             parameters,
+            variadic,
         } = ast.ty(called)
         else {
             // 6.5.2.2 p1 again: what is called is a pointer to a function.
@@ -4827,6 +4831,31 @@ impl Checker<'_> {
         // case answered by neither.
         let (what, expected, found) = match arguments.len().cmp(&parameters.len()) {
             Ordering::Less => ("too few", parameters.len(), arguments.len()),
+            // **Past the parameters of a variadic prototype**, each further
+            // argument takes no declared type: it is passed after the default
+            // argument promotions (C17 6.5.2.2 p7), which the lowering applies,
+            // and only a `void` one is no argument, as under `()` (#1213).
+            Ordering::Greater if *variadic => {
+                for (&argument, parameter) in arguments.iter().zip(parameters) {
+                    let declared = parameter.name.unwrap_or(parameter.span);
+                    self.check_argument(ast, argument, parameter.ty, declared, diagnostics);
+                }
+                for &argument in &arguments[parameters.len()..] {
+                    if self.types[argument.index()]
+                        .is_some_and(|ty| matches!(ast.ty(ty), Type::Void))
+                    {
+                        diagnostics.report(
+                            Diagnostic::error("cannot pass `void` as an argument")
+                                .with_code(MISMATCH)
+                                .with_label(Label::primary(ast.expr(argument).span(), "this is `void`"))
+                                .with_note(
+                                    "a `void` expression has no value, and its value cannot be used (C17 6.3.2.2)",
+                                ),
+                        );
+                    }
+                }
+                return Some(returns);
+            }
             Ordering::Greater => ("too many", parameters.len(), arguments.len()),
             Ordering::Equal => {
                 // Unchecked, a pointer passed for an `int` parameter arrived

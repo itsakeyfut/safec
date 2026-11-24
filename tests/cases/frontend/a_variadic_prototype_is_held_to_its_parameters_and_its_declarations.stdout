@@ -1,0 +1,60 @@
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:1:1 "f" "int (int, ...)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:1:7 "a" "int"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:2:1 "f" "int (int)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:2:7 "a" "int"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:4:1 "g" "int (int, ...)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:4:7 "a" "int"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:5:1 "g" "int ()"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:7:1 "h" "int (int, ...)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:7:7 "a" "int"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:8:1 "h" "int (int, ...)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:8:7 "a" "int"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:10:1 "too_few" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:10:19
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:11:5
+      Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:11:12
+        Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:11:12 "h"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:14:1 "void_past_the_parameters" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:14:36
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:5
+      Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:12
+        Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:12 "h"
+        Number a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:14 "1"
+        Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:17
+          Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:15:17 "too_few"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:18:1 "nothing" "void (void)"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:20:1 "a_void_argument" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:20:27
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:5
+      Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:12
+        Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:12 "h"
+        Number a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:14 "1"
+        Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:17
+          Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:17 "nothing"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:24:1 "converted" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:24:21
+    Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:25:5 "p" "int (*)(int)"
+      Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:25:21 "h"
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:26:5
+      Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:26:12
+        Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:26:12 "p"
+        Number a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:26:14 "1"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:29:1 "unprototyped" "int (*)()"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:31:1 "against_unprototyped_pointers" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:31:41
+    Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:32:5 "p" "int (*)()"
+      Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:32:18 "h"
+    Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:33:5 "r" "int (*)(int, ...)"
+      Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:33:26 "unprototyped"
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:34:5
+      Number a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:34:12 "0"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:37:1 "k" "int ()"
+Declaration a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:38:1 "k" "int (int, ...)"
+  Parameter a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:38:7 "a" "int"
+Function a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:40:1 "fixed_argument_mismatched" "int (void)"
+  Compound a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:40:37
+    Return a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:5
+      Call a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:12
+        Identifier a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:12 "h"
+        String a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:14 "\"not an int\""
+        Number a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:28 "1"

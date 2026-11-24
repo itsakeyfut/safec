@@ -1,0 +1,90 @@
+error[SC0313]: conflicting types for `f`
+   ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:2:5 ]
+   │
+ 1 │ int f(int a, ...);
+   │     ┬  
+   │     ╰── previously declared as `int (int, ...)`
+ 2 │ int f(int a);
+   │     ┬  
+   │     ╰── declared here as `int (int)`
+───╯
+  = note: C17 6.7 p4
+error[SC0313]: conflicting types for `g`
+   ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:5:5 ]
+   │
+ 4 │ int g(int a, ...);
+   │     ┬  
+   │     ╰── previously declared as `int (int, ...)`
+ 5 │ int g();
+   │     ┬  
+   │     ╰── declared here as `int ()`
+───╯
+  = note: C17 6.7 p4
+error[SC0313]: conflicting types for `k`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:38:5 ]
+    │
+ 37 │ int k();
+    │     ┬  
+    │     ╰── previously declared as `int ()`
+ 38 │ int k(int a, ...);
+    │     ┬  
+    │     ╰── declared here as `int (int, ...)`
+────╯
+  = note: C17 6.7 p4
+error[SC0303]: too few arguments: expected 1, found 0
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:11:12 ]
+    │
+  8 │ int h(int a, ...);
+    │     ┬  
+    │     ╰── declared with 1 parameters here
+    │ 
+ 11 │     return h();
+    │            ─┬─  
+    │             ╰─── this call
+────╯
+error[SC0302]: cannot pass `void` as an argument
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:21:17 ]
+    │
+ 21 │     return h(1, nothing());
+    │                 ────┬────  
+    │                     ╰────── this is `void`
+────╯
+  = note: a `void` expression has no value, and its value cannot be used (C17 6.3.2.2)
+error[SC0302]: cannot initialize `int (*)(int)` with `int (int, ...)`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:25:21 ]
+    │
+ 25 │     int (*p)(int) = h;
+    │           ┬         ┬  
+    │           ╰──────────── this holds `int (*)(int)`
+    │                     │  
+    │                     ╰── this is `int (int, ...)`
+────╯
+error[SC0302]: cannot initialize `int (*)()` with `int (int, ...)`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:32:18 ]
+    │
+ 32 │     int (*p)() = h;
+    │           ┬      ┬  
+    │           ╰───────── this holds `int (*)()`
+    │                  │  
+    │                  ╰── this is `int (int, ...)`
+────╯
+error[SC0302]: cannot initialize `int (*)(int, ...)` with `int (*)()`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:33:26 ]
+    │
+ 33 │     int (*r)(int, ...) = unprototyped;
+    │           ┬              ──────┬─────  
+    │           ╰──────────────────────────── this holds `int (*)(int, ...)`
+    │                                │       
+    │                                ╰─────── this is `int (*)()`
+────╯
+error[SC0302]: cannot pass `char[11]` to a parameter of type `int`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:14 ]
+    │
+  8 │ int h(int a, ...);
+    │           ┬  
+    │           ╰── declared `int` here
+    │ 
+ 41 │     return h("not an int", 1);
+    │              ──────┬─────  
+    │                    ╰─────── this is `char[11]`
+────╯

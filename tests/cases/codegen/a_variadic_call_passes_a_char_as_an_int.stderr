@@ -1,0 +1,20 @@
+warning[SC0417]: this may write storage the program may not modify
+   ╭─[ a_variadic_call_passes_a_char_as_an_int.c:4:5 ]
+   │
+ 4 │     printf("%c %d %lld %s", c, s, n, p);
+   │     ─────────────────┬─────────────────  
+   │                      ╰─────────────────── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: keep `const` on the pointer, or write to a copy
+warning[SC0417]: this may write storage the program may not modify
+    ╭─[ a_variadic_call_passes_a_char_as_an_int.c:10:9 ]
+    │
+ 10 │         f("%c", c);
+    │         ─────┬────  
+    │              ╰────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: keep `const` on the pointer, or write to a copy

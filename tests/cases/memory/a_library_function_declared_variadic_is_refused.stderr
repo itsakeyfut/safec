@@ -1,0 +1,8 @@
+error[SC0320]: this declares `malloc` unlike the library's
+   ╭─[ a_library_function_declared_variadic_is_refused.c:1:7 ]
+   │
+ 1 │ void *malloc(unsigned long long, ...);
+   │       ───┬──  
+   │          ╰──── declared here
+───╯
+  = note: C17 7.1.4 p2 permits declaring a library function without its header only with its own type, and this compiler reads a call to `malloc` as the library's, which takes an integer
