@@ -204,12 +204,17 @@ that makes it valid; `parser.rs::unread_keyword` and the checks beside it
 decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
 code.
 
-**`typedef` is read by the parser, and by nothing after it** (#1205). The
-parser keeps what each identifier names in each open scope, since `T * x;` is
-a declaration where `T` is a typedef name and an expression where it is not
+**A typedef's name is the parser's, and nothing after it sees one** (#1205).
+The parser keeps what each identifier names in each open scope, since `T * x;`
+is a declaration where `T` is a typedef name and an expression where it is not
 (C17 6.7.8), and it resolves a typedef name to the type it stands for as it
 reads one. A typedef declares no object, so its declaration reaches the type
-check with no declarators, and nothing after the parser sees a typedef.
+check with no declarators. **What it declared is kept apart**, as the
+declaration's `typedefs` (#1294): the resolver walks a typedef's type where
+the typedef is, so a name in a variable length is the one in scope there; the
+type check holds it to an object's rules, which refuses one at file scope
+(6.7.6.2 p2); and the lowering works its length out where the typedef is
+reached (6.7.8 p3), for an object or a `sizeof` of the type to read.
 
 **An enumeration constant is resolved by the parser and valued by the type
 check** (#1204). The parser knows which identifiers name one, in the same

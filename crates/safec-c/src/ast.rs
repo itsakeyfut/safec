@@ -761,7 +761,8 @@ pub enum Stmt {
         /// So the list is empty exactly where the declaration declares a tag,
         /// `struct S;` and `struct S { int x; };`, or an enumeration's
         /// members, `enum { A };`, or is a typedef, which declares no object
-        /// and whose names the parser has already resolved.
+        /// and whose names the parser has already resolved; what a typedef
+        /// declared is in [`Self::Declaration::typedefs`].
         declarators: Vec<InitDeclarator>,
         /// The type each typedef declarator declared, in the order written,
         /// where the specifiers wrote `typedef`, and empty otherwise.

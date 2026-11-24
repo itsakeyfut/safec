@@ -810,21 +810,6 @@ impl Resolver<'_> {
         );
     }
 
-    /// Every declarator of one declaration, in the order they were written.
-    ///
-    /// One at a time, and each one's name goes in before its own initializer is
-    /// walked. That is C17 6.2.1 p7 from the other side of the declarator to
-    /// the one [`Resolver::declaration`] cites: a name's scope begins at the
-    /// end of its declarator, an array length is inside the declarator and an
-    /// initializer is after it. So `int a = a;` resolves to the `a` being
-    /// declared, which `clang -std=c17` accepts with a warning rather than an
-    /// error, and `int b = a, a = 1;` does not resolve at all, which `clang`
-    /// reports as an undeclared identifier. Both were measured.
-    ///
-    /// Declaring every name first and walking the initializers afterwards would
-    /// resolve the second, which is the direction that stays quiet and is the
-    /// wrong one here: nothing about it is valid C, and accepting it would make
-    /// this compiler the only reader that thinks so.
     /// Walk each typedef's type where the typedef is, so that a name in an
     /// array length, `typedef int T[n]`, is the `n` in scope there (C17
     /// 6.7.8 p3), and is resolved whether or not anything is declared with
@@ -842,6 +827,21 @@ impl Resolver<'_> {
         }
     }
 
+    /// Every declarator of one declaration, in the order they were written.
+    ///
+    /// One at a time, and each one's name goes in before its own initializer is
+    /// walked. That is C17 6.2.1 p7 from the other side of the declarator to
+    /// the one [`Resolver::declaration`] cites: a name's scope begins at the
+    /// end of its declarator, an array length is inside the declarator and an
+    /// initializer is after it. So `int a = a;` resolves to the `a` being
+    /// declared, which `clang -std=c17` accepts with a warning rather than an
+    /// error, and `int b = a, a = 1;` does not resolve at all, which `clang`
+    /// reports as an undeclared identifier. Both were measured.
+    ///
+    /// Declaring every name first and walking the initializers afterwards would
+    /// resolve the second, which is the direction that stays quiet and is the
+    /// wrong one here: nothing about it is valid C, and accepting it would make
+    /// this compiler the only reader that thinks so.
     fn declarators(&mut self, declarators: &[InitDeclarator], diagnostics: &mut DiagnosticSink) {
         for declarator in declarators {
             self.declaration(&declarator.declaration, diagnostics);
@@ -1063,7 +1063,14 @@ impl Resolver<'_> {
         while let Some(step) = pending.pop() {
             let ty = match step {
                 // A typedef's own type was walked where the typedef is.
-                Step::Type(ty) if self.typedef_walked.contains(&ty) => continue,
+                // So is a qualified copy of it, `const T`, which keeps
+                // its length expression and would resolve it again here.
+                // Mutation: ask `ty` itself; the run of
+                // `a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is`'s
+                // `qualified` is refused.
+                Step::Type(ty) if self.typedef_walked.contains(&self.ast.unqualified(ty)) => {
+                    continue;
+                }
                 Step::Type(ty) => ty,
                 Step::Close(definition) => {
                     self.close_definition(definition, diagnostics);

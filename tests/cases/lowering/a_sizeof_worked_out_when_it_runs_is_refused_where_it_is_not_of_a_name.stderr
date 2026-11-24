@@ -5,7 +5,7 @@ error[SC0304]: cannot compile this `sizeof` yet
    │                 ───────┬──────  
    │                        ╰──────── sized when it runs
 ───╯
-  = note: only `sizeof` of a variable length array's own name is worked out when it runs so far
+  = note: only `sizeof` of a variable length array's own name, or of a type a typedef named, is worked out when it runs so far
 error[SC0304]: cannot compile this `sizeof` yet
    ╭─[ a_sizeof_worked_out_when_it_runs_is_refused_where_it_is_not_of_a_name.c:7:17 ]
    │
@@ -13,4 +13,4 @@ error[SC0304]: cannot compile this `sizeof` yet
    │                 ─────┬────  
    │                      ╰────── sized when it runs
 ───╯
-  = note: only `sizeof` of a variable length array's own name is worked out when it runs so far
+  = note: only `sizeof` of a variable length array's own name, or of a type a typedef named, is worked out when it runs so far

@@ -1203,10 +1203,13 @@ impl Parser<'_> {
 
         let span = self.join(start, self.previous().span, diagnostics);
         Item::Declaration {
-            // **A typedef declares no object**, so it leaves nothing to type
-            // or lower: what its names stand for is resolved here, and the
-            // tag a `typedef struct S { ... } T;` declares is kept as any tag
-            // declaration's is.
+            // **A typedef declares no object**, so it leaves no declarator:
+            // what its names stand for is resolved here, and the tag a
+            // `typedef struct S { ... } T;` declares is kept as any tag
+            // declaration's is. **Its types are kept apart**, in `typedefs`,
+            // for what a variable length one asks of later stages: its
+            // length worked out where it is reached, and refused at file
+            // scope (#1294).
             typedefs: if typedef {
                 declarators.iter().map(|d| d.declaration.ty).collect()
             } else {

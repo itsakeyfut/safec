@@ -254,7 +254,7 @@ fn refuse_run_time_sizeof(span: Span, diagnostics: &mut DiagnosticSink) -> Optio
         Diagnostic::error("cannot compile this `sizeof` yet")
             .with_code(LOWERING)
             .with_label(Label::primary(span, "sized when it runs"))
-            .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
+            .with_note("only `sizeof` of a variable length array's own name, or of a type a typedef named, is worked out when it runs so far"),
     );
     None
 }
@@ -398,6 +398,7 @@ pub fn lower(
         memcpy: None,
         vla_types: HashMap::new(),
         typedef_lengths: HashMap::new(),
+        typedef_locals: Vec::new(),
         argument_copies: Vec::new(),
         refused: HashSet::new(),
         statics: HashMap::new(),
@@ -442,10 +443,21 @@ struct Lowering<'a> {
     /// learned (#1206 review).
     vla_types: HashMap<LocalId, TyId>,
     /// The local each variable length array type a typedef declared has its
-    /// length worked out into, keyed by the array's type node, and where the
-    /// typedef is: what an object or a `sizeof` of the type reads (#1294).
-    /// **Emptied where each function begins**, as `vla_types` is.
-    typedef_lengths: HashMap<TypeId, (LocalId, Span)>,
+    /// length worked out into, and where: what an object or a `sizeof` of
+    /// the type reads (#1294).
+    ///
+    /// **Keyed by the length expression**, not by the array's type node: an
+    /// alias, `typedef T U;`, hands on T's own node, and a qualified one,
+    /// `const T`, a copy of it with the same length, so a node key worked
+    /// T's length out again at the alias and took over T's entry, a wrong
+    /// size and a jump into T's scope accepted. The expression is what C17
+    /// 6.7.8 p3 evaluates, and every share and copy keeps it. Emptied where
+    /// each function begins, as `vla_types` is.
+    typedef_lengths: HashMap<ExprId, (LocalId, Span)>,
+    /// Every local a typedef's length was worked out into in this function,
+    /// for what a jump asks: never taken from, so that an entry a later
+    /// typedef could replace in `typedef_lengths` is still found.
+    typedef_locals: Vec<(LocalId, Span)>,
     /// The scopes that are open, innermost last, each holding the locals it
     /// declared directly: a compound statement's, and a `for`'s whose first
     /// clause is a declaration (C17 6.8.5 p5).
@@ -2175,6 +2187,7 @@ impl Lowering<'_> {
         self.argument_copies.clear();
         self.vla_types.clear();
         self.typedef_lengths.clear();
+        self.typedef_locals.clear();
         for (written, ty, pointer) in struct_parameters {
             let at = written.unwrap_or(name);
             let lowered = self.ty(at, ty, diagnostics)?;
@@ -3511,9 +3524,11 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         let (ended, begun) = markers(from, to, |local| self.vla_types.contains_key(&local));
+        // A typedef's length local is a variably modified identifier's
+        // too, and is not ended on a jump back: it holds no storage.
         let typedef_at = |local: LocalId| {
-            self.typedef_lengths
-                .values()
+            self.typedef_locals
+                .iter()
                 .find(|&&(held, _)| held == local)
                 .map(|&(_, at)| at)
         };
@@ -4553,11 +4568,16 @@ impl Lowering<'_> {
             // is refused.
             Expr::SizeofType { ty, span } => {
                 let (ty, span) = (*ty, *span);
-                let Some(&(held, _)) = self.typedef_lengths.get(&ty) else {
+                let Type::Array {
+                    element,
+                    length: Some(length),
+                    ..
+                } = *self.ast.ty(ty)
+                else {
                     return refuse_run_time_sizeof(span, diagnostics);
                 };
-                let Type::Array { element, .. } = *self.ast.ty(ty) else {
-                    unreachable!("a typedef's length is an array's");
+                let Some(&(held, _)) = self.typedef_lengths.get(&length) else {
+                    return refuse_run_time_sizeof(span, diagnostics);
                 };
                 let element = self.ty(span, element, diagnostics)?;
                 let Some(element) = self.unit.size_of(element) else {
@@ -5590,11 +5610,21 @@ impl Lowering<'_> {
     /// Work out every array length with no constant value in the type a
     /// typedef declared, `ty`, where the typedef is reached (C17 6.7.8 p3,
     /// #1294): each into a local of `size_t`, recorded in `typedef_lengths`
-    /// for what reads the type later, outermost first.
+    /// for what reads the type later, evaluated outermost first.
     ///
-    /// Through arrays and pointers, and **not into a function's
-    /// parameters**, whose lengths 6.7.6.2 p5 treats as `*`. A typedef none
-    /// of whose lengths needs working out writes nothing.
+    /// Through arrays, pointers and a function's return, and **not into a
+    /// function's parameters**, whose lengths 6.7.6.2 p5 treats as `*`. A
+    /// typedef none of whose lengths needs working out writes nothing.
+    ///
+    /// **A length already worked out is not worked out again**: one an
+    /// earlier typedef wrote, which `typedef T U;`, `typedef T *P;` or
+    /// `typedef const T U;` reaches through T's type, is T's and was
+    /// evaluated where T was (p3 evaluates only what the typedef's own
+    /// declarator wrote). A typedef reached again at run time, in a loop,
+    /// still evaluates its own, since this is asked once per typedef as it
+    /// is lowered. Mutation: evaluate every length met; the run of
+    /// `a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is`'s
+    /// `alias` gives the later size and calls `f` twice.
     ///
     /// **Each local is a variably modified identifier's** for what a jump
     /// asks: it is in its scope's list, and begins there, so a jump past the
@@ -5616,7 +5646,9 @@ impl Lowering<'_> {
                     length: Some(length),
                     ..
                 } => {
-                    if self.types.value(length).is_none() {
+                    if self.types.value(length).is_none()
+                        && !self.typedef_lengths.contains_key(&length)
+                    {
                         let at = self.ast.expr(length).span();
                         let counted = self.value(builder, length, diagnostics)?;
                         let (rank, sign) = self.unit.target().size_type();
@@ -5633,12 +5665,18 @@ impl Lowering<'_> {
                             value: Rvalue::Use(counted),
                             origin: Origin::Generated(at),
                         });
-                        self.typedef_lengths.insert(current, (held, at));
+                        builder.function.mark_variable_length(held);
+                        self.typedef_lengths.insert(length, (held, at));
+                        self.typedef_locals.push((held, at));
                     }
                     current = element;
                 }
                 Type::Array { element, .. } => current = element,
                 Type::Pointer(pointee) => current = pointee,
+                // The return, which 6.7.6 p3 puts in the declarator's
+                // chain, and not the parameters. Mutation: stop here;
+                // the run's `returning` does not call `f`.
+                Type::Function { returns, .. } => current = returns,
                 _ => return Some(()),
             }
         }
@@ -5690,18 +5728,17 @@ impl Lowering<'_> {
         if self.types.value(length).is_some() {
             return Some(None);
         }
-        let typedef = (ty == specified)
-            .then(|| self.typedef_lengths.get(&ty).copied())
-            .flatten();
-        if ty == specified && typedef.is_none() {
-            diagnostics.report(
-                Diagnostic::error("cannot compile an object of a variable length array type a typedef named yet")
-                    .with_code(LOWERING)
-                    .with_label(Label::primary(span, "declared here"))
-                    .with_note("a gap in this compiler: such a type's length is worked out where the typedef is, and nothing holds it from there yet; write the array's length here instead"),
-            );
-            return None;
-        }
+        let typedef = self.typedef_lengths.get(&length).copied();
+        // A type a typedef named has had its length worked out where the
+        // typedef is, before anything of the type is declared: a typedef
+        // has block scope here (6.7.6.2 p2, and the type check refuses one
+        // at file scope), and every one this function reaches is lowered in
+        // order. Asked rather than assumed, so that a way round it panics
+        // naming what was missed instead of working the length out again.
+        assert!(
+            ty != specified || typedef.is_some(),
+            "an object of a typedef's variable length type before the typedef's length"
+        );
         let element = self.ty(span, element, diagnostics)?;
         let counted = match typedef {
             Some((from, _)) => Operand::Copy(Place::local(from)),

@@ -17,6 +17,11 @@ int through_a_typedef(int n) {
     return a[0];
 }
 
+int only_a_typedef(int n) {
+    typedef int T[n];
+    return (int)sizeof(T);
+}
+
 int main(void) {
-    return first(3) + at_its_length(3) + through_a_typedef(3);
+    return first(3) + at_its_length(3) + through_a_typedef(3) + only_a_typedef(3);
 }

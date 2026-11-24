@@ -1,0 +1,8 @@
+error[SC0309]: the length of an array cannot be `int *`
+   ╭─[ a_variable_length_typedef_is_held_to_an_integer_length.c:2:19 ]
+   │
+ 2 │     typedef int T[p];
+   │                   ┬  
+   │                   ╰── this is `int *`
+───╯
+  = note: the length of an array is an integer (C17 6.7.6.2 p1)

@@ -5,6 +5,13 @@ static int counted(void) {
     return 4;
 }
 
+static int stepped;
+
+static int step(void) {
+    stepped++;
+    return 2;
+}
+
 int main(void) {
     int wrong = 0;
 
@@ -41,7 +48,7 @@ int main(void) {
     }
     wrong += total == 6 ? 0 : 1;
 
-    // The `n` in scope where the typedef is, not a later one that hides it.
+    // The `s` in scope where the typedef is, not a later one that hides it.
     int s = 3;
     typedef char Scoped[s];
     {
@@ -49,5 +56,45 @@ int main(void) {
         Scoped a;
         wrong += sizeof a == 3 && s == 9 ? 0 : 1;
     }
+
+    // An alias names the earlier typedef's type, and works out nothing of
+    // its own: its size is the earlier one's, and the length's call runs
+    // once (`alias`).
+    int a = 3;
+    typedef char Aliased[a];
+    a = 7;
+    typedef Aliased Alias;
+    typedef Aliased *Pointing;
+    Alias alias;
+    Aliased original;
+    wrong += sizeof alias == 3 && sizeof original == 3 ? 0 : 1;
+    calls = 0;
+    typedef char Counted[counted()];
+    typedef Counted Again;
+    Again again;
+    wrong += calls == 1 && sizeof again == 4 ? 0 : 1;
+
+    // A qualified one too, its copy of the type keeping the length, in a
+    // block whose own `q` hides the one the typedef named (`qualified`).
+    int q = 3;
+    typedef char Plain[q];
+    {
+        int q = 9;
+        typedef const Plain Qualified;
+        Qualified qualified;
+        const Plain also;
+        wrong += sizeof qualified == 3 && sizeof also == 3 && sizeof(const Plain) == 3 && q == 9
+            ? 0
+            : 1;
+    }
+
+    // Through pointers, nested arrays and a function's return, every length
+    // the typedef's own declarator wrote is worked out (`returning`).
+    stepped = 0;
+    typedef int (*Rows)[step()];
+    typedef int Grid[step()][step()];
+    typedef int *Spread[step()];
+    typedef char (*(*Returning)(void))[step()];
+    wrong += stepped == 5 ? 0 : 1;
     return wrong;
 }
