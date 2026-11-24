@@ -746,7 +746,12 @@ These lower, so the safety checks read them at `--emit safety-ir`, and
 
 | Written | Why it stops here |
 |---|---|
-| `p < q`, `p <= q`, `p > q`, `p >= q`: a relational comparison of two pointers | C17 6.5.8 p5 defines it only between pointers into one object, which nothing here says; the interpreter refuses it as arithmetic on a pointer |
+| A struct passed or returned by value, on a target other than Win64, System V x86-64 and AArch64 | the backend writes those three C ABIs and no other yet |
+
+A relational comparison of two pointers builds, as an unsigned `icmp`, and
+the memory check doubts one it cannot show is between pointers into one
+live object (C17 6.5.8 p5, `SC0419`, #1211). The interpreter still refuses
+it as arithmetic on a pointer.
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and

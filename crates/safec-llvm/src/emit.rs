@@ -8,9 +8,9 @@
 //!
 //! What this refuses is what the interpreter refuses, so that two consumers of
 //! one IR do not disagree about which programs it can express, **except
-//! arrays and pointer arithmetic**: this writes both (#621), and the
-//! interpreter, whose pointer is a local with no element in it, refuses both
-//! until it is given arrays of its own. Where the *reason* for a refusal is
+//! arrays, pointer arithmetic and ordering two pointers**: this writes all
+//! three (#621, #1211), and the interpreter, whose pointer is a local with no
+//! element in it, refuses them until it is given arrays of its own. Where the *reason* for a refusal is
 //! the same it is said in the same words, and where it is not it is not.
 
 use safec_ir::ir::{Rank, Sign};

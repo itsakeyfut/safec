@@ -972,7 +972,7 @@ pub(super) fn memory_finding(
         (Kind::ComparedApart, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             COMPARED_APART,
             "this compares pointers that may point into different objects".to_owned(),
-            "nothing shows both point into one object, which C17 6.5.8 p5 asks",
+            "nothing shows both point into one live object, which C17 6.5.8 p5 asks",
             "compare pointers into one array, or compare indices instead",
         ),
         // Built only `Unknown`, at the declaration, as the rows above are.

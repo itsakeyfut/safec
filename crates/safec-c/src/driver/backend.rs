@@ -379,7 +379,7 @@ impl Drop for Scratch {
 /// What the backend could not write, as a diagnostic.
 ///
 /// The refusal's own sentence is the message, because it is the specific half:
-/// "the backend cannot write a relational comparison of two pointers" says
+/// "the backend cannot write a pointer minus a pointer, which needs a type for it" says
 /// more than a heading and a note would. `load_failure` has the same shape
 /// for the same reason.
 ///

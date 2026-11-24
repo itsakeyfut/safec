@@ -109,23 +109,30 @@ use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_ter
 /// one object (C17 6.5.8 p5, #1211), or `None` where it orders none or the
 /// two certainly share it.
 ///
-/// **One object is one referent each operand may name, and the same**:
-/// nothing else in either may-set, so a pointer that may be either of two
-/// arrays, or that holds what this check does not model
-/// (`Referent::Unknown`), is not shown to share anything. Arithmetic keeps
-/// what a pointer may name, so `p < a + n` over `a` is one object, one past
-/// its end included, which p5 allows. **An allocation site counts only
-/// where it stands for one block** (`Allocations::made_once`): one made on
-/// each turn of a loop is many objects under one name. Mutation: answer
-/// `None` whenever both name anything; `a_comparison_of_pointers_into_one_object_is_not_reported`'s
-/// `apart` goes silent.
+/// **One object is one live referent each operand may name, and the
+/// same**, read off the operand's own local:
 ///
-/// **No program measured reaches the arms for such a site or for
-/// `Referent::Unknown`** with one referent alone: a block kept across a
-/// turn also may name a lost one, and a call's result names a second site,
-/// so each is doubted before those arms are asked, and believing either
-/// arm instead changes no test. They answer as this check answers what it
-/// cannot show, should a value ever reach them that way.
+/// - nothing else in either may-set, so a pointer that may be either of two
+///   arrays, or that holds what this check does not model
+///   (`Referent::Unknown`), is not shown to share anything;
+/// - **and not null**, which a may-set does not record: `p = 0; if (c) p =
+///   a;` may name `a` alone and still point into nothing, which p5 leaves
+///   undefined (`Held::may_be_null`);
+/// - **and an allocation that is live** on every path here, since one a
+///   call may have freed is no object any more, and **that stands for one
+///   block** (`Allocations::made_once`), since one made on each turn of a
+///   loop is many objects under one name. So `p < p + 1` over a block made
+///   in a loop is doubted, though it is one block: the site cannot tell its
+///   turns apart;
+/// - **a place through a projection is not followed**: what `v.a` or `*pp`
+///   names is not what the local `v` or `pp` names.
+///
+/// Arithmetic keeps what a pointer may name, so `p < a + n` over `a` is one
+/// object, one past its end included, which p5 allows. Each line is held
+/// by `a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object`,
+/// a function per line, and its comment says the mutation. The arm for an
+/// unknown referent alone is reached by no program measured: such a value
+/// names a second site or a lost block as well, and is doubted first.
 fn compared_apart(
     unit: &TranslationUnit,
     analysis: &Allocations<'_>,
@@ -144,10 +151,13 @@ fn compared_apart(
     else {
         return None;
     };
+    // A constant is no pointer here: the type check refuses ordering a
+    // pointer against an integer, a null pointer constant included (6.5.8
+    // p2), so only an equality ever meets one.
     let pointer = |operand: &Operand| match operand {
         Operand::Copy(place) => unit
             .place_ty(function, place)
-            .is_some_and(|ty| matches!(unit.ty(ty), Ty::Pointer(_))),
+            .is_some_and(|ty| unit.ty(ty).is_pointer()),
         Operand::Constant(_) => false,
     };
     if !pointer(lhs) || !pointer(rhs) {
@@ -161,6 +171,9 @@ fn compared_apart(
             return None;
         }
         let held = &known.points_to[index::LocalIdx::of(place.local)];
+        if held.may_be_null {
+            return None;
+        }
         let mut named = held.names.ones();
         let referent = named.next()?;
         if named.next().is_some() {
@@ -168,7 +181,9 @@ fn compared_apart(
         }
         match referent {
             index::Referent::Local(_) | index::Referent::Static(_) => Some(referent),
-            index::Referent::Heap(site) => analysis.made_once[site.local()].then_some(referent),
+            index::Referent::Heap(site) => (analysis.made_once[site.local()]
+                && matches!(known.state[site], parts::SiteState::Live(_)))
+            .then_some(referent),
             index::Referent::Unknown(_) => None,
         }
     };

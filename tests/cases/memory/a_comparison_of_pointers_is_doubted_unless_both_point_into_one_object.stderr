@@ -1,0 +1,100 @@
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:19:12 ]
+    │
+ 19 │     return &a[0] < &b[0];
+    │            ──────┬──────  
+    │                  ╰──────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:26:12 ]
+    │
+ 26 │     return p >= a;
+    │            ───┬──  
+    │               ╰──── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:40:18 ]
+    │
+ 40 │             r += p < before;
+    │                  ─────┬────  
+    │                       ╰────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:53:12 ]
+    │
+ 53 │     return p > q;
+    │            ──┬──  
+    │              ╰──── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:59:12 ]
+    │
+ 59 │     return &a[0] <= &b[0];
+    │            ───────┬──────  
+    │                   ╰──────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:73:12 ]
+    │
+ 73 │     return v.first < v.second;
+    │            ─────────┬────────  
+    │                     ╰────────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:84:12 ]
+    │
+ 84 │     return &whole[0] < &other[0];
+    │            ──────────┬──────────  
+    │                      ╰──────────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+    ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:93:12 ]
+    │
+ 93 │     return p < a + 1;
+    │            ────┬────  
+    │                ╰────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+     ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:105:12 ]
+     │
+ 105 │     return p < end;
+     │            ───┬───  
+     │               ╰───── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead
+error[SC0419]: this compares pointers that may point into different objects
+     ╭─[ a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:117:14 ]
+     │
+ 117 │         r += p < p + 1;
+     │              ────┬────  
+     │                  ╰────── nothing shows both point into one live object, which C17 6.5.8 p5 asks
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: compare pointers into one array, or compare indices instead

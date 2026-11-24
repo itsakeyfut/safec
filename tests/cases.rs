@@ -54,17 +54,29 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
-        // C17 6.5.8 p5 orders pointers into one object only. `one` walks an
-        // array to its end and `past_its_end` compares one past it: silent.
-        // `apart` compares two arrays, `either` a pointer that may be
-        // either, `made_each_turn` two blocks of one site made in a loop,
-        // and `read_out_of_memory` two pointers this check does not follow:
-        // `SC0419` (#1211). Mutation: answer one object whenever both name
-        // something in `compared_apart`; `apart` goes silent. The last two
-        // are doubted by what each pointer may name besides, a lost block
-        // or a second site, before the arms for a site made each turn and
-        // for an unknown referent are asked.
-        a_comparison_of_pointers_into_one_object_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.5.8 p5 orders pointers into one object only, and
+        // `compared_apart` answers one object only where each pointer may
+        // name the one same live referent and not null (#1211). Silent:
+        // `one` walks an array to its end, `past_its_end` compares one past
+        // it, `one_static` two elements of a static. `SC0419`, with the
+        // mutation in `compared_apart` that silences each:
+        // - `apart` (`<`) and `one_or_another` (`<=`), two arrays: answer
+        //   one object whenever both name something, or drop `Le` from the
+        //   operators;
+        // - `either` (`>=`), a pointer that may be either array: count no
+        //   second name;
+        // - `through_fields`, two pointers read out of one struct: follow a
+        //   projected place as its local;
+        // - `two_statics`: take every static as one;
+        // - `maybe_null`, `a` or null: ask nothing of `may_be_null`;
+        // - `maybe_freed`, a block a call this check cannot read may have
+        //   freed: ask nothing of the site's state;
+        // - `within_one_turn`, `p < p + 1` over a block made each turn, a
+        //   doubt of one block the site cannot tell from another: take
+        //   every site as one block.
+        // `made_each_turn` and `read_out_of_memory` are doubted for what
+        // each pointer may name besides, before those arms are asked.
+        a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A variable length array's size is its length local's value, which
         // this check does not know, so an index into one is doubted, the
         // first element as much as one at its length, and nothing is

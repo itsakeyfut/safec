@@ -16,7 +16,7 @@ error[SC0419]: this compares pointers that may point into different objects
    │
  3 │ int f(int *x) { int *p = malloc(4); if (!p) return 0; free(p); return p < x; }
    │                                                                       ──┬──  
-   │                                                                         ╰──── nothing shows both point into one object, which C17 6.5.8 p5 asks
+   │                                                                         ╰──── nothing shows both point into one live object, which C17 6.5.8 p5 asks
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
