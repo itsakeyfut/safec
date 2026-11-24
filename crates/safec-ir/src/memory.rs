@@ -105,9 +105,13 @@ use report::{
 };
 use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_terminator};
 
-/// Where `element` orders two pointers this check cannot show point into
-/// one object (C17 6.5.8 p5, #1211), or `None` where it orders none or the
-/// two certainly share it.
+/// Where `element` orders or subtracts two pointers this check cannot show
+/// point into one object (C17 6.5.8 p5, #1211; 6.5.6 p9, #638), and which
+/// of the two it is, or `None` where it does neither or the two certainly
+/// share one. One question, so one answer: the clauses ask the same of
+/// both. Mutation: ask only the orderings;
+/// `the_difference_of_two_pointers_into_one_array_is_doubted_across_two`
+/// goes silent.
 ///
 /// **One object is one live referent each operand may name, and the
 /// same**, read off the operand's own local:
@@ -139,17 +143,17 @@ fn compared_apart(
     function: &Function,
     element: &Element,
     known: &known::Known,
-) -> Option<Span> {
+) -> Option<(Span, Kind)> {
     let Element::Assign(operation) = element else {
         return None;
     };
-    let Rvalue::Binary {
-        op: BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge,
-        lhs,
-        rhs,
-    } = &operation.value
-    else {
+    let Rvalue::Binary { op, lhs, rhs } = &operation.value else {
         return None;
+    };
+    let kind = match op {
+        BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => Kind::ComparedApart,
+        BinOp::Sub => Kind::SubtractedApart,
+        _ => return None,
     };
     // A constant is no pointer here: the type check refuses ordering a
     // pointer against an integer, a null pointer constant included (6.5.8
@@ -189,7 +193,7 @@ fn compared_apart(
     };
     match (one(lhs), one(rhs)) {
         (Some(left), Some(right)) if left == right => None,
-        _ => Some(operation.origin.span()),
+        _ => Some((operation.origin.span(), kind)),
     }
 }
 
@@ -351,6 +355,12 @@ pub enum Kind {
     /// pointers into one array (or one past its end) or one struct. Always
     /// `Unknown`, at the comparison (#1211).
     ComparedApart,
+    /// `q - p` of two pointers this check cannot show point into one
+    /// object, which C17 6.5.6 p9 defines only between pointers into one
+    /// array, or one past its end. The same question as
+    /// [`Kind::ComparedApart`], asked by `compared_apart`. Always `Unknown`,
+    /// at the subtraction (#638).
+    SubtractedApart,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1250,10 +1260,11 @@ fn findings_within(
                 }
                 // An ordering of two pointers, asked before the transfer,
                 // of what each held as it was compared.
-                if let Some(at) = compared_apart(unit, &analysis, function, element, &known) {
+                if let Some((at, kind)) = compared_apart(unit, &analysis, function, element, &known)
+                {
                     findings.push(Finding {
                         function: func,
-                        kind: Kind::ComparedApart,
+                        kind,
                         conclusion: Conclusion::Unknown,
                         at,
                         local: None,

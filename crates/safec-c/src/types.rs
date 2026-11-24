@@ -3401,6 +3401,17 @@ impl Checker<'_> {
                 let common = self.usual_of(left, right);
                 Some(self.integer_type(ast, common))
             }
+            // 6.5.6 p9: a pointer minus a pointer is `ptrdiff_t`, the
+            // target's, and `binary_operable` has held the two to compatible
+            // object types already (#638). Mutation: answer `None` as
+            // before; `the_difference_of_two_pointers_into_one_array_is_its_subscripts`
+            // is refused.
+            (BinOp::Sub, _)
+                if matches!(ast.ty(left), Type::Pointer(_))
+                    && matches!(ast.ty(right), Type::Pointer(_)) =>
+            {
+                Some(self.integer_type(ast, self.target.ptrdiff_type()))
+            }
             (BinOp::Add | BinOp::Sub, _) => self.additive(ast, op, left, right),
             // 6.5.7 p3: each operand is promoted, and the result has the
             // promoted left operand's type; the right does not convert it.
@@ -3561,10 +3572,10 @@ impl Checker<'_> {
         );
 
         match pointers {
-            // p9 makes a pointer minus a pointer `ptrdiff_t`, an integer
-            // type `<stddef.h>` names and this compiler does not ship yet. Two pointers added, which p2 forbids,
-            // are refused by `binary_operable` before they reach here, and
-            // the arm answers the same for them.
+            // A pointer minus a pointer is `ptrdiff_t` and answered by
+            // `Checker::binary` before this (p9). Two pointers added, which
+            // p2 forbids, are refused by `binary_operable` before they reach
+            // here, and the arm answers nothing for them.
             (true, true) => None,
             // p2 and p3 both allow the pointer on the left.
             (true, false) => Some(lhs),

@@ -1,0 +1,10 @@
+error[SC0419]: this subtracts pointers that may point into different objects
+   ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:18 ]
+   │
+ 9 │     return (int)(&a[3] - &b[1]);
+   │                  ──────┬──────  
+   │                        ╰──────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead

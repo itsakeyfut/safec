@@ -352,6 +352,16 @@ impl Target {
         (self.size, Sign::Unsigned)
     }
 
+    /// The type of `ptrdiff_t` here, which a pointer minus a pointer has
+    /// (C17 6.5.6 p9): signed, of `size_t`'s rank. Measured on every row of
+    /// [`Target::ALL`] with `clang 22.1.8 --target=<triple> -dM -E` reading
+    /// `__PTRDIFF_TYPE__` beside `__SIZE_TYPE__`: `long long` and `unsigned
+    /// long long` on Win64, `int` and `unsigned int` on `armv7` and `i686`,
+    /// `long` and `unsigned long` on the other five (#638).
+    pub fn ptrdiff_type(self) -> (Rank, Sign) {
+        (self.size, Sign::Signed)
+    }
+
     /// The sign of an enumerated type whose constants are `negative` or not,
     /// which C17 6.7.2.2 p4 leaves to the implementation: always signed for
     /// MSVC, and elsewhere unsigned where no constant is negative. Measured

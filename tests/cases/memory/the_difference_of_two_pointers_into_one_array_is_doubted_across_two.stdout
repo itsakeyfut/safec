@@ -1,0 +1,123 @@
+Target "x86_64-pc-windows-msvc"
+Function the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:1:5 "one"
+  Local "_0" "int" return
+  Local "_1" "int[4]" "a"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "long long"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:19 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:19 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 3
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:27 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:27 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:18 written
+      Destination "_6"
+      Binary "Sub"
+        Copy "_3"
+        Copy "_5"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:12 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:3:12 generated
+    Return
+Function the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:6:5 "apart"
+  Local "_0" "int" return
+  Local "_1" "int[4]" "a"
+  Local "_2" "int[4]" "b"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "long long"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:19 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:19 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 3
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:27 generated
+      Destination "_5"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:27 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:18 written
+      Destination "_7"
+      Binary "Sub"
+        Copy "_4"
+        Copy "_6"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:12 written
+      Destination "_8"
+      Use
+        Copy "_7"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:12 generated
+    Return
+Function the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:12:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:12:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:13:12 written "one" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:13:20 written "apart" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:13:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:13:12 generated
+    Return

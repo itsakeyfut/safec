@@ -178,4 +178,10 @@ programs! {
     /// Mutation: put back the backend's refusal of a relational comparison
     /// of two pointers; this is refused with `SC0801`.
     a_comparison_of_pointers_into_one_object_runs,
+    /// A pointer minus a pointer is how many elements apart they are, as
+    /// `ptrdiff_t`: either way round, to one past the end, and over a struct
+    /// with padding (#638). Mutations: divide by 1 in `Emitter::difference`,
+    /// and the counts are bytes; answer no type in `Checker::binary`, and
+    /// this is refused.
+    the_difference_of_two_pointers_into_one_array_is_its_subscripts,
 }
