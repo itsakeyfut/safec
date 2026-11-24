@@ -54,6 +54,24 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A function pointer stored, called through, compared and held in a
+        // member is silent (`stored_and_called`, `in_a_member`), and a call
+        // through one is a call this check cannot read (#1212, ADR-0125):
+        // `freed_through_a_pointer` is `SC0402` after `free` called through
+        // a pointer; `read_as_data`, a function's address read as an `int`,
+        // is `SC0421` at the cast and doubted at the read;
+        // `through_a_pointer_that_may_be_null` is `SC0403`;
+        // `through_an_unassigned_pointer` is `SC0411`;
+        // `nonnull_address_taken` is `SC0420`; `converted` is `SC0421`.
+        // Mutations: answer a call through a pointer as `Callee::Reads` in
+        // `Allocations::callee`, and `freed_through_a_pointer` goes silent;
+        // skip the callee in `assigned::terminator_reads`, and
+        // `through_an_unassigned_pointer` loses its `SC0411`; skip
+        // `called_through` in the nullability report, and
+        // `through_a_pointer_that_may_be_null` goes silent; skip the
+        // `_Nonnull` pass, and `nonnull_address_taken` does; skip
+        // `converted_function`, and `converted` does.
+        a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
@@ -8962,11 +8980,12 @@ cases! {
         a_comma_in_a_controlling_expression: ["--emit", "ast"],
         a_dangling_else: ["--emit", "ast"],
         a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A parameter the IR cannot hold. A pointer to a function, because an
-        // array or a function parameter is a pointer by C17 6.7.6.3 p7 and p8
-        // and the IR holds that, and a pointer to an array is held since #621.
-        // Chosen for what the IR cannot hold, and stops testing this the day
-        // it can.
+        // A parameter the IR cannot hold. A pointer to a variable length
+        // array, because an array or a function parameter is a pointer by
+        // C17 6.7.6.3 p7 and p8 and the IR holds that, a pointer to a
+        // constant-length array is held since #621, and a pointer to a
+        // function since #1212. Chosen for what the IR cannot hold, and stops
+        // testing this the day it can.
         a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An array source is assigned as the pointer it converts to (C17
         // 6.3.2.1 p3 and 6.5.16.1 p1), and two arrays of constant lengths are

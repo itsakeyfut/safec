@@ -23,8 +23,8 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use crate::ir::{
-    Element, LocalId, Operand, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty,
-    TyId,
+    Called, Element, LocalId, Operand, Place, Projection, Promise, Rvalue, Terminator,
+    TranslationUnit, Ty, TyId,
 };
 use crate::source::{SourceMap, Span};
 
@@ -363,7 +363,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                             .expect("writing to a string cannot fail");
                         out.push('\n');
 
-                        dump_place(sources, "Destination", &operation.place, 3, out);
+                        dump_place(sources, unit, "Destination", &operation.place, 3, out);
                         dump_rvalue(sources, unit, &operation.value, 3, out);
                     }
                     // The `Operation` shape without a destination, because
@@ -375,7 +375,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                         write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
                         out.push('\n');
 
-                        dump_place(sources, "Place", place, 3, out);
+                        dump_place(sources, unit, "Place", place, 3, out);
                     }
                     // No local and no place: the whole fact is that this is
                     // here. Printed so that a marker in the wrong place is
@@ -462,7 +462,9 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
             // pointer to an array and `int *[4]` an array of pointers.
             Ty::Pointer(pointee) => {
                 inner = match unit.ty(pointee) {
-                    Ty::Array { .. } => format!("(*{inner})"),
+                    // And where it points at a function, whose parameters
+                    // bind as tightly: `int (*)(void)`.
+                    Ty::Array { .. } | Ty::Function(_) => format!("(*{inner})"),
                     Ty::Integer {
                         rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
@@ -493,6 +495,27 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                 struct_name = format!("{keyword} #{}", id.index());
                 break struct_name.as_str();
             }
+            // What it takes after the name, as C writes it, and then what it
+            // returns: `int (*)(void)`, and `int (*)()` for `()`, which says
+            // nothing about them (C17 6.7.6.3 p14).
+            Ty::Function(id) => {
+                let signature = unit.signature(id);
+                let mut taken: Vec<String> = signature
+                    .parameters
+                    .iter()
+                    .map(|&(ty, _)| spell_ty(unit, ty))
+                    .collect();
+                if signature.variadic {
+                    taken.push("...".to_owned());
+                }
+                let taken = if taken.is_empty() && signature.prototyped {
+                    "void".to_owned()
+                } else {
+                    taken.join(", ")
+                };
+                inner = format!("{inner}({taken})");
+                current = signature.returns;
+            }
         }
     };
 
@@ -510,7 +533,14 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
 /// A line per projection rather than a spelling like `(*_1)[_2]`, because the
 /// artifact is read by kind: somebody looking for every dereference in a
 /// program greps `Deref`.
-fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out: &mut String) {
+fn dump_place(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    kind: &str,
+    place: &Place,
+    depth: usize,
+    out: &mut String,
+) {
     dump_line(kind, depth, out);
     write!(out, " {:?}", name_of(place.local)).expect("writing to a string cannot fail");
     out.push('\n');
@@ -520,7 +550,7 @@ fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out:
         out.push('\n');
 
         match projection {
-            Projection::Index(index) => dump_operand(sources, index, depth + 2 + step, out),
+            Projection::Index(index) => dump_operand(sources, unit, index, depth + 2 + step, out),
             Projection::Field(member) => {
                 dump_line("Member", depth + 2 + step, out);
                 write!(out, " {member}").expect("writing to a string cannot fail");
@@ -532,12 +562,24 @@ fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out:
 }
 
 /// An operand: what it is, and the place it reads where it reads one.
-fn dump_operand(sources: &SourceMap, operand: &Operand, depth: usize, out: &mut String) {
+fn dump_operand(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    operand: &Operand,
+    depth: usize,
+    out: &mut String,
+) {
     match operand {
-        Operand::Copy(place) => dump_place(sources, operand.name(), place, depth, out),
+        Operand::Copy(place) => dump_place(sources, unit, operand.name(), place, depth, out),
         Operand::Constant(value) => {
             dump_line(operand.name(), depth, out);
             write!(out, " {value}").expect("writing to a string cannot fail");
+            out.push('\n');
+        }
+        Operand::Function(id) => {
+            dump_line(operand.name(), depth, out);
+            write!(out, " {:?}", unit.function(*id).spelled(sources))
+                .expect("writing to a string cannot fail");
             out.push('\n');
         }
     }
@@ -556,22 +598,22 @@ fn dump_rvalue(
     match value {
         Rvalue::Use(operand) | Rvalue::Reinterpret(operand) => {
             out.push('\n');
-            dump_operand(sources, operand, depth + 1, out);
+            dump_operand(sources, unit, operand, depth + 1, out);
         }
         Rvalue::Unary { op, operand } => {
             write!(out, " {:?}", op.name()).expect("writing to a string cannot fail");
             out.push('\n');
-            dump_operand(sources, operand, depth + 1, out);
+            dump_operand(sources, unit, operand, depth + 1, out);
         }
         Rvalue::Binary { op, lhs, rhs } => {
             write!(out, " {:?}", op.name()).expect("writing to a string cannot fail");
             out.push('\n');
-            dump_operand(sources, lhs, depth + 1, out);
-            dump_operand(sources, rhs, depth + 1, out);
+            dump_operand(sources, unit, lhs, depth + 1, out);
+            dump_operand(sources, unit, rhs, depth + 1, out);
         }
         Rvalue::Address(place) => {
             out.push('\n');
-            dump_place(sources, "Place", place, depth + 1, out);
+            dump_place(sources, unit, "Place", place, depth + 1, out);
         }
         // By name, as a callee is: the id is an index into a table this
         // artifact does not show.
@@ -635,7 +677,7 @@ fn dump_terminator(
             )
             .expect("writing to a string cannot fail");
             out.push('\n');
-            dump_operand(sources, condition, depth + 1, out);
+            dump_operand(sources, unit, condition, depth + 1, out);
         }
         Terminator::Call {
             callee,
@@ -644,8 +686,13 @@ fn dump_terminator(
             then,
             origin: _,
         } => {
-            write!(out, " {:?}", unit.function(*callee).spelled(sources))
-                .expect("writing to a string cannot fail");
+            // A call through a pointer is named `through`, and the pointer
+            // is the first line under it, before what it writes and passes.
+            match callee {
+                Called::Direct(id) => write!(out, " {:?}", unit.function(*id).spelled(sources)),
+                Called::Through(_) => write!(out, " through"),
+            }
+            .expect("writing to a string cannot fail");
             // A call with no continuation names no block and says why, so the
             // artifact tells a call that does not return from one whose block
             // was left out. See ADR-0051.
@@ -656,12 +703,15 @@ fn dump_terminator(
             .expect("writing to a string cannot fail");
             out.push('\n');
 
+            if let Some(pointer) = callee.operand() {
+                dump_operand(sources, unit, pointer, depth + 1, out);
+            }
             if let Some(destination) = destination {
-                dump_place(sources, "Destination", destination, depth + 1, out);
+                dump_place(sources, unit, "Destination", destination, depth + 1, out);
             }
             // Whatever else is under a call is what it passes, in order.
             for argument in arguments {
-                dump_operand(sources, argument, depth + 1, out);
+                dump_operand(sources, unit, argument, depth + 1, out);
             }
         }
         Terminator::Return => out.push('\n'),
@@ -894,7 +944,7 @@ mod tests {
             function.push_block(Block {
                 elements: Vec::new(),
                 terminator: Terminator::Call {
-                    callee,
+                    callee: Called::Direct(callee),
                     arguments: Vec::new(),
                     destination: None,
                     then: Some(test),
@@ -959,7 +1009,7 @@ mod tests {
         function.push_block(Block {
             elements: Vec::new(),
             terminator: Terminator::Call {
-                callee,
+                callee: Called::Direct(callee),
                 arguments: Vec::new(),
                 destination: None,
                 then: Some(after),

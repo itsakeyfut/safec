@@ -184,6 +184,14 @@ programs! {
     /// and the counts are bytes; answer no type in `Checker::binary`, and
     /// this is refused.
     the_difference_of_two_pointers_into_one_array_is_its_subscripts,
+    /// A function pointer stored in a local, an array element and a struct
+    /// member, called through and by `(*f)()`, compared with a function and
+    /// with null, passed and returned, and a struct passed and returned by
+    /// value through one; and a designator called through `*` and `&`
+    /// (#1212). Mutation: pass a call through a pointer the arguments
+    /// without the struct ABI's classification in `Emitter::call`; this
+    /// exits with another value.
+    a_function_pointer_is_stored_called_and_compared,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

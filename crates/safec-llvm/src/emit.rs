@@ -18,10 +18,43 @@ use std::fmt::Write as _;
 
 use crate::abi::{self, Class, Piece};
 use safec_ir::ir::{
-    BinOp, BlockId, Element, FuncId, Function, Length, Linkage, LocalId, Operand, Operation,
-    Passes, Place, Projection, Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId,
-    UnOp,
+    BinOp, BlockId, Called, Element, FuncId, Function, Length, Linkage, LocalId, Operand,
+    Operation, Passes, Place, Projection, Rvalue, Signature, StaticId, StaticInit, Terminator,
+    TranslationUnit, Ty, TyId, UnOp,
 };
+
+/// What a call passes and returns, as the IR lays it out: the one shape
+/// [`Emitter::crossings`] and [`Emitter::call`] read, whether the callee is
+/// a function this unit names or one a pointer points at (#1212).
+struct Callable {
+    /// What it returns, after a struct result is moved into a parameter.
+    returns: TyId,
+    /// Each parameter's type and how it is passed.
+    parameters: Vec<(TyId, Passes)>,
+}
+
+impl Callable {
+    /// A function's, from its locals.
+    fn of(function: &Function) -> Self {
+        Self {
+            returns: function.local(function.return_place()),
+            parameters: function
+                .parameters()
+                .enumerate()
+                .map(|(index, local)| (function.local(local), function.passes(index)))
+                .collect(),
+        }
+    }
+
+    /// A function type's, from its signature, which the lowering lays out
+    /// as it lays out a function's own parameters.
+    fn signed(signature: &Signature) -> Self {
+        Self {
+            returns: signature.returns,
+            parameters: signature.parameters.clone(),
+        }
+    }
+}
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::{Extend, Integer, Target};
 
@@ -256,16 +289,15 @@ impl Emitter<'_> {
     /// incomplete, which C allows in a declaration (C17 6.7.6.3 p4) and
     /// nobody can pass or return, or where the target's C ABI is not written
     /// here yet.
-    fn crossings(&mut self, function: &Function) -> Refuses<Vec<Crossing>> {
+    fn crossings(&mut self, callable: &Callable) -> Refuses<Vec<Crossing>> {
         let unit = self.unit;
         let mut layouts = Vec::new();
-        for (index, local) in function.parameters().enumerate() {
-            let passes = function.passes(index);
+        for &(ty, passes) in &callable.parameters {
             if passes == Passes::Value {
                 layouts.push(None);
                 continue;
             }
-            let Some(layout) = pointed_at_struct(unit, function.local(local)) else {
+            let Some(layout) = pointed_at_struct(unit, ty) else {
                 return self
                     .refuse("a struct passed or returned by value whose type is incomplete");
             };
@@ -458,6 +490,10 @@ impl Emitter<'_> {
             // nothing else does, so its storage is its size in bytes and a
             // member is reached at its offset into them. See ADR-0124.
             Ty::Struct(layout) => format!("[{} x i8]", self.unit.struct_layout(layout).size),
+            // **A function is no value, so its type is spelled nowhere**: a
+            // pointer to one is `ptr`, and a call through one spells its
+            // parameters one by one (`Self::call`).
+            Ty::Function(_) => unreachable!("a function's type is spelled nowhere"),
         }
     }
 
@@ -478,7 +514,7 @@ impl Emitter<'_> {
                 .map_or_else(String::new, |layout| format!(", align {}", layout.align)),
             // An array of them is aligned as its element (#1202).
             Ty::Array { element, .. } => self.struct_align(element),
-            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) => String::new(),
+            Ty::Integer { .. } | Ty::Void | Ty::Pointer(_) | Ty::Function(_) => String::new(),
         }
     }
 
@@ -783,6 +819,23 @@ impl Emitter<'_> {
         let pointer = format!("i{}", self.unit.target().pointer_bits());
         let (value, from) = match from {
             Operand::Copy(place) => self.read(function, place, out)?,
+            // A function pointer's value is its symbol: as another pointer,
+            // the symbol as it is, and as an integer, its address.
+            Operand::Function(id) => {
+                if self.unit.ty(to).is_pointer() {
+                    return self.function_address(*id, to);
+                }
+                let Some(int) = self.unit.integer(to) else {
+                    return self.refuse(
+                        "a function's address converted to neither a pointer nor an integer",
+                    );
+                };
+                let name = self.name(self.unit.function(*id));
+                let result = self.temp();
+                writeln!(out, "  {result} = ptrtoint ptr {name} to i{}", int.bits())
+                    .expect("writing to a string cannot fail");
+                return Ok(result);
+            }
             // `(void *)-1`: the integer's bits at a pointer's width, which
             // is what widening it by its sign or its zeros came to when the
             // constant was folded, and `inttoptr` of them.
@@ -847,7 +900,24 @@ impl Emitter<'_> {
                 let (loaded, from) = self.read(function, place, out)?;
                 self.convert(loaded, from, want, out)
             }
+            Operand::Function(id) => self.function_address(*id, want),
         }
+    }
+
+    /// A function's address, as the pointer type `want` names: its symbol,
+    /// which LLVM's `ptr` holds as it is (#1212).
+    fn function_address(&mut self, id: FuncId, want: TyId) -> Refuses<String> {
+        let function = self.unit.function(id);
+        // **One left out of the module has no symbol to take**: see
+        // `Self::function`, which declares nothing for it.
+        if !function.is_defined() && takes_an_incomplete_struct(self.unit, function) {
+            return self.refuse("the address of a function whose struct parameter is incomplete");
+        }
+        if !self.unit.ty(want).is_pointer() {
+            return self
+                .refuse("a function's address converted to something that is not a pointer");
+        }
+        Ok(self.name(function))
     }
 
     /// A constant, as the type `want` names.
@@ -1001,6 +1071,9 @@ impl Emitter<'_> {
                 Ok(value) => value.to_string(),
                 Err(_) => return self.refuse(format!("a pointer moved by {value}")),
             },
+            Operand::Function(_) => {
+                return self.refuse("a pointer moved by a function's address");
+            }
             Operand::Copy(place) => {
                 let Some(counted) = self.unit.place_ty(function, place) else {
                     return self.refuse("a place whose projections do not fit its type");
@@ -1451,7 +1524,7 @@ impl Emitter<'_> {
                 self.at = Some(origin.span());
                 self.call(
                     function,
-                    *callee,
+                    callee,
                     arguments,
                     destination.as_ref(),
                     *then,
@@ -1514,6 +1587,9 @@ impl Emitter<'_> {
                 let (value, ty) = self.read(function, place, out)?;
                 Ok((value, self.spell(ty)))
             }
+            // A function's address is never null, so it is tested as the
+            // pointer it is.
+            Operand::Function(id) => Ok((self.name(self.unit.function(*id)), "ptr".to_owned())),
         }
     }
 
@@ -1522,24 +1598,62 @@ impl Emitter<'_> {
     fn call(
         &mut self,
         function: &Function,
-        callee: FuncId,
+        callee: &Called,
         arguments: &[Operand],
         destination: Option<&Place>,
         then: Option<BlockId>,
         out: &mut String,
     ) -> Refuses<()> {
         let unit = self.unit;
-        let called = unit.function(callee);
-
-        // A callee whose signature cannot be written is not in the module at
-        // all, so a call to it would name nothing. The refusal points at the
-        // call rather than at the callee, which is the span this walk holds.
-        let (name, returned, _) = self.signature(called)?;
-        let returns = called.local(called.return_place());
-        let parameters: Vec<TyId> = called
-            .parameters()
-            .map(|local| called.local(local))
-            .collect();
+        // **A function this unit names, or the one a pointer points at**,
+        // read as one shape so both cross the call as the target's C ABI
+        // says (#1212). A call through a pointer calls the pointer's value,
+        // read before the arguments are passed, and its type is the
+        // pointee's signature, which the lowering lays out as it lays out a
+        // function's own parameters.
+        let (name, callable) = match callee {
+            Called::Direct(id) => {
+                let called = unit.function(*id);
+                // A callee whose signature cannot be written is not in the
+                // module at all, so a call to it would name nothing. The
+                // refusal points at the call rather than at the callee, which
+                // is the span this walk holds.
+                let (name, _, _) = self.signature(called)?;
+                (name, Callable::of(called))
+            }
+            Called::Through(pointer) => {
+                let Operand::Copy(place) = pointer else {
+                    return self.refuse("a call through something that is not a pointer's place");
+                };
+                let Some(ty) = unit.place_ty(function, place) else {
+                    return self.refuse("a place whose projections do not fit its type");
+                };
+                let signature = match unit.ty(ty) {
+                    Ty::Pointer(pointee) => match unit.ty(pointee) {
+                        Ty::Function(signature) => unit.signature(signature),
+                        Ty::Integer { .. }
+                        | Ty::Void
+                        | Ty::Pointer(_)
+                        | Ty::Array { .. }
+                        | Ty::Struct(_) => {
+                            return self.refuse("a call through a pointer to no function");
+                        }
+                    },
+                    Ty::Integer { .. }
+                    | Ty::Void
+                    | Ty::Array { .. }
+                    | Ty::Struct(_)
+                    | Ty::Function(_) => {
+                        return self.refuse("a call through something that is not a pointer");
+                    }
+                };
+                let callable = Callable::signed(signature);
+                let (value, _) = self.read(function, place, out)?;
+                (value, callable)
+            }
+        };
+        let returns = callable.returns;
+        let parameters: Vec<TyId> = callable.parameters.iter().map(|&(ty, _)| ty).collect();
 
         if arguments.len() != parameters.len() {
             return self.refuse(format!(
@@ -1556,7 +1670,7 @@ impl Emitter<'_> {
         // of the copy the IR passes the address of, and a struct result
         // returned in registers is written into where the caller said
         // (#1201). See `abi::classify`.
-        let crossings = self.crossings(called)?;
+        let crossings = self.crossings(&callable)?;
         let mut passed = Vec::with_capacity(arguments.len());
         let mut returned_into = None;
         for (index, ((argument, parameter), crossing)) in
@@ -1567,7 +1681,7 @@ impl Emitter<'_> {
                 passed.push(format!("{} {value}", self.parameter(*parameter)));
                 continue;
             };
-            match (called.passes(index), class) {
+            match (callable.parameters[index].1, class) {
                 (Passes::StructReturn, Class::Registers { pieces, together }) => {
                     returned_into = Some((value, pieces, together));
                 }
@@ -1598,6 +1712,7 @@ impl Emitter<'_> {
 
         if let Some((into, pieces, together)) = returned_into {
             let result = self.temp();
+            let returned = Class::aggregate(&pieces, together);
             writeln!(out, "  {result} = call {returned} {name}({passed})")
                 .expect("writing to a string cannot fail");
             let values = self.unpack(&pieces, together, &result, out);
@@ -1676,7 +1791,7 @@ impl Emitter<'_> {
     fn signature(&mut self, function: &Function) -> Refuses<(String, String, Vec<String>)> {
         let name = self.name(function);
         let mut returns = self.result(function.local(function.return_place()));
-        let crossings = self.crossings(function)?;
+        let crossings = self.crossings(&Callable::of(function))?;
         let mut parameters = Vec::new();
 
         for (index, (local, crossing)) in function.parameters().zip(crossings).enumerate() {
@@ -1822,7 +1937,7 @@ impl Emitter<'_> {
         // struct in two System V registers is two of and one returned in
         // registers none of.
         self.returned_in = None;
-        let crossings = self.crossings(function)?;
+        let crossings = self.crossings(&Callable::of(function))?;
         let mut arg = 0;
         for (index, (local, crossing)) in function.parameters().zip(crossings).enumerate() {
             let Some((class, size, align)) = crossing else {

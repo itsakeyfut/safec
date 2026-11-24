@@ -147,7 +147,7 @@ fn free(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![],
         terminator: Terminator::Call {
-            callee: callees.free,
+            callee: safec_ir::ir::Called::Direct(callees.free),
             arguments: vec![Operand::Copy(Place::local(local))],
             destination: None,
             then: Some(then),
@@ -161,7 +161,7 @@ fn malloc(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![],
         terminator: Terminator::Call {
-            callee: callees.malloc,
+            callee: safec_ir::ir::Called::Direct(callees.malloc),
             arguments: vec![],
             destination: Some(Place::local(local)),
             then: Some(then),
@@ -181,7 +181,7 @@ fn helper(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![],
         terminator: Terminator::Call {
-            callee: callees.helper,
+            callee: safec_ir::ir::Called::Direct(callees.helper),
             arguments: vec![Operand::Copy(Place::local(local))],
             destination: None,
             then: Some(then),
@@ -361,7 +361,7 @@ fn an_allocating_call_handed_a_pointer_leaves_its_allocation_alone() {
             Block {
                 elements: vec![],
                 terminator: Terminator::Call {
-                    callee: callees.malloc,
+                    callee: safec_ir::ir::Called::Direct(callees.malloc),
                     arguments: vec![Operand::Copy(Place::local(held))],
                     destination: None,
                     then: Some(first),
@@ -2618,7 +2618,7 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
         Block {
             elements: vec![],
             terminator: Terminator::Call {
-                callee: callees.malloc,
+                callee: safec_ir::ir::Called::Direct(callees.malloc),
                 arguments: vec![],
                 destination: Some(Place::new(pointer, vec![Projection::Deref])),
                 then: Some(release),
@@ -2813,7 +2813,7 @@ fn what_a_call_was_handed_is_carried_as_it_was_before_the_call() {
             Block {
                 elements: vec![],
                 terminator: Terminator::Call {
-                    callee: callees.helper,
+                    callee: safec_ir::ir::Called::Direct(callees.helper),
                     arguments: vec![Operand::Copy(Place::local(held))],
                     destination: Some(Place::local(held)),
                     then: Some(release),
@@ -2941,7 +2941,7 @@ fn a_read_carried_to_an_allocating_call_is_not_reported() {
         Block {
             elements: read(value, held, names.at[1], exit).elements,
             terminator: Terminator::Call {
-                callee: callees.malloc,
+                callee: safec_ir::ir::Called::Direct(callees.malloc),
                 arguments: vec![Operand::Copy(Place::local(held))],
                 destination: Some(Place::local(second)),
                 then: Some(exit),
@@ -3362,7 +3362,7 @@ fn defined_under(name: &str) -> (Vec<memory::Finding>, Span) {
         Block {
             elements: vec![],
             terminator: Terminator::Call {
-                callee: callees.helper,
+                callee: safec_ir::ir::Called::Direct(callees.helper),
                 arguments: vec![
                     Operand::Copy(Place::local(held)),
                     Operand::Copy(Place::local(held)),

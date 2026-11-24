@@ -1290,7 +1290,7 @@ mod tests {
             Block {
                 elements: Vec::new(),
                 terminator: Terminator::Call {
-                    callee: callee(&mut unit, span),
+                    callee: crate::ir::Called::Direct(callee(&mut unit, span)),
                     arguments: Vec::new(),
                     destination: Some(Place::local(function.return_place())),
                     then: Some(called),

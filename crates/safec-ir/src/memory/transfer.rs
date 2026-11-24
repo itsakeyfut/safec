@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dataflow::Analysis;
 use crate::ir::{
-    BinOp, BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Place,
+    BinOp, BlockId, Called, DOES_NOT_RETURN, Element, Function, LocalId, Operand, Place,
     Projection, Rvalue, Shape, Terminator, Ty, TyId,
 };
 use crate::source::Span;
@@ -110,14 +110,14 @@ impl Allocations<'_> {
     /// size this check compares is. Found by review. See ADR-0060.
     pub(super) fn constant_argument(
         &self,
-        callee: FuncId,
+        callee: &Called,
         arguments: &[Operand],
         index: usize,
     ) -> Option<u64> {
         let Some(Operand::Constant(value)) = arguments.get(index) else {
             return None;
         };
-        let declared = self.unit.function(callee);
+        let declared = self.unit.function(callee.direct()?);
         let parameter = declared.parameters().nth(index)?;
         let integer = self.unit.integer(declared.local(parameter))?;
         u64::try_from(integer.convert(*value)).ok()
@@ -127,7 +127,7 @@ impl Allocations<'_> {
     /// start, where that is a constant: the argument
     /// [`Library::written_length`](crate::library::Library::written_length)
     /// names, and nothing for a row that names none.
-    pub(super) fn written_bytes(&self, callee: FuncId, arguments: &[Operand]) -> Option<u64> {
+    pub(super) fn written_bytes(&self, callee: &Called, arguments: &[Operand]) -> Option<u64> {
         let length = self.library(callee)?.written_length()?;
         self.constant_argument(callee, arguments, length)
     }
@@ -137,7 +137,7 @@ impl Allocations<'_> {
     /// copy of four bytes where pointers take eight writes half of one, and
     /// a reader of it reads a pointer built from four new bytes and four
     /// old ones (#717), or from four and four nothing wrote (#745).
-    pub(super) fn copied_pointers(&self, callee: FuncId, arguments: &[Operand]) -> CopiedPointers {
+    pub(super) fn copied_pointers(&self, callee: &Called, arguments: &[Operand]) -> CopiedPointers {
         self.pointers_covered(callee, arguments, 2)
     }
 
@@ -162,7 +162,7 @@ impl Allocations<'_> {
     /// 12 is still reported.
     pub(super) fn copy_writes(
         &self,
-        callee: FuncId,
+        callee: &Called,
         kind: Callee,
         arguments: &[Operand],
         value: &Known,
@@ -222,7 +222,7 @@ impl Allocations<'_> {
     /// it of a copy's third: a row that fills names its own.
     pub(super) fn pointers_covered(
         &self,
-        callee: FuncId,
+        callee: &Called,
         arguments: &[Operand],
         length: usize,
     ) -> CopiedPointers {
@@ -237,7 +237,18 @@ impl Allocations<'_> {
     }
 
     /// What this check can read in the name of the function being called.
-    pub(super) fn callee(&self, id: FuncId) -> Callee {
+    ///
+    /// **A call through a pointer is [`Callee::Opaque`]**: this check does
+    /// not follow which function a pointer holds, so the call may be to any,
+    /// `free` among them, and an opaque call may write, keep or free what it
+    /// is handed. Every door reads one kind through this one answer. See
+    /// ADR-0125. Mutation: answer `Callee::Reads`;
+    /// `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
+    /// `freed_through_a_pointer` goes silent.
+    pub(super) fn callee(&self, called: &Called) -> Callee {
+        let Some(id) = called.direct() else {
+            return Callee::Opaque;
+        };
         let name = self.unit.function(id).spelled(self.sources);
         if DOES_NOT_RETURN
             .iter()
@@ -245,7 +256,8 @@ impl Allocations<'_> {
         {
             return Callee::Ends;
         }
-        self.library(id).map_or(Callee::Opaque, |row| row.callee)
+        self.library(called)
+            .map_or(Callee::Opaque, |row| row.callee)
     }
 
     /// The row of `LIBRARY` this function's name is, if any, and none for a
@@ -258,8 +270,10 @@ impl Allocations<'_> {
     /// declaration of another shape than the row's**, read as any call by
     /// this check and the nullability check alike, since both ask
     /// [`crate::library::read_as_library`] (ADR-0073 rule 1).
-    pub(super) fn library(&self, id: FuncId) -> Option<&'static Library> {
-        crate::library::read_as_library(self.unit, self.sources, id)
+    ///
+    /// None for a call through a pointer, which names no function.
+    pub(super) fn library(&self, called: &Called) -> Option<&'static Library> {
+        crate::library::read_as_library(self.unit, self.sources, called.direct()?)
     }
 
     /// What a write through a pointer carries: the sites the written value may
@@ -362,12 +376,14 @@ impl Allocations<'_> {
             // A constant, an address. Neither is a pointer this check
             // follows to an allocation, so the target is given nothing: a
             // write this check cannot follow is not evidence that the old
-            // contents are gone.
-            Rvalue::Use(Operand::Constant(_))
+            // contents are gone. **A function's address names
+            // `Why::Function` besides**, so a read through it as data,
+            // stored and read back, is doubted. See ADR-0125.
+            Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
             | Rvalue::Address(_)
             | Rvalue::Static(_)
             | Rvalue::Reinterpret(_) => {
-                Held::from_marks(
+                let mut held = Held::from_marks(
                     value.referents(),
                     Marks {
                         lost: false,
@@ -396,7 +412,11 @@ impl Allocations<'_> {
                         read_only: super::parts::ReadOnly::NONE,
                         alone: None,
                     },
-                )
+                );
+                if let Rvalue::Use(Operand::Function(_)) = written_value {
+                    held.name_unknown(Why::Function);
+                }
+                held
             }
         }
     }
@@ -477,9 +497,10 @@ impl Allocations<'_> {
                         sign: _,
                     }
                     | Ty::Void
-                    | Ty::Struct(_) => None,
+                    | Ty::Struct(_)
+                    | Ty::Function(_) => None,
                 },
-                Operand::Constant(_) => None,
+                Operand::Constant(_) | Operand::Function(_) => None,
             })
             .collect();
         match sizes[..] {
@@ -712,6 +733,8 @@ impl Allocations<'_> {
                 let size = self.unit.size_of(ty)?;
                 (size % slot == 0).then_some(size / slot)
             }
+            // No object, so no element to count.
+            Ty::Function(_) => None,
             Ty::Integer {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
@@ -768,6 +791,9 @@ impl Allocations<'_> {
                 }
                 | Ty::Void,
             ) => false,
+            // No place has a function's type, since a function is no
+            // object: answered as a pointer, the side that asks more.
+            Some(Ty::Function(_)) => true,
             // Where any member may, as `stored_pointer` answers (#1200).
             Some(Ty::Struct(_)) => self
                 .unit
@@ -787,6 +813,9 @@ impl Allocations<'_> {
                     }
                     | Ty::Void => false,
                     Ty::Struct(_) => stored_pointer(self.unit, element).is_some(),
+                    // No array holds functions (C17 6.7.6.2 p1): answered as
+                    // a pointer, as a place of a function's type is above.
+                    Ty::Function(_) => true,
                     Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
                 }
             }
@@ -840,7 +869,8 @@ impl Allocations<'_> {
             }
             | Ty::Void
             | Ty::Array { .. }
-            | Ty::Struct(_) => None,
+            | Ty::Struct(_)
+            | Ty::Function(_) => None,
         }
     }
 
@@ -878,6 +908,10 @@ impl Allocations<'_> {
                 }
                 | Ty::Void
                 | Ty::Struct(_) => 0,
+                // A function is no object, so nothing below a function
+                // pointer is believed of any width: a read through it as
+                // data is `Why::Function`'s to doubt. See ADR-0125.
+                Ty::Function(_) => 0,
                 Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
             };
             levels.push(Width::AtMost(width));
@@ -1186,7 +1220,8 @@ impl Allocations<'_> {
                 }
                 | Ty::Void
                 | Ty::Array { .. }
-                | Ty::Struct(_),
+                | Ty::Struct(_)
+                | Ty::Function(_),
             )
             | None => Some(0),
         }
@@ -1387,7 +1422,10 @@ impl Allocations<'_> {
                 rank: Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }) => false,
-            Some(Ty::Pointer(_) | Ty::Void | Ty::Array { .. } | Ty::Struct(_)) | None => false,
+            Some(
+                Ty::Pointer(_) | Ty::Void | Ty::Array { .. } | Ty::Struct(_) | Ty::Function(_),
+            )
+            | None => false,
         }
     }
 
@@ -1801,8 +1839,61 @@ impl Allocations<'_> {
     /// Whether a call to this function may have freed any allocation still
     /// live, whatever it was handed: a hatch, whose unproven conclusions are
     /// listed rather than reported. See ADR-0038.
-    pub(super) fn frees_anything(&self, callee: FuncId) -> bool {
-        self.unit.function(callee).hatch()
+    ///
+    /// **A call through a pointer may be to any hatch here**, since this
+    /// check does not follow which function a pointer holds, so it answers
+    /// yes wherever the unit has one. See ADR-0125.
+    pub(super) fn frees_anything(&self, callee: &Called) -> bool {
+        match callee {
+            Called::Direct(id) => self.unit.function(*id).hatch(),
+            Called::Through(_) => self
+                .unit
+                .functions()
+                .any(|id| self.unit.function(id).hatch()),
+        }
+    }
+
+    /// The type each parameter of what `callee` calls was declared with, in
+    /// order: the function's, or for a call through a pointer what its
+    /// pointee's [`Signature`](crate::ir::Signature) says. An argument past
+    /// these, or every argument where the type said nothing of its
+    /// parameters, is read as its own type by every reader of this.
+    pub(super) fn parameter_types(&self, function: &Function, callee: &Called) -> Vec<TyId> {
+        match callee {
+            Called::Direct(id) => {
+                let declared = self.unit.function(*id);
+                declared
+                    .parameters()
+                    .map(|parameter| declared.local(parameter))
+                    .collect()
+            }
+            Called::Through(pointer) => {
+                let Operand::Copy(place) = pointer else {
+                    return Vec::new();
+                };
+                let Some(Ty::Pointer(pointee)) = self
+                    .unit
+                    .place_ty(function, place)
+                    .map(|ty| self.unit.ty(ty))
+                else {
+                    return Vec::new();
+                };
+                match self.unit.ty(pointee) {
+                    Ty::Function(signature) => self
+                        .unit
+                        .signature(signature)
+                        .parameters
+                        .iter()
+                        .map(|&(ty, _)| ty)
+                        .collect(),
+                    Ty::Integer { .. }
+                    | Ty::Void
+                    | Ty::Pointer(_)
+                    | Ty::Array { .. }
+                    | Ty::Struct(_) => Vec::new(),
+                }
+            }
+        }
     }
 
     /// Which locals a call this check cannot read writes its result into,
@@ -1824,7 +1915,7 @@ impl Allocations<'_> {
             {
                 // Every kind written out, so that one added later is asked
                 // whether what it returns was handed over.
-                let handed_over = match self.callee(*callee) {
+                let handed_over = match self.callee(callee) {
                     // A search names what it searched rather than a site of
                     // its own, so nothing holds this mark; marked all the
                     // same, since a mark can only add a doubt. See
@@ -1950,6 +2041,13 @@ impl Allocations<'_> {
                 // arm's: what it takes to recognise is a nullness the other
                 // check established, which nothing here can see. See ADR-0027.
                 Operand::Constant(_) => continue,
+                // **A function's address is no allocation**, and freeing it
+                // is undefined (C17 7.22.3.3 p2): a doubt, as a pointer this
+                // check stopped following is. See ADR-0125.
+                Operand::Function(_) => {
+                    reached.push(Reached::Lost(LostReason::Other));
+                    continue;
+                }
                 Operand::Copy(place) => place,
             };
 
@@ -3904,40 +4002,47 @@ impl Allocations<'_> {
                     // an integer**, which is reported unproven where it is
                     // made (`Self::reinterpreted`), and is not null: what
                     // this proves after it is moot. See ADR-0117.
-                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Reinterpret(_) => {
-                        value.replace(
-                            at,
-                            Held::from_marks(
-                                value.referents(),
-                                Marks {
-                                    lost: false,
-                                    freed: None,
-                                    writes_elsewhere: true,
-                                    position: Position::START,
-                                    loaded: false,
-                                    foreign: false,
-                                    stale_read: false,
-                                    unreplaced_read: false,
-                                    lost_read: false,
-                                    from_caller: false,
-                                    forged: false,
-                                    returned_by: None,
-                                    fresh_read: false,
-                                    widths: Levels::new(vec![Width::Nothing]),
-                                    arrived_holds_pointer: false,
-                                    inner_address: false,
-                                    element: None,
-                                    site_element: None,
-                                    array_edge: false,
-                                    stored_through: false,
-                                    may_be_null: false,
-                                    vouched: false,
-                                    // A constant names nothing. See ADR-0105.
-                                    read_only: super::parts::ReadOnly::NONE,
-                                    alone: None,
-                                },
-                            ),
+                    //
+                    // **A function's address is no number, and names
+                    // `Why::Function`**: a function is no object, so a read
+                    // or a write through it as data is doubted as through a
+                    // lost value is. See ADR-0125.
+                    Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
+                    | Rvalue::Reinterpret(_) => {
+                        let mut held = Held::from_marks(
+                            value.referents(),
+                            Marks {
+                                lost: false,
+                                freed: None,
+                                writes_elsewhere: true,
+                                position: Position::START,
+                                loaded: false,
+                                foreign: false,
+                                stale_read: false,
+                                unreplaced_read: false,
+                                lost_read: false,
+                                from_caller: false,
+                                forged: false,
+                                returned_by: None,
+                                fresh_read: false,
+                                widths: Levels::new(vec![Width::Nothing]),
+                                arrived_holds_pointer: false,
+                                inner_address: false,
+                                element: None,
+                                site_element: None,
+                                array_edge: false,
+                                stored_through: false,
+                                may_be_null: false,
+                                vouched: false,
+                                // A constant names nothing. See ADR-0105.
+                                read_only: super::parts::ReadOnly::NONE,
+                                alone: None,
+                            },
                         );
+                        if let Rvalue::Use(Operand::Function(_)) = &operation.value {
+                            held.name_unknown(Why::Function);
+                        }
+                        value.replace(at, held);
                     }
                     // **The address of a static object names storage this check
                     // does not follow**, as a constant does: no allocation, so
@@ -4374,7 +4479,7 @@ mod caller_memory {
             Block {
                 elements: vec![],
                 terminator: Terminator::Call {
-                    callee: get,
+                    callee: crate::ir::Called::Direct(get),
                     arguments: vec![],
                     destination: Some(Place::local(result)),
                     then: Some(exit),

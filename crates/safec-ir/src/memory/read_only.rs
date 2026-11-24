@@ -317,7 +317,8 @@ pub(super) fn returned_read_only(
             &read_only,
             known,
         ),
-        Operand::Constant(_) => false,
+        // A function's code is not storage a return hands back to write.
+        Operand::Constant(_) | Operand::Function(_) => false,
     };
     if below || (!returns_reads_only && names_read_only(operand, &read_only, known)) {
         report_once(
@@ -394,7 +395,7 @@ pub(super) fn handed_read_only(
     else {
         return;
     };
-    let beyond = match analysis.callee(*callee) {
+    let beyond = match analysis.callee(callee) {
         Callee::Frees | Callee::Reallocates => return,
         Callee::Allocates
         | Callee::ReturnsFirst
@@ -403,9 +404,15 @@ pub(super) fn handed_read_only(
         | Callee::Reads => false,
         Callee::Opaque => true,
     };
-    let called = analysis.unit.function(*callee);
+    // **A call through a pointer is read as one through `void unp();`**:
+    // its pointee's type carries no `const` levels per parameter, so every
+    // argument is asked at its own and none is believed only read. See
+    // ADR-0125.
+    let called = callee.direct().map(|id| analysis.unit.function(id));
     let read_only = read_only_locals(function);
-    let parameters: Vec<_> = called.parameters().collect();
+    let parameters: Vec<_> = called
+        .map(|called| called.parameters().collect())
+        .unwrap_or_default();
     for (index, argument) in arguments.iter().enumerate() {
         let Operand::Copy(place) = argument else {
             continue;
@@ -421,9 +428,11 @@ pub(super) fn handed_read_only(
         // as writable one level down (#1134 review). Mutation: use `0`;
         // `read_only_storage_below_what_leaves_or_arrives_is_unproven`'s
         // `handed_unprototyped` is reported.
-        let receiver = match parameters.get(index) {
-            Some(&parameter) => Some((called.local(parameter), called.const_levels(parameter))),
-            None => analysis.unit.place_ty(function, place).map(|ty| {
+        let receiver = match (called, parameters.get(index)) {
+            (Some(called), Some(&parameter)) => {
+                Some((called.local(parameter), called.const_levels(parameter)))
+            }
+            (_, None) | (None, Some(_)) => analysis.unit.place_ty(function, place).map(|ty| {
                 let depth = depth_of(place).unwrap_or(0);
                 let own = function
                     .const_levels(place.local)
@@ -436,7 +445,8 @@ pub(super) fn handed_read_only(
             below_read_only(analysis, place, receiver, (1, beyond), &read_only, known)
         });
         if below
-            || (!called.reads_only_through(index) && names_read_only(argument, &read_only, known))
+            || (!called.is_some_and(|called| called.reads_only_through(index))
+                && names_read_only(argument, &read_only, known))
         {
             report_once(
                 findings,

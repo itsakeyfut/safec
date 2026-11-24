@@ -103,7 +103,7 @@ pub(crate) fn read_as_library(
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             } => Some(Shape::Integer),
-            Ty::Void | Ty::Array { .. } | Ty::Struct(_) => None,
+            Ty::Void | Ty::Array { .. } | Ty::Struct(_) | Ty::Function(_) => None,
         })
         .collect();
     if declared.is_empty() {

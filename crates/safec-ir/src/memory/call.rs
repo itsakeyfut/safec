@@ -4,7 +4,7 @@
 //! often, so a change to it is read without the rest of `transfer.rs`.
 
 use crate::ir::{
-    BlockId, FuncId, Function, LocalId, Operand, Origin, Place, Rvalue, Shape, Terminator, Ty, TyId,
+    BlockId, Called, Function, LocalId, Operand, Origin, Place, Rvalue, Shape, Terminator, Ty, TyId,
 };
 use crate::ir::{Rank, Sign};
 use crate::library::Library;
@@ -142,7 +142,9 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             } => true,
-            Ty::Void | Ty::Pointer(_) => false,
+            // A function's code is no memory a copy reads pointers out of
+            // as this check models them, and says nothing, as `void` does.
+            Ty::Void | Ty::Pointer(_) | Ty::Function(_) => false,
             // Where no member holds one, as `stored_pointer` answers.
             Ty::Struct(_) => crate::layout::stored_pointer(self.unit, pointee).is_none(),
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
@@ -201,7 +203,7 @@ impl Allocations<'_> {
     pub(super) fn call(
         &self,
         function: &Function,
-        callee: &FuncId,
+        callee: &Called,
         arguments: &[Operand],
         destination: &Option<Place>,
         then: &Option<BlockId>,
@@ -222,7 +224,7 @@ impl Allocations<'_> {
         // the two readers cannot disagree about which. Dropping this loop
         // silences `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`.
         // See ADR-0042.
-        for place in handed_places(self, function, *callee, arguments) {
+        for place in handed_places(self, function, callee, arguments) {
             let reached = value.handed_reached(place);
             value.meeting(origin.span(), place, Read::Argument, &reached);
         }
@@ -233,7 +235,7 @@ impl Allocations<'_> {
         // what it says is that this call touched something the check was not
         // following, which is a fact about the report rather than about the
         // lattice.
-        let kind = self.callee(*callee);
+        let kind = self.callee(callee);
         // `realloc` is asked about its first argument only, as `reported` asks
         // it. No C program shows the difference, since its size holds no
         // allocation; it is written the same way in both places so that the
@@ -409,6 +411,8 @@ impl Allocations<'_> {
                             .any(|target| may_hold_lost(&value.points_to[target]))
                 }
                 Operand::Constant(_) => false,
+                // `Why::Function`, which is read as a lost value. See ADR-0125.
+                Operand::Function(_) => true,
             }) || value
                 .closure(handed_memory)
                 .into_iter()
@@ -442,6 +446,8 @@ impl Allocations<'_> {
                     }) || held.beyond().any_unknown()
                 }
                 Operand::Constant(_) => false,
+                // It names `Why::Function`, which is unknown. See ADR-0125.
+                Operand::Function(_) => true,
             })
         {
             value.lost_may_be_gone();
@@ -462,8 +468,8 @@ impl Allocations<'_> {
         // the third argument, a row that fills with another `Callee` or its
         // length elsewhere, `bzero(m, 4)`, set the column and stayed
         // silent. Found by review.
-        if let Some(length) = self.library(*callee).and_then(Library::fill_length) {
-            let covered = self.pointers_covered(*callee, arguments, length);
+        if let Some(length) = self.library(callee).and_then(Library::fill_length) {
+            let covered = self.pointers_covered(callee, arguments, length);
             // **Bytes it fills are no pointer this check follows**, unless
             // they are all zero, where it covers at least one pointer's
             // width; a fill of less is part of one, noted below. See
@@ -696,7 +702,7 @@ impl Allocations<'_> {
             Callee::ReturnsFirst | Callee::Copies => {
                 // **What it writes, asked before anything it does changes
                 // what its source holds** (#1019): see `Self::copy_writes`.
-                let whole = self.copy_writes(*callee, kind, arguments, value);
+                let whole = self.copy_writes(callee, kind, arguments, value);
                 // **The copy door's answer for every field, never `..`**, so
                 // a field added to `Known` answers here for what a library
                 // copy does with it. See ADR-0091.
@@ -915,7 +921,7 @@ impl Allocations<'_> {
                             // in**, for where the block is later held as
                             // pointers to ask (#832). See
                             // `Known::part_written` and ADR-0087.
-                            let in_part = match self.copied_pointers(*callee, arguments) {
+                            let in_part = match self.copied_pointers(callee, arguments) {
                                 CopiedPointers::LastInPart | CopiedPointers::NoneWhole => true,
                                 CopiedPointers::Whole => false,
                             };
@@ -1046,7 +1052,7 @@ impl Allocations<'_> {
                                 function,
                                 value,
                                 arguments.first(),
-                                self.written_bytes(*callee, arguments),
+                                self.written_bytes(callee, arguments),
                             );
                             for &target in &targets {
                                 let mut each = read.clone();
@@ -1186,13 +1192,13 @@ impl Allocations<'_> {
                             // could be replaced too, and no case holds the
                             // difference.
                             let byte_for_byte = self
-                                .library(*callee)
+                                .library(callee)
                                 .is_some_and(Library::writes_byte_for_byte);
                             let replaces = if into_depth == 0 && byte_for_byte {
                                 self.replaces(
                                     &landing,
                                     value.points_to[dest.local].position.at,
-                                    self.written_bytes(*callee, arguments),
+                                    self.written_bytes(callee, arguments),
                                     value,
                                 )
                             } else {
@@ -1220,14 +1226,14 @@ impl Allocations<'_> {
                     Wrote::Copy {
                         dest: arguments.first(),
                         span: origin.span(),
-                        length: self.copied_pointers(*callee, arguments),
-                        bytes: self.written_bytes(*callee, arguments),
+                        length: self.copied_pointers(callee, arguments),
+                        bytes: self.written_bytes(callee, arguments),
                         source: arguments.get(1),
                         // A source read as far as a string runs is a string
                         // copy, and the table says which of its arguments it
                         // reads so.
                         byte_for_byte: self
-                            .library(*callee)
+                            .library(callee)
                             .is_some_and(Library::writes_byte_for_byte),
                         whole,
                     },
@@ -1285,7 +1291,9 @@ impl Allocations<'_> {
                     .iter()
                     .filter_map(|argument| match argument {
                         Operand::Copy(place) => Some(self.handed_value(function, place, value)),
-                        Operand::Constant(_) => None,
+                        // A function's address names nothing this check
+                        // believes written, as a constant does not.
+                        Operand::Constant(_) | Operand::Function(_) => None,
                     })
                     .collect();
                 value.believed_written_only_where_named_alone(&handed_values, &written_before);
@@ -1308,7 +1316,7 @@ impl Allocations<'_> {
                 // the caller assumes the worst of, which is ADR-0032's default
                 // with nothing declared to narrow it. A proved free stays
                 // proved: nothing a callee does un-frees it. See ADR-0038.
-                if self.frees_anything(*callee) {
+                if self.frees_anything(callee) {
                     for state in &mut value.state {
                         // Reachable: a hatch reaches what it was not handed
                         // only as code this check cannot read. See ADR-0047.
@@ -1510,16 +1518,15 @@ impl Allocations<'_> {
                 // An argument past every parameter, to a variadic or an
                 // unprototyped callee, is read as its own type, as a
                 // departure reads it; a constant hands no local.
-                let declared = self.unit.function(*callee);
-                let parameters: Vec<LocalId> = declared.parameters().collect();
+                let parameters = self.parameter_types(function, callee);
                 for (index, argument) in arguments.iter().enumerate() {
                     let ty = match (parameters.get(index), argument) {
-                        (Some(&parameter), _) => declared.local(parameter),
+                        (Some(&parameter), _) => parameter,
                         (None, Operand::Copy(place)) => match self.unit.place_ty(function, place) {
                             Some(ty) => ty,
                             None => continue,
                         },
-                        (None, Operand::Constant(_)) => continue,
+                        (None, Operand::Constant(_) | Operand::Function(_)) => continue,
                     };
                     let Ty::Pointer(read_as) = self.unit.ty(ty) else {
                         continue;
@@ -1818,11 +1825,11 @@ impl Allocations<'_> {
                         }) =>
                     {
                         let mut held = value.points_to[source.local].clone();
-                        if let Some(parameter) = self.unit.function(*callee).parameters().next() {
+                        if let Some(&parameter) = self.parameter_types(function, callee).first() {
                             self.converted(
                                 &mut held,
                                 function.local(source.local),
-                                self.unit.function(*callee).local(parameter),
+                                parameter,
                                 &value.extent,
                             );
                         }
@@ -1836,7 +1843,11 @@ impl Allocations<'_> {
                     // which ADR-0096 is; whether a case holds it since is not
                     // measured. See ADR-0040.
                     Some(Operand::Copy(source)) => self.read_through(function, source, value),
-                    Some(Operand::Constant(_)) | None => Held::from_marks(
+                    // A library call handed a function's address is handed
+                    // what the type check let through a cast, which is
+                    // doubted where it was converted (ADR-0125): returned as a
+                    // constant is.
+                    Some(Operand::Constant(_) | Operand::Function(_)) | None => Held::from_marks(
                         value.referents(),
                         Marks {
                             lost: false,
@@ -1986,7 +1997,10 @@ impl Allocations<'_> {
                     stored_through: false,
                     // **And may be null**, an allocation's result as much as an opaque
                     // call's, unless its callee promises otherwise (#931).
-                    may_be_null: self.unit.function(*callee).promised().is_none(),
+                    // A call through a pointer names no function to promise.
+                    may_be_null: callee
+                        .direct()
+                        .is_none_or(|id| self.unit.function(id).promised().is_none()),
                     vouched: false,
                     // **An allocation's result is certainly its one block**, where its
                     // site stands for one; nothing else a call returns is. See ADR-0105.
@@ -2018,7 +2032,7 @@ impl Allocations<'_> {
             }
         };
         value.reborn(site, made);
-        value.extent[site] = Some(self.made_extent(function, *callee, kind, arguments, place));
+        value.extent[site] = Some(self.made_extent(function, callee, kind, arguments, place));
         if opaque {
             let believed = self.pointee_size(function, place);
             value.points_to[result].believe(believed);
@@ -2059,7 +2073,7 @@ impl Allocations<'_> {
                 .iter()
                 .filter_map(|argument| match argument {
                     Operand::Copy(place) => Some(place),
-                    Operand::Constant(_) => None,
+                    Operand::Constant(_) | Operand::Function(_) => None,
                 })
                 .filter_map(|place| match place.shape() {
                     Shape::Local => Some((place.local, 0)),
@@ -2085,7 +2099,7 @@ impl Allocations<'_> {
         // A nonzero constant, or a place reached through a dereference, is
         // read as the old object: neither is null in a defined program, and
         // the null a dereference could read is undefined to read already.
-        let fresh = match self.library(*callee).and_then(|row| row.leaves) {
+        let fresh = match self.library(callee).and_then(|row| row.leaves) {
             Some(Leaves::Indeterminate) => true,
             Some(Leaves::TheOld) => match arguments.first() {
                 Some(Operand::Constant(0)) => true,
@@ -2096,7 +2110,7 @@ impl Allocations<'_> {
                     }) && (value.names_nothing(handed.local)
                         || value.names_only_fresh(handed.local, None))
                 }
-                Some(Operand::Constant(_)) | None => false,
+                Some(Operand::Constant(_) | Operand::Function(_)) | None => false,
             },
             Some(Leaves::ZeroBits) | None => false,
         };
@@ -2138,10 +2152,10 @@ impl Allocations<'_> {
                     by: Carrier::Realloc,
                 })
             }
-            Operand::Copy(_) | Operand::Constant(_) => None,
+            Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
         };
         let carried = match (
-            self.library(*callee).and_then(|row| row.leaves),
+            self.library(callee).and_then(|row| row.leaves),
             arguments.first(),
         ) {
             (Some(Leaves::TheOld), Some(handed)) => carried_from(handed, value),
@@ -2153,7 +2167,7 @@ impl Allocations<'_> {
                 value.written[site].carried_by(carried);
             }
         } else if let (Some(Leaves::TheOld), Some(Operand::Copy(handed))) = (
-            self.library(*callee).and_then(|row| row.leaves),
+            self.library(callee).and_then(|row| row.leaves),
             arguments.first(),
         ) {
             // **And may be indeterminate where the old block may have been**,
@@ -2180,7 +2194,7 @@ impl Allocations<'_> {
             }
             self.past_the_old_size(function, value, site, result, handed, carried);
         } else if matches!(
-            self.library(*callee).and_then(|row| row.leaves),
+            self.library(callee).and_then(|row| row.leaves),
             Some(Leaves::ZeroBits)
         ) {
             // **Zero bytes are no whole pointer** (#940): C17 7.22.3.2 p2
@@ -2273,7 +2287,7 @@ impl Allocations<'_> {
                         {
                             Some(source.local)
                         }
-                        Operand::Copy(_) | Operand::Constant(_) => None,
+                        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
                     })
                     .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
                     .filter(|&old| old != site)
@@ -2448,7 +2462,7 @@ impl Allocations<'_> {
     fn made_extent(
         &self,
         function: &Function,
-        callee: FuncId,
+        callee: &Called,
         kind: Callee,
         handed: &[Operand],
         destination: &Place,
@@ -2557,7 +2571,8 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Struct(_) => 0,
+            | Ty::Struct(_)
+            | Ty::Function(_) => 0,
             Ty::Array { .. } => {
                 unreachable!("`innermost_element` strips every array")
             }
@@ -2623,8 +2638,9 @@ impl Allocations<'_> {
                         sign: _,
                     } => false,
                     // Members of more than one type, so it may store any
-                    // pointer somewhere below (#1200).
-                    Ty::Struct(_) => true,
+                    // pointer somewhere below (#1200). A function says no
+                    // more than `void` does.
+                    Ty::Struct(_) | Ty::Function(_) => true,
                     Ty::Pointer(_) | Ty::Array { .. } => {
                         unreachable!("the loop strips every pointer and array")
                     }
@@ -2635,7 +2651,8 @@ impl Allocations<'_> {
                 rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                 sign: _,
             }
-            | Ty::Struct(_) => true,
+            | Ty::Struct(_)
+            | Ty::Function(_) => true,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }
@@ -2697,6 +2714,9 @@ impl Allocations<'_> {
         arguments.iter().any(|argument| match argument {
             // A constant holds no allocation, for the reason `touching` gives.
             Operand::Constant(_) => false,
+            // A function's address names `Why::Function`, which this check
+            // cannot name, so a free of it says nothing of which went.
+            Operand::Function(_) => true,
             // A projection names a place rather than a local, and this check
             // follows locals: `free(*pp)` is already a `Reached::Lost` above,
             // and there is no row here to ask.
@@ -2870,7 +2890,8 @@ impl Allocations<'_> {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Struct(_) => return usize::MAX,
+            | Ty::Struct(_)
+            | Ty::Function(_) => return usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         };
         match self.unit.ty(copied) {
@@ -2882,7 +2903,8 @@ impl Allocations<'_> {
                 sign: _,
             }
             | Ty::Void
-            | Ty::Struct(_) => usize::MAX,
+            | Ty::Struct(_)
+            | Ty::Function(_) => usize::MAX,
             Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
         }
     }

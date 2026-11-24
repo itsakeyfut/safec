@@ -7,7 +7,7 @@
 //! report reads in. See ADR-0063.
 
 use crate::cfg::Cfg;
-use crate::ir::{FuncId, Function, LocalId, Operand, Place, Shape, TranslationUnit};
+use crate::ir::{Called, FuncId, Function, LocalId, Operand, Place, Shape, TranslationUnit};
 use crate::library::Callee;
 use crate::source::SourceMap;
 
@@ -124,7 +124,7 @@ pub(super) use crate::layout::{innermost_element, stored_pointer};
 pub(super) fn handed_places<'a>(
     analysis: &Allocations<'_>,
     function: &Function,
-    callee: FuncId,
+    callee: &Called,
     arguments: &'a [Operand],
 ) -> Vec<&'a Place> {
     let arguments = match analysis.callee(callee) {

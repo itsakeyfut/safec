@@ -41,14 +41,15 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                 match step {
                     Projection::Deref => {}
                     Projection::Index(Operand::Copy(index)) => reads_of_place(index, read, written),
-                    Projection::Index(Operand::Constant(_)) | Projection::Field(_) => {}
+                    Projection::Index(Operand::Constant(_) | Operand::Function(_))
+                    | Projection::Field(_) => {}
                 }
             }
         }
         let reads_of_operand =
             |operand: &Operand, read: &mut Vec<bool>, written: &[bool]| match operand {
                 Operand::Copy(place) => reads_of_place(place, read, written),
-                Operand::Constant(_) => {}
+                Operand::Constant(_) | Operand::Function(_) => {}
             };
         // A destination that is the whole local writes it; one through a
         // projection reads the local it goes through.
@@ -115,11 +116,13 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                 reads_of_operand(condition, &mut read, &written);
             }
             Terminator::Call {
+                callee,
                 arguments,
                 destination,
-                ..
+                then: _,
+                origin: _,
             } => {
-                for argument in arguments {
+                for argument in arguments.iter().chain(callee.operand()) {
                     reads_of_operand(argument, &mut read, &written);
                 }
                 if let Some(place) = destination {
@@ -337,7 +340,7 @@ mod tests {
             Block {
                 elements: vec![],
                 terminator: Terminator::Call {
-                    callee,
+                    callee: crate::ir::Called::Direct(callee),
                     arguments: vec![Operand::Copy(Place::local(x))],
                     destination: None,
                     then: Some(then),

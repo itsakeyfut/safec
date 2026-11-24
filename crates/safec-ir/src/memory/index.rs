@@ -258,6 +258,12 @@ enum Why {
     /// a block to every load out of it, and doubted at a use as a lost value
     /// is (#948).
     Forged,
+    /// A function's address (#1212). A function is no object (C17 6.2.5
+    /// p1), so nothing this check names is what it points at, and a read or
+    /// a write through it as data is doubted as through a lost value is. Not
+    /// the empty set, which is what a null pointer holds and which a reader
+    /// may take as reaching nothing. See ADR-0125.
+    Function,
 }
 }
 

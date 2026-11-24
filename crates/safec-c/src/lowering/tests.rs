@@ -509,7 +509,12 @@ fn the_mvp_lowers() {
         panic!("{:?}", entry.terminator);
     };
     assert_eq!(
-        lowered.sources.snippet(lowered.unit.function(*callee).name),
+        lowered.sources.snippet(
+            lowered
+                .unit
+                .function(callee.direct().expect("a direct call"))
+                .name
+        ),
         "add"
     );
     assert_eq!(arguments, &[Operand::Constant(1), Operand::Constant(2)]);
@@ -771,7 +776,12 @@ fn a_recursive_call_names_the_function_it_is_in() {
         panic!("{:?}", entry.terminator);
     };
     assert_eq!(
-        lowered.sources.snippet(lowered.unit.function(*callee).name),
+        lowered.sources.snippet(
+            lowered
+                .unit
+                .function(callee.direct().expect("a direct call"))
+                .name
+        ),
         "f"
     );
 }
@@ -894,7 +904,7 @@ fn a_type_the_ir_cannot_hold_is_reported() {
 
 /// A name that is neither a local nor an object with static storage
 /// duration is reported where it is used: a file-scope object whose type the
-/// IR cannot hold, a pointer to a function, is passed over where it is
+/// IR cannot hold, a struct with a `const` member, is passed over where it is
 /// declared and has nothing to be.
 ///
 /// Mutation: give a use with no local the return place instead. Nothing is
@@ -902,7 +912,8 @@ fn a_type_the_ir_cannot_hold_is_reported() {
 /// fails.
 #[test]
 fn a_name_the_ir_cannot_reach_is_reported() {
-    let lowered = lowered("int (*g)(void);\n\nint f(void) {\n    return g == 0;\n}\n");
+    let lowered =
+        lowered("struct C { const int a; int b; } g;\n\nint f(void) {\n    return g.b;\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }
@@ -1451,7 +1462,12 @@ fn a_prototype_and_its_definition_are_one_function() {
     let Terminator::Call { callee, .. } = &entry.terminator else {
         panic!("{:?}", entry.terminator);
     };
-    assert!(lowered.unit.function(*callee).is_defined());
+    assert!(
+        lowered
+            .unit
+            .function(callee.direct().expect("a direct call"))
+            .is_defined()
+    );
 }
 
 /// The value of an assignment is what was assigned, and a call cannot
@@ -1654,7 +1670,7 @@ fn a_parameter_whose_array_length_is_a_positive_constant_lowers() {
 /// fails.
 #[test]
 fn a_call_to_a_refused_function_is_not_reported_twice() {
-    let lowered = lowered("int g(int (*a)(int));\n\nint f(void) {\n    return g(0);\n}\n");
+    let lowered = lowered("int g(int n, int (*a)[n]);\n\nint f(void) {\n    return g(1, 0);\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
 }
 

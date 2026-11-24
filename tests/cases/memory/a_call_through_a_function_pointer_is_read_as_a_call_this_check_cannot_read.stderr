@@ -1,0 +1,94 @@
+error[SC0402]: this uses `p`, which may have been freed
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:5 ]
+    │
+ 28 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:14 ]
+    │
+ 32 │     int *q = (int *)zero;
+    │              ─────┬─────  
+    │                   ╰─────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0402]: this uses `q`, which this check stopped following
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:5 ]
+    │
+ 33 │     return *q;
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:5 ]
+    │
+ 33 │     return *q;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0411]: `f` is read before anything was assigned to it
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:12 ]
+    │
+ 45 │     return f();
+    │            ─┬─  
+    │             ╰─── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0421]: this converts a pointer to a function of another type
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:23 ]
+    │
+ 55 │     void (*f)(void) = (void (*)(void))zero;
+    │                       ──────────┬─────────  
+    │                                 ╰─────────── a call through it to a function of a different type is undefined, and this check does not follow which function a pointer holds
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep the pointer the function's own type, or call through a pointer of that type
+error[SC0403]: this may dereference `f` while it is null
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:40:12 ]
+    │
+ 40 │     return f();
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `f` while it is null
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:12 ]
+    │
+ 45 │     return f();
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0420]: this takes the address of a function with a `_Nonnull` parameter
+    ╭─[ a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:49:11 ]
+    │
+ 12 │ int read_it(int *_Nonnull p) {
+    │                  ────┬───  
+    │                      ╰───── the parameter is declared `_Nonnull` here
+    │ 
+ 49 │     int (*f)(int *) = read_it;
+    │           ─────────┬─────────  
+    │                    ╰─────────── a call through this pointer is not checked against the promise, and the function's body still believes it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: call the function by its name, or have it test the parameter against null itself

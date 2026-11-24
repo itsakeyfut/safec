@@ -545,7 +545,7 @@ fn a_call_that_returns_nothing_stores_nothing() {
         Block {
             elements: Vec::new(),
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: Vec::new(),
                 destination: None,
                 then: Some(after),
@@ -593,7 +593,7 @@ fn a_call_that_returns_nothing_into_a_local_stores_nothing() {
         Block {
             elements: Vec::new(),
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: Vec::new(),
                 destination: Some(Place::local(nothing)),
                 then: Some(after),
@@ -948,7 +948,7 @@ fn a_call_to_a_refused_function_is_refused_where_it_is_written() {
         Block {
             elements: Vec::new(),
             terminator: Terminator::Call {
-                callee,
+                callee: safec_ir::ir::Called::Direct(callee),
                 arguments: Vec::new(),
                 destination: None,
                 then: Some(after),

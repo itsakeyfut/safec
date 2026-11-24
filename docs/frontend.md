@@ -764,6 +764,15 @@ check doubts one it cannot show is between elements of one array (C17
 ordering asks for: two members of a struct are two arrays, and so are
 two members of one element of an array of structs (#1301).
 
+A pointer to a function builds (#1212): stored, called through, compared,
+and held in an array or a member, with a struct passed or returned by value
+through one as the target's C ABI says. The memory check reads a call
+through one as a call to code it cannot read, the nullability and assigned
+checks read the pointer as a dereference reads it, and a conversion to or
+from a pointer to a function is doubted where it is written (`SC0421`), as
+is taking the address of a function with a `_Nonnull` parameter
+(`SC0420`). See ADR-0125. The interpreter refuses a call through one.
+
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and
 `*(p + 0)` are still folded to `*p` by the lowering (ADR-0021). The

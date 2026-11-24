@@ -24,7 +24,8 @@ pub(crate) fn innermost_element(unit: &TranslationUnit, ty: TyId) -> TyId {
         }
         | Ty::Void
         | Ty::Pointer(_)
-        | Ty::Struct(_) => ty,
+        | Ty::Struct(_)
+        | Ty::Function(_) => ty,
     }
 }
 
@@ -92,5 +93,7 @@ pub(crate) fn pointer_depth(unit: &TranslationUnit, ty: TyId) -> usize {
         // through the member's own pointer type, which is counted where it
         // is used, so nothing reads a struct's own depth: measured.
         Ty::Struct(_) => 0,
+        // A function holds nothing, so `int (*)(void)` is one `*` deep.
+        Ty::Function(_) => 0,
     }
 }

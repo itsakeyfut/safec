@@ -273,7 +273,7 @@ fn every_terminator_says_where_control_can_go() {
         ),
         (
             Terminator::Call {
-                callee: FuncId(0),
+                callee: Called::Direct(FuncId(0)),
                 arguments: Vec::new(),
                 destination: Some(Place::local(LocalId(0))),
                 then: Some(two),
@@ -283,7 +283,7 @@ fn every_terminator_says_where_control_can_go() {
         ),
         (
             Terminator::Call {
-                callee: FuncId(0),
+                callee: Called::Direct(FuncId(0)),
                 arguments: Vec::new(),
                 destination: None,
                 then: None,
@@ -572,7 +572,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
     let call = caller.push_block(Block {
         elements: Vec::new(),
         terminator: Terminator::Call {
-            callee: free,
+            callee: Called::Direct(free),
             arguments: vec![Operand::Copy(Place::local(p))],
             destination: None,
             then: Some(after),
@@ -591,7 +591,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
     };
     assert_eq!(*destination, None);
     assert_eq!(origin.span(), at);
-    assert_eq!(callee.index(), 0);
+    assert_eq!(callee.direct().map(FuncId::index), Some(0));
 }
 
 /// A function whose body is elsewhere is not a function with no blocks.

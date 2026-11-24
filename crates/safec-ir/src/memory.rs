@@ -86,7 +86,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, BinOp, BlockId, Element, FuncId, Function, Length, LocalId, Operand, Operation, Place,
-    Rvalue, StaticId, Terminator, TranslationUnit, Ty,
+    Rvalue, StaticId, Terminator, TranslationUnit, Ty, TyId,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -206,6 +206,10 @@ fn compared_apart(
             .place_ty(function, place)
             .is_some_and(|ty| unit.ty(ty).is_pointer()),
         Operand::Constant(_) => false,
+        // A function's address, which no ordering or difference reaches
+        // (the type check refuses both, 6.5.8 p2 and 6.5.6 p3), and which
+        // `one` answers as naming no object, so it is doubted if it did.
+        Operand::Function(_) => true,
     };
     if !pointer(lhs) || !pointer(rhs) {
         return None;
@@ -243,7 +247,7 @@ fn compared_apart(
                 Ty::Pointer(pointee) => Some(pointee),
                 _ => None,
             }),
-        Operand::Constant(_) => None,
+        Operand::Constant(_) | Operand::Function(_) => None,
     };
     let referent_ty = |referent: index::Referent| match referent {
         index::Referent::Local(local) => function
@@ -312,6 +316,72 @@ fn compared_apart(
         }
         _ => Some((operation.origin.span(), kind)),
     }
+}
+
+/// Where `element` converts a pointer to a function into a pointer of a type
+/// it is not compatible with, or another pointer into a pointer to a
+/// function: a copy whose destination's type and operand's type are pointers
+/// and differ in that way (#1212). Two function types are compatible where
+/// they return one type, take one list of parameters or say nothing of them
+/// (`()`, C17 6.7.6.3 p15), and agree on `...`. See ADR-0125.
+fn converted_function(
+    unit: &TranslationUnit,
+    function: &Function,
+    element: &Element,
+) -> Option<Span> {
+    let Element::Assign(operation) = element else {
+        return None;
+    };
+    let Rvalue::Use(operand) = &operation.value else {
+        return None;
+    };
+    // What a pointer type points at, where it is a pointer: the function's
+    // signature for a pointer to a function, `None` for any other pointer.
+    let pointee = |ty: TyId| -> Option<Option<crate::ir::Signature>> {
+        match unit.ty(ty) {
+            Ty::Pointer(pointee) => Some(match unit.ty(pointee) {
+                Ty::Function(signature) => Some(unit.signature(signature).clone()),
+                Ty::Integer { .. }
+                | Ty::Void
+                | Ty::Pointer(_)
+                | Ty::Array { .. }
+                | Ty::Struct(_) => None,
+            }),
+            Ty::Integer { .. } | Ty::Void | Ty::Array { .. } | Ty::Struct(_) | Ty::Function(_) => {
+                None
+            }
+        }
+    };
+    let from = match operand {
+        Operand::Copy(place) => pointee(unit.place_ty(function, place)?)?,
+        // A designator's own type, as `TranslationUnit::function_pointer`
+        // builds it.
+        Operand::Function(id) => {
+            let declared = unit.function(*id);
+            Some(crate::ir::Signature {
+                returns: declared.local(declared.return_place()),
+                parameters: declared
+                    .parameters()
+                    .enumerate()
+                    .map(|(index, local)| (declared.local(local), declared.passes(index)))
+                    .collect(),
+                prototyped: declared.prototyped(),
+                variadic: false,
+            })
+        }
+        Operand::Constant(_) => return None,
+    };
+    let into = pointee(unit.place_ty(function, &operation.place)?)?;
+    let compatible = match (&from, &into) {
+        (None, None) => true,
+        (Some(from), Some(into)) => {
+            from.returns == into.returns
+                && from.variadic == into.variadic
+                && (!from.prototyped || !into.prototyped || from.parameters == into.parameters)
+        }
+        (Some(_), None) | (None, Some(_)) => false,
+    };
+    (!compatible).then(|| operation.origin.span())
 }
 
 /// Whether the pointer `local` holds only ever moved as its own type, so a
@@ -554,6 +624,12 @@ pub enum Kind {
     /// that both be elements of that array and says how (#1301). Always
     /// `Unknown`, at the subtraction (#638).
     SubtractedApart,
+    /// A pointer to a function converted to a pointer of another type, or
+    /// another type's pointer converted to a pointer to a function: a call
+    /// through it to a function of a different type is undefined (C17
+    /// 6.3.2.3 p8), and this check does not follow which function a pointer
+    /// holds. Always `Unknown`, at the conversion (#1212). See ADR-0125.
+    FunctionConverted,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1474,6 +1550,23 @@ fn findings_within(
                         unproven: None,
                     });
                 }
+                // A conversion to, from or between function pointer types,
+                // which the IR writes as a copy into a temporary of the type
+                // converted to. Mutation: skip this;
+                // `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
+                // `converted` goes silent.
+                if let Some(at) = converted_function(unit, function, element) {
+                    findings.push(Finding {
+                        function: func,
+                        kind: Kind::FunctionConverted,
+                        conclusion: Conclusion::Unknown,
+                        at,
+                        local: None,
+                        freed: None,
+                        made: None,
+                        unproven: None,
+                    });
+                }
                 if let Element::Assign(operation) = element {
                     if let Rvalue::Reinterpret(_) = operation.value {
                         findings.push(Finding {
@@ -2123,7 +2216,7 @@ mod tests {
             Block {
                 elements: vec![],
                 terminator: Terminator::Call {
-                    callee,
+                    callee: crate::ir::Called::Direct(callee),
                     arguments,
                     destination: into.map(Place::local),
                     then: Some(then),

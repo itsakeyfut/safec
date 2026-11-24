@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Shape,
+    BlockId, Called, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Shape,
     Terminator, TyId,
 };
 use crate::library::{Callee, Reach};
@@ -249,7 +249,8 @@ fn verdict(
         Kind::Reinterpreted
         | Kind::VariableLength
         | Kind::ComparedApart
-        | Kind::SubtractedApart => true,
+        | Kind::SubtractedApart
+        | Kind::FunctionConverted => true,
         // Never asked: it is built by `memory::read_only`, about no free.
         Kind::WritesReadOnly => true,
         // Never asked: it is built by `memory::assigned` from where a local
@@ -364,7 +365,7 @@ pub(super) fn reported(
     // What is handed to be freed: every argument of `free`, and the first of
     // `realloc`, which C17 7.22.3.5 p3 holds to what `free` is held to. A
     // `match` so that a new kind of callee answers here. See ADR-0039.
-    let arguments = match analysis.callee(*callee) {
+    let arguments = match analysis.callee(callee) {
         Callee::Frees => &arguments[..],
         Callee::Reallocates => &arguments[..arguments.len().min(1)],
         Callee::Allocates
@@ -402,7 +403,7 @@ pub(super) fn reported(
                         known.points_to[place.local].certain(),
                         Some(Referent::Static(_))
                     ),
-                    Operand::Constant(_) => false,
+                    Operand::Constant(_) | Operand::Function(_) => false,
                 });
             if only {
                 (Conclusion::Unsafe, None)
@@ -421,8 +422,9 @@ pub(super) fn reported(
                 Some(known.points_to[place.local].position.at)
             }
             // A constant frees nothing and a projection is already a
-            // `Reached::Lost` above, which `interior` answers nothing for.
-            Operand::Copy(_) | Operand::Constant(_) => None,
+            // `Reached::Lost` above, which `interior` answers nothing for,
+            // as a function's address is.
+            Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
         })
         .reduce(|here, there| here.joined(there, false))
         .unwrap_or(At::Bytes(0));
@@ -459,7 +461,7 @@ pub(super) fn reported(
         {
             known.points_to[place.local].vouched
         }
-        Operand::Copy(_) | Operand::Constant(_) => false,
+        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => false,
     });
 
     // Asked first because `verdict` takes what was reached by value; pushed
@@ -679,7 +681,8 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
         {
             null.established_null(block, place.local)
         }
-        Operand::Copy(_) | Operand::Constant(_) => false,
+        // A function's address is never null (C17 6.3.2.3 p3).
+        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => false,
     }
 }
 
@@ -1138,7 +1141,7 @@ pub(super) fn reached_by_library(
     else {
         return;
     };
-    let Some(row) = analysis.library(*callee) else {
+    let Some(row) = analysis.library(callee) else {
         return;
     };
     let at = origin.span();
@@ -1151,7 +1154,7 @@ pub(super) fn reached_by_library(
         // `appended_to_a_literal_declared_const` goes silent.
         let reads_only = !(index == 0
             && matches!(
-                analysis.callee(*callee),
+                analysis.callee(callee),
                 Callee::Copies | Callee::ReturnsFirst
             ));
         let Some(Operand::Copy(place)) = arguments.get(index) else {
@@ -1159,7 +1162,7 @@ pub(super) fn reached_by_library(
         };
         let local = place.local;
         let width = match reach {
-            Reach::Length(length) => analysis.constant_argument(*callee, arguments, length),
+            Reach::Length(length) => analysis.constant_argument(callee, arguments, length),
             Reach::String => None,
         };
         // The call reaches through the local itself, which doubts what may
@@ -1288,7 +1291,9 @@ fn leaving(
     known: &Known,
 ) -> Option<(Fit, Option<LocalId>)> {
     match value {
-        Rvalue::Use(Operand::Constant(_)) => None,
+        // Nor does a function's address ask a width: it points at no
+        // object, and a read through it as data is `Why::Function`'s.
+        Rvalue::Use(Operand::Constant(_) | Operand::Function(_)) => None,
         // A value leaving doubts nothing unseen, as [`fits`] says. Off its
         // start, unknown: see [`departing_fit`].
         Rvalue::Use(Operand::Copy(place))
@@ -1742,7 +1747,7 @@ fn contents_leaving(
 /// `CopiedPointers`.
 fn part_of_a_pointer(
     analysis: &Allocations<'_>,
-    callee: FuncId,
+    callee: &Called,
     arguments: &[Operand],
     ty: Option<TyId>,
 ) -> Option<u64> {
@@ -1771,7 +1776,7 @@ fn part_of_a_pointer(
 fn part_of_what_operands_point_at(
     analysis: &Allocations<'_>,
     function: &Function,
-    callee: FuncId,
+    callee: &Called,
     arguments: &[Operand],
     known: &Known,
 ) -> Option<u64> {
@@ -1952,11 +1957,10 @@ pub(super) fn departed_at_call(
         return;
     };
     let at = origin.span();
-    let declared = analysis.unit.function(*callee);
     // **A body here is what runs, whatever it is called**, so a definition of
     // `memcmp` taking `int *` is asked as any function is: `callee` answers
     // `Callee::Opaque` for every body this unit defines (ADR-0071).
-    match analysis.callee(*callee) {
+    match analysis.callee(callee) {
         Callee::Opaque => {}
         // **`memcpy` and `memmove` store what they copy**, so the pointers
         // their source reaches leave into the destination as a store would
@@ -1984,7 +1988,7 @@ pub(super) fn departed_at_call(
                 .is_some_and(|store| !store.leaves);
             let source_ty = match arguments.get(1) {
                 Some(Operand::Copy(place)) => analysis.unit.place_ty(function, place),
-                Some(Operand::Constant(_)) | None => None,
+                Some(Operand::Constant(_) | Operand::Function(_)) | None => None,
             };
             if let (Some(source), Some(source_ty), false) = (arguments.get(1), source_ty, stays) {
                 contents_leaving(
@@ -2014,7 +2018,7 @@ pub(super) fn departed_at_call(
             // `void **` alone let through with three bytes behind it (#1079).
             let into = match arguments.first() {
                 Some(Operand::Copy(place)) => Some(place),
-                Some(Operand::Constant(_)) | None => None,
+                Some(Operand::Constant(_) | Operand::Function(_)) | None => None,
             };
             let into_ty = into.and_then(|place| analysis.unit.place_ty(function, place));
             let carried = analysis
@@ -2041,10 +2045,10 @@ pub(super) fn departed_at_call(
             // the operands point at**, where neither type says: `void *d =
             // out; void *s = &v; memcpy(d, s, 4);` hid both (#746). See
             // ADR-0071 rule 4.
-            if let Some(width) = part_of_a_pointer(analysis, *callee, arguments, into_ty)
-                .or_else(|| part_of_a_pointer(analysis, *callee, arguments, source_ty))
+            if let Some(width) = part_of_a_pointer(analysis, callee, arguments, into_ty)
+                .or_else(|| part_of_a_pointer(analysis, callee, arguments, source_ty))
                 .or_else(|| {
-                    part_of_what_operands_point_at(analysis, function, *callee, arguments, known)
+                    part_of_what_operands_point_at(analysis, function, callee, arguments, known)
                 })
             {
                 say_leaving(
@@ -2075,23 +2079,23 @@ pub(super) fn departed_at_call(
         | Callee::Reads => return,
     }
     let reached: Vec<usize> = analysis
-        .library(*callee)
+        .library(callee)
         .map(|row| row.reaches.iter().map(|&(index, _)| index).collect())
         .unwrap_or_default();
-    let parameters: Vec<LocalId> = declared.parameters().collect();
+    let parameters = analysis.parameter_types(function, callee);
     for index in 0..parameters.len().max(arguments.len()) {
         if reached.contains(&index) {
             continue;
         }
         let ty = match (parameters.get(index), arguments.get(index)) {
-            (Some(&parameter), _) => declared.local(parameter),
+            (Some(&parameter), _) => parameter,
             (None, Some(Operand::Copy(place))) => {
                 let Some(ty) = analysis.unit.place_ty(function, place) else {
                     continue;
                 };
                 ty
             }
-            (None, Some(Operand::Constant(_)) | None) => continue,
+            (None, Some(Operand::Constant(_) | Operand::Function(_)) | None) => continue,
         };
         if let Some(argument) = arguments.get(index) {
             contents_leaving(
@@ -2128,7 +2132,7 @@ pub(super) fn departed_at_call(
             {
                 Some(place)
             }
-            Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+            Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_)) | None => None,
         };
         if let Some(place) = handed {
             // **What it names, and as far below as the parameter reads
@@ -2235,7 +2239,7 @@ pub(super) fn freed_after_its_read_was_reported(
     else {
         return None;
     };
-    match analysis.callee(*callee) {
+    match analysis.callee(callee) {
         Callee::Frees | Callee::Reallocates => {}
         Callee::Allocates
         | Callee::ReturnsFirst
@@ -2253,7 +2257,7 @@ pub(super) fn freed_after_its_read_was_reported(
         {
             Some(place.local)
         }
-        Some(Operand::Copy(_) | Operand::Constant(_)) | None => None,
+        Some(Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_)) | None => None,
     }
 }
 
@@ -2639,7 +2643,7 @@ pub(super) fn made_where_all_agree(sites: &[Site], known: &Known) -> Option<Span
 fn freed_by_opaque_call(
     analysis: &Allocations<'_>,
     function: &Function,
-    callee: FuncId,
+    callee: &Called,
     handed: &[Operand],
     known: &Known,
 ) -> BTreeSet<Site> {
@@ -2683,7 +2687,7 @@ pub(super) fn handed_stored_out(
     };
     // Written out, so that a kind of callee nobody has added yet answers
     // here whether what it is handed may be freed.
-    match analysis.callee(*callee) {
+    match analysis.callee(callee) {
         Callee::Opaque => {}
         Callee::Frees
         | Callee::Reallocates
@@ -2693,7 +2697,7 @@ pub(super) fn handed_stored_out(
         | Callee::Ends
         | Callee::Reads => return,
     }
-    let stored: Vec<Site> = freed_by_opaque_call(analysis, function, *callee, arguments, known)
+    let stored: Vec<Site> = freed_by_opaque_call(analysis, function, callee, arguments, known)
         .into_iter()
         .filter(|&site| known.stored_out[site].now().is_some())
         .collect();
@@ -2718,7 +2722,7 @@ pub(super) fn handed_stored_out(
         {
             Some(place)
         }
-        Operand::Copy(_) | Operand::Constant(_) => None,
+        Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
     });
     let reaching = || {
         arguments.iter().find_map(|argument| match argument {
@@ -2726,7 +2730,7 @@ pub(super) fn handed_stored_out(
                 if freed_by_opaque_call(
                     analysis,
                     function,
-                    *callee,
+                    callee,
                     std::slice::from_ref(argument),
                     known,
                 )
@@ -2735,7 +2739,7 @@ pub(super) fn handed_stored_out(
             {
                 Some(place)
             }
-            Operand::Copy(_) | Operand::Constant(_) => None,
+            Operand::Copy(_) | Operand::Constant(_) | Operand::Function(_) => None,
         })
     };
     // **A hatch is handed nothing it frees**, and every allocation is what it
@@ -2866,13 +2870,13 @@ pub(super) fn handed(
             .take(2)
             .filter_map(|argument| match argument {
                 Operand::Copy(place) => Some(place),
-                Operand::Constant(_) => None,
+                Operand::Constant(_) | Operand::Function(_) => None,
             })
             .collect()
     } else {
         Vec::new()
     };
-    for place in handed_places(analysis, function, *callee, arguments) {
+    for place in handed_places(analysis, function, callee, arguments) {
         if at_the_store_door.contains(&place) {
             continue;
         }
@@ -2922,7 +2926,7 @@ pub(super) fn handed(
     // where the copy makes a store, and above where it makes none.
     // A `match` rather than a `matches!`, so that a kind of callee added
     // later answers here whether it is a copy.
-    let copies = match analysis.callee(*callee) {
+    let copies = match analysis.callee(callee) {
         Callee::Copies => true,
         Callee::Frees
         | Callee::Allocates
@@ -3220,7 +3224,7 @@ pub(super) fn used_before(
     // callee is answered for here by `error[E0004]` rather than falling into a
     // row decided before it existed. The second half is whether the call may
     // free what it was not handed, which only code this check cannot read can.
-    let (frees, beyond_its_arguments) = match analysis.callee(*callee) {
+    let (frees, beyond_its_arguments) = match analysis.callee(callee) {
         Callee::Frees => (true, false),
         // `realloc` may free what it was handed and may not, which is what an
         // opaque call is to a read carried to it. Only what it was handed:
@@ -3298,7 +3302,7 @@ pub(super) fn used_before(
     let (own_reach, anything) = if beyond_its_arguments {
         let function = analysis.unit.function(analysis.function);
         let reach = analysis.reach(function, arguments, taken.iter().copied(), known);
-        (known.closure(reach), analysis.frees_anything(*callee))
+        (known.closure(reach), analysis.frees_anything(callee))
     } else {
         (BTreeSet::new(), false)
     };

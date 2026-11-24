@@ -11,7 +11,7 @@ use crate::ir::{Rank, Sign};
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    Element, FuncId, Function, LocalId, Operand, Operation, Place, Rvalue, Shape, Terminator, Ty,
+    Called, Element, Function, LocalId, Operand, Operation, Place, Rvalue, Shape, Terminator, Ty,
     TyId,
 };
 use crate::library::Callee;
@@ -169,12 +169,12 @@ pub(super) fn asked_unwritten_in_terminator(
                 else {
                     continue;
                 };
-                if !matches!(ask.analysis.callee(*callee), Callee::Copies) {
+                if !matches!(ask.analysis.callee(callee), Callee::Copies) {
                     continue;
                 }
                 let into_ty = match arguments.first() {
                     Some(Operand::Copy(place)) => ask.analysis.unit.place_ty(ask.function, place),
-                    Some(Operand::Constant(_)) | None => None,
+                    Some(Operand::Constant(_) | Operand::Function(_)) | None => None,
                 };
                 // **Whether what it copies was written**: `int *a[1];
                 // memcpy(out, a, 8);` leaves the caller a pointer nobody
@@ -345,7 +345,8 @@ pub(super) fn says_nothing_of_its_pointee(analysis: &Allocations<'_>, ty: TyId) 
         }
         | Ty::Void
         | Ty::Array { .. }
-        | Ty::Struct(_) => false,
+        | Ty::Struct(_)
+        | Ty::Function(_) => false,
     }
 }
 
@@ -789,7 +790,7 @@ fn copied_unwritten(
             .first()
             .and_then(|into| points_at_a_pointer(analysis, function, into, known))
             .is_some();
-    holds && source_may_be_unwritten(analysis, *callee, arguments, from, known)
+    holds && source_may_be_unwritten(analysis, callee, arguments, from, known)
 }
 
 /// Whether the bytes a library copy reads through `from` may not have been
@@ -807,7 +808,7 @@ fn copied_unwritten(
 /// (`Allocations::reads_partly`).
 fn source_may_be_unwritten(
     analysis: &Allocations<'_>,
-    callee: FuncId,
+    callee: &Called,
     arguments: &[Operand],
     from: &Place,
     known: &Known,

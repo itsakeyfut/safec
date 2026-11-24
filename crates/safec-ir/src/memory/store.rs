@@ -153,7 +153,7 @@ impl Allocations<'_> {
         else {
             return None;
         };
-        let copies = match self.callee(*callee) {
+        let copies = match self.callee(callee) {
             Callee::Copies => true,
             Callee::Frees
             | Callee::Allocates

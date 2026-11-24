@@ -439,7 +439,8 @@ pub(super) fn pointee_width(analysis: &Allocations<'_>, ty: TyId) -> Option<u64>
         }
         | Ty::Void
         | Ty::Array { .. }
-        | Ty::Struct(_) => None,
+        | Ty::Struct(_)
+        | Ty::Function(_) => None,
     }
 }
 
@@ -729,6 +730,8 @@ pub(super) fn pointee(analysis: &Allocations<'_>, ty: TyId) -> Option<TyId> {
         // Mutation: answer the member's pointee;
         // `a_node_linked_into_a_list_is_checked` hangs.
         Ty::Struct(_) => None,
+        // A function is no pointer.
+        Ty::Function(_) => None,
         Ty::Array { .. } => unreachable!("`innermost_element` strips every array"),
     }
 }
