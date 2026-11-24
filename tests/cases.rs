@@ -56,9 +56,14 @@ cases! {
     "memory" => {
         // C17 6.5.8 p5 orders pointers into one object only. `one` walks an
         // array to its end and `past_its_end` compares one past it: silent.
-        // `apart` compares two arrays and `either` a pointer that may be
-        // either: `SC0419` (#1211). Mutation: answer one object whenever
-        // both name something in `compared_apart`; `apart` goes silent.
+        // `apart` compares two arrays, `either` a pointer that may be
+        // either, `made_each_turn` two blocks of one site made in a loop,
+        // and `read_out_of_memory` two pointers this check does not follow:
+        // `SC0419` (#1211). Mutation: answer one object whenever both name
+        // something in `compared_apart`; `apart` goes silent. The last two
+        // are doubted by what each pointer may name besides, a lost block
+        // or a second site, before the arms for a site made each turn and
+        // for an unknown referent are asked.
         a_comparison_of_pointers_into_one_object_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A variable length array's size is its length local's value, which
         // this check does not know, so an index into one is doubted, the

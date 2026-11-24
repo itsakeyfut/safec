@@ -119,6 +119,13 @@ use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_ter
 /// each turn of a loop is many objects under one name. Mutation: answer
 /// `None` whenever both name anything; `a_comparison_of_pointers_into_one_object_is_not_reported`'s
 /// `apart` goes silent.
+///
+/// **No program measured reaches the arms for such a site or for
+/// `Referent::Unknown`** with one referent alone: a block kept across a
+/// turn also may name a lost one, and a call's result names a second site,
+/// so each is doubted before those arms are asked, and believing either
+/// arm instead changes no test. They answer as this check answers what it
+/// cannot show, should a value ever reach them that way.
 fn compared_apart(
     unit: &TranslationUnit,
     analysis: &Allocations<'_>,
