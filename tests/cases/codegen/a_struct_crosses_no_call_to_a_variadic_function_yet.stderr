@@ -1,0 +1,14 @@
+error[SC0801]: the backend cannot write a struct crossing a call to a variadic function
+    ╭─[ a_struct_crosses_no_call_to_a_variadic_function_yet.c:10:12 ]
+    │
+ 10 │     return takes(p, 1);
+    │            ─────┬─────  
+    │                 ╰─────── this is what it could not write
+────╯
+error[SC0801]: the backend cannot write a struct crossing a call to a variadic function
+    ╭─[ a_struct_crosses_no_call_to_a_variadic_function_yet.c:14:21 ]
+    │
+ 14 │     struct pair p = makes(1, 2);
+    │                     ─────┬─────  
+    │                          ╰─────── this is what it could not write
+────╯

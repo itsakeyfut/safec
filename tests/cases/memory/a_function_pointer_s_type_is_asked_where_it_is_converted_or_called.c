@@ -71,3 +71,27 @@ int same_type(int (*g)(int)) {
     int (**qq)(int) = pp;
     return qq == pp;
 }
+
+int variadic(int a, ...);
+int fixed(int a);
+
+int variadic_to_fixed(void) {
+    int (*p)(int) = (int (*)(int))variadic;
+    if (!p)
+        return 0;
+    return p(1);
+}
+
+int fixed_to_variadic(void) {
+    int (*p)(int, ...) = (int (*)(int, ...))fixed;
+    if (!p)
+        return 0;
+    return p(1, 2);
+}
+
+int unprototyped_to_variadic(void) {
+    int (*p)(int, ...) = (int (*)(int, ...))unprototyped;
+    if (!p)
+        return 0;
+    return p(1, 2);
+}

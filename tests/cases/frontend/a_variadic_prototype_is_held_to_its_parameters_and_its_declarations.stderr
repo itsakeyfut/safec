@@ -20,6 +20,17 @@ error[SC0313]: conflicting types for `g`
    │     ╰── declared here as `int ()`
 ───╯
   = note: C17 6.7 p4
+error[SC0313]: conflicting types for `k`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:38:5 ]
+    │
+ 37 │ int k();
+    │     ┬  
+    │     ╰── previously declared as `int ()`
+ 38 │ int k(int a, ...);
+    │     ┬  
+    │     ╰── declared here as `int (int, ...)`
+────╯
+  = note: C17 6.7 p4
 error[SC0303]: too few arguments: expected 1, found 0
     ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:11:12 ]
     │
@@ -47,4 +58,33 @@ error[SC0302]: cannot initialize `int (*)(int)` with `int (int, ...)`
     │           ╰──────────── this holds `int (*)(int)`
     │                     │  
     │                     ╰── this is `int (int, ...)`
+────╯
+error[SC0302]: cannot initialize `int (*)()` with `int (int, ...)`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:32:18 ]
+    │
+ 32 │     int (*p)() = h;
+    │           ┬      ┬  
+    │           ╰───────── this holds `int (*)()`
+    │                  │  
+    │                  ╰── this is `int (int, ...)`
+────╯
+error[SC0302]: cannot initialize `int (*)(int, ...)` with `int (*)()`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:33:26 ]
+    │
+ 33 │     int (*r)(int, ...) = unprototyped;
+    │           ┬              ──────┬─────  
+    │           ╰──────────────────────────── this holds `int (*)(int, ...)`
+    │                                │       
+    │                                ╰─────── this is `int (*)()`
+────╯
+error[SC0302]: cannot pass `char[11]` to a parameter of type `int`
+    ╭─[ a_variadic_prototype_is_held_to_its_parameters_and_its_declarations.c:41:14 ]
+    │
+  8 │ int h(int a, ...);
+    │           ┬  
+    │           ╰── declared `int` here
+    │ 
+ 41 │     return h("not an int", 1);
+    │              ──────┬─────  
+    │                    ╰─────── this is `char[11]`
 ────╯

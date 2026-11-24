@@ -108,7 +108,19 @@ cases! {
         // promotion leaves alone is compatible, and the standing
         // declaration is the one asked (answer `true` in
         // `standing_prototyped`, and `f` is reported).
+        // `variadic_to_fixed`, `fixed_to_variadic` and
+        // `unprototyped_to_variadic` are `SC0421` too (#1213): drop
+        // `from.variadic == into.variadic` from `compatible_functions`, and
+        // the first two go silent; drop `!signature.variadic` from its
+        // promotion test, and the third does.
         a_function_pointer_s_type_is_asked_where_it_is_converted_or_called: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 7.1.4 p2 lets a library function be declared without its
+        // header only with its own type, and no row takes `...` (#1213):
+        // `malloc` declared variadic is `SC0320`, and a call to it is read
+        // as any call, not by the row. Mutation: read the parameters alone
+        // in `Resolver::misdeclared_library`; this builds, and the freed
+        // `q` handed to `malloc` is silent.
+        a_library_function_declared_variadic_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call to a variadic function hands every argument past the
         // parameters as it hands the others, to a callee this check cannot
         // read (#1213, ADR-0066): `read_after_free` is `SC0402`,
@@ -9941,9 +9953,14 @@ cases! {
         // A variadic prototype is one function type (#1213): a declaration
         // without the `...`, and `()` (C17 6.7.6.3 p15), conflict with it;
         // a call passes at least its parameters; a `void` argument past them
-        // is no argument; and `int (int, ...)` is no `int (int)`. Mutation:
-        // ignore `...` in `Ast::compatible_parameters`; `f`'s conflict and
-        // `converted`'s mismatch go.
+        // is no argument; and `int (int, ...)` is no `int (int)`, nor `()`
+        // either way. A fixed argument is still checked when more follow.
+        // Mutations: compare prototypes without `...` in
+        // `Ast::compatible_parameters`, and `converted`'s mismatch goes;
+        // drop `!left_variadic` or `!right_variadic` from its arms against
+        // `()`, and one of `against_unprototyped_pointers`' two goes; skip
+        // the fixed arguments in `Checker::call` when more follow, and
+        // `fixed_argument_mismatched` builds.
         a_variadic_prototype_is_held_to_its_parameters_and_its_declarations: ["--emit", "ast"],
         // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
         // of the function's type, and one on what a pointer points to is.
@@ -10419,8 +10436,23 @@ cases! {
         // A call to `printf` names its type, `i32 (ptr, ...)`, and passes a
         // `char` and a `short` past the parameters as `i32` (C17 6.5.2.2
         // p7), directly and through a pointer (#1213). Mutation: pass them
-        // as they are in the lowering; they cross as `i8` and `i16`.
+        // as they are in the lowering; they cross as `i8` and `i16`. A
+        // constant crosses at its own type, `i64` for a `long long`, a
+        // function's address as `ptr`, a `void` callee is called by its type
+        // too, and a `char` fixed parameter is passed as one. Mutations:
+        // leave a constant as it is, and the `long long` crosses as `i32`;
+        // promote from the first argument, and the fixed `char` crosses as
+        // `i32`. `--allow-unknown`, since a literal passed past the
+        // parameters is doubted (#1326).
         a_variadic_call_passes_a_char_as_an_int: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu", "--allow-unknown"],
+        // A struct does not cross a call to a variadic function yet (#1325):
+        // as a fixed parameter or a result, the backend refuses it. Mutation:
+        // drop that refusal; the struct is passed as a pointer to its copy.
+        a_struct_crosses_no_call_to_a_variadic_function_yet: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // Nor past the parameters, which the lowering refuses (#1325).
+        // Mutation: drop the refusal; the call passes `ptr` where C passes
+        // the struct, and no later stage notices.
+        a_struct_passed_past_a_variadic_function_s_parameters_is_refused: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
         // `extern struct O g;` with `O` defined nowhere, and `&g`, are C
         // (C17 6.2.5 p22): declared as an `i8`, since only its definition
         // elsewhere has a size (#1202 review). Mutation: spell it from a

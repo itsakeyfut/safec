@@ -1,0 +1,7 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+declare i32 @tail(i32, ...)
+
+declare i32 @past_the_parameters(i64, i64)
+
+declare ptr @memcpy(ptr, ptr, i64)

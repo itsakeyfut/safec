@@ -25,3 +25,18 @@ int converted(void) {
     int (*p)(int) = h;
     return p(1);
 }
+
+int (*unprototyped)();
+
+int against_unprototyped_pointers(void) {
+    int (*p)() = h;
+    int (*r)(int, ...) = unprototyped;
+    return 0;
+}
+
+int k();
+int k(int a, ...);
+
+int fixed_argument_mismatched(void) {
+    return h("not an int", 1);
+}

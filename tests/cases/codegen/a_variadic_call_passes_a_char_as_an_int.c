@@ -9,3 +9,11 @@ void through_a_pointer(char c) {
     if (f)
         f("%c", c);
 }
+
+void note(const char *format, ...);
+int narrow_fixed(char c, ...);
+
+void constants_and_addresses(char c) {
+    note("%lld %d %p", 1234567890123LL, 1, show);
+    narrow_fixed(c, c);
+}
