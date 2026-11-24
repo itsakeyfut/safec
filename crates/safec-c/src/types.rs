@@ -1897,9 +1897,10 @@ impl Checker<'_> {
             .map(|(index, member)| {
                 // A flexible array member takes no bytes, and aligns the
                 // struct as its element does (C17 6.7.2.1 p18, #1208).
-                // Mutation: size it as nothing at all; `sized` in
-                // `a_flexible_array_member_is_bounded_by_its_allocation`
-                // is refused.
+                // Mutation: size it as one element; `sizeof` in
+                // `a_flexible_array_member_holds_what_was_allocated` in
+                // `tests/run.rs` is 8. Mutation: align it to 4 whatever its
+                // element; the `long long` one there is 4 short.
                 let (size, align) = match ast.ty(member.ty) {
                     Type::Array {
                         element,

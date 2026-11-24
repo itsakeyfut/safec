@@ -84,8 +84,18 @@ pub(crate) enum Parameter<'a> {
     /// A parameter of its own, which takes one integer register.
     Scalar,
     /// A struct passed by value, or where one is returned: see [`Passes`].
-    Struct(Passes, &'a StructLayout),
+    /// The flag says whether it holds a flexible array member, itself or
+    /// in a member, which Win64 and System V pass in memory whatever its
+    /// size (#1208 review).
+    Struct(Passes, &'a StructLayout, bool),
 }
+
+/// A target's convention, as `classify` takes it: the rule a struct is
+/// classified by from its size and whether it is a result, whether the
+/// integer registers left are counted, and what a struct holding a flexible
+/// array member crosses as whatever its size, where the target sets one
+/// apart.
+type Convention = (fn(u64, bool) -> Class, bool, Option<Class>);
 
 /// How each struct of a signature crosses a call on `target`, in its
 /// parameters' order and `None` for a scalar, or `None` for the whole on a
@@ -127,16 +137,22 @@ pub(crate) fn classify(target: Target, parameters: &[Parameter]) -> Option<Vec<O
         return Some(vec![None; parameters.len()]);
     }
     let triple = target.triple();
-    let (rule, counts_registers): (fn(u64, bool) -> Class, bool) = match triple {
-        "x86_64-pc-windows-msvc" => (win64, false),
-        "x86_64-unknown-linux-gnu" | "x86_64-apple-darwin" => (system_v, true),
-        "aarch64-unknown-linux-gnu" | "aarch64-apple-darwin" => (aarch64, false),
+    // The rule, whether it counts the integer registers left, and what a
+    // struct holding a flexible array member is passed as whatever its size:
+    // memory on Win64 and System V, as `clang` passes one, and by its size
+    // on AArch64, which `clang` does not set apart (#1208 review).
+    let (rule, counts_registers, flexible): Convention = match triple {
+        "x86_64-pc-windows-msvc" => (win64, false, Some(Class::Memory { byval: false })),
+        "x86_64-unknown-linux-gnu" | "x86_64-apple-darwin" => {
+            (system_v, true, Some(Class::Memory { byval: true }))
+        }
+        "aarch64-unknown-linux-gnu" | "aarch64-apple-darwin" => (aarch64, false, None),
         _ => return None,
     };
     let mut free: usize = 6;
     let mut classes = Vec::with_capacity(parameters.len());
     for parameter in parameters {
-        let Parameter::Struct(passes, layout) = *parameter else {
+        let Parameter::Struct(passes, layout, holds_flexible) = *parameter else {
             free = free.saturating_sub(1);
             classes.push(None);
             continue;
@@ -145,7 +161,12 @@ pub(crate) fn classify(target: Target, parameters: &[Parameter]) -> Option<Vec<O
             return None;
         }
         let result = passes == Passes::StructReturn;
-        let mut class = rule(layout.size, result);
+        // Mutation: classify by size alone; `a_struct_with_a_flexible_array_member_crosses_in_memory`
+        // passes one of 4 bytes in a register on System V, and `..._as_win64_says` on Win64.
+        let mut class = match &flexible {
+            Some(memory) if holds_flexible => memory.clone(),
+            _ => rule(layout.size, result),
+        };
         if counts_registers {
             match (&class, result) {
                 (Class::Registers { pieces, .. }, false) if pieces.len() > free => {
@@ -236,7 +257,7 @@ mod tests {
     fn alone(triple: &str, bytes: usize, passes: Passes) -> Option<Class> {
         let target = Target::from_triple(triple).expect("known");
         let layout = layout_of(target, bytes);
-        classify(target, &[Parameter::Struct(passes, &layout)])
+        classify(target, &[Parameter::Struct(passes, &layout, false)])
             .map(|mut classes| classes.remove(0).expect("a struct"))
     }
 
@@ -307,7 +328,7 @@ mod tests {
                 Parameter::Scalar,
                 Parameter::Scalar,
                 Parameter::Scalar,
-                Parameter::Struct(Passes::StructCopy, &pair),
+                Parameter::Struct(Passes::StructCopy, &pair, false),
             ],
         )
         .expect("written");
@@ -315,12 +336,12 @@ mod tests {
         let behind_sret = classify(
             target,
             &[
-                Parameter::Struct(Passes::StructReturn, &big),
+                Parameter::Struct(Passes::StructReturn, &big, false),
                 Parameter::Scalar,
                 Parameter::Scalar,
                 Parameter::Scalar,
                 Parameter::Scalar,
-                Parameter::Struct(Passes::StructCopy, &pair),
+                Parameter::Struct(Passes::StructCopy, &pair, false),
             ],
         )
         .expect("written");
@@ -328,12 +349,12 @@ mod tests {
         let behind_registers = classify(
             target,
             &[
-                Parameter::Struct(Passes::StructReturn, &pair),
+                Parameter::Struct(Passes::StructReturn, &pair, false),
                 Parameter::Scalar,
                 Parameter::Scalar,
                 Parameter::Scalar,
                 Parameter::Scalar,
-                Parameter::Struct(Passes::StructCopy, &pair),
+                Parameter::Struct(Passes::StructCopy, &pair, false),
             ],
         )
         .expect("written");

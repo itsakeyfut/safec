@@ -525,12 +525,25 @@ impl Resolution {
             return false;
         };
         let Type::Struct {
+            union,
             members: Some(members),
             ..
         } = ast.ty(definition)
         else {
             return false;
         };
+        // **A union holding such a struct is one too**, however deep: C17
+        // 6.7.2.1 p3 keeps "any union containing, possibly recursively, a
+        // member that is such a structure" out of a structure and an array as
+        // well (#1208 review). A union cannot hold itself by value, so this
+        // ends. Mutation: ask a union nothing;
+        // `a_union_holding_a_flexible_array_member_is_no_member_of_a_struct`'s `Nested`
+        // is accepted.
+        if *union {
+            return members
+                .iter()
+                .any(|member| self.has_flexible_array_member(ast, member.ty));
+        }
         members
             .last()
             .is_some_and(|last| matches!(ast.ty(last.ty), Type::Array { length: None, .. }))

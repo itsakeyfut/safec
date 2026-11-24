@@ -288,7 +288,114 @@ Function a_flexible_array_member_is_bounded_by_its_allocation.c:37:5 "on_the_sta
           Deref
     Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:41:12 generated
     Return
-Function a_flexible_array_member_is_bounded_by_its_allocation.c:44:5 "main"
+Function a_flexible_array_member_is_bounded_by_its_allocation.c:49:5 "inside_a_member"
+  Local "_0" "int" return
+  Local "_1" "struct #1" "rows"
+  Local "_2" "struct #1 *"
+  Local "_3" "int (*)[4]"
+  Local "_4" "int *"
+  Local "_5" "struct #0 *" "b"
+  Local "_6" "struct #1 *"
+  Local "_7" "int (*)[2]"
+  Local "_8" "int *"
+  Local "_9" "struct #0 *"
+  Local "_10" "int (*)[0]"
+  Local "_11" "int *"
+  Local "_12" "int *"
+  Local "_13" "struct #1 *"
+  Local "_14" "int (*)[4]"
+  Local "_15" "int *"
+  Block "bb0" entry
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:51:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:51:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:51:5 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:51:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:51:5 generated
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:52:41 generated
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:52:41 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:52:41 generated
+      Destination "_8"
+      Use
+        Copy "_7"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:52:24 written
+      Destination "_9"
+      Use
+        Copy "_8"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:52:20 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:52:24 generated
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 written
+      Destination "_10"
+      Address
+        Place "_5"
+          Deref
+            Field
+              Member 1
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 generated
+      Destination "_11"
+      Use
+        Copy "_10"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_11"
+        Constant 1
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 written
+      Destination "_12"
+        Deref
+      Use
+        Constant 7
+    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 generated
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:54:12 generated
+      Destination "_13"
+      Address
+        Place "_1"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:54:12 written
+      Destination "_14"
+      Address
+        Place "_13"
+          Deref
+            Field
+              Member 1
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:54:12 generated
+      Destination "_15"
+      Use
+        Copy "_14"
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:54:5 written
+      Destination "_0"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:54:12 generated
+    Return
+Function a_flexible_array_member_is_bounded_by_its_allocation.c:57:5 "main"
   Local "_0" "int" return
   Local "_1" "int"
   Local "_2" "int"
@@ -296,32 +403,32 @@ Function a_flexible_array_member_is_bounded_by_its_allocation.c:44:5 "main"
   Local "_4" "int"
   Local "_5" "int"
   Block "bb0" entry
-    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:44:5 generated
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:57:5 generated
       Destination "_0"
       Use
         Constant 0
-    Call a_flexible_array_member_is_bounded_by_its_allocation.c:45:12 written "fits" "bb1"
+    Call a_flexible_array_member_is_bounded_by_its_allocation.c:58:12 written "fits" "bb1"
       Destination "_1"
   Block "bb1"
-    Call a_flexible_array_member_is_bounded_by_its_allocation.c:45:21 written "past" "bb2"
+    Call a_flexible_array_member_is_bounded_by_its_allocation.c:58:21 written "past" "bb2"
       Destination "_2"
   Block "bb2"
-    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:45:12 written
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:58:12 written
       Destination "_3"
       Binary "Add"
         Copy "_1"
         Copy "_2"
-    Call a_flexible_array_member_is_bounded_by_its_allocation.c:45:30 written "on_the_stack" "bb3"
+    Call a_flexible_array_member_is_bounded_by_its_allocation.c:58:30 written "on_the_stack" "bb3"
       Destination "_4"
   Block "bb3"
-    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:45:12 written
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:58:12 written
       Destination "_5"
       Binary "Add"
         Copy "_3"
         Copy "_4"
-    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:45:5 written
+    Operation a_flexible_array_member_is_bounded_by_its_allocation.c:58:5 written
       Destination "_0"
       Use
         Copy "_5"
-    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:45:12 generated
+    Sequenced a_flexible_array_member_is_bounded_by_its_allocation.c:58:12 generated
     Return

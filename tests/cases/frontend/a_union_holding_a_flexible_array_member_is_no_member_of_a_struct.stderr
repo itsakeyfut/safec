@@ -1,0 +1,8 @@
+error[SC0314]: member `u` has type `union U`, which has a flexible array member
+   ╭─[ a_union_holding_a_flexible_array_member_is_no_member_of_a_struct.c:3:32 ]
+   │
+ 3 │ struct Nested { int k; union U u; };
+   │                                ┬  
+   │                                ╰── declared here
+───╯
+  = note: C17 6.7.2.1 p3

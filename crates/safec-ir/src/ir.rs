@@ -361,10 +361,11 @@ pub enum Ty {
     /// A pointer to the type this id names.
     Pointer(TyId),
     /// `length` objects of the type `element` names, one after another,
-    /// which is what C17 6.2.5 p20 makes an array. `length` is never zero:
-    /// the lowering builds one only for a constant length the type check
-    /// gave a positive value, and 6.7.6.2 p1 makes any other constant length
-    /// a constraint violation.
+    /// which is what C17 6.2.5 p20 makes an array. `length` is zero only for
+    /// a flexible array member, as the field says: the lowering builds any
+    /// other only for a constant length the type check gave a positive
+    /// value, and 6.7.6.2 p1 makes any other constant length a constraint
+    /// violation.
     ///
     /// **Never a value.** C reads an array only by converting it to a pointer
     /// to its first element (6.3.2.1 p3) and gives it no assignment, so no

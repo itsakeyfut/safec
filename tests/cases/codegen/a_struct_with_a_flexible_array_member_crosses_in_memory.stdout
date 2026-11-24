@@ -1,0 +1,91 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @make(ptr sret([4 x i8]) align 4 %arg0) {
+entry:
+  %_1 = alloca ptr
+  %_2 = alloca [4 x i8], align 4
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_3
+  %t0 = load ptr, ptr %_3
+  %t1 = getelementptr i8, ptr %t0, i64 0
+  store ptr %t1, ptr %_4
+  %t2 = load ptr, ptr %_4
+  store i8 1, ptr %t2
+  store ptr %_2, ptr %_5
+  %t3 = load ptr, ptr %_1
+  %t4 = load ptr, ptr %_5
+  %t5 = call ptr @memcpy(ptr %t3, ptr %t4, i64 4)
+  br label %bb1
+
+bb1:
+  ret void
+}
+
+define i32 @take(ptr byval([4 x i8]) align 8 %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca [4 x i8], align 4
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_3
+  %t0 = load ptr, ptr %_3
+  %t1 = load ptr, ptr %_1
+  %t2 = call ptr @memcpy(ptr %t0, ptr %t1, i64 4)
+  br label %bb1
+
+bb1:
+  store ptr %_2, ptr %_4
+  %t3 = load ptr, ptr %_4
+  %t4 = getelementptr i8, ptr %t3, i64 0
+  store ptr %t4, ptr %_5
+  %t5 = load ptr, ptr %_5
+  %t6 = load i8, ptr %t5
+  %t7 = sext i8 %t6 to i32
+  store i32 %t7, ptr %_0
+  %t8 = load i32, ptr %_0
+  ret i32 %t8
+}
+
+define i32 @held(ptr byval([4 x i8]) align 8 %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca [4 x i8], align 4
+  %_3 = alloca ptr
+  %_4 = alloca ptr
+  %_5 = alloca ptr
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_3
+  %t0 = load ptr, ptr %_3
+  %t1 = load ptr, ptr %_1
+  %t2 = call ptr @memcpy(ptr %t0, ptr %t1, i64 4)
+  br label %bb1
+
+bb1:
+  store ptr %_2, ptr %_4
+  %t3 = load ptr, ptr %_4
+  %t4 = getelementptr i8, ptr %t3, i64 0
+  store ptr %t4, ptr %_5
+  %t5 = load ptr, ptr %_5
+  %t6 = load i32, ptr %t5
+  store i32 %t6, ptr %_0
+  %t7 = load i32, ptr %_0
+  ret i32 %t7
+}
+
+declare ptr @memcpy(ptr, ptr, i64)

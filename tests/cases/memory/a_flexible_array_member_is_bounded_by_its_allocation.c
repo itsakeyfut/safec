@@ -41,6 +41,19 @@ int on_the_stack(void) {
     return b.items[0];
 }
 
+struct Rows {
+    int first[2];
+    int second[4];
+};
+
+int inside_a_member(void) {
+    struct Rows rows;
+    rows.second[0] = 0;
+    struct Buffer *b = (struct Buffer *)rows.first;
+    b->items[1] = 7;
+    return rows.second[0];
+}
+
 int main(void) {
     return fits() + past() + on_the_stack();
 }

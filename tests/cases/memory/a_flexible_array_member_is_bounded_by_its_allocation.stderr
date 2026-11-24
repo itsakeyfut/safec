@@ -39,3 +39,13 @@ error[SC0412]: this reaches 8 bytes into an object of 4 bytes
 ────╯
   = note: this check belongs to safety level 1
   = help: make the object at least as wide as this access, or reach less of it
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_flexible_array_member_is_bounded_by_its_allocation.c:53:5 ]
+    │
+ 53 │     b->items[1] = 7;
+    │     ───────┬───────  
+    │            ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one

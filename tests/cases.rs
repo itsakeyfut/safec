@@ -59,9 +59,15 @@ cases! {
         // `fits` writes the last of four allocated and is silent, `past`
         // writes one beyond them and is `SC0412` with the bytes counted, a
         // struct a parameter points at has an allocation this check cannot
-        // know and is doubted, and one on the stack has no elements at all.
-        // Mutation: enter the member's row of no bytes in
-        // `converted`; `fits` reports `SC0412`.
+        // know and is doubted, one on the stack has no elements at all, and
+        // one laid over a member's row is bounded by that row, so
+        // `inside_a_member`'s `items[1]`, which would be `second[0]`, is
+        // reported.
+        // Mutation: enter the member's row of no bytes in `converted`, or
+        // where its address is taken in `Self::element`'s `Field` arm; each
+        // alone makes `fits` report `SC0412`. Mutation: drop the row the
+        // struct is in, in either place, rather than keep it;
+        // `inside_a_member` goes silent.
         a_flexible_array_member_is_bounded_by_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A bit-field is read and written through its unit, so the memory
         // check sees an integer read and written beside a pointer member
@@ -8563,6 +8569,13 @@ cases! {
     }
 
     "frontend" => {
+        // A union holding a struct with a flexible array member is no member
+        // of a struct, as the struct itself is not (C17 6.7.2.1 p3, which
+        // names "any union containing, possibly recursively" such a
+        // structure), and may be a member of another union (#1208 review).
+        // Mutation: ask a union nothing in
+        // `Resolution::has_flexible_array_member`; `Nested` is accepted.
+        a_union_holding_a_flexible_array_member_is_no_member_of_a_struct: ["--emit", "ast"],
         // `union` after another type specifier is refused as the clash it
         // is, naming `union` (#1203). Mutation: drop `Keyword::Union` from
         // `tagged_keyword` in `Parser::specifiers`; this says `expected a
@@ -10295,6 +10308,14 @@ cases! {
         // Mutation: count every member named in `Lowering::struct_of`; the
         // IR lays it out at 8 bytes and `local`'s `alloca` changes.
         an_unnamed_bit_field_aligns_nothing_on_itanium: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A struct holding a flexible array member, itself or in a member of
+        // a union, crosses a call in memory on System V and Win64 whatever
+        // its size, as `clang` passes it: `byval` and `sret` here, a plain
+        // pointer and `sret` on Win64, though four bytes would go in a
+        // register (#1208 review). Mutation: classify by size alone in
+        // `abi::classify`; each changes.
+        a_struct_with_a_flexible_array_member_crosses_in_memory: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        a_struct_with_a_flexible_array_member_crosses_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
