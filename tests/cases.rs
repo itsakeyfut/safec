@@ -54,6 +54,13 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A bit-field is read and written through its unit, so the memory
+        // check sees an integer read and written beside a pointer member
+        // and asks nothing new, and one reached through a freed pointer is
+        // `SC0402` as any member is (#1206). Mutation: give a bit-field its
+        // declared type rather than its unit's in `Lowering::member`; the
+        // unit reads in this case's IR change.
+        a_bit_field_is_read_and_written_within_its_unit: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer kept in an anonymous union is the container's member
         // (#1207), so the memory check reads it there as any other: written
         // and read through the same member, a number read back as it, and a
@@ -71,7 +78,7 @@ cases! {
         // narrower member `SC0413`, a number written into an element of an
         // array of unions `SC0413`, and a union handed to a call after one
         // that may write it `SC0413`. None is answered safe. Mutation: lay a
-        // union out as a struct in `lay_out_union`; `number_read_as_pointer`
+        // union out as a struct in `record::lay_out_union`; `number_read_as_pointer`
         // no longer reads the number it wrote and says `SC0411` instead.
         a_union_holds_its_members_at_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct copied is a library copy, so a freed pointer it carries,
@@ -9118,12 +9125,18 @@ cases! {
         // both struct types spelled. Mutation: answer every struct pair
         // compatible in `Ast::compatible`; the conflict goes silent.
         declarations_of_one_name_as_two_struct_types_conflict: ["--emit", "ast"],
-        // Valid C that is not read yet, each told so with the paragraph that
-        // makes it valid: a bit-field, named or not (C17 6.7.2.1 p9).
-        // Mutation: drop either `:` check; that bit-field is `expected`
-        // something instead.
-        a_bit_field_is_not_read_yet: ["--emit", "ast"],
-        a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
+        // A bit-field's width is a constant, here an enumerator, and `Fine`
+        // is sized by the target's packing; each rule C17 6.7.2.1 p4 and p5
+        // set on a width and a type is held, and `&` and `sizeof` of a
+        // bit-field are refused (6.5.3.2 p1, 6.5.3.4 p1) (#1206). A struct
+        // ending in a zero-width bit-field is laid out, and a narrow `const`
+        // bit-field stays `const` where it is promoted, so `write_fixed` is
+        // refused as a write to it. Mutations: drop the width check in
+        // `Checker::check_bit_fields`, and `Unfit` is accepted; drop
+        // `refuse_bit_field` from `&`, and `address`'s `&f->a` is accepted;
+        // drop the `const` in `Checker::read_as`, and `write_fixed` is
+        // accepted.
+        a_bit_field_is_typed_and_its_width_held: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
         // A `switch` with nothing in it is read and goes straight past its
         // body, and a `case` with no `switch` around it breaks 6.8.1 p2's
         // constraint, so it is not C and says where C allows it. Mutation:
@@ -10261,6 +10274,18 @@ cases! {
         // struct's is, since `[N x i8]` alone aligns to 1 (#1203). Mutation:
         // drop the alignment from `struct_align`; this changes.
         a_union_is_aligned_as_its_strictest_member: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
+        // A struct holding an unnamed bit-field, laid out by AArch64 Linux's
+        // AAPCS rules, where the unnamed one aligns the whole to 4, and a
+        // plain `char` bit-field, which is unsigned there as a plain `char`
+        // is, so it is read with `lshr` and not `ashr` (#1206). Mutation:
+        // read a plain `char` bit-field as signed; the shift changes.
+        a_bit_field_is_read_by_its_targets_rules: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-unknown-linux-gnu"],
+        // The same struct on x86-64 Linux, whose Itanium rules let an
+        // unnamed bit-field align nothing, so `d` follows at byte 4 and the
+        // whole is 6 bytes, as `clang` lays it out, `local`'s storage too (#1206).
+        // Mutation: count every member named in `Lowering::struct_of`; the
+        // IR lays it out at 8 bytes and `local`'s `alloca` changes.
+        an_unnamed_bit_field_aligns_nothing_on_itanium: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],

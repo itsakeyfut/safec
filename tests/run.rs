@@ -134,7 +134,7 @@ programs! {
     /// A union's members share their first byte, so an `int` written is the
     /// low half of the `long long` read; a union sits in a struct as a
     /// member, and is assigned, passed and returned by value (#1203).
-    /// Mutation: lay a union out as a struct in `lay_out_union`; the low
+    /// Mutation: lay a union out as a struct in `record::lay_out_union`; the low
     /// half is read from the wrong bytes and this fails.
     a_union_holds_its_members_at_one_place,
     /// The members of an anonymous struct inside an anonymous union are
@@ -145,4 +145,19 @@ programs! {
     /// each step in `Checker::find_member` rather than prepend it; `low`'s
     /// path is reversed and this fails.
     an_anonymous_member_is_reached_through_its_container,
+    /// Bit-fields packed into their units beside a `char` and a 40-bit
+    /// `long long` one, each read and written with the other bits of its
+    /// unit kept, a signed one carrying its sign, an assignment's value cut
+    /// to the width, a step that wraps, an `unsigned` one promoted to `int`,
+    /// and `unsigned long long` and `unsigned long` ones promoted too, as
+    /// `clang` promotes them, but an `unsigned` one as wide as `int` not;
+    /// two declarators sharing one declaration, each with its width; ones
+    /// inside an anonymous struct; and a function after one that reaches a
+    /// bit-field writing only its own local (#1206). Mutations: promote at
+    /// `<=` in `Checker::read_as`, read no width after a second declarator
+    /// in `Parser::members`, or stop at the first step of an anonymous
+    /// member's path in `Lowering::member`; each fails this. Mutation: drop the shift
+    /// in `Lowering::extract`; the reads come out of the wrong bits and this
+    /// fails.
+    a_bit_field_is_read_and_written_within_its_unit,
 }

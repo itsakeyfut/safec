@@ -1,0 +1,685 @@
+Target "x86_64-pc-windows-msvc"
+Function a_bit_field_is_read_and_written_within_its_unit.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter "size"
+Function a_bit_field_is_read_and_written_within_its_unit.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "pointer"
+Function a_bit_field_is_read_and_written_within_its_unit.c:10:5 "written_then_read"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "f"
+  Local "_2" "struct #0 *"
+  Local "_3" "unsigned char *"
+  Local "_4" "int"
+  Local "_5" "unsigned char"
+  Local "_6" "unsigned char"
+  Local "_7" "unsigned char"
+  Local "_8" "unsigned char"
+  Local "_9" "unsigned char"
+  Local "_10" "unsigned char"
+  Local "_11" "unsigned char"
+  Local "_12" "unsigned char"
+  Local "_13" "unsigned char"
+  Local "_14" "unsigned char"
+  Local "_15" "unsigned char"
+  Local "_16" "unsigned char"
+  Local "_17" "struct #0 *"
+  Local "_18" "unsigned char *"
+  Local "_19" "int"
+  Local "_20" "unsigned char"
+  Local "_21" "unsigned char"
+  Local "_22" "signed char"
+  Local "_23" "signed char"
+  Local "_24" "unsigned char"
+  Local "_25" "unsigned char"
+  Local "_26" "unsigned char"
+  Local "_27" "unsigned char"
+  Local "_28" "unsigned char"
+  Local "_29" "unsigned char"
+  Local "_30" "unsigned char"
+  Local "_31" "unsigned char"
+  Local "_32" "signed char"
+  Local "_33" "signed char"
+  Local "_34" "struct #0 *"
+  Local "_35" "unsigned char *"
+  Local "_36" "int"
+  Local "_37" "unsigned char"
+  Local "_38" "unsigned char"
+  Local "_39" "unsigned char"
+  Local "_40" "struct #0 *"
+  Local "_41" "unsigned char *"
+  Local "_42" "int"
+  Local "_43" "unsigned char"
+  Local "_44" "unsigned char"
+  Local "_45" "signed char"
+  Local "_46" "signed char"
+  Local "_47" "int"
+  Block "bb0" entry
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_6"
+      Binary "Shr"
+        Copy "_5"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_7"
+      Binary "BitAnd"
+        Copy "_6"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_4"
+      Use
+        Copy "_7"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 written
+      Destination "_4"
+      Use
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_9"
+      Binary "BitAnd"
+        Copy "_8"
+        Constant 254
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_10"
+      Use
+        Copy "_4"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_11"
+      Binary "BitAnd"
+        Copy "_10"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_12"
+      Binary "Shl"
+        Copy "_11"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_13"
+      Binary "BitOr"
+        Copy "_9"
+        Copy "_12"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_3"
+        Deref
+      Use
+        Copy "_13"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_14"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_15"
+      Binary "Shr"
+        Copy "_14"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_16"
+      Binary "BitAnd"
+        Copy "_15"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+      Destination "_4"
+      Use
+        Copy "_16"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:12:5 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_17"
+      Address
+        Place "_1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 written
+      Destination "_18"
+      Address
+        Place "_17"
+          Deref
+            Field
+              Member 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_20"
+      Use
+        Copy "_18"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_21"
+      Binary "Shl"
+        Copy "_20"
+        Constant 3
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_22"
+      Use
+        Copy "_21"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_23"
+      Binary "Shr"
+        Copy "_22"
+        Constant 4
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_19"
+      Use
+        Copy "_23"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 written
+      Destination "_19"
+      Use
+        Constant -1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_24"
+      Use
+        Copy "_18"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_25"
+      Binary "BitAnd"
+        Copy "_24"
+        Constant 225
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_26"
+      Use
+        Copy "_19"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_27"
+      Binary "BitAnd"
+        Copy "_26"
+        Constant 15
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_28"
+      Binary "Shl"
+        Copy "_27"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_29"
+      Binary "BitOr"
+        Copy "_25"
+        Copy "_28"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_18"
+        Deref
+      Use
+        Copy "_29"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_30"
+      Use
+        Copy "_18"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_31"
+      Binary "Shl"
+        Copy "_30"
+        Constant 3
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_32"
+      Use
+        Copy "_31"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_33"
+      Binary "Shr"
+        Copy "_32"
+        Constant 4
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+      Destination "_19"
+      Use
+        Copy "_33"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:13:5 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+      Destination "_34"
+      Address
+        Place "_1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 written
+      Destination "_35"
+      Address
+        Place "_34"
+          Deref
+            Field
+              Member 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+      Destination "_37"
+      Use
+        Copy "_35"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+      Destination "_38"
+      Binary "Shr"
+        Copy "_37"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+      Destination "_39"
+      Binary "BitAnd"
+        Copy "_38"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+      Destination "_36"
+      Use
+        Copy "_39"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_40"
+      Address
+        Place "_1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 written
+      Destination "_41"
+      Address
+        Place "_40"
+          Deref
+            Field
+              Member 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_43"
+      Use
+        Copy "_41"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_44"
+      Binary "Shl"
+        Copy "_43"
+        Constant 3
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_45"
+      Use
+        Copy "_44"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_46"
+      Binary "Shr"
+        Copy "_45"
+        Constant 4
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:22 generated
+      Destination "_42"
+      Use
+        Copy "_46"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:12 written
+      Destination "_47"
+      Binary "Add"
+        Copy "_36"
+        Copy "_42"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_47"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:14:12 generated
+    Return
+Function a_bit_field_is_read_and_written_within_its_unit.c:17:5 "beside_a_pointer"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "struct #0" "f"
+  Local "_3" "struct #0 *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "struct #0 *"
+  Local "_7" "unsigned char *"
+  Local "_8" "int"
+  Local "_9" "unsigned char"
+  Local "_10" "unsigned char"
+  Local "_11" "unsigned char"
+  Local "_12" "unsigned char"
+  Local "_13" "unsigned char"
+  Local "_14" "unsigned char"
+  Local "_15" "unsigned char"
+  Local "_16" "unsigned char"
+  Local "_17" "unsigned char"
+  Local "_18" "unsigned char"
+  Local "_19" "unsigned char"
+  Local "_20" "unsigned char"
+  Local "_21" "struct #0 *"
+  Local "_22" "int **"
+  Block "bb0" entry
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:18:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:18:13 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:20:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:20:5 written
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 2
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:20:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:20:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:20:5 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 written
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_9"
+      Use
+        Copy "_7"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_10"
+      Binary "Shr"
+        Copy "_9"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_11"
+      Binary "BitAnd"
+        Copy "_10"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_8"
+      Use
+        Copy "_11"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 written
+      Destination "_8"
+      Use
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_12"
+      Use
+        Copy "_7"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_13"
+      Binary "BitAnd"
+        Copy "_12"
+        Constant 254
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_14"
+      Use
+        Copy "_8"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_15"
+      Binary "BitAnd"
+        Copy "_14"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_16"
+      Binary "Shl"
+        Copy "_15"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_17"
+      Binary "BitOr"
+        Copy "_13"
+        Copy "_16"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_7"
+        Deref
+      Use
+        Copy "_17"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_18"
+      Use
+        Copy "_7"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_19"
+      Binary "Shr"
+        Copy "_18"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_20"
+      Binary "BitAnd"
+        Copy "_19"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+      Destination "_8"
+      Use
+        Copy "_20"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:21:5 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:22:13 generated
+      Destination "_21"
+      Address
+        Place "_2"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:22:13 written
+      Destination "_22"
+      Address
+        Place "_21"
+          Deref
+            Field
+              Member 2
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:22:5 written
+      Destination "_0"
+      Use
+        Copy "_22"
+          Deref
+            Deref
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:22:12 generated
+    Return
+Function a_bit_field_is_read_and_written_within_its_unit.c:25:5 "through_a_freed_pointer"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" "f"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "unsigned char *"
+  Local "_5" "int"
+  Local "_6" "unsigned char"
+  Local "_7" "unsigned char"
+  Local "_8" "unsigned char"
+  Local "_9" "unsigned char"
+  Local "_10" "unsigned char"
+  Local "_11" "unsigned char"
+  Local "_12" "unsigned char"
+  Local "_13" "unsigned char"
+  Local "_14" "unsigned char"
+  Local "_15" "unsigned char"
+  Local "_16" "unsigned char"
+  Local "_17" "unsigned char"
+  Local "_18" "unsigned char *"
+  Local "_19" "int"
+  Local "_20" "unsigned char"
+  Local "_21" "unsigned char"
+  Local "_22" "unsigned char"
+  Block "bb0" entry
+    ArgumentsEvaluated a_bit_field_is_read_and_written_within_its_unit.c:26:23 generated
+    Call a_bit_field_is_read_and_written_within_its_unit.c:26:23 written "malloc" "bb1"
+      Destination "_2"
+      Constant 16
+  Block "bb1"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:26:19 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:26:23 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:27:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_bit_field_is_read_and_written_within_its_unit.c:27:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:27:9 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:28:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:28:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:27:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 written
+      Destination "_4"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_7"
+      Binary "Shr"
+        Copy "_6"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_8"
+      Binary "BitAnd"
+        Copy "_7"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_5"
+      Use
+        Copy "_8"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 written
+      Destination "_5"
+      Use
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_9"
+      Use
+        Copy "_4"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_10"
+      Binary "BitAnd"
+        Copy "_9"
+        Constant 254
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_11"
+      Use
+        Copy "_5"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_12"
+      Binary "BitAnd"
+        Copy "_11"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_13"
+      Binary "Shl"
+        Copy "_12"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_14"
+      Binary "BitOr"
+        Copy "_10"
+        Copy "_13"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_4"
+        Deref
+      Use
+        Copy "_14"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_15"
+      Use
+        Copy "_4"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_16"
+      Binary "Shr"
+        Copy "_15"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_17"
+      Binary "BitAnd"
+        Copy "_16"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+      Destination "_5"
+      Use
+        Copy "_17"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:30:5 generated
+    ArgumentsEvaluated a_bit_field_is_read_and_written_within_its_unit.c:31:5 generated
+    Call a_bit_field_is_read_and_written_within_its_unit.c:31:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:31:5 generated
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:12 written
+      Destination "_18"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:12 generated
+      Destination "_20"
+      Use
+        Copy "_18"
+          Deref
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:12 generated
+      Destination "_21"
+      Binary "Shr"
+        Copy "_20"
+        Constant 0
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:12 generated
+      Destination "_22"
+      Binary "BitAnd"
+        Copy "_21"
+        Constant 1
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:12 generated
+      Destination "_19"
+      Use
+        Copy "_22"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:32:5 written
+      Destination "_0"
+      Use
+        Copy "_19"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:32:12 generated
+    Return
+Function a_bit_field_is_read_and_written_within_its_unit.c:35:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:35:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call a_bit_field_is_read_and_written_within_its_unit.c:36:12 written "written_then_read" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call a_bit_field_is_read_and_written_within_its_unit.c:36:34 written "beside_a_pointer" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:36:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Call a_bit_field_is_read_and_written_within_its_unit.c:36:55 written "through_a_freed_pointer" "bb3"
+      Destination "_4"
+  Block "bb3"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:36:12 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+        Copy "_4"
+    Operation a_bit_field_is_read_and_written_within_its_unit.c:36:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_bit_field_is_read_and_written_within_its_unit.c:36:12 generated
+    Return

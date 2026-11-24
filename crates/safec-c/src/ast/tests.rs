@@ -57,6 +57,7 @@ fn two_types_are_compatible_when_c_says_they_are() {
         written: ty,
         span: Span::new(file, 0, 1),
         nullability: None,
+        width: None,
     };
     let of = |ast: &mut Ast, returns, parameters| {
         ast.push_type(Type::Function {
@@ -227,6 +228,7 @@ fn every_type_is_spelled_the_way_c_declares_it() {
         written: ty,
         span: Span::new(file, 0, 2),
         nullability: None,
+        width: None,
     };
     let takes_int = |returns| Type::Function {
         returns,

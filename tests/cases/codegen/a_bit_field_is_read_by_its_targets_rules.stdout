@@ -1,0 +1,52 @@
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @size() {
+entry:
+  %_0 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 8, ptr %_0
+  %t0 = load i32, ptr %_0
+  ret i32 %t0
+}
+
+define i32 @read(ptr %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca ptr
+  %_4 = alloca i32
+  %_5 = alloca i8
+  %_6 = alloca i8
+  %_7 = alloca i8
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load ptr, ptr %_1
+  %t1 = getelementptr i8, ptr %t0, i64 4
+  store ptr %t1, ptr %_2
+  %t2 = load ptr, ptr %_2
+  store i8 1, ptr %t2
+  %t3 = load ptr, ptr %_1
+  %t4 = getelementptr i8, ptr %t3, i64 5
+  store ptr %t4, ptr %_3
+  %t5 = load ptr, ptr %_3
+  %t6 = load i8, ptr %t5
+  store i8 %t6, ptr %_5
+  %t7 = load i8, ptr %_5
+  %t8 = lshr i8 %t7, 0
+  store i8 %t8, ptr %_6
+  %t9 = load i8, ptr %_6
+  %t10 = and i8 %t9, 7
+  store i8 %t10, ptr %_7
+  %t11 = load i8, ptr %_7
+  %t12 = zext i8 %t11 to i32
+  store i32 %t12, ptr %_4
+  %t13 = load i32, ptr %_4
+  store i32 %t13, ptr %_0
+  %t14 = load i32, ptr %_0
+  ret i32 %t14
+}

@@ -304,6 +304,10 @@ pub struct Declaration {
     /// [`Declaration::ty`]: it selects no type and changes no code, and what it
     /// does mean is ADR-0037 for `_Nonnull` and ADR-0050 for `_Nullable`.
     pub nullability: Option<Nullability>,
+    /// The width a bit-field is declared with, its constant expression
+    /// after the `:` (C17 6.7.2.1 p4), and `None` for any other declaration.
+    /// Only a member has one, and a member that has one may have no name.
+    pub width: Option<ExprId>,
 }
 
 /// A nullability specifier written after a `*`, and where.
