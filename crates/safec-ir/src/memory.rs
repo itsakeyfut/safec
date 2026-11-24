@@ -1264,11 +1264,19 @@ fn findings_within(
                 // Mutation: push nothing;
                 // `a_variable_length_array_is_doubted_where_its_length_is_unknown`
                 // loses its `SC0418`.
+                // And where a typedef's variable length is worked out
+                // (#1294), whose array no storage is made for yet: the
+                // length is what p5 asks of, each time. Mutation: ask only
+                // arrays; `a_variable_length_array_is_doubted_where_its_length_is_unknown`'s
+                // `only_a_typedef` loses its `SC0418`.
                 if let Element::StorageLive { local, origin } = element {
-                    if let Ty::Array {
-                        length: Length::Local(_),
-                        ..
-                    } = unit.ty(function.local(*local))
+                    if matches!(
+                        unit.ty(function.local(*local)),
+                        Ty::Array {
+                            length: Length::Local(_),
+                            ..
+                        }
+                    ) || function.variable_length(*local)
                     {
                         findings.push(Finding {
                             function: func,

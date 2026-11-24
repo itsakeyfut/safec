@@ -761,8 +761,20 @@ pub enum Stmt {
         /// So the list is empty exactly where the declaration declares a tag,
         /// `struct S;` and `struct S { int x; };`, or an enumeration's
         /// members, `enum { A };`, or is a typedef, which declares no object
-        /// and whose names the parser has already resolved.
+        /// and whose names the parser has already resolved; what a typedef
+        /// declared is in [`Self::Declaration::typedefs`].
         declarators: Vec<InitDeclarator>,
+        /// The type each typedef declarator declared, in the order written,
+        /// where the specifiers wrote `typedef`, and empty otherwise.
+        ///
+        /// **Apart from [`Self::Declaration::declarators`]**, which a typedef
+        /// leaves empty, so that no reader of objects can take a typedef for
+        /// one: a reader that does not know this field refuses what it would
+        /// need, rather than lowering a type as an object. What it is for is
+        /// a variable length array typedef, whose length C17 6.7.8 p3 works
+        /// out where the typedef is reached, and a file-scope one, which
+        /// 6.7.6.2 p2 forbids (#1294).
+        typedefs: Vec<TypeId>,
         /// What the specifiers named, before any declarator derived from it.
         /// The only type a declaration with no declarator has, and what the
         /// type checker asks of one.
@@ -981,6 +993,8 @@ pub enum Item {
         ///
         /// Empty exactly where [`Stmt::Declaration::declarators`] says.
         declarators: Vec<InitDeclarator>,
+        /// As [`Stmt::Declaration::typedefs`] says.
+        typedefs: Vec<TypeId>,
         /// What the specifiers named, as [`Stmt::Declaration::specified`].
         specified: TypeId,
         /// As [`Stmt::Declaration::enumerators`].

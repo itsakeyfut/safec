@@ -1503,6 +1503,12 @@ pub struct Function {
     /// The locals the program may not modify, each defined `const` at its
     /// innermost element (C17 6.7.3 p6). See ADR-0120.
     read_only: Vec<LocalId>,
+    /// The locals that hold a variable length array type's length worked
+    /// out where a typedef is reached (#1294), which no array's storage
+    /// reads: the memory check doubts each where it begins, as it doubts a
+    /// variable length array's declaration, since C17 6.7.6.2 p5 asks the
+    /// length be above zero each time it is worked out.
+    variable_lengths: Vec<LocalId>,
     /// Whether what it returns is a pointer to `const`, so that a caller
     /// cannot write through it: [`Parameter::reads_only`] for the result.
     returns_reads_only: bool,
@@ -1573,6 +1579,7 @@ impl Function {
             internal: false,
             return_promise: None,
             read_only: Vec::new(),
+            variable_lengths: Vec::new(),
             returns_reads_only: false,
             const_levels: Vec::new(),
             carried_levels: Vec::new(),
@@ -1852,6 +1859,17 @@ impl Function {
     /// Whether `local` may not be modified, being defined `const`.
     pub fn read_only(&self, local: LocalId) -> bool {
         self.read_only.contains(&local)
+    }
+
+    /// Say that `local` holds a variable length array type's length, worked
+    /// out where a typedef is reached. See `Function::variable_lengths`.
+    pub fn mark_variable_length(&mut self, local: LocalId) {
+        self.variable_lengths.push(local);
+    }
+
+    /// Whether `local` holds a typedef's variable length.
+    pub fn variable_length(&self, local: LocalId) -> bool {
+        self.variable_lengths.contains(&local)
     }
 
     /// Add a local written with the name at `name`, and hand back its id.

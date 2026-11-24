@@ -1,0 +1,22 @@
+error[SC0323]: this jumps into the scope of a variable length array
+   ╭─[ a_jump_into_the_scope_of_a_variable_length_typedef_is_refused.c:2:5 ]
+   │
+ 2 │     goto in;
+   │     ────┬───  
+   │         ╰───── this jumps past its declaration
+ 3 │     typedef char T[n];
+   │                    ┬  
+   │                    ╰── its length is worked out here
+───╯
+  = note: C17 6.8.6.1 p1 and 6.8.4.2 p2: no jump may enter the scope of a variable length array from outside it
+error[SC0323]: this jumps into the scope of a variable length array
+    ╭─[ a_jump_into_the_scope_of_a_variable_length_typedef_is_refused.c:10:5 ]
+    │
+ 10 │     goto in;
+    │     ────┬───  
+    │         ╰───── this jumps past its declaration
+ 11 │     typedef char T[n];
+    │                    ┬  
+    │                    ╰── its length is worked out here
+────╯
+  = note: C17 6.8.6.1 p1 and 6.8.4.2 p2: no jump may enter the scope of a variable length array from outside it

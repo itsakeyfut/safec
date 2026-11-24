@@ -778,23 +778,33 @@ impl Checker<'_> {
                 }
                 Item::Declaration {
                     declarators,
+                    typedefs,
                     specified,
                     enumerators: _,
                     storage: _,
                     span,
-                } => push(
-                    declarators,
-                    *specified,
-                    *span,
-                    Where::FileScope,
-                    &mut declared,
-                ),
+                } => {
+                    push(
+                        declarators,
+                        *specified,
+                        *span,
+                        Where::FileScope,
+                        &mut declared,
+                    );
+                    // **A typedef's type is held to the same rules** (#1294):
+                    // at file scope C17 6.7.6.2 p2 forbids a variably
+                    // modified one, as it does an object's. Mutation: leave
+                    // typedefs out; `a_variable_length_typedef_at_file_scope_is_refused`
+                    // is accepted.
+                    declared.extend(typedefs.iter().map(|&ty| (*span, ty, Where::FileScope)));
+                }
                 Item::Error { .. } => {}
             }
         }
         for id in ast.stmt_ids() {
             if let Stmt::Declaration {
                 declarators,
+                typedefs,
                 specified,
                 enumerators: _,
                 storage: _,
@@ -802,6 +812,7 @@ impl Checker<'_> {
             } = ast.stmt(id)
             {
                 push(declarators, *specified, *span, Where::Inner, &mut declared);
+                declared.extend(typedefs.iter().map(|&ty| (*span, ty, Where::Inner)));
             }
         }
 
@@ -1451,6 +1462,7 @@ impl Checker<'_> {
             // the one place that builds it.
             let Stmt::Declaration {
                 declarators,
+                typedefs: _,
                 specified,
                 enumerators: _,
                 storage,

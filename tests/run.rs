@@ -191,4 +191,17 @@ programs! {
     /// `Lowering::lay_out_stepped`; the difference is refused and the step
     /// panics.
     a_struct_only_pointers_reach_is_stepped_and_subtracted,
+    /// A typedef of a variable length array has its length worked out
+    /// where the typedef is reached (C17 6.7.8 p3): not again at each
+    /// object; once, however many objects are declared with it, and with
+    /// none; by `sizeof` of the type; afresh on each pass of a loop; from
+    /// the name in scope at the typedef; and not again through an alias, a
+    /// pointer or a qualified copy of it, while every length its own
+    /// declarator wrote, through pointers, nested arrays and a function's
+    /// return, is (#1294). Mutations: evaluate the length at the object
+    /// again, and `later` takes 7; walk no typedef in the resolver, and
+    /// `scoped` takes the inner `s`; evaluate every length met, and `alias`
+    /// takes 7; ask `ty` itself in the resolver's skip, and `qualified` is
+    /// refused; stop at a function type, and `returning` counts 4.
+    a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is,
 }

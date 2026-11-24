@@ -96,6 +96,11 @@ cases! {
         // first element as much as one at its length, and nothing is
         // answered safe (#1209). Each declaration is doubted too, `SC0418`,
         // since nothing shows its length is above zero (C17 6.7.6.2 p5).
+        // `through_a_typedef`'s object, whose length the typedef worked out,
+        // is doubted as any is, and `only_a_typedef`'s typedef where it works
+        // the length out, with nothing of the type declared (#1294).
+        // Mutation: ask only arrays in the memory check's `SC0418`;
+        // `only_a_typedef` goes silent.
         // Mutation: give such an array the size of one element in
         // `TranslationUnit::size_of`; `first`'s `SC0412` goes silent.
         a_variable_length_array_is_doubted_where_its_length_is_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -8883,6 +8888,15 @@ cases! {
         // than to overflow; and one over arrays of them is refused where the
         // type check sizes it (#1209). Mutations are in `types.rs`.
         a_sizeof_of_a_variable_length_array_is_no_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A variably modified typedef at file scope is a constraint
+        // violation (C17 6.7.6.2 p2), refused as an object's would be
+        // (#1294). Mutation: leave typedefs out of `check_declarators`; it
+        // is accepted.
+        a_variable_length_typedef_at_file_scope_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // In a block a typedef's length is held to an integer type as an
+        // object's is (C17 6.7.6.2 p1, #1294). Mutation: leave block-scope
+        // typedefs out of `check_declarators`; it reaches the backend.
+        a_variable_length_typedef_is_held_to_an_integer_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.9 p4 holds a block-scope `static` to a constant as it
         // holds a global. Mutation: walk only file-scope declarations in
         // `Checker::check_static_initializers`; nothing is reported here, and
@@ -10396,16 +10410,21 @@ cases! {
     }
 
     "lowering" => {
+        // A jump past a variable length typedef into its scope is a
+        // constraint violation (C17 6.8.6.1 p1), refused with `SC0323`, the
+        // second label on the typedef whose length it skips (#1294),
+        // `past_an_alias` too, past an alias of it in a block. Mutation:
+        // leave the typedef's length local out of its scope's list; the
+        // jump is accepted. Mutation: key the length by its type node;
+        // the alias takes over the typedef's entry and `past_an_alias` is
+        // accepted.
+        a_jump_into_the_scope_of_a_variable_length_typedef_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A jump into the scope of a variable length array is a constraint
         // violation (C17 6.8.6.1 p1, 6.8.4.2 p2), refused with `SC0323` for
         // a `goto` into a block, a `switch` past one to a `case`, and a
         // `goto` past one in the function's own body (#1209). Mutations are
         // on `Lowering::jump` and the declaration.
         a_jump_into_the_scope_of_a_variable_length_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A typedef's array length is worked out where the typedef is (C17
-        // 6.7.8 p3), which nothing holds yet, so an object of that type is
-        // refused rather than given a length worked out again (#1209).
-        a_typedef_of_a_variable_length_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Only `sizeof` of a variable length array's own name is worked out
         // when it runs; `sizeof(int[n])` and `sizeof *&a` are refused, not
         // answered (#1209). Mutation: report nothing in
