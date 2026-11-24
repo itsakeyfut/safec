@@ -1893,8 +1893,21 @@ impl Checker<'_> {
         };
         let fields = members
             .iter()
-            .map(|member| {
-                let (size, align) = self.size_and_align(ast, member.ty)?;
+            .enumerate()
+            .map(|(index, member)| {
+                // A flexible array member takes no bytes, and aligns the
+                // struct as its element does (C17 6.7.2.1 p18, #1208).
+                // Mutation: size it as nothing at all; `sized` in
+                // `a_flexible_array_member_is_bounded_by_its_allocation`
+                // is refused.
+                let (size, align) = match ast.ty(member.ty) {
+                    Type::Array {
+                        element,
+                        length: None,
+                        ..
+                    } if index + 1 == members.len() => (0, self.size_and_align(ast, *element)?.1),
+                    _ => self.size_and_align(ast, member.ty)?,
+                };
                 Some(safec_ir::record::Field {
                     size,
                     align,

@@ -374,7 +374,11 @@ pub enum Ty {
     Array {
         /// The type of each element.
         element: TyId,
-        /// How many elements there are, which the lowering never makes zero.
+        /// How many elements there are. Zero only for a flexible array member
+        /// (C17 6.7.2.1 p18, #1208), the last member of a struct, which takes
+        /// no bytes of it and whose elements are as many as were allocated
+        /// past it: the memory check bounds a walk through one by the
+        /// allocation rather than by the member.
         length: u64,
     },
     /// A struct, laid out in [`TranslationUnit::struct_layout`], or a union.

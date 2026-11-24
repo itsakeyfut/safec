@@ -54,6 +54,15 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A flexible array member takes no bytes of its struct, and its
+        // elements are what was allocated past it (C17 6.7.2.1 p18, #1208):
+        // `fits` writes the last of four allocated and is silent, `past`
+        // writes one beyond them and is `SC0412` with the bytes counted, a
+        // struct a parameter points at has an allocation this check cannot
+        // know and is doubted, and one on the stack has no elements at all.
+        // Mutation: enter the member's row of no bytes in
+        // `converted`; `fits` reports `SC0412`.
+        a_flexible_array_member_is_bounded_by_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A bit-field is read and written through its unit, so the memory
         // check sees an integer read and written beside a pointer member
         // and asks nothing new, and one reached through a freed pointer is
