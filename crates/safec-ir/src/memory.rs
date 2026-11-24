@@ -106,12 +106,20 @@ use report::{
 use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_terminator};
 
 /// Where `element` orders or subtracts two pointers this check cannot show
-/// point into one object (C17 6.5.8 p5, #1211; 6.5.6 p9, #638), and which
-/// of the two it is, or `None` where it does neither or the two certainly
-/// share one. One question, so one answer: the clauses ask the same of
-/// both. Mutation: ask only the orderings;
-/// `the_difference_of_two_pointers_into_one_array_is_doubted_across_two`
-/// goes silent.
+/// point into one object (C17 6.5.8 p5, #1211) or one array (6.5.6 p9,
+/// #638), and which of the two it is, or `None` where it does neither or
+/// the two certainly share it. Mutation: ask only the orderings;
+/// `the_difference_of_two_pointers_into_one_array_is_doubted_across_two`'s
+/// `apart` goes silent.
+///
+/// **The two clauses ask different things.** An ordering is defined
+/// between members of one struct (p5), so one object is enough; a
+/// difference only between elements of one array (p9), and two members of
+/// a struct, or two arrays in one, are two arrays. So a difference is
+/// answered only where the one referent is a local or a static of array
+/// type, and doubted where it is a struct, or a block this check holds no
+/// type for. Mutation: let a difference take any one referent; the same
+/// case's `two_members` and `two_arrays_in_one` go silent.
 ///
 /// **One object is one live referent each operand may name, and the
 /// same**, read off the operand's own local:
@@ -155,9 +163,10 @@ fn compared_apart(
         BinOp::Sub => Kind::SubtractedApart,
         _ => return None,
     };
-    // A constant is no pointer here: the type check refuses ordering a
-    // pointer against an integer, a null pointer constant included (6.5.8
-    // p2), so only an equality ever meets one.
+    // Both operands a pointer, or nothing is asked: the type check refuses
+    // ordering a pointer against an integer, a null pointer constant
+    // included (6.5.8 p2), and a pointer minus an integer is a move, not a
+    // difference.
     let pointer = |operand: &Operand| match operand {
         Operand::Copy(place) => unit
             .place_ty(function, place)
@@ -191,8 +200,23 @@ fn compared_apart(
             index::Referent::Unknown(_) => None,
         }
     };
+    let array = |referent: index::Referent| match referent {
+        index::Referent::Local(local) => function
+            .locals()
+            .nth(crate::index::Idx::index(local))
+            .is_some_and(|id| matches!(unit.ty(function.local(id)), Ty::Array { .. })),
+        index::Referent::Static(slot) => analysis
+            .statics
+            .get(crate::index::Idx::index(slot))
+            .is_some_and(|&id| matches!(unit.ty(unit.static_object(id).ty), Ty::Array { .. })),
+        index::Referent::Heap(_) | index::Referent::Unknown(_) => false,
+    };
     match (one(lhs), one(rhs)) {
-        (Some(left), Some(right)) if left == right => None,
+        (Some(left), Some(right))
+            if left == right && (kind == Kind::ComparedApart || array(left)) =>
+        {
+            None
+        }
         _ => Some((operation.origin.span(), kind)),
     }
 }
@@ -1145,7 +1169,7 @@ fn findings_within(
                     sources,
                     &mut findings,
                     &mut said,
-                    operated_on_in_element(element),
+                    operated_on_in_element(unit, function, element),
                     &known,
                     func,
                     &|local| unit.ty(function.local(local)).is_pointer(),

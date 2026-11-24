@@ -392,6 +392,7 @@ pub fn lower(
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
         structs: HashMap::new(),
+        written: HashMap::new(),
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
@@ -412,6 +413,7 @@ pub fn lower(
 
     lowering.declare(diagnostics);
     lowering.define(diagnostics);
+    lowering.lay_out_stepped(diagnostics);
     lowering.unit
 }
 
@@ -498,6 +500,10 @@ struct Lowering<'a> {
     /// The IR struct each struct tag became, so that one struct type is one
     /// `Ty::Struct` however many times it is written. See [`Lowering::ty`].
     structs: HashMap<TagId, StructId>,
+    /// Where each IR struct was first written and the C type that wrote it,
+    /// so that one only a pointer reaches can be laid out once the unit is
+    /// lowered. See [`Lowering::lay_out_stepped`].
+    written: HashMap<StructId, (Span, TypeId)>,
     /// The tags whose members are being laid out now. See
     /// [`Lowering::struct_of`].
     laying_out: HashSet<TagId>,
@@ -1805,7 +1811,8 @@ impl Lowering<'_> {
         let at = parameter.name.unwrap_or(parameter.span);
         // The note claims nothing about the program, because a length nobody
         // typed can hide a fault: `int a[*(p - q)]` is not C, and the type
-        // check could not ask, since `p - q` has no type.
+        // check could not ask while `p - q` had no type, which it has since
+        // #638; no untyped length is measured now (#1298).
         let mut refusal =
             Diagnostic::error("cannot compile a parameter declared as this array yet")
                 .with_code(LOWERING)
@@ -2367,6 +2374,7 @@ impl Lowering<'_> {
                     self.unit.declare_struct()
                 };
                 self.structs.insert(tag, id);
+                self.written.insert(id, (at, ty));
                 id
             }
         };
@@ -2645,7 +2653,8 @@ impl Lowering<'_> {
             // nobody has reported yet, which is what the message says. The
             // note does not say the program is valid, because some of those
             // are not: `(p - q) < p` breaks C17 6.5.8 p2, and the type check
-            // could not ask, since `p - q` has no type.
+            // could not ask while `p - q` had no type, which it has since
+            // #638; no untyped expression is measured now (#1298).
             //
             // The driver does not lower a tree the type check reported
             // about, so no run reaches the list today. It is kept as the
@@ -5468,6 +5477,68 @@ impl Lowering<'_> {
             rank,
             sign: safec_ir::ir::Sign::Signed,
         })
+    }
+
+    /// Lay out every struct a pointer is moved over or subtracted across
+    /// and nothing else laid out, once every function is lowered (#638).
+    ///
+    /// **A struct behind a pointer is not laid out where the pointer is
+    /// written** (#1202 review, see `Lowering::ty`), so one a function only
+    /// ever reaches through pointers had no size: `q - p` over it was
+    /// refused as having none, and `p + 1` panicked asking for its layout,
+    /// while the same function built once anything else in the file declared
+    /// an object of it. Here no struct is being laid out, so the recursion
+    /// that rule avoids cannot arise, and only a struct the IR steps over is
+    /// asked, so one with a member this compiler refuses is still refused
+    /// only where it is used. Mutation: skip this;
+    /// `a_struct_only_pointers_reach_is_stepped_and_subtracted` panics.
+    fn lay_out_stepped(&mut self, diagnostics: &mut DiagnosticSink) {
+        let mut stepped = Vec::new();
+        for func in self.unit.functions() {
+            let function = self.unit.function(func);
+            // A declaration has no body to step over anything.
+            if !function.is_defined() {
+                continue;
+            }
+            for block in function.blocks() {
+                for element in &block.elements {
+                    let Element::Assign(Operation {
+                        value:
+                            Rvalue::Binary {
+                                op: BinOp::Add | BinOp::Sub,
+                                lhs,
+                                rhs,
+                            },
+                        ..
+                    }) = element
+                    else {
+                        continue;
+                    };
+                    for operand in [lhs, rhs] {
+                        let Operand::Copy(place) = operand else {
+                            continue;
+                        };
+                        let Some(ty) = self.unit.place_ty(function, place) else {
+                            continue;
+                        };
+                        if let Ty::Pointer(pointee) = self.unit.ty(ty) {
+                            if let Ty::Struct(id) = self.unit.ty(pointee) {
+                                if self.unit.layout_of(id).is_none() {
+                                    stepped.push(id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for id in stepped {
+            if self.unit.layout_of(id).is_none() {
+                if let Some(&(at, ty)) = self.written.get(&id) {
+                    let _ = self.struct_of(at, ty, true, diagnostics);
+                }
+            }
+        }
     }
 
     /// The IR type of a variable length array declared with type `ty`, its

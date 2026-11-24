@@ -729,7 +729,6 @@ a declaration. They are gaps rather than decisions, and each one is a program
 | `int *p = &g;`, an object with static storage duration whose initializer is an address | what a static starts with is a number or a null pointer (ADR-0115) |
 | `extern char g;` in a block, where the file-scope `g` is an `int` | C17 6.2.7 p2 makes it undefined, and nothing before the lowering compares a block's `extern` with the file scope's declaration |
 | a file-scope object of a type the IR cannot hold, used inside a function | it is passed over where it is declared, so the use names nothing |
-| `p - q`, the difference of two pointers | C17 6.5.6 p9 makes it a `ptrdiff_t`, which this compiler has no type for, so the type checker leaves it untyped (`types.rs`), until #638 |
 
 The reason a refusal is reported rather than lowered around is that the IR has
 no way to say a function has a hole in it: a body with a piece missing and a
@@ -752,6 +751,12 @@ A relational comparison of two pointers builds, as an unsigned `icmp`, and
 the memory check doubts one it cannot show is between pointers into one
 live object (C17 6.5.8 p5, `SC0419`, #1211). The interpreter still refuses
 it as arithmetic on a pointer.
+
+A pointer minus a pointer builds too, as the target's `ptrdiff_t`: the byte
+distance divided by the element's size from the IR's layout. The memory
+check doubts one it cannot show is between elements of one array (C17
+6.5.6 p9, `SC0419`, #638), which is narrower than the one object an
+ordering asks for: two members of a struct are two arrays.
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and

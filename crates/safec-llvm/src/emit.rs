@@ -1045,7 +1045,8 @@ impl Emitter<'_> {
     /// on every target here (`Target::ptrdiff_type`), and the quotient is
     /// signed, since either may be the lower. Plain `sdiv`, not `exact`: a
     /// distance that is no multiple is undefined (the pointers are into no
-    /// one array) and the memory check doubts it, rather than this making
+    /// one array) and the memory check doubts it, `Unknown` by
+    /// `SubtractedApart`, rather than this making
     /// it poison. Mutation: divide by 1;
     /// `the_difference_of_two_pointers_into_one_array_is_its_subscripts`
     /// returns the byte distance.

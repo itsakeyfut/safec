@@ -184,4 +184,11 @@ programs! {
     /// and the counts are bytes; answer no type in `Checker::binary`, and
     /// this is refused.
     the_difference_of_two_pointers_into_one_array_is_its_subscripts,
+    /// A struct a function reaches only through pointers is laid out where
+    /// a pointer to it is stepped or subtracted, so `end - first` counts its
+    /// elements and `at + 1` steps over one, though nothing in those
+    /// functions declares an object of it (#638). Mutation: skip
+    /// `Lowering::lay_out_stepped`; the difference is refused and the step
+    /// panics.
+    a_struct_only_pointers_reach_is_stepped_and_subtracted,
 }

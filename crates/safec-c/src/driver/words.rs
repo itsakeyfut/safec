@@ -131,7 +131,9 @@ const WRITES_READ_ONLY: Code = Code::new("SC0417");
 const VARIABLE_LENGTH: Code = Code::new("SC0418");
 
 /// An ordering or a difference of two pointers that may point into
-/// different objects.
+/// different objects, or for a difference, different arrays: the one
+/// question of which object a pair of pointers is into, asked by
+/// `memory::Kind::ComparedApart` and `memory::Kind::SubtractedApart`.
 ///
 /// Not any code above, which are each about an access, an allocation or a
 /// size: this is about which two objects a comparison is between, and the

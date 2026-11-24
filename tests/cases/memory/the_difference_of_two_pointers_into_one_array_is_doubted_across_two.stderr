@@ -1,10 +1,76 @@
 error[SC0419]: this subtracts pointers that may point into different objects
-   ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:9:18 ]
-   │
- 9 │     return (int)(&a[3] - &b[1]);
-   │                  ──────┬──────  
-   │                        ╰──────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
-───╯
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:12:18 ]
+    │
+ 12 │     return (int)(&a[3] - &b[1]);
+    │                  ──────┬──────  
+    │                        ╰──────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:22:18 ]
+    │
+ 22 │     return (int)(&s.y - &s.x);
+    │                  ─────┬─────  
+    │                       ╰─────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:32:18 ]
+    │
+ 32 │     return (int)(&s.b[0] - &s.a[0]);
+    │                  ────────┬────────  
+    │                          ╰────────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:40:19 ]
+    │
+ 40 │     int d = (int)(p + 3 - p);
+    │                   ────┬────  
+    │                       ╰────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0402]: this uses `q` after it was freed
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:52:18 ]
+    │
+ 46 │     char *p = malloc(8);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 51 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 52 │     return (int)(q - p);
+    │                  ──┬──  
+    │                    ╰──── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:52:18 ]
+    │
+ 52 │     return (int)(q - p);
+    │                  ──┬──  
+    │                    ╰──── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:61:18 ]
+    │
+ 61 │     return (int)(a + 1 - p);
+    │                  ────┬────  
+    │                      ╰────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: subtract pointers into one array, or subtract indices instead

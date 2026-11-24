@@ -2855,19 +2855,29 @@ fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
 /// chain overflows the stack. Each fails one of these.
 ///
 /// A difference of two pointers is no constant expression C17 6.6 p7
-/// lists, so both are `SC0317` since #638 gave it a type: `p - p`, which
-/// `clang` refuses too, and `&x[1] - &x[0]`, which `clang` accepts under
-/// p10's leave to take other forms. Until #638 both were untyped and said
-/// to be this compiler's gap. No initializer is untyped any more, so the
-/// gap's refusal has no input left (#1298).
+/// lists. `p - p` over an object that is no address constant is `SC0317`,
+/// which `clang` refuses too. `&x[1] - &x[0]`, of two address constants,
+/// `clang` folds under p10's leave to take other forms, so it is this
+/// compiler's gap, `SC0304`, as it was while a difference had no type, at
+/// the top of an initializer and inside one alike (#638). Mutation: drop
+/// the gap in `check_static_initializers`; `g` and `h` are said to be no
+/// constant.
 #[test]
-fn an_initializer_at_file_scope_this_stage_cannot_ask_is_still_refused() {
-    let between = checked("int x[4];\nint g = &x[1] - &x[0];\n");
-    assert_eq!(
-        between.messages(),
-        ["the initializer of `g` is not a constant"]
-    );
-    assert_eq!(between.codes(), ["SC0317"]);
+fn a_difference_of_two_addresses_in_a_static_is_this_compilers_gap() {
+    let unchecked = "a gap in this compiler: whether this initializer is valid C is not checked";
+    for text in [
+        "int x[4];\nint g = &x[1] - &x[0];\n",
+        "int x[4];\nlong long g = (&x[3] - &x[0]) * 2;\n",
+    ] {
+        let between = checked(text);
+        assert_eq!(
+            between.messages(),
+            ["cannot check whether the initializer of `g` is a constant"],
+            "{text}"
+        );
+        assert_eq!(between.codes(), ["SC0304"], "{text}");
+        assert_eq!(between.notes(), [unchecked], "{text}");
+    }
 
     let forbidden = checked("int *p;\nint m = p - p;\n");
     assert_eq!(

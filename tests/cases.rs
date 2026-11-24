@@ -55,10 +55,18 @@ macro_rules! cases {
 cases! {
     "memory" => {
         // C17 6.5.6 p9 defines a pointer minus a pointer only between
-        // pointers into one array, the question 6.5.8 p5 asks of an
-        // ordering, so `compared_apart` asks it of both: `one` is silent and
-        // `apart`, across two arrays, is `SC0419` (#638). Mutation: ask only
-        // the orderings; `apart` goes silent.
+        // elements of one array, narrower than the one object 6.5.8 p5 asks
+        // of an ordering, and `compared_apart` asks it (#638). `one` is
+        // silent. `SC0419`, with the mutation that silences each:
+        // - `apart`, two arrays: ask only the orderings;
+        // - `two_members` and `two_arrays_in_one`, two arrays in one struct:
+        //   let a difference take any one referent;
+        // - `in_a_block`, a block this check holds no type for: the same;
+        // - `maybe_null`: ask nothing of `may_be_null`.
+        // `after_a_free` is `SC0402` too, a value used: answer a difference
+        // as a move in `operated_on_in_element`. And `maybe_null` has no
+        // `SC0403`, which said the pointer was moved: answer a difference as
+        // a move in the nullability check, and it gains two.
         the_difference_of_two_pointers_into_one_array_is_doubted_across_two: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.8 p5 orders pointers into one object only, and
         // `compared_apart` answers one object only where each pointer may
@@ -10369,6 +10377,13 @@ cases! {
         // it runs (#1209). Mutation: skip the restore at `StorageDead`;
         // `stackrestore` goes from the text.
         a_variable_length_array_is_made_and_given_back: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
+        // A pointer minus a pointer is as wide as `ptrdiff_t`, which is a
+        // pointer's width: `i32` on `i686` and `i64` on x86-64 Linux, where
+        // `ptrdiff_t` is `long` and not Win64's `long long` (#638).
+        // Mutation: compute in `i64` whatever the target; the `i686` text
+        // changes.
+        the_difference_of_two_pointers_is_as_wide_as_a_pointer_on_i686: ["--emit", "llvm-ir", "--safety", "off", "--target", "i686-unknown-linux-gnu"],
+        the_difference_of_two_pointers_is_as_wide_as_a_pointer_on_x86_64_linux: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         // On `i686`, where `size_t` is 32 bits, the length is widened to the
         // `alloca`'s count, and the storage is as many of the element as it
         // holds, so a `long long` is aligned as LLVM aligns one (eight, as

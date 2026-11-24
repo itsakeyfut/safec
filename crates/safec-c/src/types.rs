@@ -179,7 +179,8 @@ const SWITCH_LABELS: Code = Code::new("SC0321");
 const FOR_DECLARATION: Code = Code::new("SC0311");
 
 /// Valid C this compiler reads and cannot check yet: a member access whose
-/// base this stage left with no type, such as `(p - q).a`.
+/// base this stage left with no type, as `(p - q).a`'s was until #638 gave
+/// a difference `ptrdiff_t`. No base measured is untyped now (#1298).
 ///
 /// The lowering's code, `SC0304`, rather than one of this stage's own,
 /// because it is the same class of refusal: what a reader searches for is
@@ -937,8 +938,9 @@ impl Checker<'_> {
                 let span = ast.expr(init).span();
                 if self.types[init.index()].is_none() {
                     // Either the program's fault, reported where it was
-                    // typed, or this compiler's gap, `*arr` and `p - q`
-                    // among them, which nobody reported: the lowering drops
+                    // typed, or this compiler's gap, which nobody reported
+                    // (`p - q` was until #638, and none is measured now,
+                    // #1298): the lowering drops
                     // a file-scope initializer unread, so passing it over
                     // here would build a program C forbids. Declined unless
                     // something was already reported, since then the run
@@ -958,6 +960,31 @@ impl Checker<'_> {
                     continue;
                 }
                 if self.values[init.index()].is_some() || self.address_constant(ast, init) {
+                    continue;
+                }
+                // **A difference of two address constants is this
+                // compiler's gap** (#638): C17 6.6 p7 lists no such form,
+                // and p10 lets an implementation take others, which `clang`
+                // does even under `-pedantic-errors`, folding `&x[3] -
+                // &x[0]`. Saying the program is wrong about one it builds
+                // would be a report about ordinary C; this compiler does not
+                // fold one yet. Mutation: drop this; the test
+                // `a_difference_of_two_addresses_in_a_static_is_this_compilers_gap`
+                // says `g` is no constant.
+                if self.holds_address_difference(ast, init) {
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "cannot check whether the initializer of `{name}` is a constant"
+                        ))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(
+                            span,
+                            "a difference of two addresses, which this compiler does not fold",
+                        ))
+                        .with_note(
+                            "a gap in this compiler: whether this initializer is valid C is not checked",
+                        ),
+                    );
                     continue;
                 }
                 let diagnostic = if self.undefined[init.index()] {
@@ -1001,6 +1028,40 @@ impl Checker<'_> {
     /// A loop rather than a recursion, since every step goes to one operand
     /// and `x + 1 + 1 + ...` or `s.a.b.c...` is as long as the source makes
     /// it: the parser bounds the depth of nesting, not of a chain.
+    /// Whether `id` holds, anywhere in it, a pointer minus a pointer whose
+    /// operands are both address constants (C17 6.6 p9), which an
+    /// implementation may take as a constant (p10). Walked with a stack, as
+    /// [`Checker::address_constant`] is, so a chain as long as the source
+    /// makes it does not run out of stack.
+    fn holds_address_difference(&self, ast: &Ast, id: ExprId) -> bool {
+        let mut pending = vec![id];
+        while let Some(id) = pending.pop() {
+            let expr = ast.expr(id);
+            if let Expr::Binary {
+                op: BinOp::Sub,
+                lhs,
+                rhs,
+                ..
+            } = *expr
+            {
+                let pointer = |id: ExprId| {
+                    self.types[id.index()].is_some_and(|ty| {
+                        matches!(ast.ty(ty), Type::Pointer(_) | Type::Array { .. })
+                    })
+                };
+                if pointer(lhs)
+                    && pointer(rhs)
+                    && self.address_constant(ast, lhs)
+                    && self.address_constant(ast, rhs)
+                {
+                    return true;
+                }
+            }
+            pending.extend(subexpressions(expr));
+        }
+        false
+    }
+
     fn address_constant(&self, ast: &Ast, id: ExprId) -> bool {
         let constant = |id: ExprId| self.values[id.index()].is_some();
         let (mut id, mut designator) = (id, false);
@@ -2005,8 +2066,9 @@ impl Checker<'_> {
         let Some(length) = length else {
             return false;
         };
-        // "the expression shall have an integer type", and an untyped one,
-        // `p - q`, is asked nothing, as `subscript` asks nothing of it.
+        // "the expression shall have an integer type", and an untyped one
+        // is asked nothing, as `subscript` asks nothing of it. `p - q` was
+        // one until #638 typed it; none is measured now (#1298).
         let ty = self.types[length.index()];
         if let Some(ty) = ty.filter(|&ty| {
             !matches!(
@@ -2075,8 +2137,9 @@ impl Checker<'_> {
         }
         // At file scope a length has to be a constant with a value. Untyped,
         // it was asked nothing above and is asked nothing here: an undeclared
-        // name has been reported already, and `p - q`, the one untyped length
-        // a valid program can write, goes unasked for want of a `ptrdiff_t`.
+        // name has been reported already, and a length this compiler left
+        // untyped goes unasked. `p - q` was the one a valid program could
+        // write, until #638 typed it (#1298).
         if !matches!(place, Where::Inner) && ty.is_some() && self.values[length.index()].is_none() {
             let at = ast.expr(length).span();
             diagnostics.report(if self.undefined[length.index()] {
@@ -2180,12 +2243,13 @@ impl Checker<'_> {
             // A base with a fault reported within it, `nowhere.x` or `a.b.c`
             // with no `b`, says nothing more, because the run already fails
             // and the fault is usually why the base has no type. Not always:
-            // `(nowhere, p - q).x` is untyped by `p - q`, and that gap is not
-            // said until `nowhere` is fixed, which is the trade `binary`
+            // a base untyped by this compiler's own gap beside the fault is
+            // not said until the fault is fixed, which is the trade `binary`
             // makes beside a marked operand. Any other base with no type was
             // left untyped by this compiler, and without its type whether the
-            // access is C cannot be told: `(*a).x` with `a` an array of
-            // structs is, and `(p - q).a` is not. So it is declined rather
+            // access is C cannot be told. `(p - q).a` was the example until
+            // #638 typed a difference; none is measured now (#1298). So it is
+            // declined rather
             // than passed over, and the note claims neither. An access that
             // says nothing here is marked through its base, by
             // `subexpressions`.
@@ -3215,10 +3279,11 @@ impl Checker<'_> {
     /// an integer. A pointer beside an integer is asked [`unsteppable`], the
     /// function `v + 1` asks, whichever side it was written on. Any other
     /// pairing, `x[0]`, `p[q]` or a `void` operand, is refused and answers no
-    /// type. All of that is asked only where both operands are typed: `x[p -
-    /// q]` is an integer subscripted by a pointer difference this compiler
-    /// has no type for, and goes unreported here and untyped into the
-    /// lowering, for want of a `ptrdiff_t` rather than of a rule. The
+    /// type. All of that is asked only where both operands are typed: an
+    /// operand this compiler left untyped goes unreported here and untyped
+    /// into the lowering. `x[p - q]` was that until #638 gave a difference
+    /// `ptrdiff_t`, and is now an integer subscripted by an integer,
+    /// refused; no untyped operand is measured now (#1298). The
     /// operands are decayed first, because 6.3.2.1 converts an
     /// array or a function before `[]` sees it, and a function `g` is refused
     /// in `g[1]` only as the pointer it becomes.
@@ -3345,11 +3410,11 @@ impl Checker<'_> {
     /// the program never had.
     ///
     /// Beside an operand this stage could not type, the answer turns on why
-    /// it is untyped. An operand can be untyped with nothing reported: `p -
-    /// q` is valid C, and this compiler has no type for its `ptrdiff_t`.
-    /// Every operator but `+` and `-` is still `int` there, because no type
-    /// would skip the check around it, and `int *r = (p - q) * 2;` would
-    /// lose its `SC0302`. An operand that is untyped because a fault in it
+    /// it is untyped. An operand can be untyped with nothing reported, as
+    /// `p - q` was until #638 gave it `ptrdiff_t`; none is measured now
+    /// (#1298). Every operator but `+` and `-` is still `int` there, because
+    /// no type would skip the check around it, which kept `int *r = (p - q)
+    /// * 2;` its `SC0302` while it was. An operand that is untyped because a fault in it
     /// was reported (see `reported_within`) gives no type, as `unary` does, because
     /// an `int` there had `p = nowhere * 1` reported as an undeclared name
     /// and then as an `int` given to a pointer.
@@ -3732,8 +3797,8 @@ impl Checker<'_> {
     /// `OPERANDS`, in `binary`'s words, and has no type, as a refused binary
     /// operation has none, a pointer to a function beside a pointer to `void`
     /// among them. An arm with no type makes no type in silence: either
-    /// something reported it, or it is `p - q`, which this compiler has no
-    /// type for.
+    /// something reported it, or this compiler left it untyped, as it did
+    /// `p - q` until #638 (#1298).
     ///
     /// Refused whether or not the value is used: `c ? h() : 1;` breaks p3 as
     /// a statement too, which `clang` accepts unless asked to be pedantic.
