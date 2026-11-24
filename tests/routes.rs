@@ -18,7 +18,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 mod compare;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 /// What memory is believed to hold, and what reports it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -5225,7 +5227,7 @@ fn parameters(row: Row, hazard: bool) -> &'static str {
 
 /// What the compiler said about one program: its exit code and the code of
 /// every report, with the message beside it.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Answer {
     exit: i32,
     /// Each report: whether it is an error, its code, and its message.
@@ -5338,6 +5340,32 @@ fn ask_allowing(name: &str, source: &str) -> Answer {
 }
 
 fn ask_with(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
+    // **One program asked once per run**: a row's test and the summary ask
+    // the same two programs at the same level, and answered twice they were
+    // 1,594 processes this binary spent for nothing (#1328). Keyed by what
+    // the compiler is handed, so a row's name, which only labels a failure,
+    // does not split it. Two threads asking at once may both run it, which
+    // costs a process and changes no answer.
+    static ANSWERED: OnceLock<Mutex<HashMap<String, Answer>>> = OnceLock::new();
+    let key = format!("{safety} {extra:?} {source}");
+    let answered = ANSWERED.get_or_init(Mutex::default);
+    if let Some(answer) = answered
+        .lock()
+        .expect("no thread panics holding it")
+        .get(&key)
+    {
+        return answer.clone();
+    }
+    let answer = ask_uncached(name, source, safety, extra);
+    answered
+        .lock()
+        .expect("no thread panics holding it")
+        .insert(key, answer.clone());
+    answer
+}
+
+/// [`ask_with`], running the compiler.
+fn ask_uncached(name: &str, source: &str, safety: &str, extra: &[&str]) -> Answer {
     static CALLS: AtomicUsize = AtomicUsize::new(0);
     let call = CALLS.fetch_add(1, Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!("safec-route-{}-{call}", std::process::id()));
@@ -6935,6 +6963,36 @@ fn every_uncertain_row_is_in_the_table_once_with_a_reason() {
     }
 }
 
+/// `answer` of every row, in the table's order, asked on as many threads as
+/// the machine has.
+///
+/// **The two tests that walk the whole matrix ask through this**, since each
+/// spawns `safec` for every row: one row after another, the summary took 72
+/// seconds where the rows beside it, which the harness already runs in
+/// parallel, took 42 (#1328). Each answer is its own process in its own
+/// directory, so nothing is shared but the counter that names them.
+fn each_row<R: Send>(answer: impl Fn(&str, Row) -> R + Sync) -> Vec<R> {
+    let threads = std::thread::available_parallelism().map_or(1, usize::from);
+    let chunk = ROWS.len().div_ceil(threads).max(1);
+    std::thread::scope(|scope| {
+        let answer = &answer;
+        let handles: Vec<_> = ROWS
+            .chunks(chunk)
+            .map(|rows| {
+                scope.spawn(move || {
+                    rows.iter()
+                        .map(|&(name, row)| answer(name, row))
+                        .collect::<Vec<R>>()
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a row's question does not panic"))
+            .collect()
+    })
+}
+
 /// Every program the matrix writes is C this frontend reads, built at
 /// `--safety off` with nothing said, so that a template that is wrong about
 /// C fails as itself rather than as a row that disagrees.
@@ -6943,15 +7001,19 @@ fn every_uncertain_row_is_in_the_table_once_with_a_reason() {
 /// rather than `&i`; this fails, beside the rows that template writes.
 #[test]
 fn every_generated_program_is_c_this_frontend_reads() {
-    let mut refused = vec![];
-    for &(name, row) in ROWS {
-        for (side, hazard) in [("hazard", true), ("control", false)] {
-            let answer = ask(name, &program(row, hazard), "off");
-            if answer.exit != 0 || !answer.reports.is_empty() {
-                refused.push(format!("{name} {side}: {answer:?}"));
-            }
-        }
-    }
+    let refused: Vec<String> = each_row(|name, row| {
+        [("hazard", true), ("control", false)]
+            .into_iter()
+            .filter_map(|(side, hazard)| {
+                let answer = ask(name, &program(row, hazard), "off");
+                (answer.exit != 0 || !answer.reports.is_empty())
+                    .then(|| format!("{name} {side}: {answer:?}"))
+            })
+            .collect::<Vec<_>>()
+    })
+    .into_iter()
+    .flatten()
+    .collect();
     assert!(
         refused.is_empty(),
         "generated programs this frontend refuses:\n{}",
@@ -6969,20 +7031,17 @@ fn every_generated_program_is_c_this_frontend_reads() {
 /// Mutation: change one line of `tests/routes.expected`. This fails.
 #[test]
 fn the_matrix_answers_what_was_blessed() {
-    let mut lines: Vec<String> = ROWS
-        .iter()
-        .map(|&(name, row)| {
-            let hazard = ask(name, &program(row, true), "memory");
-            let control = ask(name, &program(row, false), "memory");
-            let allowed = ask_allowing(name, &program(row, true));
-            format!(
-                "{name} hazard={} control={} allowed={}",
-                hazard.summary(),
-                control.summary(),
-                allowed.summary()
-            )
-        })
-        .collect();
+    let mut lines: Vec<String> = each_row(|name, row| {
+        let hazard = ask(name, &program(row, true), "memory");
+        let control = ask(name, &program(row, false), "memory");
+        let allowed = ask_allowing(name, &program(row, true));
+        format!(
+            "{name} hazard={} control={} allowed={}",
+            hazard.summary(),
+            control.summary(),
+            allowed.summary()
+        )
+    });
     lines.sort();
     let actual = lines.join("\n") + "\n";
     let path = expected_path();
