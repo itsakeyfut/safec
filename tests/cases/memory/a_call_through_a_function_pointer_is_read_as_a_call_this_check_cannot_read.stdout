@@ -1,31 +1,54 @@
 Target "x86_64-pc-windows-msvc"
+Static "global" "int *" external zero
+Static "kept" "int (*)(void)" external zero
+Static ".str.0" "char[8]" internal bytes 108 105 116 101 114 97 108 0
 Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:1:7 "malloc" declared
   Local "_0" "void *" return
   Local "_1" "unsigned long long" parameter
 Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:2:6 "free" declared
   Local "_0" "void" return
   Local "_1" "void *" parameter
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:8:5 "zero"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:11:6 "take" declared
+  Local "_0" "void" return
+  Local "_1" "int (*)(void)" parameter "f"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:12:6 "use" declared
+  Local "_0" "void" return
+  Local "_1" "char *" parameter "p"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:14:51 "hatch" hatch
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:15:10 generated
+      Destination "_1"
+      Static "global"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:15:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:15:5 written "free" "bb1"
+      Copy "_1"
+        Deref
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:15:5 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:5 "zero"
   Local "_0" "int" return
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:9:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:19:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:9:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:19:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:12:5 "read_it"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:22:5 "read_it"
   Local "_0" "int" return
   Local "_1" "int *" parameter _Nonnull "p"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:13:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:5 written
       Destination "_0"
       Use
         Copy "_1"
           Deref
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:13:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:16:5 "stored_and_called"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:26:5 "stored_and_called"
   Local "_0" "int" return
   Local "_1" "int (*)(void)" "f"
   Local "_2" "int"
@@ -34,230 +57,230 @@ Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_r
   Local "_5" "int"
   Local "_6" "int"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:17:11 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:27:11 written
       Destination "_1"
       Use
         Function "zero"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:17:22 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:12 written through "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:27:22 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:12 written through "bb1"
       Copy "_1"
       Destination "_2"
   Block "bb1"
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:18 written "zero" "bb2"
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:18 written "zero" "bb2"
       Destination "_3"
   Block "bb2"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:12 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:12 written
       Destination "_4"
       Binary "Add"
         Copy "_2"
         Copy "_3"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:31 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:31 written
       Destination "_5"
       Binary "Eq"
         Copy "_1"
         Function "zero"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:12 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:12 written
       Destination "_6"
       Binary "Add"
         Copy "_4"
         Copy "_5"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:5 written
       Destination "_0"
       Use
         Copy "_6"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:18:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:21:5 "freed_through_a_pointer"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:31:5 "freed_through_a_pointer"
   Local "_0" "int" return
   Local "_1" "void (*)(void *)" "release"
   Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:22:12 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:12 written
       Destination "_1"
       Use
         Function "free"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:22:31 generated
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:14 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:14 written "malloc" "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:31 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:14 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:14 written "malloc" "bb1"
       Destination "_3"
       Constant 4
   Block "bb1"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:10 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:10 written
       Destination "_2"
       Use
         Copy "_3"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:23:14 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:24:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:34:9 written
       Destination "_4"
       Unary "Not"
         Copy "_2"
-    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:24:9 written "bb2" "bb3"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:34:9 written "bb2" "bb3"
       Copy "_4"
   Block "bb2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:24:9 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:25:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:34:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:35:9 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:25:16 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:35:16 generated
     Return
   Block "bb3"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:24:9 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:34:9 generated
     Goto "bb4"
   Block "bb4"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:26:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:36:5 written
       Destination "_2"
         Deref
       Use
         Constant 1
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:26:5 generated
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:27:5 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:27:5 written through "bb5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:36:5 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:37:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:37:5 written through "bb5"
       Copy "_1"
       Copy "_2"
   Block "bb5"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:27:5 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:5 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:37:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:38:5 written
       Destination "_0"
       Use
         Copy "_2"
           Deref
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:28:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:38:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:31:5 "read_as_data"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:41:5 "read_as_data"
   Local "_0" "int" return
   Local "_1" "int *" "q"
   Local "_2" "int *"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:14 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:42:14 written
       Destination "_2"
       Use
         Function "zero"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:10 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:42:10 written
       Destination "_1"
       Use
         Copy "_2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:32:14 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:5 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:42:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:43:5 written
       Destination "_0"
       Use
         Copy "_1"
           Deref
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:33:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:43:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:36:5 "through_a_pointer_that_may_be_null"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:46:5 "through_a_pointer_that_may_be_null"
   Local "_0" "int" return
   Local "_1" "int" parameter "c"
   Local "_2" "int (*)(void)" "f"
   Local "_3" "int"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:37:11 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:47:11 written
       Destination "_2"
       Use
         Constant 0
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:37:22 generated
-    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:38:9 written "bb1" "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:47:22 generated
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:48:9 written "bb1" "bb2"
       Copy "_1"
   Block "bb1"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:38:9 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:39:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:48:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:49:9 written
       Destination "_2"
       Use
         Function "zero"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:39:9 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:49:9 generated
     Goto "bb3"
   Block "bb2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:38:9 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:48:9 generated
     Goto "bb3"
   Block "bb3"
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:40:12 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:40:12 written through "bb4"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:12 written through "bb4"
       Copy "_2"
       Destination "_3"
   Block "bb4"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:40:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:5 written
       Destination "_0"
       Use
         Copy "_3"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:40:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:43:5 "through_an_unassigned_pointer"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:53:5 "through_an_unassigned_pointer"
   Local "_0" "int" return
   Local "_1" "int (*)(void)" "f"
   Local "_2" "int"
   Block "bb0" entry
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:12 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:12 written through "bb1"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:12 written through "bb1"
       Copy "_1"
       Destination "_2"
   Block "bb1"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:5 written
       Destination "_0"
       Use
         Copy "_2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:45:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:48:5 "nonnull_address_taken"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:58:5 "nonnull_address_taken"
   Local "_0" "int" return
   Local "_1" "int (*)(int *)" "f"
   Local "_2" "int" "x"
   Local "_3" "int *"
   Local "_4" "int"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:49:11 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:59:11 written
       Destination "_1"
       Use
         Function "read_it"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:49:23 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:59:23 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:60:9 written
       Destination "_2"
       Use
         Constant 1
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:50:13 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:51:14 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:60:13 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:61:14 written
       Destination "_3"
       Address
         Place "_2"
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:51:12 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:51:12 written through "bb1"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:61:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:61:12 written through "bb1"
       Copy "_1"
       Destination "_4"
       Copy "_3"
   Block "bb1"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:51:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:61:5 written
       Destination "_0"
       Use
         Copy "_4"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:51:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:61:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:54:5 "converted"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:64:5 "converted"
   Local "_0" "int" return
   Local "_1" "void (*)(void)" "f"
   Local "_2" "void (*)(void)"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:23 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:65:23 written
       Destination "_2"
       Use
         Function "zero"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:12 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:65:12 written
       Destination "_1"
       Use
         Copy "_2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:55:23 generated
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:56:5 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:56:5 written through "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:65:23 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:5 written through "bb1"
       Copy "_1"
   Block "bb1"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:56:5 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:57:5 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:67:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:57:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:67:12 generated
     Return
-Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:60:5 "in_a_member"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:70:5 "in_a_member"
   Local "_0" "int" return
   Local "_1" "struct #0" "ops"
   Local "_2" "struct #0 *"
@@ -268,66 +291,782 @@ Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_r
   Local "_7" "int"
   Local "_8" "int"
   Block "bb0" entry
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:62:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:72:5 generated
       Destination "_2"
       Address
         Place "_1"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:62:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:72:5 written
       Destination "_3"
       Address
         Place "_2"
           Deref
             Field
               Member 0
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:62:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:72:5 written
       Destination "_3"
         Deref
       Use
         Function "zero"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:62:5 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:63:22 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:72:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:73:22 generated
       Destination "_5"
       Address
         Place "_1"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:63:22 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:73:22 written
       Destination "_6"
       Address
         Place "_5"
           Deref
             Field
               Member 0
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:63:11 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:73:11 written
       Destination "_4"
       Use
         Copy "_6"
           Deref
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:63:22 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:64:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:73:22 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:74:9 written
       Destination "_7"
       Unary "Not"
         Copy "_4"
-    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:64:9 written "bb1" "bb2"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:74:9 written "bb1" "bb2"
       Copy "_7"
   Block "bb1"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:64:9 generated
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:65:9 written
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:74:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:75:9 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:65:16 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:75:16 generated
     Return
   Block "bb2"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:64:9 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:74:9 generated
     Goto "bb3"
   Block "bb3"
-    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:12 generated
-    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:12 written through "bb4"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:76:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:76:12 written through "bb4"
       Copy "_4"
       Destination "_8"
   Block "bb4"
-    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:5 written
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:76:5 written
       Destination "_0"
       Use
         Copy "_8"
-    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:66:12 generated
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:76:12 generated
     Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:79:5 "freed_callee_through_a_member"
+  Local "_0" "int" return
+  Local "_1" "struct #0 *" "o"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int (**)(void)"
+  Local "_5" "int (**)(void)"
+  Local "_6" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:80:21 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:80:21 written "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:80:17 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:80:21 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:81:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:81:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:81:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:82:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:82:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:81:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:83:5 written
+      Destination "_4"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:83:5 written
+      Destination "_4"
+        Deref
+      Use
+        Function "zero"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:83:5 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:84:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:84:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:84:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:85:12 written
+      Destination "_5"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:85:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:85:12 written through "bb6"
+      Copy "_5"
+        Deref
+      Destination "_6"
+  Block "bb6"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:85:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:85:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:88:5 "unassigned_member_called"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "o"
+  Local "_2" "struct #0 *"
+  Local "_3" "int (**)(void)"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:12 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:12 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:12 written through "bb1"
+      Copy "_3"
+        Deref
+      Destination "_4"
+  Block "bb1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:90:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:93:5 "unassigned_called_through_a_pointer_to_it"
+  Local "_0" "int" return
+  Local "_1" "int (*)(void)" "f"
+  Local "_2" "int (**)(void)" "pp"
+  Local "_3" "int (**)(void)"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:95:24 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:95:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:95:24 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:96:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:96:12 written through "bb1"
+      Copy "_2"
+        Deref
+      Destination "_4"
+  Block "bb1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:96:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:96:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:99:5 "apply"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int *)" parameter "f"
+  Local "_2" "int *" parameter "p"
+  Local "_3" "int"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:100:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:100:9 written "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:100:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:101:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:101:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:100:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:102:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:102:12 written through "bb4"
+      Copy "_1"
+      Destination "_4"
+      Copy "_2"
+  Block "bb4"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:102:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:102:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:105:5 "nonnull_as_an_argument"
+  Local "_0" "int" return
+  Local "_1" "int" "x"
+  Local "_2" "int *"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:106:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:106:13 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:107:27 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:107:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:107:12 written "apply" "bb1"
+      Destination "_3"
+      Function "read_it"
+      Copy "_2"
+  Block "bb1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:107:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:107:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:110:5 "nonnull_as_a_condition"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:111:9 written "bb1" "bb2"
+      Function "read_it"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:111:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:112:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:112:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:111:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:113:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:113:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:116:5 "nonnull_compared"
+  Local "_0" "int" return
+  Local "_1" "int (*)(int *)" parameter "g"
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:117:12 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Function "read_it"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:117:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:117:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:120:5 "nonnull_negated"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:121:12 written
+      Destination "_1"
+      Unary "Not"
+        Function "read_it"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:121:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:121:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:124:5 "nonnull_converted"
+  Local "_0" "int" return
+  Local "_1" "int (*)(void)" "g"
+  Local "_2" "int (*)(void)"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:125:22 written
+      Destination "_2"
+      Use
+        Function "read_it"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:125:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:125:22 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:126:12 written
+      Destination "_3"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:126:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:126:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:129:5 "through_a_pointer_a_hatch_may_free_behind"
+  Local "_0" "int" return
+  Local "_1" "void (*)(void)" parameter "f"
+  Local "_2" "int *" "p"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:130:14 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:130:14 written "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:130:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:130:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:131:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:131:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:131:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:132:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:132:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:131:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:133:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:133:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:134:9 written
+      Destination "_5"
+      Unary "Not"
+        Copy "_1"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:134:9 written "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:134:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:135:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:135:16 generated
+    Return
+  Block "bb6"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:134:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:136:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:136:5 written through "bb8"
+      Copy "_1"
+  Block "bb8"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:136:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:137:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:137:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:140:5 "stored_and_read_as_data"
+  Local "_0" "int" return
+  Local "_1" "int (*)(void)" "f"
+  Local "_2" "int (**)(void)" "pp"
+  Local "_3" "int (**)(void)"
+  Local "_4" "int *" "q"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:142:24 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:142:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:142:24 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:143:5 written
+      Destination "_2"
+        Deref
+      Use
+        Function "zero"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:143:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:144:14 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:144:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:144:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:145:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:145:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:148:5 "stored_in_a_member_and_read_as_data"
+  Local "_0" "int" return
+  Local "_1" "struct #0" "o"
+  Local "_2" "struct #0 *"
+  Local "_3" "int (**)(void)"
+  Local "_4" "int *" "q"
+  Local "_5" "struct #0 *"
+  Local "_6" "int (**)(void)"
+  Local "_7" "int *"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:150:5 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:150:5 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:150:5 written
+      Destination "_3"
+        Deref
+      Use
+        Function "zero"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:150:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:151:21 generated
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:151:21 written
+      Destination "_6"
+      Address
+        Place "_5"
+          Deref
+            Field
+              Member 0
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:151:14 written
+      Destination "_7"
+      Use
+        Copy "_6"
+          Deref
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:151:10 written
+      Destination "_4"
+      Use
+        Copy "_7"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:151:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:152:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:152:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:155:5 "a_literal_handed_through_a_pointer"
+  Local "_0" "int" return
+  Local "_1" "void (*)(char *)" parameter "f"
+  Local "_2" "int"
+  Local "_3" "char (*)[8]"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:156:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:156:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:156:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:157:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:157:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:156:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:158:7 generated
+      Destination "_3"
+      Static ".str.0"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:158:7 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:158:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:158:5 written through "bb4"
+      Copy "_1"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:158:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:159:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:159:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:162:5 "called_twice_through_a_pointer_that_may_be_null"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int (*)(void)" "f"
+  Local "_3" "int"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:163:11 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:163:22 generated
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:164:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:164:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:165:9 written
+      Destination "_2"
+      Use
+        Function "zero"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:165:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:164:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:166:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:166:5 written through "bb4"
+      Copy "_2"
+      Destination "_3"
+  Block "bb4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:166:5 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:167:12 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:167:12 written through "bb5"
+      Copy "_2"
+      Destination "_4"
+  Block "bb5"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:167:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:167:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:170:5 "unassigned_where_a_call_through_a_pointer_returns"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "void (*)(void)" parameter "f"
+  Local "_3" "int" "x"
+  Local "_4" "int *" "p"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:171:9 written
+      Destination "_3"
+      Use
+        Constant 1
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:171:13 generated
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:173:9 written "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:173:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:174:13 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:174:9 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:174:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:173:9 generated
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:175:14 written "bb4" "bb5"
+      Copy "_2"
+  Block "bb3"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:177:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:177:12 generated
+    Return
+  Block "bb4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:175:14 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:176:9 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:176:9 written through "bb7"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:175:14 generated
+    Goto "bb6"
+  Block "bb6"
+    Goto "bb3"
+  Block "bb7"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:176:9 generated
+    Goto "bb6"
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:180:5 "handed_a_narrow_block_through_a_pointer"
+  Local "_0" "int" return
+  Local "_1" "void (*)(int *)" parameter "f"
+  Local "_2" "void (*)(void *)" parameter "g"
+  Local "_3" "char" "c"
+  Local "_4" "int *" "p"
+  Local "_5" "char *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:181:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:181:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:182:21 written
+      Destination "_5"
+      Address
+        Place "_3"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:182:14 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:182:10 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:182:14 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_1"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_7"
+        Constant 0
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 written "bb3" "bb2"
+      Copy "_8"
+  Block "bb1"
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 written "bb3" "bb4"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:15 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_2"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:15 written
+      Destination "_8"
+      Binary "Ne"
+        Copy "_9"
+        Constant 0
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:184:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:184:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:183:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:185:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:185:5 written through "bb6"
+      Copy "_2"
+      Copy "_4"
+  Block "bb6"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:185:5 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:186:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:186:5 written through "bb7"
+      Copy "_1"
+      Copy "_4"
+  Block "bb7"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:186:5 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:187:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:187:12 generated
+    Return
+Function a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:190:7 "callback_leaves"
+  Local "_0" "int (*)(void)" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int (*)(void)" "f"
+  Local "_3" "int (**)(void)"
+  Local "_4" "int (*)(void)"
+  Block "bb0" entry
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:191:11 written
+      Destination "_2"
+      Use
+        Function "zero"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:191:22 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:192:5 generated
+      Destination "_3"
+      Static "kept"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:192:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_2"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:192:5 generated
+    ArgumentsEvaluated a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:193:5 generated
+    Call a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:193:5 written "take" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:193:5 generated
+    Branch a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 written "bb3" "bb4"
+      Copy "_1"
+  Block "bb2"
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 generated
+    Return
+  Block "bb3"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 written
+      Destination "_4"
+      Use
+        Function "zero"
+    Goto "bb2"
+  Block "bb4"
+    Sequenced a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 generated
+    Operation a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read.c:194:12 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Goto "bb2"

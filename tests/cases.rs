@@ -71,6 +71,27 @@ cases! {
         // `through_a_pointer_that_may_be_null` goes silent; skip the
         // `_Nonnull` pass, and `nonnull_address_taken` does; skip
         // `converted_function`, and `converted` does.
+        //
+        // And each other place a callee or a function's address is read:
+        // `freed_callee_through_a_member` is `SC0402` and the two
+        // `unassigned_*_called*` are `SC0411`, because `reads.rs` reads the
+        // callee operand (drop it from `dereferenced_in_terminator` or
+        // `read_out_of_memory_in_terminator`, and they go silent); each
+        // `nonnull_*` is `SC0420` wherever the address is taken (restrict
+        // `function_addresses` to `Rvalue::Use`, and they go silent);
+        // `through_a_pointer_a_hatch_may_free_behind` is `SC0402` (answer
+        // `frees_anything` false for a pointer, and it goes silent); the two
+        // `*_read_as_data` are doubted at the read (drop `Why::Function`
+        // from a store in `transfer.rs`, and they go silent);
+        // `a_literal_handed_through_a_pointer` is `SC0417`;
+        // `called_twice_through_a_pointer_that_may_be_null` is one `SC0403`,
+        // since the first call meets the question; and
+        // `unassigned_where_a_call_through_a_pointer_returns` is `SC0411` on
+        // the edge where the call returns. `handed_a_narrow_block_through_a_pointer`
+        // is `SC0413` at `f(p)` alone, by the pointer's own parameter types.
+        // `callback_leaves` is silent: a function pointer is not asked
+        // whether it is live where it leaves (mutation: answer `false` in
+        // `points_at_code`, and it is reported at each door).
         a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function pointer's type is asked where it is converted and where
         // a call through it cannot say what it takes (#1212):
@@ -10368,8 +10389,13 @@ cases! {
         // through the pointer carries `sret` and `byval`, as a direct call
         // does, since the pointer's signature is laid out as a declaration's
         // parameters are (#1212). Mutation: give `Callable::signed` every
-        // parameter as `Passes::Value`; both attributes go.
-        a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // parameter as `Passes::Value`; both attributes go. A struct of two
+        // `long long` crosses in registers through a pointer as it would
+        // directly, and a function's address converted to an integer is a
+        // `ptrtoint` of its symbol, `Unknown` to the memory check, hence
+        // `--allow-unknown`. Mutation: write the `ptrtoint` at `i32`; the
+        // line changes.
+        a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu", "--allow-unknown"],
         // `extern struct O g;` with `O` defined nowhere, and `&g`, are C
         // (C17 6.2.5 p22): declared as an `i8`, since only its definition
         // elsewhere has a size (#1202 review). Mutation: spell it from a

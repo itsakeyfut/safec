@@ -1,0 +1,10 @@
+warning[SC0416]: this converts between a pointer and an integer, which the memory check does not follow
+    ╭─[ a_struct_crosses_a_call_through_a_pointer_as_the_target_abi_says.c:33:12 ]
+    │
+ 33 │     return (long long)two;
+    │            ───────┬──────  
+    │                   ╰──────── nothing about what this points at is proved from here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: keep the value a pointer, or a `void *` where its type has to change

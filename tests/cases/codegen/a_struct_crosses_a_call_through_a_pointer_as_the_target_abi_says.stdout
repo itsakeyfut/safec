@@ -4,6 +4,10 @@ declare void @make(ptr sret([24 x i8]) align 8, i64)
 
 declare i64 @sum(ptr byval([24 x i8]) align 8)
 
+declare { i64, i64 } @two(i64)
+
+declare i64 @both(i64, i64)
+
 define i64 @through_pointers() {
 entry:
   %_0 = alloca i64
@@ -59,6 +63,88 @@ bb4:
   store i64 %t11, ptr %_0
   %t12 = load i64, ptr %_0
   ret i64 %t12
+}
+
+define i64 @in_registers() {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  %_3 = alloca [16 x i8], align 8
+  %_4 = alloca [16 x i8], align 8
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca ptr
+  %_8 = alloca [16 x i8], align 8
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca ptr
+  %_12 = alloca i64
+  br label %bb0
+
+bb0:
+  store ptr @two, ptr %_1
+  store ptr @both, ptr %_2
+  store ptr %_4, ptr %_5
+  %t0 = load ptr, ptr %_1
+  %t1 = load ptr, ptr %_5
+  %t2 = call { i64, i64 } %t0(i64 1)
+  %t3 = extractvalue { i64, i64 } %t2, 0
+  %t4 = extractvalue { i64, i64 } %t2, 1
+  %t5 = getelementptr i8, ptr %t1, i64 0
+  store i64 %t3, ptr %t5, align 1
+  %t6 = getelementptr i8, ptr %t1, i64 8
+  store i64 %t4, ptr %t6, align 1
+  br label %bb1
+
+bb1:
+  store ptr %_3, ptr %_6
+  store ptr %_4, ptr %_7
+  %t7 = load ptr, ptr %_6
+  %t8 = load ptr, ptr %_7
+  %t9 = call ptr @memcpy(ptr %t7, ptr %t8, i64 16)
+  br label %bb2
+
+bb2:
+  store ptr %_8, ptr %_9
+  store ptr %_3, ptr %_10
+  %t10 = load ptr, ptr %_9
+  %t11 = load ptr, ptr %_10
+  %t12 = call ptr @memcpy(ptr %t10, ptr %t11, i64 16)
+  br label %bb3
+
+bb3:
+  store ptr %_8, ptr %_11
+  %t13 = load ptr, ptr %_2
+  %t14 = load ptr, ptr %_11
+  %t15 = getelementptr i8, ptr %t14, i64 0
+  %t16 = load i64, ptr %t15, align 1
+  %t17 = getelementptr i8, ptr %t14, i64 8
+  %t18 = load i64, ptr %t17, align 1
+  %t19 = call i64 %t13(i64 %t16, i64 %t18)
+  store i64 %t19, ptr %_12
+  br label %bb4
+
+bb4:
+  %t20 = load i64, ptr %_12
+  store i64 %t20, ptr %_0
+  %t21 = load i64, ptr %_0
+  ret i64 %t21
+}
+
+define i64 @an_address_as_an_integer() {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca i64
+  br label %bb0
+
+bb0:
+  %t0 = ptrtoint ptr @two to i64
+  store i64 %t0, ptr %_1
+  %t1 = load i64, ptr %_1
+  store i64 %t1, ptr %_0
+  %t2 = load i64, ptr %_0
+  ret i64 %t2
 }
 
 declare ptr @memcpy(ptr, ptr, i64)

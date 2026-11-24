@@ -86,6 +86,33 @@ fn pending_local(read: Read, place: &Place) -> Option<LocalId> {
 /// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
 /// following, and a dereference hands an empty iterator. That asymmetry is the
 /// design rather than an accident, and [`used`] says why.
+/// Whether `place` has the type of a pointer to a function, which no door
+/// asks whether it is live: a function is no object and is never freed, and
+/// the only way an allocation's address reaches such a pointer is a
+/// conversion, which is `Unknown` where it is written (`SC0421`). Asked, a
+/// callback held in a local was reported as a value this check stopped
+/// following at the return, the store or the call it left by, where the
+/// designator spelled there was not. See ADR-0125.
+///
+/// Mutation: answer `false`; `callback_leaves` in
+/// `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`
+/// is reported at each door.
+fn points_at_code(analysis: &Allocations<'_>, function: &Function, place: &Place) -> bool {
+    analysis
+        .unit
+        .place_ty(function, place)
+        .is_some_and(|ty| match analysis.unit.ty(ty) {
+            crate::ir::Ty::Pointer(pointee) => {
+                matches!(analysis.unit.ty(pointee), crate::ir::Ty::Function(_))
+            }
+            crate::ir::Ty::Integer { .. }
+            | crate::ir::Ty::Void
+            | crate::ir::Ty::Array { .. }
+            | crate::ir::Ty::Struct(_)
+            | crate::ir::Ty::Function(_) => false,
+        })
+}
+
 fn verdict(
     sources: &SourceMap,
     kind: Kind,
@@ -2315,6 +2342,9 @@ pub(super) fn returned(
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
+    if points_at_code(analysis, function, source) {
+        return;
+    }
     if !(match source.shape() {
         Shape::Local => true,
         Shape::Deref(_) | Shape::Indexed => false,
@@ -2428,6 +2458,9 @@ pub(super) fn stored_away(
     let Written::Value(Rvalue::Use(Operand::Copy(source))) = store.from else {
         return;
     };
+    if points_at_code(analysis, function, source) {
+        return;
+    }
     if !(match source.shape() {
         Shape::Local => true,
         Shape::Deref(_) | Shape::Indexed => false,
@@ -2878,7 +2911,7 @@ pub(super) fn handed(
         Vec::new()
     };
     for place in handed_places(analysis, function, callee, arguments) {
-        if at_the_store_door.contains(&place) {
+        if at_the_store_door.contains(&place) || points_at_code(analysis, function, place) {
             continue;
         }
         let Some(verdict) = verdict(
