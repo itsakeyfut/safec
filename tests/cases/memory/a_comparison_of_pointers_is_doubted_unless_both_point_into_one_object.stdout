@@ -890,7 +890,49 @@ Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c
         Copy "_12"
     Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:112:28 generated
     Goto "bb1"
-Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:123:5 "main"
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:128:5 "members_of_one_struct"
+  Local "_0" "int" return
+  Local "_1" "struct #1" "s"
+  Local "_2" "struct #1 *"
+  Local "_3" "int *"
+  Local "_4" "struct #1 *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:13 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:13 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:20 generated
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:20 written
+      Destination "_5"
+      Address
+        Place "_4"
+          Deref
+            Field
+              Member 1
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_3"
+        Copy "_5"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:130:12 generated
+    Return
+Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:133:5 "main"
   Local "_0" "int" return
   Local "_1" "int"
   Local "_2" "int"
@@ -917,118 +959,128 @@ Function a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c
   Local "_23" "int"
   Local "_24" "int"
   Local "_25" "int"
+  Local "_26" "int"
+  Local "_27" "int"
   Block "bb0" entry
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:123:5 generated
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:133:5 generated
       Destination "_0"
       Use
         Constant 0
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written "one" "bb1"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written "one" "bb1"
       Destination "_1"
   Block "bb1"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:20 written "past_its_end" "bb2"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:20 written "past_its_end" "bb2"
       Destination "_2"
   Block "bb2"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_3"
       Binary "Add"
         Copy "_1"
         Copy "_2"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:37 written "apart" "bb3"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:37 written "apart" "bb3"
       Destination "_4"
   Block "bb3"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_5"
       Binary "Add"
         Copy "_3"
         Copy "_4"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:47 written "either" "bb4"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:47 written "either" "bb4"
       Destination "_6"
       Constant 1
   Block "bb4"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_7"
       Binary "Add"
         Copy "_5"
         Copy "_6"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:59 written "made_each_turn" "bb5"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:59 written "made_each_turn" "bb5"
       Destination "_8"
       Constant 2
   Block "bb5"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_9"
       Binary "Add"
         Copy "_7"
         Copy "_8"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:79 written "read_out_of_memory" "bb6"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:79 written "read_out_of_memory" "bb6"
       Destination "_10"
       Constant 0
   Block "bb6"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_11"
       Binary "Add"
         Copy "_9"
         Copy "_10"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:11 written "one_or_another" "bb7"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:135:11 written "one_or_another" "bb7"
       Destination "_12"
   Block "bb7"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_13"
       Binary "Add"
         Copy "_11"
         Copy "_12"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:30 written "through_fields" "bb8"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:135:30 written "through_fields" "bb8"
       Destination "_14"
   Block "bb8"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_15"
       Binary "Add"
         Copy "_13"
         Copy "_14"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:49 written "one_static" "bb9"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:135:49 written "one_static" "bb9"
       Destination "_16"
   Block "bb9"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_17"
       Binary "Add"
         Copy "_15"
         Copy "_16"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:64 written "two_statics" "bb10"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:135:64 written "two_statics" "bb10"
       Destination "_18"
   Block "bb10"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_19"
       Binary "Add"
         Copy "_17"
         Copy "_18"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:125:80 written "maybe_null" "bb11"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:135:80 written "maybe_null" "bb11"
       Destination "_20"
       Constant 0
   Block "bb11"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_21"
       Binary "Add"
         Copy "_19"
         Copy "_20"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:126:11 written "maybe_freed" "bb12"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:136:11 written "maybe_freed" "bb12"
       Destination "_22"
   Block "bb12"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_23"
       Binary "Add"
         Copy "_21"
         Copy "_22"
-    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:126:27 written "within_one_turn" "bb13"
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:136:27 written "within_one_turn" "bb13"
       Destination "_24"
       Constant 2
   Block "bb13"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 written
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
       Destination "_25"
       Binary "Add"
         Copy "_23"
         Copy "_24"
-    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:5 written
+    Call a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:136:48 written "members_of_one_struct" "bb14"
+      Destination "_26"
+  Block "bb14"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 written
+      Destination "_27"
+      Binary "Add"
+        Copy "_25"
+        Copy "_26"
+    Operation a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:5 written
       Destination "_0"
       Use
-        Copy "_25"
-    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:124:12 generated
+        Copy "_27"
+    Sequenced a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object.c:134:12 generated
     Return

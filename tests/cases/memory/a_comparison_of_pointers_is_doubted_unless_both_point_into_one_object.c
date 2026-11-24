@@ -120,8 +120,18 @@ int within_one_turn(int n) {
     return r;
 }
 
+struct pair_of_ints {
+    int x;
+    int y;
+};
+
+int members_of_one_struct(void) {
+    struct pair_of_ints s;
+    return &s.x < &s.y;
+}
+
 int main(void) {
     return one() + past_its_end() + apart() + either(1) + made_each_turn(2) + read_out_of_memory(0)
         + one_or_another() + through_fields() + one_static() + two_statics() + maybe_null(0)
-        + maybe_freed() + within_one_turn(2);
+        + maybe_freed() + within_one_turn(2) + members_of_one_struct();
 }

@@ -86,8 +86,8 @@ union either {
 
 int a_union_element(void) {
     union either a[2];
-    char *p = a[0].c;
-    char *q = a[1].c;
+    int *p = &a[0].i;
+    int *q = &a[1].i;
     return (int)(q - p);
 }
 
@@ -113,8 +113,41 @@ int whole_elements(void) {
     return (int)(&a[1] - &a[0]);
 }
 
+int both_off_the_stride(void) {
+    struct two_chars a[4];
+    struct two_chars *p = (struct two_chars *)((char *)a + 1);
+    struct two_chars *q = (struct two_chars *)((char *)a + 3);
+    return (int)(q - p);
+}
+
+int bytes_of_an_array(void) {
+    int a[4];
+    char *p = (char *)a;
+    char *q = (char *)(a + 2);
+    return (int)(q - p);
+}
+
+int off_by_an_unknown(int n) {
+    struct two_chars a[4];
+    struct two_chars *p = (struct two_chars *)((char *)a + n);
+    return (int)(p - a);
+}
+
+int moved_by_n(int n) {
+    int a[4];
+    int *p = a + n;
+    return (int)(p - a);
+}
+
+static int kept_ints[4];
+
+int in_a_static_array(void) {
+    return (int)(&kept_ints[3] - &kept_ints[0]);
+}
+
 int main(void) {
     return one() + apart() + two_members() + two_arrays_in_one() + in_a_block() + after_a_free()
         + maybe_null(1) + members_of_an_element() + in_a_static() + a_union_element()
-        + off_the_stride() + rows() + whole_elements();
+        + off_the_stride() + rows() + whole_elements() + both_off_the_stride()
+        + bytes_of_an_array() + off_by_an_unknown(1) + moved_by_n(2) + in_a_static_array();
 }

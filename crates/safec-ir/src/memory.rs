@@ -125,17 +125,35 @@ use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_ter
 ///
 /// - their pointee is the array's element type at some level of its
 ///   nesting, so `int *` into `struct T a[2]` is two members of one element
-///   and is doubted, while `int *` into `int a[2][2]` is answered, the rows
-///   of a 2-D array taken flat as `clang` takes them (the strict reading of
-///   p9 makes two rows two arrays, and doubting the common idiom was
-///   judged the worse cost). Mutation: ask only the referent's type; the
-///   case's `members_of_an_element` goes silent. Mutation: ask only the
-///   direct element; its `rows` reports;
-/// - and where both positions are counted, they are a whole number of
-///   pointees apart, so `(struct P *)((char *)a + 1) - a` points at no
-///   element and is doubted. A position this check does not count is left
-///   to the first condition, which is the residual. Mutation: skip it; the
-///   case's `off_the_stride` goes silent.
+///   and is doubted, while `int *` into `int a[2][2]` is answered: the rows
+///   of a 2-D array are taken flat, as `clang` takes them. The strict
+///   reading of p9 makes two rows two arrays, so that one case is silent
+///   where the strict reading calls it undefined (row 6 by that reading);
+///   doubting the common idiom was judged the worse cost. Types are
+///   compared by id, which is sound because the IR interns them and holds
+///   no qualifier: `const int *` and `int *` point at one type. Mutation:
+///   ask only the referent's type; the case's `members_of_an_element`
+///   goes silent.
+///
+///   Mutation: ask only the direct element; its `rows` reports;
+/// - **or their pointee is a character type**, which views the whole
+///   object as its bytes (C17 6.3.2.3 p7), so any one local or static is
+///   that array. Mutation: drop this; the case's `bytes_of_an_array`
+///   reports;
+/// - **and each is a whole number of pointees from the object's start**,
+///   since an element starts there and nowhere else (an array has no
+///   padding). Where a position is counted, that is asked of it;
+///   `(struct P *)((char *)a + 1)` is no element, nor are two pointers off
+///   by the same amount. Mutation: ask the distance between them instead;
+///   the case's `both_off_the_stride` goes silent;
+/// - **where a position is not counted**, moved by an amount not known,
+///   joined from two paths or widened in a loop, it is asked whether the
+///   pointer only ever moved as its own type (`moved_as_its_type`): a
+///   `T *` moved by `n` stays on `sizeof(T)`, and one that came through a
+///   conversion from another pointer type may not. Mutation: answer every
+///   uncounted position on the stride; the case's `off_by_an_unknown`
+///   goes silent. Mutation: doubt every uncounted one; its `moved_by_n`
+///   reports.
 ///
 /// **One object is one live referent each operand may name, and the
 /// same**, read off the operand's own local:
@@ -216,8 +234,8 @@ fn compared_apart(
             index::Referent::Unknown(_) => None,
         }
     };
-    // What the pointers point at, which both share: 6.5.6 p3 asks
-    // compatible types of a difference, and an ordering is not asked this.
+    // What the pointers point at, read off the left alone: the type check
+    // has already held the two to compatible types (6.5.6 p3, 6.5.8 p2).
     let pointee = match lhs {
         Operand::Copy(place) => unit
             .place_ty(function, place)
@@ -238,11 +256,21 @@ fn compared_apart(
             .map(|&id| unit.static_object(id).ty),
         index::Referent::Heap(_) | index::Referent::Unknown(_) => None,
     };
-    // The referent is an array with `pointee` as its element at some level.
+    // The referent is an array with `pointee` as its element at some level,
+    // or any object, viewed as its bytes through a character pointee.
     let elements_of = |referent: index::Referent| {
         let (Some(mut current), Some(pointee)) = (referent_ty(referent), pointee) else {
             return false;
         };
+        if matches!(
+            unit.ty(pointee),
+            Ty::Integer {
+                rank: crate::ir::Rank::Char,
+                ..
+            }
+        ) {
+            return true;
+        }
         while let Ty::Array { element, .. } = unit.ty(current) {
             if element == pointee {
                 return true;
@@ -251,32 +279,114 @@ fn compared_apart(
         }
         false
     };
-    // Where both are counted, a whole number of pointees apart.
-    let at = |operand: &Operand| match operand {
-        Operand::Copy(place) if place.steps().is_empty() => {
-            match known.points_to[index::LocalIdx::of(place.local)]
+    // Each a whole number of pointees from the object's start: asked of a
+    // counted position directly, and of an uncounted one by how it moved.
+    // A size of 0 has no stride to be off; every complete object type C
+    // gives a pointee has a size above it, and the guard keeps `% 0` from
+    // being written at all.
+    let size = pointee
+        .and_then(|ty| unit.size_of(ty))
+        .filter(|&size| size > 0);
+    let on_the_stride = |operand: &Operand| {
+        let Operand::Copy(place) = operand else {
+            return false;
+        };
+        match (
+            known.points_to[index::LocalIdx::of(place.local)]
                 .position
-                .at
-            {
-                parts::At::Bytes(at) => Some(at),
-                _ => None,
-            }
+                .at,
+            size,
+        ) {
+            (parts::At::Bytes(at), Some(size)) => at % size == 0,
+            (parts::At::Bytes(_), None) => true,
+            _ => moved_as_its_type(unit, function, place.local),
         }
-        _ => None,
-    };
-    let on_the_stride = match (at(lhs), at(rhs), pointee.and_then(|ty| unit.size_of(ty))) {
-        (Some(left), Some(right), Some(size)) if size > 0 => left.abs_diff(right) % size == 0,
-        _ => true,
     };
     match (one(lhs), one(rhs)) {
         (Some(left), Some(right))
             if left == right
-                && (kind == Kind::ComparedApart || (elements_of(left) && on_the_stride)) =>
+                && (kind == Kind::ComparedApart
+                    || (elements_of(left) && on_the_stride(lhs) && on_the_stride(rhs))) =>
         {
             None
         }
         _ => Some((operation.origin.span(), kind)),
     }
+}
+
+/// Whether the pointer `local` holds only ever moved as its own type, so a
+/// position this check does not count is still a whole number of its
+/// pointees from where it started (#1301): every assignment to it, and to
+/// what it was copied or moved from, is a copy of a pointer of the same
+/// type, that pointer moved by `+` or `-`, or the address of an object of
+/// its pointee type or of an array of them. A conversion from another
+/// pointer type is a copy between two types, and a call's result, a load
+/// and a cast from an integer are none of those, so each answers `false`.
+fn moved_as_its_type(unit: &TranslationUnit, function: &Function, local: LocalId) -> bool {
+    let Ty::Pointer(pointee) = unit.ty(function.local(local)) else {
+        return false;
+    };
+    let ty = function.local(local);
+    let addresses_a_pointee = |place: &Place| {
+        unit.place_ty(function, place).is_some_and(|at| {
+            at == pointee || matches!(unit.ty(at), Ty::Array { element, .. } if element == pointee)
+        })
+    };
+    let mut pending = vec![local];
+    let mut seen = vec![local];
+    while let Some(current) = pending.pop() {
+        for block in function.blocks() {
+            if let Terminator::Call {
+                destination: Some(place),
+                ..
+            } = &block.terminator
+            {
+                if place.local == current {
+                    return false;
+                }
+            }
+            for element in &block.elements {
+                let Element::Assign(operation) = element else {
+                    continue;
+                };
+                if operation.place.local != current {
+                    continue;
+                }
+                if !operation.place.steps().is_empty() {
+                    return false;
+                }
+                let from = match &operation.value {
+                    Rvalue::Use(Operand::Copy(source)) if source.steps().is_empty() => {
+                        Some(source.local)
+                    }
+                    Rvalue::Binary {
+                        op: BinOp::Add | BinOp::Sub,
+                        lhs,
+                        rhs,
+                    } => [lhs, rhs].into_iter().find_map(|operand| match operand {
+                        Operand::Copy(source)
+                            if source.steps().is_empty() && function.local(source.local) == ty =>
+                        {
+                            Some(source.local)
+                        }
+                        _ => None,
+                    }),
+                    Rvalue::Address(place) if addresses_a_pointee(place) => None,
+                    _ => return false,
+                };
+                if let Some(from) = from {
+                    if function.local(from) != ty {
+                        return false;
+                    }
+                    if !seen.contains(&from) {
+                        seen.push(from);
+                        pending.push(from);
+                    }
+                }
+            }
+        }
+    }
+    true
 }
 
 /// The library call that carried bytes nothing wrote into a place, and the
@@ -440,8 +550,9 @@ pub enum Kind {
     /// `q - p` of two pointers this check cannot show point into one
     /// object, which C17 6.5.6 p9 defines only between pointers into one
     /// array, or one past its end. The same question as
-    /// [`Kind::ComparedApart`], asked by `compared_apart`. Always `Unknown`,
-    /// at the subtraction (#638).
+    /// [`Kind::ComparedApart`], asked by `compared_apart`, which also asks
+    /// that both be elements of that array and says how (#1301). Always
+    /// `Unknown`, at the subtraction (#638).
     SubtractedApart,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,

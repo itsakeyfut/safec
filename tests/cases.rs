@@ -67,14 +67,23 @@ cases! {
         // as a move in `operated_on_in_element`. And `maybe_null` has no
         // `SC0403`, which said the pointer was moved: answer a difference as
         // a move in the nullability check, and it gains two.
-        // And only where the pointers are elements of that array (#1301):
-        // `members_of_an_element`, `in_a_static` and `a_union_element`
-        // subtract members of elements, `off_the_stride` pointers no whole
-        // number of elements apart, each `SC0419`; `rows` of a 2-D array,
-        // taken flat, and `whole_elements` are silent. Mutations in
-        // `compared_apart`: ask only the referent's type, and the first
-        // three go silent; skip the stride, and `off_the_stride` does;
-        // ask only the direct element, and `rows` reports.
+        // And only where the pointers are elements of that array (#1301).
+        // `SC0419`: `members_of_an_element`, `in_a_static` and
+        // `a_union_element`, members of elements through a pointee that is
+        // no element type; `off_the_stride` and `both_off_the_stride`,
+        // counted positions off the stride, the second two pointers off by
+        // the same amount; `off_by_an_unknown`, an uncounted position that
+        // came through a conversion. Silent: `rows` of a 2-D array, taken
+        // flat; `whole_elements`; `bytes_of_an_array`, a character view;
+        // `moved_by_n`, an uncounted position moved as its own type;
+        // `in_a_static_array`. Mutations in `compared_apart`: ask only the
+        // referent's type, and the first three go silent; ask the distance
+        // between the positions, and `both_off_the_stride` does; answer an
+        // uncounted position on the stride, and `off_by_an_unknown` does;
+        // doubt every uncounted one, and `moved_by_n` reports; ask only the
+        // direct element, and `rows` does; drop the character view, and
+        // `bytes_of_an_array` does; lose the static arm, and
+        // `in_a_static_array` does.
         the_difference_of_two_pointers_into_one_array_is_doubted_across_two: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.8 p5 orders pointers into one object only, and
         // `compared_apart` answers one object only where each pointer may
@@ -98,6 +107,9 @@ cases! {
         //   every site as one block.
         // `made_each_turn` and `read_out_of_memory` are doubted for what
         // each pointer may name besides, before those arms are asked.
+        // `members_of_one_struct` orders two members of one struct, which
+        // 6.5.8 p5 defines, and is silent: a difference's narrower rule is
+        // not asked of an ordering. Mutation: ask it of both; it reports.
         a_comparison_of_pointers_is_doubted_unless_both_point_into_one_object: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A variable length array's size is its length local's value, which
         // this check does not know, so an index into one is doubted, the
