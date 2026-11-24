@@ -14,6 +14,17 @@ struct Wide {
     int : 0;
 };
 
+struct Declarators {
+    int pad;
+    unsigned first : 2, second : 3;
+    struct {
+        int lo : 3;
+        int hi : 5;
+    };
+    unsigned whole : 32;
+    int full : 32;
+};
+
 static int first(struct Flags *f) {
     return f->ready;
 }
@@ -64,6 +75,20 @@ int main(void) {
     w.flag = 0;
     int promoted_wide = w.low - 1 < 0 && w.flag - 1 < 0;
     wrong += promoted_wide ? 0 : 1;
+
+    // Two declarators in one declaration, each with its width; bit-fields
+    // in an anonymous struct, reached as the container's; and the widths
+    // of `int` itself, where an `unsigned` one stays `unsigned`.
+    struct Declarators d;
+    d.pad = 0;
+    d.first = 3;
+    d.second = 5;
+    d.lo = 3;
+    d.hi = -2;
+    d.whole = 0;
+    d.full = -1;
+    wrong += d.first == 3 && d.second == 5 && d.lo + d.hi == 1 ? 0 : 1;
+    wrong += d.whole - 1 > 0 && d.full < 0 ? 0 : 1;
 
     unsigned char byte = 240;
     wrong += first(&f) == 1 ? 0 : 1;

@@ -547,6 +547,14 @@ fn bit_shapes() -> Vec<(bool, Vec<BitMember>)> {
             (Char, Unsigned, Some(5), true),
             (LongLong, Unsigned, Some(11), false),
         ]),
+        s(vec![
+            (Char, Signed, Some(1), true),
+            (Char, Signed, Some(0), false),
+        ]),
+        s(vec![
+            (Char, Signed, None, true),
+            (Int, Signed, Some(17), false),
+        ]),
     ]
 }
 

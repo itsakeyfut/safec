@@ -10274,6 +10274,18 @@ cases! {
         // struct's is, since `[N x i8]` alone aligns to 1 (#1203). Mutation:
         // drop the alignment from `struct_align`; this changes.
         a_union_is_aligned_as_its_strictest_member: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
+        // A struct holding an unnamed bit-field, laid out by AArch64 Linux's
+        // AAPCS rules, where the unnamed one aligns the whole to 4, and a
+        // plain `char` bit-field, which is unsigned there as a plain `char`
+        // is, so it is read with `lshr` and not `ashr` (#1206). Mutation:
+        // read a plain `char` bit-field as signed; the shift changes.
+        a_bit_field_is_read_by_its_targets_rules: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-unknown-linux-gnu"],
+        // The same struct on x86-64 Linux, whose Itanium rules let an
+        // unnamed bit-field align nothing, so `d` follows at byte 4 and the
+        // whole is 6 bytes, as `clang` lays it out, `local`'s storage too (#1206).
+        // Mutation: count every member named in `Lowering::struct_of`; the
+        // IR lays it out at 8 bytes and `local`'s `alloca` changes.
+        an_unnamed_bit_field_aligns_nothing_on_itanium: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_system_v_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-unknown-linux-gnu"],
         a_struct_crosses_a_call_as_aarch64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "aarch64-apple-darwin"],
         a_struct_crosses_a_call_as_win64_says: ["--emit", "llvm-ir", "--safety", "off", "--target", "x86_64-pc-windows-msvc"],
