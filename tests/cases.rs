@@ -9506,7 +9506,7 @@ cases! {
         // mutation this was written for, answer no type beside an untyped
         // operand, fails nothing now that no operand here is untyped
         // (#1298).
-        a_type_error_beside_a_difference_of_pointers_is_still_reported: ["--emit", "ast"],
+        a_type_error_beside_a_difference_of_pointers_is_still_reported: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
