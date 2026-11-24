@@ -14,6 +14,36 @@ static int sized(int n) {
     return a[0] + a[n - 1] + (int)sizeof(a);
 }
 
+static long long back_in_a_block(void) {
+    int passes = 0;
+    int count = 4096;
+    long long seen = 0;
+    {
+    again:;
+        char buffer[count];
+        buffer[count - 1] = 1;
+        seen += buffer[count - 1];
+        if (++passes < 200000) {
+            goto again;
+        }
+    }
+    return seen;
+}
+
+static long long back_in_the_body(void) {
+    int passes = 0;
+    int count = 4096;
+    long long seen = 0;
+again:;
+    char buffer[count];
+    buffer[count - 1] = 1;
+    seen += buffer[count - 1];
+    if (++passes < 200000) {
+        goto again;
+    }
+    return seen;
+}
+
 int main(void) {
     int wrong = 0;
     wrong += sized(3) == 3 + 3 * (int)sizeof(int) ? 0 : 1;
@@ -37,5 +67,11 @@ int main(void) {
         seen += buffer[count - 1];
     }
     wrong += seen == 200000 ? 0 : 1;
+
+    // A jump back to before the declaration ends the array's lifetime
+    // (C17 6.2.4 p7), so its storage is given back on that jump too, in a
+    // block and in the function's own body alike.
+    wrong += back_in_a_block() == 200000 ? 0 : 1;
+    wrong += back_in_the_body() == 200000 ? 0 : 1;
     return wrong;
 }

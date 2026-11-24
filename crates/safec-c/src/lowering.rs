@@ -58,6 +58,12 @@ use safec_ir::target::Target;
 /// this one. See `types.rs`'s `NOT_YET`.
 const LOWERING: Code = Code::new("SC0304");
 
+/// A jump from outside the scope of a variable length array to inside it,
+/// which C17 6.8.6.1 p1 and 6.8.4.2 p2 make a constraint violation: the jump
+/// passes the declaration that works its length out and makes its storage,
+/// and nothing past it has either (#1209).
+const INTO_VARIABLE_SCOPE: Code = Code::new("SC0323");
+
 /// Two declarations of one function that disagree about a nullability
 /// specifier.
 ///
@@ -238,6 +244,21 @@ enum Continued {
     Passes,
 }
 
+/// Refuse a `sizeof` sized when it runs that is not of a variable length
+/// array's own name, such as `sizeof(int[n])` or `sizeof *&a` (#1209). One
+/// place, so that both arms say the same. Mutation: report nothing;
+/// `a_sizeof_worked_out_when_it_runs_is_refused_where_it_is_not_of_a_name`
+/// loses both refusals.
+fn refuse_run_time_sizeof(span: Span, diagnostics: &mut DiagnosticSink) -> Option<()> {
+    diagnostics.report(
+        Diagnostic::error("cannot compile this `sizeof` yet")
+            .with_code(LOWERING)
+            .with_label(Label::primary(span, "sized when it runs"))
+            .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
+    );
+    None
+}
+
 /// End the storage of the copies a call made of its struct arguments, once
 /// it has returned. See `Lowering::argument_copies`.
 fn end_copies(builder: &mut Builder, copies: &[LocalId], span: Span) {
@@ -267,16 +288,33 @@ fn mask(bits: u64) -> i128 {
 
 /// What a jump from `from` to `to` ends and begins, in the order
 /// [`Lowering::jump`] writes them. See there, and ADR-0114.
-fn markers(from: &Point, to: &Point) -> (Vec<LocalId>, Vec<LocalId>) {
+///
+/// `variable` says which locals are variable length arrays, whose lifetime
+/// a backward jump to before their declaration ends (C17 6.2.4 p7): their
+/// storage is made each time the declaration is reached, so one not ended
+/// on such a jump is made again on top of itself and never given back.
+/// Every other local of that scope lives through the whole block (p6) and
+/// is left alone. Mutation: end none of them; the run of
+/// `a_variable_length_array_is_sized_when_declared` overflows the stack.
+fn markers(
+    from: &Point,
+    to: &Point,
+    variable: impl Fn(LocalId) -> bool,
+) -> (Vec<LocalId>, Vec<LocalId>) {
     let shared = from
         .iter()
         .zip(to)
         .take_while(|((left, _), (right, _))| left == right)
         .count();
+    let left = shared.checked_sub(1).map_or(&[][..], |deepest| {
+        let (passed, reached) = (&from[deepest].1, &to[deepest].1);
+        passed.get(reached.len()..).unwrap_or(&[])
+    });
     let ended = from[shared..]
         .iter()
         .rev()
         .flat_map(|(_, declared)| declared.iter().rev().copied())
+        .chain(left.iter().rev().copied().filter(|&local| variable(local)))
         .collect();
     let skipped = shared.checked_sub(1).map_or(&[][..], |deepest| {
         let (passed, reached) = (&from[deepest].1, &to[deepest].1);
@@ -2524,7 +2562,9 @@ impl Lowering<'_> {
                 // value**, which is what C17 6.7.6.2 p1 asks of a constant
                 // length. Not a pointer: saying it is would tell the memory
                 // analysis that one object is another. A length with no value
-                // is a variable length, which the IR does not hold yet.
+                // is a variable length, which `Lowering::variable_length`
+                // holds only for the declared object's own array, so one
+                // reached here, nested or behind a pointer, is refused.
                 Type::Array {
                     element,
                     length: Some(length),
@@ -2563,7 +2603,7 @@ impl Lowering<'_> {
                         ))
                         .with_code(LOWERING)
                         .with_label(Label::primary(at, "declared here"))
-                        .with_note("the integer types, `void`, structs, and pointers to them and arrays of them with a constant length are all this compiler holds so far"),
+                        .with_note("the integer types, `void`, structs, pointers to them, arrays of them with a constant length, and a variable length array of them declared as an object are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -2681,14 +2721,20 @@ impl Lowering<'_> {
         let ty = self.typed(id, diagnostics)?;
         // **A name of a variable length array is the array its local is**
         // (#1209): its length is the local it was worked out into where it
-        // was declared, which the C type, `T[n]`, does not say.
+        // was declared, which the C type, `T[n]`, does not say. Only a
+        // length with no value, so a constant array is never answered from
+        // the table, whatever it holds.
         if let (
             Expr::Identifier { .. },
             Type::Array {
-                length: Some(_), ..
+                length: Some(length),
+                ..
             },
         ) = (self.ast.expr(id), self.ast.ty(ty))
         {
+            if self.types.value(*length).is_some() {
+                return self.ty(self.ast.expr(id).span(), ty, diagnostics);
+            }
             if let Some(&local) = self
                 .resolution
                 .resolved(id)
@@ -2794,8 +2840,9 @@ impl Lowering<'_> {
                 // `Compound` arm's reason, and spanned by the `return` rather
                 // than by each `}`, because control never reaches those braces
                 // and this statement is why the storage ends. The function's
-                // own body is the first scope and holds nothing, so no depth
-                // test is needed. See ADR-0012.
+                // own body is the first scope, and holds only its variable
+                // length arrays (#1209), whose storage a `return` gives back
+                // like any other's, so no depth test is needed. See ADR-0012.
                 self.leave_scopes(builder, 0, span);
                 builder.end(Terminator::Return);
             }
@@ -2808,7 +2855,12 @@ impl Lowering<'_> {
                     self.block_static(builder, declarator, *storage, diagnostics)?;
                 }
             }
-            Stmt::Declaration { declarators, .. } => {
+            Stmt::Declaration {
+                declarators,
+                specified,
+                ..
+            } => {
+                let specified = *specified;
                 for declarator in declarators {
                     let (name, ty, span) = (
                         declarator.declaration.name,
@@ -2821,7 +2873,8 @@ impl Lowering<'_> {
                     if let Some(name) = name {
                         let read_only = self.read_only(ty);
                         let const_levels = self.const_levels(ty);
-                        let variable = self.variable_length(builder, ty, span, diagnostics)?;
+                        let variable =
+                            self.variable_length(builder, ty, specified, span, diagnostics)?;
                         let ty = match variable {
                             Some(ty) => ty,
                             None => self.ty(span, ty, diagnostics)?,
@@ -2849,19 +2902,24 @@ impl Lowering<'_> {
                         // Marked, and not added to the body's scope, so that
                         // no jump and no `return` ends a frame's local. Found
                         // by review. See ADR-0114.
+                        //
+                        // **A variable length array is both, even in the
+                        // body** (#1209). Its storage is made at this marker,
+                        // as large as its length then is, which the backend
+                        // does here; and it is in its scope's list, the
+                        // body's too, so that a jump past its declaration is
+                        // found and refused and one back before it ends it
+                        // (`markers`). Mutations: leave the marker to
+                        // `narrower`, and the run of
+                        // `a_variable_length_array_is_sized_when_declared`
+                        // fails; leave the list to it, and
+                        // `a_jump_into_the_scope_of_a_variable_length_array_is_refused`
+                        // accepts the jump in the body.
                         let narrower = self.scopes.len() > 1;
-                        if narrower {
+                        if narrower || variable.is_some() {
                             let scope = self.scopes.last_mut().expect("a scope is open");
                             scope.declared.push(local);
                         }
-                        // **A variable length array begins where it is
-                        // declared, every time** (#1209): its storage is
-                        // made there, as large as its length then is, which
-                        // the backend does at this marker, so it is written
-                        // even in the function's own body. Mutation: leave it
-                        // to `narrower`; the run of
-                        // `a_variable_length_array_is_sized_when_declared`
-                        // fails.
                         if narrower || self.labeled || variable.is_some() {
                             // Generated for the same reason as the closing half:
                             // the declaration is what this exists because of, and
@@ -3009,7 +3067,7 @@ impl Lowering<'_> {
                     // markers go in this block.
                     Some(to) => {
                         let (to, block) = (to.clone(), landing.block);
-                        self.jump(builder, &from, &to, span);
+                        self.jump(builder, &from, &to, span, span, diagnostics)?;
                         builder.end(Terminator::Goto(block));
                     }
                     // Forward: what the label has declared is not, so this
@@ -3234,7 +3292,7 @@ impl Lowering<'_> {
                 .at
                 .clone()
                 .expect("every label of a lowered body was reached");
-            let (ended, begun) = markers(&from, &to);
+            let (ended, begun) = markers(&from, &to, |local| self.vla_types.contains_key(&local));
             let pad = if ended.is_empty() && begun.is_empty() {
                 landing.block
             } else {
@@ -3278,7 +3336,22 @@ impl Lowering<'_> {
 
         for (pad, block, to, label) in pads {
             builder.switch(pad);
-            self.jump(builder, &from, &to, self.ast.stmt(label).span());
+            // The caret on the label alone, `case 1` or `default`, rather
+            // than on the statement it labels as well.
+            let span = self.ast.stmt(label).span();
+            let caret = match self.ast.stmt(label) {
+                Stmt::Case { value, .. } => Span::new(
+                    span.file(),
+                    span.start(),
+                    self.ast.expr(*value).span().end(),
+                ),
+                _ => Span::new(
+                    span.file(),
+                    span.start(),
+                    span.start() + "default".len() as u32,
+                ),
+            };
+            self.jump(builder, &from, &to, span, caret, diagnostics)?;
             builder.end(Terminator::Goto(block));
         }
 
@@ -3344,7 +3417,7 @@ impl Lowering<'_> {
         landing.at = Some(to.clone());
         for (pad, from, span) in std::mem::take(&mut landing.waiting) {
             builder.switch(pad);
-            self.jump(builder, &from, &to, span);
+            self.jump(builder, &from, &to, span, span, diagnostics)?;
             builder.end(Terminator::Goto(block));
         }
         if let Some(orphan) = orphan {
@@ -3400,8 +3473,41 @@ impl Lowering<'_> {
     /// block skips. A backward jump within one scope begins nothing: what it
     /// passes is alive already, and a declaration it reaches again is what
     /// makes the value indeterminate.
-    fn jump(&self, builder: &mut Builder, from: &Point, to: &Point, span: Span) {
-        let (ended, begun) = markers(from, to);
+    ///
+    /// **A jump that would begin a variable length array is refused**
+    /// (#1209): it passes the declaration that works the length out, so the
+    /// storage it begins would be sized by a local nothing wrote, and C17
+    /// 6.8.6.1 p1 and 6.8.4.2 p2 make it a constraint violation. Mutation:
+    /// report nothing; `a_jump_into_the_scope_of_a_variable_length_array_is_refused`
+    /// is accepted. `caret` is where that is said, the jump or the label a
+    /// `switch` jumps to, and `span` what the markers are generated by.
+    fn jump(
+        &self,
+        builder: &mut Builder,
+        from: &Point,
+        to: &Point,
+        span: Span,
+        caret: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let (ended, begun) = markers(from, to, |local| self.vla_types.contains_key(&local));
+        if let Some(&skipped) = begun
+            .iter()
+            .find(|local| self.vla_types.contains_key(local))
+        {
+            let mut diagnostic = Diagnostic::error(
+                "this jumps into the scope of a variable length array",
+            )
+            .with_code(INTO_VARIABLE_SCOPE)
+            .with_label(Label::primary(caret, "this jumps past its declaration"))
+            .with_note("C17 6.8.6.1 p1 and 6.8.4.2 p2: no jump may enter the scope of a variable length array from outside it");
+            if let Some(name) = builder.function.name_of(skipped) {
+                diagnostic =
+                    diagnostic.with_label(Label::secondary(name, "its length is worked out here"));
+            }
+            diagnostics.report(diagnostic);
+            return None;
+        }
         for local in ended {
             builder.element(Element::StorageDead {
                 origin: Origin::Generated(span),
@@ -3414,6 +3520,7 @@ impl Lowering<'_> {
                 origin: Origin::Generated(span),
             });
         }
+        Some(())
     }
 
     /// End the storage of every local in a scope deeper than `depth`, where
@@ -3423,8 +3530,9 @@ impl Lowering<'_> {
     /// Innermost first, in the order the `Compound` arm closes one, and
     /// `Generated` at `span`, the statement that leaves: control never
     /// reaches those braces, and this statement is why the storage ends. The
-    /// body of the function is the first scope and holds nothing, so the depth
-    /// of 0 a `return` passes needs no test. See ADR-0012.
+    /// body of the function is the first scope and holds only its variable
+    /// length arrays (#1209), which a `return` ends like any other, so the
+    /// depth of 0 a `return` passes needs no test. See ADR-0012.
     fn leave_scopes(&self, builder: &mut Builder, depth: usize, span: Span) {
         for scope in self.scopes[depth..].iter().rev() {
             for &local in scope.declared.iter().rev() {
@@ -4097,10 +4205,10 @@ impl Lowering<'_> {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Value(*operand));
             }
-            // A `sizeof` that has a type has its value, which the fold above
-            // pushed; its operand is never evaluated (C17 6.5.3.4 p2). One
-            // with none is of a variable length array, worked out when the
-            // node finishes (#1209).
+            // A `sizeof` with a value had it pushed by the fold above, and its
+            // operand is never evaluated (C17 6.5.3.4 p2). One that reaches
+            // here has none: it is of a variable length array, worked out
+            // when the node finishes (#1209).
             Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => tasks.push(Task::Finish(id)),
             // The parser reported whatever made this, and the driver's gate
             // means it never reaches here. Reporting it again would be a second
@@ -4377,10 +4485,11 @@ impl Lowering<'_> {
             // `a_variable_length_array_is_sized_when_declared` fails.
             Expr::SizeofExpr { operand, span } => {
                 let (operand, span) = (*operand, *span);
+                // An identifier here is a local: an object with static
+                // storage duration is never a variable length array (C17
+                // 6.7.6.2 p2), so its `sizeof` had a value.
                 let array = match self.ast.expr(operand) {
-                    Expr::Identifier { .. } if self.static_named(operand).is_none() => {
-                        self.local(operand, diagnostics)
-                    }
+                    Expr::Identifier { .. } => self.local(operand, diagnostics),
                     _ => None,
                 };
                 let Some((held, element)) =
@@ -4392,13 +4501,7 @@ impl Lowering<'_> {
                         _ => None,
                     })
                 else {
-                    diagnostics.report(
-                        Diagnostic::error("cannot compile this `sizeof` yet")
-                            .with_code(LOWERING)
-                            .with_label(Label::primary(span, "sized when it runs"))
-                            .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
-                    );
-                    return None;
+                    return refuse_run_time_sizeof(span, diagnostics);
                 };
                 let element = self
                     .unit
@@ -4416,15 +4519,7 @@ impl Lowering<'_> {
                 });
                 values.push(Operand::Copy(Place::local(into)));
             }
-            Expr::SizeofType { span, .. } => {
-                diagnostics.report(
-                    Diagnostic::error("cannot compile this `sizeof` yet")
-                        .with_code(LOWERING)
-                        .with_label(Label::primary(*span, "sized when it runs"))
-                        .with_note("only `sizeof` of a variable length array's own name is worked out when it runs so far"),
-                );
-                return None;
-            }
+            Expr::SizeofType { span, .. } => return refuse_run_time_sizeof(*span, diagnostics),
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
@@ -5382,13 +5477,23 @@ impl Lowering<'_> {
     /// and whose element has a size: one nested deeper, or behind a
     /// pointer, is refused by [`Self::ty`] as before.
     ///
-    /// The length is not checked against zero or a negative value, which
-    /// C makes undefined (p5): the memory check concludes nothing about an
-    /// array whose size it cannot count, and says so where it is used.
+    /// The length is not checked against zero or a negative value, which C
+    /// makes undefined (p5). The memory check doubts every declaration of
+    /// one instead, since it cannot show the length is above zero:
+    /// `a_variable_length_array_is_doubted_where_its_length_is_unknown`.
+    ///
+    /// **An array type a typedef named is refused** (`specified`, what the
+    /// declaration's specifiers wrote, is `ty` itself). C17 6.7.8 p3 works its
+    /// length out once, where the typedef is reached, and a typedef leaves
+    /// nothing in the tree to hold that value: working it out here, at each
+    /// object, gave a different size wherever the length had changed since.
+    /// Mutation: drop the refusal; `a_typedef_of_a_variable_length_array_is_refused`
+    /// is accepted.
     fn variable_length(
         &mut self,
         builder: &mut Builder,
         ty: TypeId,
+        specified: TypeId,
         span: Span,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Option<TyId>> {
@@ -5400,8 +5505,21 @@ impl Lowering<'_> {
         else {
             return Some(None);
         };
-        if self.positive_length(length).is_some() || self.types.value(length).is_some() {
+        // A constant length is `Self::ty`'s, which refuses one that is not
+        // positive as before; the type check has refused it first in
+        // every program measured, so asking `positive_length` here instead
+        // changes nothing a test can see.
+        if self.types.value(length).is_some() {
             return Some(None);
+        }
+        if ty == specified {
+            diagnostics.report(
+                Diagnostic::error("cannot compile an object of a variable length array type a typedef named yet")
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(span, "declared here"))
+                    .with_note("a gap in this compiler: such a type's length is worked out where the typedef is, and nothing holds it from there yet; write the array's length here instead"),
+            );
+            return None;
         }
         let element = self.ty(span, element, diagnostics)?;
         let counted = self.value(builder, length, diagnostics)?;

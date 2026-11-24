@@ -85,8 +85,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
-    Between, BlockId, Element, FuncId, Function, LocalId, Operation, Place, Rvalue, StaticId,
-    Terminator, TranslationUnit,
+    Between, BlockId, Element, FuncId, Function, Length, LocalId, Operation, Place, Rvalue,
+    StaticId, Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -251,6 +251,13 @@ pub enum Kind {
     /// and one turned into one may be freed or written through where nothing
     /// here sees it. Always `Unknown`, at the cast. See ADR-0117.
     Reinterpreted,
+    /// A variable length array made where this check cannot show its length
+    /// is above zero, which C17 6.7.6.2 p5 asks each time it is worked out:
+    /// one of no elements or of a negative count, widened to `size_t`, is
+    /// storage of a size nothing sane asked for. This check keeps no value
+    /// of an integer, so it is every such array. Always `Unknown`, at the
+    /// declaration (#1209).
+    VariableLength,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1125,6 +1132,29 @@ fn findings_within(
                 // proves. Mutation: push nothing;
                 // `a_cast_between_a_pointer_and_an_integer_is_unproven`
                 // goes silent. See ADR-0117.
+                // Where its storage is made: a variable length array's
+                // length is nothing this check can show above zero.
+                // Mutation: push nothing;
+                // `a_variable_length_array_is_doubted_where_its_length_is_unknown`
+                // loses its `SC0418`.
+                if let Element::StorageLive { local, origin } = element {
+                    if let Ty::Array {
+                        length: Length::Local(_),
+                        ..
+                    } = unit.ty(function.local(*local))
+                    {
+                        findings.push(Finding {
+                            function: func,
+                            kind: Kind::VariableLength,
+                            conclusion: Conclusion::Unknown,
+                            at: origin.span(),
+                            local: Some(*local),
+                            freed: None,
+                            made: None,
+                            unproven: None,
+                        });
+                    }
+                }
                 if let Element::Assign(operation) = element {
                     if let Rvalue::Reinterpret(_) = operation.value {
                         findings.push(Finding {

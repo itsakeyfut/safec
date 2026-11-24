@@ -439,18 +439,21 @@ impl Emitter<'_> {
             }
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
-            // A variable length array has no size LLVM can spell, and none
-            // is asked: its local holds a pointer to storage made where it
-            // is declared (`Emitter::begin_variable`), and an index into it
-            // starts at that pointer (#1209).
             Ty::Array {
                 element,
                 length: Length::Constant(length),
             } => format!("[{length} x {}]", self.spell(element)),
+            // **A variable length array has no LLVM type, and none is
+            // asked** (#1209): its local is a pointer to storage made where
+            // it is declared (`Emitter::begin_variable`), spelled by `body`
+            // without asking here, and an index into it starts at that
+            // pointer. Anything else that asks, a step of a pointer to one
+            // above all, would be given a size that is not its own, so it
+            // stops here rather than being given `ptr`'s.
             Ty::Array {
                 length: Length::Local(_),
                 ..
-            } => "ptr".to_owned(),
+            } => unreachable!("a variable length array's type is spelled nowhere"),
             // **Bytes, and no LLVM struct type**: the IR lays a struct out and
             // nothing else does, so its storage is its size in bytes and a
             // member is reached at its offset into them. See ADR-0124.
@@ -1185,11 +1188,15 @@ impl Emitter<'_> {
             // defined C program can observe: C17 6.2.4 p6 gives the second
             // lifetime an indeterminate value, and reading one is undefined.
             //
-            // **Except for a variable length array** (#1209), whose storage
-            // these make and end: the stack as it was is kept where it
-            // begins, storage of its length's elements is made there, and
-            // the stack is put back where it ends, so one in a loop takes no
-            // more each time round. Mutation: skip the restore;
+            // **Except for a variable length array** (#1209), which is the
+            // one local these do write something for, since they make and
+            // end its storage: the stack as it was is kept where it begins,
+            // storage of its length's elements is made there, and the stack
+            // is put back where it ends, so one in a loop, or reached again
+            // by a jump back, takes no more each time round. The stack and
+            // not the heap, as C has it and `clang` does it: nothing to free
+            // on a path that leaves by `return` or a jump, and nothing to
+            // fail on but the stack itself. Mutation: skip the restore;
             // `a_variable_length_array_is_made_and_given_back` loses its
             // `stackrestore`, and the loop in
             // `a_variable_length_array_is_sized_when_declared` overflows the
@@ -1202,6 +1209,8 @@ impl Emitter<'_> {
             }
             Element::StorageDead { origin: _, local } => {
                 if is_variable(self.unit, function.local(*local)) {
+                    // `%_saved{N}`, which `body` made beside the local and
+                    // `begin_variable` wrote.
                     let saved = self.temp();
                     writeln!(out, "  {saved} = load ptr, ptr %_saved{}", local.index())
                         .expect("writing to a string cannot fail");
@@ -1214,9 +1223,19 @@ impl Emitter<'_> {
     }
 
     /// Make the storage of the variable length array `local`, where its
-    /// declaration is reached: keep the stack as it is, then make room for
-    /// as many elements as its length local holds, and put the address in
-    /// the local (#1209).
+    /// declaration is reached: keep the stack as it is in `%_saved{N}`, then
+    /// make room for as many elements as its length local holds, and put
+    /// the address in the local's own slot, `%_{N}` (#1209). Both slots are
+    /// `body`'s, made at entry; the length is the lowering's, written before
+    /// this marker on every path to it (see `Element::StorageLive`).
+    ///
+    /// **As many of the element's own type**, not bytes, so that LLVM aligns
+    /// the storage as it aligns one of them, which is what `clang` gives: a
+    /// `long long` on `i686` gets eight where its ABI alignment is four. A
+    /// struct is bytes here, so its alignment is written out, and where the
+    /// target sets a floor (`Target::variable_array_align`) that is written
+    /// instead. Mutation: write `align 1`;
+    /// `a_variable_length_array_is_made_and_given_back` changes.
     fn begin_variable(
         &mut self,
         function: &Function,
@@ -1230,10 +1249,18 @@ impl Emitter<'_> {
         else {
             unreachable!("asked of a variable length array");
         };
-        let Some(size) = self.unit.size_of(element) else {
+        if self.unit.size_of(element).is_none() {
             return self.refuse("a variable length array of elements with no size");
+        }
+        let align = match self.unit.target().variable_array_align() {
+            Some(floor) => {
+                format!(
+                    ", align {}",
+                    floor.max(self.unit.align_of(element).unwrap_or(1))
+                )
+            }
+            None => self.struct_align(element),
         };
-        let align = self.unit.align_of(element).unwrap_or(1);
         self.stack_saved = true;
         let saved = self.temp();
         writeln!(out, "  {saved} = call ptr @llvm.stacksave.p0()")
@@ -1253,11 +1280,9 @@ impl Emitter<'_> {
                 .expect("writing to a string cannot fail");
             wide
         };
-        let bytes = self.temp();
-        writeln!(out, "  {bytes} = mul i64 {count}, {size}")
-            .expect("writing to a string cannot fail");
         let storage = self.temp();
-        writeln!(out, "  {storage} = alloca i8, i64 {bytes}, align {align}")
+        let spelled = self.spell(element);
+        writeln!(out, "  {storage} = alloca {spelled}, i64 {count}{align}")
             .expect("writing to a string cannot fail");
         writeln!(out, "  store ptr {storage}, ptr %_{}", local.index())
             .expect("writing to a string cannot fail");

@@ -801,7 +801,10 @@ impl Known {
             pending: _,
             calls: _,
             exposed_after_call: _,
-            // A local's size, the same in every lifetime.
+            // A local's size, the same in every lifetime. A variable length
+            // array's is not, and holds as none (`size_of` gives it none),
+            // so bounding one by its length would have to set it here, at
+            // each lifetime it begins (#1209).
             extent: _,
             // Not touched here, as in `Self::clear`.
             handed_at_most: _,

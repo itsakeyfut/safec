@@ -36,6 +36,7 @@ Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:1:5 "f
         Copy "_5"
           Deref
     Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:4:12 generated
+    StorageDead a_variable_length_array_is_doubted_where_its_length_is_unknown.c:4:5 generated "_3"
     Return
 Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:7:5 "at_its_length"
   Local "_0" "int" return
@@ -72,6 +73,7 @@ Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:7:5 "a
       Use
         Constant 0
     Sequenced a_variable_length_array_is_doubted_where_its_length_is_unknown.c:10:12 generated
+    StorageDead a_variable_length_array_is_doubted_where_its_length_is_unknown.c:10:5 generated "_3"
     Return
 Function a_variable_length_array_is_doubted_where_its_length_is_unknown.c:13:5 "main"
   Local "_0" "int" return

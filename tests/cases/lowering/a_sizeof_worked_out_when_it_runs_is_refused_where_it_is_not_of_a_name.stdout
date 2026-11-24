@@ -1,0 +1,7 @@
+Target "x86_64-pc-windows-msvc"
+Function a_sizeof_worked_out_when_it_runs_is_refused_where_it_is_not_of_a_name.c:1:5 "of_a_type" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+Function a_sizeof_worked_out_when_it_runs_is_refused_where_it_is_not_of_a_name.c:5:5 "through_its_address" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"

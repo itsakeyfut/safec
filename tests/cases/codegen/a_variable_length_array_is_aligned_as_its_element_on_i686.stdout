@@ -1,0 +1,101 @@
+target triple = "i686-unknown-linux-gnu"
+
+define i64 @sized(i32 %arg0) {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca i32
+  %_2 = alloca i32
+  %_3 = alloca ptr
+  %_saved3 = alloca ptr
+  %_4 = alloca i32
+  %_5 = alloca ptr
+  %_saved5 = alloca ptr
+  %_6 = alloca ptr
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca ptr
+  %_12 = alloca i64
+  %_13 = alloca i32
+  %_14 = alloca i64
+  %_15 = alloca i64
+  %_16 = alloca i32
+  %_17 = alloca i64
+  %_18 = alloca i64
+  store i32 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load i32, ptr %_1
+  store i32 %t0, ptr %_2
+  %t1 = call ptr @llvm.stacksave.p0()
+  store ptr %t1, ptr %_saved3
+  %t2 = load i32, ptr %_2
+  %t3 = zext i32 %t2 to i64
+  %t4 = alloca i64, i64 %t3
+  store ptr %t4, ptr %_3
+  %t5 = load i32, ptr %_1
+  store i32 %t5, ptr %_4
+  %t6 = call ptr @llvm.stacksave.p0()
+  store ptr %t6, ptr %_saved5
+  %t7 = load i32, ptr %_4
+  %t8 = zext i32 %t7 to i64
+  %t9 = alloca [12 x i8], i64 %t8, align 4
+  store ptr %t9, ptr %_5
+  %t10 = load ptr, ptr %_3
+  store ptr %t10, ptr %_6
+  %t11 = load ptr, ptr %_6
+  store i64 1, ptr %t11
+  %t12 = load ptr, ptr %_5
+  store ptr %t12, ptr %_7
+  %t13 = load ptr, ptr %_7
+  %t14 = getelementptr i8, ptr %t13, i64 0
+  store ptr %t14, ptr %_8
+  %t15 = load ptr, ptr %_8
+  store i64 2, ptr %t15
+  %t16 = load ptr, ptr %_3
+  store ptr %t16, ptr %_9
+  %t17 = load ptr, ptr %_5
+  store ptr %t17, ptr %_10
+  %t18 = load ptr, ptr %_10
+  %t19 = getelementptr i8, ptr %t18, i64 0
+  store ptr %t19, ptr %_11
+  %t20 = load ptr, ptr %_9
+  %t21 = load i64, ptr %t20
+  %t22 = load ptr, ptr %_11
+  %t23 = load i64, ptr %t22
+  %t24 = add nsw i64 %t21, %t23
+  store i64 %t24, ptr %_12
+  %t25 = load i32, ptr %_2
+  %t26 = mul i32 %t25, 8
+  store i32 %t26, ptr %_13
+  %t27 = load i32, ptr %_13
+  %t28 = zext i32 %t27 to i64
+  store i64 %t28, ptr %_14
+  %t29 = load i64, ptr %_12
+  %t30 = load i64, ptr %_14
+  %t31 = add nsw i64 %t29, %t30
+  store i64 %t31, ptr %_15
+  %t32 = load i32, ptr %_4
+  %t33 = mul i32 %t32, 12
+  store i32 %t33, ptr %_16
+  %t34 = load i32, ptr %_16
+  %t35 = zext i32 %t34 to i64
+  store i64 %t35, ptr %_17
+  %t36 = load i64, ptr %_15
+  %t37 = load i64, ptr %_17
+  %t38 = add nsw i64 %t36, %t37
+  store i64 %t38, ptr %_18
+  %t39 = load i64, ptr %_18
+  store i64 %t39, ptr %_0
+  %t40 = load ptr, ptr %_saved5
+  call void @llvm.stackrestore.p0(ptr %t40)
+  %t41 = load ptr, ptr %_saved3
+  call void @llvm.stackrestore.p0(ptr %t41)
+  %t42 = load i64, ptr %_0
+  ret i64 %t42
+}
+
+declare ptr @llvm.stacksave.p0()
+declare void @llvm.stackrestore.p0(ptr)

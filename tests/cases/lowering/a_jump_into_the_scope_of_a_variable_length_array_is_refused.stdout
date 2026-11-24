@@ -1,0 +1,11 @@
+Target "x86_64-pc-windows-msvc"
+Function a_jump_into_the_scope_of_a_variable_length_array_is_refused.c:1:5 "into_a_block" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+Function a_jump_into_the_scope_of_a_variable_length_array_is_refused.c:10:5 "past_a_case" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "k"
+  Local "_2" "int" parameter "n"
+Function a_jump_into_the_scope_of_a_variable_length_array_is_refused.c:19:5 "past_it_in_the_body" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"

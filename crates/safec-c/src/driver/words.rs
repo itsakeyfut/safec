@@ -121,6 +121,14 @@ const REINTERPRETED: Code = Code::new("SC0416");
 /// written at all, and the fix is in the pointer's type or in what it is
 /// made to point at. See ADR-0120.
 const WRITES_READ_ONLY: Code = Code::new("SC0417");
+
+/// A variable length array whose length may not be above zero.
+///
+/// Not any code above, which are each about an access or an allocation the
+/// program asks for by name: this is about the size C asks a declaration
+/// to have, and the fix is in how the length is chosen. See
+/// `memory::Kind::VariableLength`.
+const VARIABLE_LENGTH: Code = Code::new("SC0418");
 const UNASSIGNED: Code = Code::new("SC0411");
 
 /// An access that may not fit the object its pointer reaches.
@@ -951,6 +959,14 @@ pub(super) fn memory_finding(
                 .to_owned(),
             "nothing about what this points at is proved from here",
             "keep the value a pointer, or a `void *` where its type has to change",
+        ),
+        // Built only `Unknown`, at the declaration, as the rows above are.
+        (Kind::VariableLength, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            VARIABLE_LENGTH,
+            "this may make a variable length array of no elements or of a negative count"
+                .to_owned(),
+            "nothing shows its length is above zero, which C17 6.7.6.2 p5 asks",
+            "give the array a constant length, or allocate it with `malloc`",
         ),
         // Only ever a proof: a read some paths assigned is the next arm's.
         // `Unknown` takes the same words so the match stays exhaustive

@@ -1,0 +1,24 @@
+error[SC0304]: this compiler cannot size `int[n][n]` yet
+   ╭─[ a_sizeof_of_a_variable_length_array_is_no_constant.c:3:17 ]
+   │
+ 3 │     return (int)sizeof a;
+   │                 ────┬───  
+   │                     ╰───── this `sizeof`
+───╯
+  = note: a gap in this compiler: an array of a length that is not a constant is sized at run time, and a struct is sized here only where every member is
+error[SC0317]: the initializer of `x` is not a constant
+   ╭─[ a_sizeof_of_a_variable_length_array_is_no_constant.c:8:20 ]
+   │
+ 8 │     static int x = sizeof a;
+   │                    ────┬───  
+   │                        ╰───── not a constant expression
+───╯
+  = note: a `static` object is initialized with a constant expression (C17 6.7.9 p4)
+error[SC0317]: a `case` value is not an integer constant expression
+    ╭─[ a_sizeof_of_a_variable_length_array_is_no_constant.c:15:10 ]
+    │
+ 15 │     case sizeof a:
+    │          ────┬───  
+    │              ╰───── not a constant expression
+────╯
+  = note: C17 6.8.4.2 p3

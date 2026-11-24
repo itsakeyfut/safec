@@ -473,11 +473,10 @@ fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
                 };
                 current = pointee;
             }
-            // The length as a number, since the IR holds no other: `int a[1 +
-            // 2]` is `int[1 + 2]` in `--emit ast`, which spells what was
-            // written, and `int[3]` here.
-            // A variable length array's length by the local that holds it,
-            // which is how the dump names every local (#1209).
+            // A constant length as its number: `int a[1 + 2]` is `int[1 + 2]`
+            // in `--emit ast`, which spells what was written, and `int[3]`
+            // here. A variable length array's length by the local that holds
+            // it, which is how the dump names every local (#1209).
             Ty::Array { element, length } => {
                 inner = match length {
                     Length::Constant(length) => format!("{inner}[{length}]"),
