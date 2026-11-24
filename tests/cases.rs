@@ -67,6 +67,14 @@ cases! {
         // as a move in `operated_on_in_element`. And `maybe_null` has no
         // `SC0403`, which said the pointer was moved: answer a difference as
         // a move in the nullability check, and it gains two.
+        // And only where the pointers are elements of that array (#1301):
+        // `members_of_an_element`, `in_a_static` and `a_union_element`
+        // subtract members of elements, `off_the_stride` pointers no whole
+        // number of elements apart, each `SC0419`; `rows` of a 2-D array,
+        // taken flat, and `whole_elements` are silent. Mutations in
+        // `compared_apart`: ask only the referent's type, and the first
+        // three go silent; skip the stride, and `off_the_stride` does;
+        // ask only the direct element, and `rows` reports.
         the_difference_of_two_pointers_into_one_array_is_doubted_across_two: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.8 p5 orders pointers into one object only, and
         // `compared_apart` answers one object only where each pointer may

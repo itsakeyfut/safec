@@ -74,3 +74,43 @@ error[SC0419]: this subtracts pointers that may point into different objects
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:73:18 ]
+    │
+ 73 │     return (int)(q - p);
+    │                  ──┬──  
+    │                    ╰──── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:79:18 ]
+    │
+ 79 │     return (int)(&kept[1].x - &kept[0].y);
+    │                  ───────────┬───────────  
+    │                             ╰───────────── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+    ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:91:18 ]
+    │
+ 91 │     return (int)(q - p);
+    │                  ──┬──  
+    │                    ╰──── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead
+error[SC0419]: this subtracts pointers that may point into different objects
+     ╭─[ the_difference_of_two_pointers_into_one_array_is_doubted_across_two.c:101:18 ]
+     │
+ 101 │     return (int)(q - a);
+     │                  ──┬──  
+     │                    ╰──── nothing shows both point into one live object, which C17 6.5.6 p9 asks
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: subtract pointers into one array, or subtract indices instead

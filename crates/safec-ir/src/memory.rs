@@ -121,6 +121,22 @@ use unwritten::{UnwrittenAsk, asked_unwritten_in_element, asked_unwritten_in_ter
 /// type for. Mutation: let a difference take any one referent; the same
 /// case's `two_members` and `two_arrays_in_one` go silent.
 ///
+/// **And only where the pointers are elements of that array** (#1301):
+///
+/// - their pointee is the array's element type at some level of its
+///   nesting, so `int *` into `struct T a[2]` is two members of one element
+///   and is doubted, while `int *` into `int a[2][2]` is answered, the rows
+///   of a 2-D array taken flat as `clang` takes them (the strict reading of
+///   p9 makes two rows two arrays, and doubting the common idiom was
+///   judged the worse cost). Mutation: ask only the referent's type; the
+///   case's `members_of_an_element` goes silent. Mutation: ask only the
+///   direct element; its `rows` reports;
+/// - and where both positions are counted, they are a whole number of
+///   pointees apart, so `(struct P *)((char *)a + 1) - a` points at no
+///   element and is doubted. A position this check does not count is left
+///   to the first condition, which is the residual. Mutation: skip it; the
+///   case's `off_the_stride` goes silent.
+///
 /// **One object is one live referent each operand may name, and the
 /// same**, read off the operand's own local:
 ///
@@ -200,20 +216,62 @@ fn compared_apart(
             index::Referent::Unknown(_) => None,
         }
     };
-    let array = |referent: index::Referent| match referent {
+    // What the pointers point at, which both share: 6.5.6 p3 asks
+    // compatible types of a difference, and an ordering is not asked this.
+    let pointee = match lhs {
+        Operand::Copy(place) => unit
+            .place_ty(function, place)
+            .and_then(|ty| match unit.ty(ty) {
+                Ty::Pointer(pointee) => Some(pointee),
+                _ => None,
+            }),
+        Operand::Constant(_) => None,
+    };
+    let referent_ty = |referent: index::Referent| match referent {
         index::Referent::Local(local) => function
             .locals()
             .nth(crate::index::Idx::index(local))
-            .is_some_and(|id| matches!(unit.ty(function.local(id)), Ty::Array { .. })),
+            .map(|id| function.local(id)),
         index::Referent::Static(slot) => analysis
             .statics
             .get(crate::index::Idx::index(slot))
-            .is_some_and(|&id| matches!(unit.ty(unit.static_object(id).ty), Ty::Array { .. })),
-        index::Referent::Heap(_) | index::Referent::Unknown(_) => false,
+            .map(|&id| unit.static_object(id).ty),
+        index::Referent::Heap(_) | index::Referent::Unknown(_) => None,
+    };
+    // The referent is an array with `pointee` as its element at some level.
+    let elements_of = |referent: index::Referent| {
+        let (Some(mut current), Some(pointee)) = (referent_ty(referent), pointee) else {
+            return false;
+        };
+        while let Ty::Array { element, .. } = unit.ty(current) {
+            if element == pointee {
+                return true;
+            }
+            current = element;
+        }
+        false
+    };
+    // Where both are counted, a whole number of pointees apart.
+    let at = |operand: &Operand| match operand {
+        Operand::Copy(place) if place.steps().is_empty() => {
+            match known.points_to[index::LocalIdx::of(place.local)]
+                .position
+                .at
+            {
+                parts::At::Bytes(at) => Some(at),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+    let on_the_stride = match (at(lhs), at(rhs), pointee.and_then(|ty| unit.size_of(ty))) {
+        (Some(left), Some(right), Some(size)) if size > 0 => left.abs_diff(right) % size == 0,
+        _ => true,
     };
     match (one(lhs), one(rhs)) {
         (Some(left), Some(right))
-            if left == right && (kind == Kind::ComparedApart || array(left)) =>
+            if left == right
+                && (kind == Kind::ComparedApart || (elements_of(left) && on_the_stride)) =>
         {
             None
         }
