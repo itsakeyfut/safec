@@ -1634,6 +1634,23 @@ fn closed(instance: &Instance, reading: &mut Reading) {
     }
 }
 
+/// Whether the arguments of a call at `token` would be read deeper than
+/// [`MAX_ARGUMENT_DEPTH`] calls' arguments, reported where they would.
+fn too_deep(token: Token, reading: &Reading, diagnostics: &mut DiagnosticSink) -> bool {
+    let deep = reading.arguments >= MAX_ARGUMENT_DEPTH;
+    if deep {
+        diagnostics.report(
+            Diagnostic::error("this call is nested too deep in other calls' arguments")
+                .with_code(TOO_MANY_EXPANSIONS)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(format!(
+                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
+                )),
+        );
+    }
+    deep
+}
+
 /// Why [`collected`] read no call.
 #[derive(Clone, Copy, Debug)]
 enum Uncollected {
@@ -1654,8 +1671,8 @@ struct Collected {
 }
 
 /// The `(`, the arguments and the `)` after `token`, a name the innermost of
-/// `frames` was reading, read as [`call`] reads a call's, or what to answer
-/// instead. A comma outside any parentheses starts a new argument where
+/// `frames` was reading, read as [`call`] reads a call's, or why there is
+/// none. A comma outside any parentheses starts a new argument where
 /// `splits`, given how many there are so far, says so. Shared with
 /// `_Pragma`, whose operand is one argument (#1345).
 fn collected(
@@ -1949,15 +1966,7 @@ fn call(
     }
 
     begin_use(reading);
-    if reading.arguments >= MAX_ARGUMENT_DEPTH {
-        diagnostics.report(
-            Diagnostic::error("this call is nested too deep in other calls' arguments")
-                .with_code(TOO_MANY_EXPANSIONS)
-                .with_label(Label::primary(token.span, "called here"))
-                .with_note(format!(
-                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
-                )),
-        );
+    if too_deep(token, reading, diagnostics) {
         return Replaced::Dropped;
     }
     // Only an argument the body substitutes is replaced: C replaces one before

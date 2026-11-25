@@ -10671,11 +10671,18 @@ cases! {
         a_pragma_ignoring_which_changes_nothing_is_ignored_silently: ["--emit", "ast"],
         // Mutation: drop the warning; the `.stderr` loses both `SC0118`s.
         an_unknown_pragma_is_warned_about_and_ignored: ["--emit", "ast"],
-        // `_Pragma` read only as `( string-literal )` written in one place.
+        // `_Pragma` read only where a `(` follows and what is between it and
+        // its `)` replaces to one string literal: not a character, no `(`,
+        // a token after the literal, two literals a macro writes, or none.
         // Mutations: drop the refusal; the reports go and the parser meets
-        // what is left. Drop the test of the `(` or of the `)`; the third or
-        // the fourth line is read as `once`.
+        // what is left. Take the first of what the operand replaces to; the
+        // fourth and the sixth line are read as `once`.
         a_pragma_operator_written_otherwise_is_refused: ["--emit", "ast"],
+        // `_Pragma(STR(x))`, the operand a macro writes, replaced as an
+        // argument is before it is read (#1345), marks its header once.
+        // Mutation: leave the operand unreplaced; it is refused, and `once`
+        // is defined twice.
+        a_header_marked_once_by_a_pragma_operator_whose_operand_a_macro_writes_is_read_once: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.

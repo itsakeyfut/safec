@@ -329,7 +329,8 @@ programs! {
     /// the build, nor `#error` in a group that is skipped; and `#line`,
     /// macro-replaced, renumbers `__LINE__` and names `__FILE__`, a later
     /// one without a name keeping it, and a name's `\` read as one
-    /// (#1220). Mutations: refuse an ignored pragma, or report `#warning`
+    /// (#1220); and `_Pragma` whose operand a macro writes, or whose name an
+    /// alias does (#1345). Mutations: refuse an ignored pragma, or report `#warning`
     /// as an error, and this does not build; leave `#line` unread, or
     /// count from its own line, and a bit fails.
     pragmas_and_line_are_read_as_c_says,

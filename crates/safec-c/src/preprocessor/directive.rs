@@ -4,12 +4,12 @@
 //! compiled; in a skipped one a directive is read only as far as its name.
 
 use super::{
-    Frame, Reading, UNSUPPORTED_DIRECTIVE, begin_use, canonical, condition, hash, refused,
-    replaced, spliced, used_at,
+    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, canonical, collected, condition,
+    hash, refused, replaced, spliced, too_deep, used_at,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::lexer::UNSUPPORTED_SPLICE;
-use crate::token::{Punct, Token, TokenKind};
+use crate::token::{Token, TokenKind};
 use safec_ir::source::{FileName, SourceMap, Span};
 
 /// A pragma this does not read, ignored as C17 6.10.6 p1 allows. See
@@ -229,53 +229,64 @@ fn pragma(
     }
 }
 
-/// `_Pragma`, at `token`, a name the innermost of `frames` was reading:
-/// with `(`, a plain string literal and `)` after it in that frame, the
-/// pragma the literal spells, those three taken from the frame (C17
-/// 6.10.9). Refused otherwise, the three left to be read: an operand a
-/// macro writes, `_Pragma(STR(x))`, is among them, which #1345 is to read.
+/// `_Pragma`, at `token`, a name the innermost of `frames` was reading: the
+/// pragma its operand spells (C17 6.10.9). The `(` and the `)` are read as a
+/// call's are, past an expansion that ends first, so `#define P _Pragma`
+/// used as `P("once")` is read, and what is between them is replaced as an
+/// argument is, so `_Pragma(STR(x))` is, as `clang` reads both; what that
+/// comes to has to be one string literal with no prefix but `L`, which C
+/// deletes. Refused otherwise, the report made, what was read taken.
 pub(super) fn operator(
-    frames: &mut [Frame],
+    frames: &mut Vec<Frame>,
     token: Token,
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
-    let read = frames.last_mut().and_then(|frame| {
-        let literal = operand(&frame.tokens, frame.cursor)?;
-        // C17 6.10.9 p1 deletes an `L` prefix before the rest is read.
-        let spelled = sources.snippet(literal.span);
-        let spelled = spelled.strip_prefix('L').unwrap_or(spelled);
-        let text = destringized(spelled, Escapes::QuotesAndBackslashes)?;
-        frame.cursor += 3;
-        Some((literal, text))
-    });
-    match read {
-        Some((literal, text)) => pragma(&text, literal.span, sources, reading, diagnostics),
-        None => diagnostics.report(
+    let unread = |diagnostics: &mut DiagnosticSink| {
+        diagnostics.report(
             Diagnostic::error("this `_Pragma` is not read")
                 .with_code(UNSUPPORTED_DIRECTIVE)
                 .with_label(Label::primary(token.span, "written here"))
                 .with_note(
-                    "`_Pragma` is read with `(`, a string literal with no prefix but `L`, \
-                     and `)` after it, all three written in the same place",
+                    "`_Pragma` is read with `(`, what replaces to one string literal with no \
+                     prefix but `L`, and `)` after it",
                 ),
-        ),
+        );
+    };
+    // One operand, its commas in it.
+    let operand = match collected(frames, token, &|_| false, sources, reading, diagnostics) {
+        Ok(collected) => collected
+            .arguments
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>(),
+        Err(Uncollected::NoCall) => return unread(diagnostics),
+        Err(Uncollected::Refused) => return,
+    };
+    begin_use(reading);
+    if too_deep(token, reading, diagnostics) {
+        return;
     }
-}
-
-/// The string literal of `( string-literal )` at `tokens[at..]`, if that
-/// is what is there.
-fn operand(tokens: &[Token], at: usize) -> Option<Token> {
-    match tokens.get(at..at + 3)? {
-        [open, literal, close]
-            if open.kind == TokenKind::Punct(Punct::LeftParen)
-                && literal.kind == TokenKind::String
-                && close.kind == TokenKind::Punct(Punct::RightParen) =>
-        {
-            Some(*literal)
+    let leading = operand.first().is_some_and(|&(_, leading)| leading);
+    let tokens = operand.into_iter().map(|(token, _)| token).collect();
+    let errors = diagnostics.error_count();
+    let replaced = replaced(tokens, leading, sources, reading, diagnostics);
+    if diagnostics.error_count() > errors {
+        return;
+    }
+    let read = match replaced.as_slice() {
+        [(literal, _)] if literal.kind == TokenKind::String => {
+            // C17 6.10.9 p1 deletes an `L` prefix before the rest is read.
+            let spelled = sources.snippet(literal.span);
+            let spelled = spelled.strip_prefix('L').unwrap_or(spelled);
+            destringized(spelled, Escapes::QuotesAndBackslashes).map(|text| (*literal, text))
         }
         _ => None,
+    };
+    match read {
+        Some((literal, text)) => pragma(&text, literal.span, sources, reading, diagnostics),
+        None => unread(diagnostics),
     }
 }
 
