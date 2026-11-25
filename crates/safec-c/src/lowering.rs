@@ -6603,6 +6603,8 @@ impl Lowering<'_> {
     /// A worklist rather than recursion, as every walk of an expression here
     /// is, because an operand is as deep as its source.
     fn accesses(&self, operand: ExprId, as_place: bool) -> Vec<(LocalId, Span, bool)> {
+        #[cfg(test)]
+        ACCESS_WALKS.with(|walks| walks.set(walks.get() + 1));
         let mut found = Vec::new();
         // The expression, and whether it is read as a place rather than for
         // its value. Pushed in reverse, so they come off in source order.
@@ -6719,7 +6721,8 @@ impl Lowering<'_> {
         // itself. Asked first, because walking each operand whole at every
         // node made `a + a + ... + a` quadratic: ten thousand terms took 27
         // seconds to lower, one test that was most of `safec-c`'s suite
-        // (#1330). Mutation: ask every node; that test takes 27 seconds again.
+        // (#1330). Mutation: ask every node;
+        // `a_chain_with_no_write_walks_no_operand` fails.
         let operands: &[ExprId] = match self.ast.expr(node) {
             Expr::Binary { lhs, rhs, .. } => &[*lhs, *rhs],
             Expr::Subscript { base, index, .. } => &[*base, *index],
@@ -7116,6 +7119,13 @@ impl Lowering<'_> {
             .iter()
             .any(|&(reserved, _)| reserved == name)
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many times [`Lowering::accesses`] has walked an operand on this
+    /// thread, so a test can say a walk was skipped rather than time it.
+    pub(crate) static ACCESS_WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Whether each expression of `ast`, or anything below it, assigns,
