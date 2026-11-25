@@ -47,25 +47,47 @@ error[SC0104]: a `##` beside `__VA_OPT__` is not read yet
    │ ┬  
    │ ╰── directive begins here
 ───╯
-error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
-    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:10:9 ]
+error[SC0119]: `__VA_OPT__` is followed by no `(`
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:10:1 ]
     │
- 10 │ int v = __VA_ARGS__;
+ 10 │ #define NO_OPEN(...) __VA_OPT__ x
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:12:9 ]
+    │
+ 12 │ int v = __VA_ARGS__;
     │         ─────┬─────  
     │              ╰─────── written here
 ────╯
 error[SC0119]: `TWO` takes at least 2 arguments, and is given 1
-    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:11:9 ]
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:13:9 ]
     │
- 11 │ int w = TWO(1);
+ 13 │ int w = TWO(1);
     │         ───┬──  
     │            ╰──── called here
 ────╯
 error[SC0104]: this call of `ONLY` keeps the comma before `__VA_ARGS__` in one C mode and not the other
-    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:12:9 ]
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:14:9 ]
     │
- 12 │ int x = ONLY();
+ 14 │ int x = ONLY();
     │         ──┬─  
     │           ╰─── called here
 ────╯
   = note: a macro whose only parameter is `...`, called with nothing, has its variable arguments left out under GNU's mode and empty under C's
+error[SC0119]: `__VA_OPT__` is read only in a variadic macro's replacement list
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:15:9 ]
+    │
+ 15 │ int u = __VA_OPT__;
+    │         ─────┬────  
+    │              ╰────── written here
+────╯
+error[SC0119]: `##` makes `,1`, which is not one token
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:16:9 ]
+    │
+ 16 │ int n = NAMED_COMMA(1);
+    │         ─────┬─────  
+    │              ╰─────── expanded here
+────╯
+  = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined

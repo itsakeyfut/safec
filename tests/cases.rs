@@ -10168,8 +10168,12 @@ cases! {
         // (C17 6.10.3 p5, C23 6.10.5.2), `__VA_OPT__` unclosed, inside
         // another, or beside `##`, too few arguments, and `F()` for a macro
         // of `...` alone with `, ## __VA_ARGS__`, whose comma C's and GNU's
-        // modes disagree on (ADR-0055), are each refused. Mutations: drop
-        // any one of these tests; a report goes.
+        // modes disagree on (ADR-0055), are each refused; and so are
+        // `__VA_OPT__` with no `(`, `__VA_OPT__` in code, and `, ## y` for a
+        // named `y`, an ordinary join making `,1`. Mutations: drop the test
+        // for a variadic macro, a nesting, a `##` before or after
+        // `__VA_OPT__`, a `(` or `)` after it, a count, the mode, or a
+        // name in code, or read `, ## y` as GNU's comma; a report goes.
         va_args_outside_a_variadic_macro_is_refused: ["--emit", "ast"],
         // `L(1,)` passes the variable arguments empty, so `, ## __VA_ARGS__`
         // keeps its comma, as `clang` and GCC's manual do, and `count(1,)`

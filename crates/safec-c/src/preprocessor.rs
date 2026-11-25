@@ -239,14 +239,20 @@ enum Edit {
         operator: (u32, u32),
         spaced: bool,
     },
-    /// GNU's `, ## __VA_ARGS__`: the comma and the variable arguments where
-    /// they were given, even empty, and nothing where they were left out.
-    /// `comma` is the comma, what it is copied from.
+    /// GNU's `, ## __VA_ARGS__`: the comma and the variable arguments as
+    /// written where they were given, even empty, and nothing where they
+    /// were left out. `comma` is the comma, what it is copied from. `rest`
+    /// are operands joined on after `__VA_ARGS__`, as in `, ## __VA_ARGS__
+    /// ## 1`, and `operator` the first `##`: where the arguments were given
+    /// they join onto them, and where they were left out the run is an
+    /// ordinary join of the comma and a placemarker.
     Comma {
         start: u32,
         end: u32,
         index: usize,
         comma: (u32, u32),
+        rest: Vec<(Operand, bool)>,
+        operator: (u32, u32),
         spaced: bool,
     },
     /// `__VA_OPT__ ( ... )`, or `#` and one: `operand` is an
@@ -293,6 +299,20 @@ enum Operand {
     },
 }
 
+/// `operands` counted from `by` bytes later in the list.
+fn shifted_operands(operands: Vec<(Operand, bool)>, by: u32) -> Vec<(Operand, bool)> {
+    operands
+        .into_iter()
+        .map(|(operand, spaced)| {
+            let operand = match operand {
+                Operand::Token(start, end) => Operand::Token(start - by, end - by),
+                other => other,
+            };
+            (operand, spaced)
+        })
+        .collect()
+}
+
 impl Edit {
     /// This edit counted from `by` bytes later in the list.
     fn shifted(self, by: u32) -> Self {
@@ -327,12 +347,16 @@ impl Edit {
                 end,
                 index,
                 comma,
+                rest,
+                operator,
                 spaced,
             } => Self::Comma {
                 start: less(start),
                 end: less(end),
                 index,
                 comma: (less(comma.0), less(comma.1)),
+                rest: shifted_operands(rest, by),
+                operator: (less(operator.0), less(operator.1)),
                 spaced,
             },
             Self::Optional { .. } => {
@@ -347,16 +371,7 @@ impl Edit {
             } => Self::Pasted {
                 start: less(start),
                 end: less(end),
-                operands: operands
-                    .into_iter()
-                    .map(|(operand, spaced)| {
-                        let operand = match operand {
-                            Operand::Token(start, end) => Operand::Token(less(start), less(end)),
-                            other => other,
-                        };
-                        (operand, spaced)
-                    })
-                    .collect(),
+                operands: shifted_operands(operands, by),
                 operator: (less(operator.0), less(operator.1)),
                 spaced,
             },
@@ -366,7 +381,7 @@ impl Edit {
     /// Whether this edit, or one inside it, writes argument `index` replaced.
     fn replaces(&self, index: usize) -> bool {
         match self {
-            Self::Parameter { index: used, .. } | Self::Comma { index: used, .. } => *used == index,
+            Self::Parameter { index: used, .. } => *used == index,
             Self::Optional {
                 operand:
                     Operand::Optional {
@@ -374,7 +389,14 @@ impl Edit {
                     },
                 ..
             } => *used == index || inner.iter().any(|edit| edit.replaces(index)),
-            Self::Optional { .. } | Self::Stringized { .. } | Self::Pasted { .. } => false,
+            // The operand of `##` is written as it was (C17 6.10.3.1 p1),
+            // and so is GNU's comma's: replaced first, `F(0, F(0, 5))` with
+            // `#define F(a, ...) f(a, ## __VA_ARGS__)` called the inner `F`
+            // where it is the function. Found by review.
+            Self::Optional { .. }
+            | Self::Stringized { .. }
+            | Self::Comma { .. }
+            | Self::Pasted { .. } => false,
         }
     }
 
@@ -1468,7 +1490,6 @@ fn call(
     // says, and this is refused rather than answered for one.
     if parameters.variadic()
         && named == 0
-        && !omitted
         && arguments.first().is_some_and(Vec::is_empty)
         && edits.iter().any(Edit::is_comma)
     {
@@ -1754,6 +1775,72 @@ fn substituted(
             last = Some(token);
         }
     };
+    // A run of operands joined by `##`, the first with the white space
+    // `spaced` says: each operand as the tokens it stands for, an argument
+    // as written (C17 6.10.3.1 p1), each with whether C has white space
+    // before it and the token it was copied from, where it was copied
+    // unchanged. What a join makes is copied from `operator`.
+    let paste = |out: &mut Written,
+                 operands: &[(Operand, bool)],
+                 spaced: bool,
+                 operator: (u32, u32)|
+     -> Result<(), Unwritten> {
+        let mut joined: Vec<(String, bool, Option<Token>)> = Vec::new();
+        for &(ref operand, operand_spaced) in operands {
+            let tokens: Vec<(String, bool, Option<Token>)> = match *operand {
+                Operand::Parameter(index) => written[index]
+                    .iter()
+                    .enumerate()
+                    .map(|(at, &(token, leading))| {
+                        let leading = if at == 0 { operand_spaced } else { leading };
+                        (sources.snippet(token.span).to_owned(), leading, Some(token))
+                    })
+                    .collect(),
+                Operand::Stringized(index) => {
+                    vec![(stringized(&written[index], sources), operand_spaced, None)]
+                }
+                Operand::Token(start, end) => vec![(
+                    body[start as usize..end as usize].to_owned(),
+                    operand_spaced,
+                    None,
+                )],
+                Operand::Optional { .. } => {
+                    unreachable!("`edits_in` refuses a `##` beside `__VA_OPT__`")
+                }
+            };
+            // An empty argument is a placemarker, and a join with one is the
+            // other side (C17 6.10.3.3 p3). What a join makes has the white
+            // space its left side has.
+            let mut tokens = tokens.into_iter();
+            match (joined.pop(), tokens.next()) {
+                (Some((left, leading, _)), Some((right, _, _))) => {
+                    let pasted = format!("{left}{right}");
+                    out.scanned += pasted.len();
+                    if out.scanned > MAX_PASTED {
+                        return Err(Unwritten::TooLong);
+                    }
+                    if !one_token(&pasted) {
+                        return Err(Unwritten::Unpasted(pasted));
+                    }
+                    joined.push((pasted, leading, None));
+                }
+                (left, right) => joined.extend(left.into_iter().chain(right)),
+            }
+            joined.extend(tokens);
+        }
+        for (at, (token, leading, copied)) in joined.iter().enumerate() {
+            before(out, if at == 0 { spaced } else { *leading }, false);
+            out.pieces.push(Piece {
+                offset: out.text.len() as u32,
+                from: copied.map_or(in_body(operator.0, operator.1), |copied| copied.span),
+            });
+            if copied.is_some_and(is_painted) {
+                out.painted.push(out.text.len() as u32);
+            }
+            out.text.push_str(token);
+        }
+        Ok(())
+    };
     let mut copied = 0;
     for edit in edits {
         let (start, end, spaced) = match *edit {
@@ -1775,15 +1862,42 @@ fn substituted(
         };
         run(&mut out, copied, start);
         match edit {
-            Edit::Comma { index, comma, .. } => {
-                if !omitted {
+            Edit::Comma {
+                index,
+                comma,
+                rest,
+                operator,
+                ..
+            } => {
+                let variable = (Operand::Parameter(*index), false);
+                if omitted && rest.is_empty() {
+                    // The comma goes with the white space before it, as it
+                    // does in `clang`: `[a ,##__VA_ARGS__]` is `[1]`.
+                    // Kept, `#` read `[1 ]`. Found by review.
+                    let kept = out.text.trim_end().len();
+                    out.text.truncate(kept);
+                    let kept = kept as u32;
+                    out.pieces.retain(|piece| piece.offset < kept);
+                    out.painted.retain(|&at| at < kept);
+                    out.unspaced.retain(|&at| at < kept);
+                } else if omitted {
+                    // An ordinary join of the comma and a placemarker on.
+                    let mut operands = vec![(Operand::Token(comma.0, comma.1), spaced), variable];
+                    operands.extend(rest.iter().cloned());
+                    paste(&mut out, &operands, spaced, *operator)?;
+                } else {
                     before(&mut out, spaced, false);
                     out.pieces.push(Piece {
                         offset: out.text.len() as u32,
                         from: in_body(comma.0, comma.1),
                     });
                     out.text.push(',');
-                    write_argument(&mut out, &replaced[*index], None);
+                    // The arguments as written, the operand of `##` they
+                    // are, with any joins after them made.
+                    let leading = written[*index].first().is_some_and(|&(_, leading)| leading);
+                    let mut operands = vec![(Operand::Parameter(*index), leading)];
+                    operands.extend(rest.iter().cloned());
+                    paste(&mut out, &operands, leading, *operator)?;
                 }
             }
             Edit::Optional {
@@ -1813,6 +1927,13 @@ fn substituted(
                         spelled.start() + content.1,
                     );
                     let made = substituted(within, inner, arguments, sources, reading)?;
+                    // The joins of every `__VA_OPT__` count toward one bound:
+                    // counted apart, two of them each just under it joined
+                    // twice as much. Found by review.
+                    out.scanned += made.scanned;
+                    if out.scanned > MAX_PASTED {
+                        return Err(Unwritten::TooLong);
+                    }
                     if *stringized {
                         before(&mut out, spaced, false);
                         out.pieces.push(Piece {
@@ -1820,7 +1941,15 @@ fn substituted(
                             from: in_body(operator.0, operator.1),
                         });
                         out.text.push_str(&stringized_text(&made));
-                    } else if !made.text.trim().is_empty() {
+                    } else if made.text.trim().is_empty() {
+                        // Content of white space alone writes no token, and
+                        // no piece, which would share an offset with the
+                        // next; its white space stays before the next token,
+                        // as `clang` keeps it: `[__VA_OPT__( )]` is `[ ]`.
+                        if !made.text.is_empty() && !out.text.is_empty() {
+                            out.text.push(' ');
+                        }
+                    } else {
                         before(&mut out, spaced, false);
                         let base = out.text.len() as u32;
                         out.pieces.extend(made.pieces.iter().map(|piece| Piece {
@@ -1830,7 +1959,6 @@ fn substituted(
                         out.painted.extend(made.painted.iter().map(|at| base + at));
                         out.unspaced
                             .extend(made.unspaced.iter().map(|at| base + at));
-                        out.scanned += made.scanned;
                         out.text.push_str(&made.text);
                     }
                 }
@@ -1854,65 +1982,7 @@ fn substituted(
             }
             Edit::Pasted {
                 operands, operator, ..
-            } => {
-                // Each operand as the tokens it stands for: each with whether
-                // C has white space before it, and the token it was copied
-                // from, where it was copied unchanged.
-                let mut joined: Vec<(String, bool, Option<Token>)> = Vec::new();
-                for &(ref operand, operand_spaced) in operands {
-                    let tokens: Vec<(String, bool, Option<Token>)> = match *operand {
-                        Operand::Parameter(index) => written[index]
-                            .iter()
-                            .enumerate()
-                            .map(|(at, &(token, leading))| {
-                                let leading = if at == 0 { operand_spaced } else { leading };
-                                (sources.snippet(token.span).to_owned(), leading, Some(token))
-                            })
-                            .collect(),
-                        Operand::Stringized(index) => {
-                            vec![(stringized(&written[index], sources), operand_spaced, None)]
-                        }
-                        Operand::Token(start, end) => vec![(
-                            body[start as usize..end as usize].to_owned(),
-                            operand_spaced,
-                            None,
-                        )],
-                        Operand::Optional { .. } => {
-                            unreachable!("`edits_in` refuses a `##` beside `__VA_OPT__`")
-                        }
-                    };
-                    // An empty argument is a placemarker, and a join with one
-                    // is the other side (C17 6.10.3.3 p3). What a join makes
-                    // has the white space its left side has.
-                    let mut tokens = tokens.into_iter();
-                    match (joined.pop(), tokens.next()) {
-                        (Some((left, leading, _)), Some((right, _, _))) => {
-                            let pasted = format!("{left}{right}");
-                            out.scanned += pasted.len();
-                            if out.scanned > MAX_PASTED {
-                                return Err(Unwritten::TooLong);
-                            }
-                            if !one_token(&pasted) {
-                                return Err(Unwritten::Unpasted(pasted));
-                            }
-                            joined.push((pasted, leading, None));
-                        }
-                        (left, right) => joined.extend(left.into_iter().chain(right)),
-                    }
-                    joined.extend(tokens);
-                }
-                for (at, (token, leading, copied)) in joined.iter().enumerate() {
-                    before(&mut out, if at == 0 { spaced } else { *leading }, false);
-                    out.pieces.push(Piece {
-                        offset: out.text.len() as u32,
-                        from: copied.map_or(in_body(operator.0, operator.1), |copied| copied.span),
-                    });
-                    if copied.is_some_and(is_painted) {
-                        out.painted.push(out.text.len() as u32);
-                    }
-                    out.text.push_str(token);
-                }
-            }
+            } => paste(&mut out, operands, spaced, *operator)?,
         }
         copied = end;
     }
@@ -2013,33 +2083,51 @@ fn replaced(
         skipped_depth: 0,
         leading,
     }];
-    let mut handed = Vec::new();
+    let mut handed: Vec<(Token, bool)> = Vec::new();
+    // How much had been handed on when each open expansion began, and
+    // whether an expansion that ended having handed on nothing had white
+    // space before it, which the next token takes, as `clang` gives it:
+    // with `#define E`, `[ E]` replaced is `[ ]` to `#`. Dropped, it was
+    // `[]`. Found by review.
+    let mut begun: Vec<usize> = Vec::new();
+    let mut carried = false;
     while let Some(frame) = frames.last_mut() {
         let next = frame.tokens.get(frame.cursor).copied();
         frame.cursor += 1;
         let Some(token) = next else {
             if let Some(Frame {
                 instance: Some(instance),
+                leading,
                 ..
             }) = frames.pop()
             {
                 closed(&instance, reading);
+                if begun.pop() == Some(handed.len()) {
+                    carried |= leading;
+                }
             }
             continue;
         };
         let spaced = frames
             .last()
             .is_some_and(|frame| spaced(frame, frame.cursor - 1, reading));
+        let mut hand = |token: Token, spaced: bool| {
+            handed.push((token, spaced || carried));
+            carried = false;
+        };
         match token.kind {
             TokenKind::Eof => {}
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
                 match replacement(&mut frames, token, sources, reading, diagnostics) {
-                    Replaced::Frame(frame) => frames.push(frame),
-                    Replaced::Kept => handed.push((token, spaced)),
+                    Replaced::Frame(frame) => {
+                        begun.push(handed.len());
+                        frames.push(frame);
+                    }
+                    Replaced::Kept => hand(token, spaced),
                     Replaced::Dropped => {}
                 }
             }
-            _ => handed.push((token, spaced)),
+            _ => hand(token, spaced),
         }
     }
     reading.arguments -= 1;
@@ -2299,9 +2387,10 @@ fn edits_in(
             (
                 [
                     (Operand::Token(comma_start, comma_end), start, _, _, spaced),
-                    (Operand::Parameter(index), _, end, _, _),
+                    (Operand::Parameter(index), _, variable_end, _, _),
+                    rest @ ..,
                 ],
-                Some(_),
+                Some(operator),
             ) if variadic
                 && *index == va
                 && tokens.iter().any(|token| {
@@ -2311,9 +2400,14 @@ fn edits_in(
             {
                 edits.push(Edit::Comma {
                     start: *start,
-                    end: *end,
+                    end: rest.last().map_or(*variable_end, |&(_, _, end, _, _)| end),
                     index: *index,
                     comma: (*comma_start, *comma_end),
+                    rest: rest
+                        .iter()
+                        .map(|(operand, _, _, _, spaced)| (operand.clone(), *spaced))
+                        .collect(),
+                    operator,
                     spaced: *spaced,
                 });
             }
