@@ -105,26 +105,56 @@ enum Class {
     Ignored,
     /// One whose meaning ignoring it would change, by what it is called.
     Refused(String),
+    /// `GCC error` or `GCC warning`, a message `clang` reports as `#error`
+    /// or `#warning` would: ignored, a build `clang` stops went on.
+    Message {
+        /// Whether it is `GCC error`.
+        error: bool,
+    },
     /// One not named in ADR-0129.
     Unknown,
+}
+
+/// The first two names of the pragma `rest`, the text after `pragma`, and
+/// what follows them. A name is read only where it begins, after white
+/// space: `#pragma "once"` has none, where reading past the quote made it
+/// `once` and a header `clang` reads twice was read once. Found by review.
+fn names(rest: &str) -> (&str, &str, &str) {
+    fn name(text: &str) -> (&str, &str) {
+        let text = text.trim_start_matches([' ', '\t', '\u{b}', '\u{c}', '\r']);
+        let length = text.len()
+            - text
+                .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '_')
+                .len();
+        text.split_at(length)
+    }
+    let (first, rest) = name(rest);
+    let (second, rest) = if first.is_empty() {
+        ("", rest)
+    } else {
+        name(rest)
+    };
+    (first, second, rest)
 }
 
 /// The class of the pragma `rest`, the text after `pragma`: by its first
 /// name, and by the name after it where the first is `STDC`, `GCC` or
 /// `clang`, which are namespaces, or `options`.
 fn classify(rest: &str) -> Class {
-    let mut names = rest
-        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
-        .filter(|name| !name.is_empty());
-    let first = names.next().unwrap_or("");
-    let second = names.next().unwrap_or("");
+    let (first, second, _) = names(rest);
     match (first, second) {
         ("once", _) => Class::Once,
         ("STDC", "FP_CONTRACT" | "FENV_ACCESS" | "CX_LIMITED_RANGE")
         | ("GCC" | "clang", "diagnostic")
-        | ("GCC", "system_header" | "visibility")
+        | ("GCC", "system_header")
         | ("warning" | "message" | "region" | "endregion", _) => Class::Ignored,
-        ("GCC", "poison") | ("clang", "assume_nonnull") | ("options", "align") => {
+        ("GCC", "error" | "warning") => Class::Message {
+            error: second == "error",
+        },
+        // `GCC visibility` hides what it covers from the dynamic linker, so
+        // ignoring it exports symbols `clang` would not: linking changed, as
+        // `pack` changes layout. ADR-0132 moves it here from the ignored.
+        ("GCC", "poison" | "visibility") | ("clang", "assume_nonnull") | ("options", "align") => {
             Class::Refused(format!("{first} {second}"))
         }
         (
@@ -164,6 +194,26 @@ fn pragma(
             ),
         },
         Class::Ignored => {}
+        Class::Message { error } => {
+            let (.., after) = names(rest);
+            let after = after.trim();
+            let literal = after
+                .strip_prefix('(')
+                .and_then(|inner| inner.strip_suffix(')'))
+                .map_or(after, str::trim);
+            let report = match destringized(literal, Escapes::QuotesAndBackslashes) {
+                Some(message) if error => Diagnostic::error(message).with_code(ERROR_DIRECTIVE),
+                Some(message) => Diagnostic::warning(message).with_code(WARNING_DIRECTIVE),
+                // `clang` stops here too.
+                None => Diagnostic::error(format!(
+                    "this `#pragma GCC {}` is not read",
+                    if error { "error" } else { "warning" }
+                ))
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_note("it is read with a string literal after it, or one in `(` and `)`"),
+            };
+            diagnostics.report(report.with_label(Label::primary(at, "written here")));
+        }
         Class::Refused(what) => diagnostics.report(
             Diagnostic::error(format!("`#pragma {what}` is not read"))
                 .with_code(UNSUPPORTED_DIRECTIVE)
@@ -182,7 +232,8 @@ fn pragma(
 /// `_Pragma`, at `token`, a name the innermost of `frames` was reading:
 /// with `(`, a plain string literal and `)` after it in that frame, the
 /// pragma the literal spells, those three taken from the frame (C17
-/// 6.10.9). Refused otherwise, the three left to be read.
+/// 6.10.9). Refused otherwise, the three left to be read: an operand a
+/// macro writes, `_Pragma(STR(x))`, is among them, which #1345 is to read.
 pub(super) fn operator(
     frames: &mut [Frame],
     token: Token,
@@ -192,7 +243,10 @@ pub(super) fn operator(
 ) {
     let read = frames.last_mut().and_then(|frame| {
         let literal = operand(&frame.tokens, frame.cursor)?;
-        let text = destringized(sources.snippet(literal.span), Escapes::QuotesAndBackslashes)?;
+        // C17 6.10.9 p1 deletes an `L` prefix before the rest is read.
+        let spelled = sources.snippet(literal.span);
+        let spelled = spelled.strip_prefix('L').unwrap_or(spelled);
+        let text = destringized(spelled, Escapes::QuotesAndBackslashes)?;
         frame.cursor += 3;
         Some((literal, text))
     });
@@ -203,8 +257,8 @@ pub(super) fn operator(
                 .with_code(UNSUPPORTED_DIRECTIVE)
                 .with_label(Label::primary(token.span, "written here"))
                 .with_note(
-                    "`_Pragma` is read with `(`, a string literal with no prefix, and `)` \
-                     after it, all three written in the same place",
+                    "`_Pragma` is read with `(`, a string literal with no prefix but `L`, \
+                     and `)` after it, all three written in the same place",
                 ),
         ),
     }
@@ -349,13 +403,21 @@ mod tests {
     use super::*;
 
     /// Each class of ADR-0129 is answered for the pragmas it names, the
-    /// namespaced ones by their second name.
+    /// namespaced ones by their second name, `GCC visibility` refused as
+    /// ADR-0132 has it, and a name read only where it begins.
     ///
-    /// Mutations: move any name to another class, or read a namespace's
-    /// pragma by its first name alone; its assertion fails.
+    /// Mutations: move any name to another class, read a namespace's
+    /// pragma by its first name alone, or read a name past a quote; its
+    /// assertion fails.
     #[test]
     fn a_pragma_is_classified_as_adr_0129_lists_it() {
         assert_eq!(classify(" once"), Class::Once);
+        assert_eq!(classify(" once extra"), Class::Once);
+        assert_eq!(classify("GCC error \"x\""), Class::Message { error: true });
+        assert_eq!(
+            classify("GCC warning(\"x\")"),
+            Class::Message { error: false }
+        );
         for ignored in [
             "STDC FP_CONTRACT ON",
             "STDC FENV_ACCESS OFF",
@@ -363,7 +425,6 @@ mod tests {
             "GCC diagnostic push",
             "clang diagnostic ignored \"-Wx\"",
             "GCC system_header",
-            "GCC visibility push(default)",
             "warning(disable: 4996)",
             "message(\"hi\")",
             "region x",
@@ -388,6 +449,7 @@ mod tests {
             ("const_seg(\"s\")", "const_seg"),
             ("init_seg(lib)", "init_seg"),
             ("GCC poison x", "GCC poison"),
+            ("GCC visibility push(hidden)", "GCC visibility"),
             ("clang assume_nonnull begin", "clang assume_nonnull"),
         ] {
             assert_eq!(
@@ -403,6 +465,8 @@ mod tests {
             "clang loop vectorize(enable)",
             "options other",
             "omp parallel",
+            "\"once\"",
+            "(once)",
         ] {
             assert_eq!(classify(unknown), Class::Unknown, "{unknown}");
         }
@@ -433,15 +497,21 @@ mod tests {
         assert_eq!(destringized("u8\"x.c\"", line), None);
     }
 
-    /// A directive's name ends where no identifier goes on.
+    /// A directive's name begins after any white space C allows there and
+    /// ends where no identifier goes on: `$`, a `\` that begins a universal
+    /// character name, or a letter outside ASCII would.
     ///
-    /// Mutation: end it at the first character that is not a letter, digit
-    /// or `_`; `#line$` is read as `#line`.
+    /// Mutations: end it at the first character that is not a letter,
+    /// digit or `_`, or at any one of those three; or skip only spaces and
+    /// tabs after the `#`. An assertion fails.
     #[test]
     fn a_directive_name_is_the_whole_identifier() {
         assert_eq!(name("#  pragma once"), Some(("pragma", " once")));
+        assert_eq!(name("#\u{b}\u{c}line 4"), Some(("line", " 4")));
         assert_eq!(name("%:line 4"), Some(("line", " 4")));
         assert_eq!(name("#pragmas"), Some(("pragmas", "")));
         assert_eq!(name("#line$ 4"), None);
+        assert_eq!(name("#line\\u00e9 4"), None);
+        assert_eq!(name("#lineé 4"), None);
     }
 }

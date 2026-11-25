@@ -79,3 +79,11 @@ error[SC0104]: this `#line` is not read
 ───╯
   = note: `"t\tz.c"` is not a string literal with no prefix and no escape but `\\` and `\"`
   = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
+error[SC0119]: this call of `F` has no `)`
+    ╭─[ a_line_directive_written_wrong_is_refused.c:11:7 ]
+    │
+ 11 │ #line F(
+    │       ┬  
+    │       ╰── called here
+────╯
+  = note: its arguments run on to the end of the file

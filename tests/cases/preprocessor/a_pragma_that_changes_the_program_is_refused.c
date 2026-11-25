@@ -3,5 +3,6 @@
 #pragma comment(lib, "x")
 #pragma clang assume_nonnull begin
 _Pragma("GCC poison gets")
+#pragma GCC visibility push(hidden)
 
 int main(void) { return 0; }

@@ -38,3 +38,11 @@ error[SC0104]: `#pragma GCC poison` is not read
    │                 ╰────────── written here
 ───╯
   = note: ignoring it would change what the program is
+error[SC0104]: `#pragma GCC visibility` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:6:1 ]
+   │
+ 6 │ #pragma GCC visibility push(hidden)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is

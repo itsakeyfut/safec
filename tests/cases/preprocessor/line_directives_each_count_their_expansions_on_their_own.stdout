@@ -1,0 +1,4 @@
+Function line_directives_each_count_their_expansions_on_their_own.c:20:1 "main" "int (void)"
+  Compound line_directives_each_count_their_expansions_on_their_own.c:20:16
+    Return line_directives_each_count_their_expansions_on_their_own.c:20:18
+      Number line_directives_each_count_their_expansions_on_their_own.c:20:25 "0"

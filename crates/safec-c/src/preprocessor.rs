@@ -2432,6 +2432,19 @@ fn define(
         directive.start() + name_at + name.len() as u32,
     );
 
+    // An operator, read before any macro is looked up, so a macro of the
+    // name would be kept and never used: `#define _Pragma(x)` then
+    // `_Pragma("pack(1)")` refused the pragma the macro was there to drop.
+    // Found by review.
+    if name == "_Pragma" {
+        diagnostics.report(
+            Diagnostic::error("`_Pragma` is an operator, and is not defined as a macro")
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(named, "defined here")),
+        );
+        return;
+    }
+
     // Scanned as an expansion is, so a list that begins with `#` holds the
     // operator rather than a directive. See `lex_replacement`.
     let mut scratch = SourceMap::new();

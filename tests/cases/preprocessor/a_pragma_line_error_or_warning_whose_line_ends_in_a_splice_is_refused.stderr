@@ -1,0 +1,32 @@
+error[SC0107]: a line splice or a trigraph in a `#pragma` is not read yet
+   ╭─[ a_pragma_line_error_or_warning_whose_line_ends_in_a_splice_is_refused.c:1:1 ]
+   │
+ 1 │ #pragma GCC diagnostic \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be read on its own
+error[SC0107]: a line splice or a trigraph in a `#line` is not read yet
+   ╭─[ a_pragma_line_error_or_warning_whose_line_ends_in_a_splice_is_refused.c:3:1 ]
+   │
+ 3 │ #line 5 \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be read on its own
+error[SC0107]: a line splice or a trigraph in a `#warning` is not read yet
+   ╭─[ a_pragma_line_error_or_warning_whose_line_ends_in_a_splice_is_refused.c:5:1 ]
+   │
+ 5 │ #warning this build \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be read on its own
+error[SC0107]: a line splice or a trigraph in a `#error` is not read yet
+   ╭─[ a_pragma_line_error_or_warning_whose_line_ends_in_a_splice_is_refused.c:7:1 ]
+   │
+ 7 │ #error this build \
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be read on its own

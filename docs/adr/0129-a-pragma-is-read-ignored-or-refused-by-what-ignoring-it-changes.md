@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its listing of `GCC visibility` among the pragmas ignored superseded by ADR-0132)"
 date: 2026-11-25
 decision-makers: itsakeyfut
 ---
