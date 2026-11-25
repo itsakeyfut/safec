@@ -112,15 +112,39 @@ const MAX_INCLUSIONS: usize = 4096;
 /// counting them all refused it. Found by review.
 const MAX_EXPANSIONS: usize = 65536;
 
-/// How many expansions one input may make in all.
+/// How many bytes the expansions of one input may hold in all, each one
+/// counted as [`INSTANCE_COST`] and [`BYTE_COST`] for each byte of its text:
+/// an estimate of the memory it takes, from what was measured.
 ///
 /// [`MAX_EXPANSIONS`] bounds one use's tree, and a file can hold many uses:
-/// with the count starting again at each, forty uses of a tree just under the
-/// bound took over 600 MB, each expansion a file of its own, and printed
-/// nothing before it was stopped. Found by review. This sits above the most a
-/// file that uses a macro once on each of its lines needs at the bound, and
-/// past it the next expansion is refused, once.
-const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
+/// with the count starting again at each, forty uses of a tree just under
+/// the bound held 818 MB, each expansion a file of its own, and printed
+/// nothing until it ended. Found by review. What that costs is memory, so
+/// memory is what is bounded: a count of expansions, which this replaces,
+/// refused a file of 66,000 lines of `s = F(s);` with `#define F(x) (G + x)`,
+/// two expansions a line, at line 65,540. That file is counted at about
+/// 51 MB, a fifth of this, and the forty uses past it are refused, once, at
+/// the eleventh. Found by review of #1215.
+const MAX_HELD_IN_ALL: usize = 256 << 20;
+
+/// What one expansion costs beside its text, in bytes.
+///
+/// Measured, not reckoned: with the count above lifted, a release build read
+/// `--emit tokens` of forty uses of `M15`, `#define M{n} (M{n-1} + M{n-1})`
+/// down to `#define M0 1`, 2,621,400 expansions of a few bytes each, at a
+/// peak working set of 818 MB, and ten such uses at 209 MB: about 320 bytes
+/// an expansion either way.
+const INSTANCE_COST: usize = 320;
+
+/// What one byte of an expansion's text costs, at most, in bytes.
+///
+/// A byte can be a token, and the tokens an expansion hands on are held
+/// until the input ends: a list of 65,536 commas used 255 times held 283 MB
+/// at its peak, 17 bytes for each byte of its text, where the same length of
+/// spaces held 21 MB. Counted as one byte, a list that dense passed the
+/// bound at seventeen times it, a gigabyte with nothing said. Found by
+/// review.
+const BYTE_COST: usize = 17;
 
 /// How deep one call's arguments may hold calls, one inside the next.
 ///
@@ -142,7 +166,7 @@ const MAX_ARGUMENT_DEPTH: usize = 200;
 const MAX_SUBSTITUTED: usize = 1 << 22;
 
 /// How many bytes the calls of one input may write in all, for the reason
-/// [`MAX_EXPANSIONS_IN_ALL`] bounds an input as well as a use.
+/// [`MAX_HELD_IN_ALL`] bounds an input as well as a use.
 const MAX_SUBSTITUTED_IN_ALL: usize = 1 << 26;
 
 /// How many bytes the `##`s of one expansion may make for the scan to read.
@@ -176,8 +200,9 @@ struct Reading {
     /// the clock otherwise, read once per build; or the value of a
     /// `SOURCE_DATE_EPOCH` that is not a number of seconds. See ADR-0130.
     started: Result<u64, String>,
-    /// Every expansion this input has made.
-    expansions_in_all: usize,
+    /// The bytes every expansion this input has made holds, as
+    /// [`MAX_HELD_IN_ALL`] counts them.
+    held_in_all: usize,
     /// How many expansions of each name are open, and of all names: what the
     /// rule that a macro is not expanded inside itself asks of, kept as a
     /// count rather than found by walking the frames, which made a chain of
@@ -558,7 +583,7 @@ pub fn prelude(
         macros: HashMap::new(),
         expansions: 0,
         target,
-        expansions_in_all: 0,
+        held_in_all: 0,
         open_macros: HashMap::new(),
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
@@ -1286,7 +1311,7 @@ fn expansion(
             }
         };
         if !written_within_bounds(token, written.scanned, reading, diagnostics)
-            || !admitted(token, &name, reading, diagnostics)
+            || !admitted(token, &name, written.text.len(), reading, diagnostics)
         {
             return None;
         }
@@ -1302,7 +1327,7 @@ fn expansion(
             diagnostics,
         ));
     }
-    if !admitted(token, &name, reading, diagnostics) {
+    if !admitted(token, &name, spelled.len() as usize, reading, diagnostics) {
         return None;
     }
     let file = sources.expand(spelled, token.span);
@@ -1370,7 +1395,7 @@ fn dynamic(
         }
     };
     begin_use(reading);
-    if !admitted(token, &name, reading, diagnostics) {
+    if !admitted(token, &name, text.len(), reading, diagnostics) {
         return None;
     }
     let pieces = vec![Piece {
@@ -1503,23 +1528,32 @@ fn begin_use(reading: &mut Reading) {
     }
 }
 
-/// Count an expansion of `name`, used at `token`, and open it; or refuse it
-/// past a bound, said once.
+/// Count an expansion of `name`, used at `token`, whose text is `length`
+/// bytes, and open it; or refuse it where it would pass a bound, said once.
 fn admitted(
     token: Token,
     name: &str,
+    length: usize,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
-    if reading.expansions_in_all >= MAX_EXPANSIONS_IN_ALL {
-        if reading.expansions_in_all == MAX_EXPANSIONS_IN_ALL {
-            reading.expansions_in_all += 1;
+    let held = INSTANCE_COST + BYTE_COST * length;
+    if reading.held_in_all + held > MAX_HELD_IN_ALL {
+        // Once: past the bound, the count is left above it, which no
+        // admitted expansion can leave it.
+        if reading.held_in_all <= MAX_HELD_IN_ALL {
+            reading.held_in_all = MAX_HELD_IN_ALL + 1;
+            // What this one would take them to, not what they hold: one
+            // large list can pass the bound from well under it. Found by
+            // review.
             diagnostics.report(
-                Diagnostic::error("this input expands too many macros")
+                Diagnostic::error("this input's macro expansions would take too much memory")
                     .with_code(TOO_MANY_EXPANSIONS)
                     .with_label(Label::primary(token.span, "expanded here"))
                     .with_note(format!(
-                        "{MAX_EXPANSIONS_IN_ALL} expansions have already been read for it in all"
+                        "this expansion would take what they hold past {} MiB, the most \
+                         one input's may",
+                        MAX_HELD_IN_ALL >> 20
                     )),
             );
         }
@@ -1542,7 +1576,7 @@ fn admitted(
         return false;
     }
     reading.expansions += 1;
-    reading.expansions_in_all += 1;
+    reading.held_in_all += held;
     *reading.open_macros.entry(name.to_owned()).or_insert(0) += 1;
     reading.open_expansions += 1;
     true
@@ -1838,7 +1872,7 @@ fn call(
         written.text.len() + written.scanned,
         reading,
         diagnostics,
-    ) || !admitted(token, &name, reading, diagnostics)
+    ) || !admitted(token, &name, written.text.len(), reading, diagnostics)
     {
         return Replaced::Dropped;
     }
@@ -4737,20 +4771,23 @@ mod tests {
         assert_eq!(codes, ["SC0113"]);
     }
 
-    /// Many uses of trees under the bound for one use are refused once
-    /// their expansions pass the bound for the input.
+    /// Many uses of trees just under the bound for one use, the case the
+    /// bound for the input was added for, are refused once their expansions
+    /// hold more than it allows.
     ///
     /// Mutation: drop the bound for the input. Every use is read and
     /// nothing is reported.
     #[test]
     fn many_uses_of_large_trees_are_refused_once_past_the_bound_for_the_input() {
         let mut text = String::from("#define M0 1\n");
-        for at in 1..=12 {
+        for at in 1..=15 {
             text.push_str(&format!("#define M{at} (M{} + M{})\n", at - 1, at - 1));
         }
-        let uses = MAX_EXPANSIONS_IN_ALL / ((1 << 13) - 1) + 1;
+        // Each use is 65,535 expansions; enough uses that their fixed cost
+        // alone passes the bound.
+        let uses = MAX_HELD_IN_ALL / (MAX_EXPANSIONS * INSTANCE_COST) + 2;
         for at in 0..uses {
-            text.push_str(&format!("int v{at} = M12;\n"));
+            text.push_str(&format!("int v{at} = M15;\n"));
         }
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
@@ -4772,6 +4809,104 @@ mod tests {
             .map(|code| code.to_string())
             .collect();
         assert_eq!(codes, ["SC0113"]);
+    }
+
+    /// An expansion's text counts toward the bound for the input, each
+    /// byte as [`BYTE_COST`], with its fixed cost, up to the bound itself:
+    /// one that takes what is held to the bound exactly is read, and the
+    /// next is refused, once.
+    ///
+    /// Mutations: count the fixed cost alone, or refuse at the bound rather
+    /// than past it; an assertion fails.
+    #[test]
+    fn an_expansion_s_text_counts_toward_the_bound_for_the_input() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "x");
+        let mut diagnostics = DiagnosticSink::new();
+        let target = Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple");
+        let mut reading = prelude(target, &[], &mut sources, &mut diagnostics).reading;
+        let token = Token::new(TokenKind::Identifier, Span::new(file, 0, 1));
+
+        reading.held_in_all = MAX_HELD_IN_ALL - INSTANCE_COST - 2 * BYTE_COST;
+        assert!(admitted(token, "X", 2, &mut reading, &mut diagnostics));
+        assert_eq!(reading.held_in_all, MAX_HELD_IN_ALL);
+        assert!(!admitted(token, "X", 0, &mut reading, &mut diagnostics));
+        assert_eq!(diagnostics.diagnostics().len(), 1);
+    }
+
+    /// Each kind of expansion counts its own text toward the bound for the
+    /// input, a byte at what a dense list was measured to cost: an
+    /// object-like list as written, one whose `##` joins were made, and a
+    /// call's. Each list is a mebibyte of white space, quick to scan, and
+    /// sixteen uses of it pass the bound, 256 MiB over 17 MiB a use, by their
+    /// text and nowhere near it by their fixed cost.
+    ///
+    /// Mutations: pass no length from `expansion`'s plain list, from its
+    /// list with `##`, or from `call`, or weigh a byte as one; that input,
+    /// or every one, reads every use and reports nothing.
+    #[test]
+    fn every_kind_of_expansion_counts_its_text_toward_the_bound_for_the_input() {
+        let spaces = " ".repeat(1 << 20);
+        let uses = 16;
+        for (definition, used) in [
+            (format!("#define A a{spaces}a\n"), "A"),
+            (format!("#define A a ## b{spaces}a\n"), "A"),
+            (format!("#define A(x) x{spaces}x\n"), "A(1)"),
+        ] {
+            let mut text = definition;
+            for at in 0..uses {
+                text.push_str(&format!("int v{at} = {used};\n"));
+            }
+            let mut sources = SourceMap::new();
+            let file = sources.add_virtual("t.c", text);
+            let mut diagnostics = DiagnosticSink::new();
+            let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+            preprocess(
+                file,
+                &tokens,
+                Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+                &[],
+                &mut sources,
+                &mut diagnostics,
+            );
+
+            let codes: Vec<String> = diagnostics
+                .diagnostics()
+                .iter()
+                .filter_map(|diagnostic| diagnostic.code())
+                .map(|code| code.to_string())
+                .collect();
+            assert_eq!(codes, ["SC0113"], "{used} defined as a mebibyte");
+        }
+    }
+
+    /// A file of ordinary function-like code, one call a line, two
+    /// expansions each, is read well past the count of expansions the
+    /// bound for the input used to be, which refused it at line 65,540.
+    ///
+    /// Mutation: bound the input by a count of 131,072 expansions again.
+    /// It reports `SC0113`.
+    #[test]
+    fn ordinary_function_like_code_is_read_far_past_the_old_count() {
+        let mut text = String::from("#define G 1\n#define F(x) (G + x)\nint f(int s) {\n");
+        for _ in 0..66_000 {
+            text.push_str("    s = F(s);\n");
+        }
+        text.push_str("    return s;\n}\n");
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        assert!(diagnostics.diagnostics().is_empty());
     }
 
     /// Each conditional directive is read by its name, a name that only
