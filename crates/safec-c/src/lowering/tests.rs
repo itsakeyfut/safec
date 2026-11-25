@@ -1834,6 +1834,28 @@ fn an_expression_deeper_than_the_parser_nests_still_lowers() {
     assert_eq!(operations, terms + 1);
 }
 
+/// A chain of operators none of which writes is lowered without walking any
+/// operand for conflicting accesses, so lowering it is linear in its length.
+/// Asked at every node, `a + a + ... + a` was walked once per operator, and
+/// ten thousand terms took 27 seconds (#1330). Counted rather than timed, so
+/// a loaded machine cannot fail it.
+///
+/// Mutation: drop the early return in `Lowering::unsequenced`; the count is
+/// in the thousands and this fails.
+#[test]
+fn a_chain_with_no_write_walks_no_operand() {
+    let mut program = String::from("int f(int a) {\n    return a");
+    for _ in 0..1_000 {
+        program.push_str(" + a");
+    }
+    program.push_str(";\n}\n");
+
+    super::ACCESS_WALKS.with(|walks| walks.set(0));
+    let lowered = lowered(&program);
+    assert_eq!(codes(&lowered), Vec::<String>::new());
+    assert_eq!(super::ACCESS_WALKS.with(std::cell::Cell::get), 0);
+}
+
 /// A conflict between two parameters' lengths is placed across every
 /// parameter with a length it was asked over, from the first to the last, as
 /// a call's is placed on the call: there is no node that holds the lengths,

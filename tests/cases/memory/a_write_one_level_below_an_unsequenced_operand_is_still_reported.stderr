@@ -1,0 +1,660 @@
+error[SC0412]: this may reach outside the object `q` points at
+   ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:6:5 ]
+   │
+ 6 │     h(*q, *++q);
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:6:5 ]
+   │
+ 6 │     h(*q, *++q);
+   │     ─────┬─────  
+   │          ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+   ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:6:8 ]
+   │
+ 6 │     h(*q, *++q);
+   │        ┬   ─┬─  
+   │        ╰──────── read here
+   │             │   
+   │             ╰─── written here
+───╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:10:5 ]
+    │
+ 10 │     h(*q, *--q);
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:10:5 ]
+    │
+ 10 │     h(*q, *--q);
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:10:8 ]
+    │
+ 10 │     h(*q, *--q);
+    │        ┬   ─┬─  
+    │        ╰──────── read here
+    │             │   
+    │             ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:14:5 ]
+    │
+ 14 │     h(*q, *q--);
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:14:8 ]
+    │
+ 14 │     h(*q, *q--);
+    │        ┬   ─┬─  
+    │        ╰──────── read here
+    │             │   
+    │             ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:18:5 ]
+    │
+ 18 │     h(*q, -*q++);
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:18:8 ]
+    │
+ 18 │     h(*q, -*q++);
+    │        ┬    ─┬─  
+    │        ╰───────── read here
+    │              │   
+    │              ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:5 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:5 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:8 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │        ┬     ─┬─  
+    │        ╰────────── read here
+    │               │   
+    │               ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0409]: this reads `q`, which another operand of the same expression writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:11 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │           ┬  ─┬─  
+    │           ╰─────── read here
+    │               │   
+    │               ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:26:5 ]
+    │
+ 26 │     h(*q, (q++)[0]);
+    │     ───────┬───────  
+    │            ╰───────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:26:8 ]
+    │
+ 26 │     h(*q, (q++)[0]);
+    │        ┬   ─┬─  
+    │        ╰──────── read here
+    │             │   
+    │             ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:30:5 ]
+    │
+ 30 │     h(*q, (q++ ? 1 : 2));
+    │     ──────────┬─────────  
+    │               ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:30:8 ]
+    │
+ 30 │     h(*q, (q++ ? 1 : 2));
+    │        ┬   ─┬─  
+    │        ╰──────── read here
+    │             │   
+    │             ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:34:5 ]
+    │
+ 34 │     h(*q, (c ? *q++ : 2));
+    │     ──────────┬──────────  
+    │               ╰──────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:34:8 ]
+    │
+ 34 │     h(*q, (c ? *q++ : 2));
+    │        ┬        ─┬─  
+    │        ╰───────────── read here
+    │                  │   
+    │                  ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:38:5 ]
+    │
+ 38 │     h(*q, (c ? 2 : *q++));
+    │     ──────────┬──────────  
+    │               ╰──────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:38:8 ]
+    │
+ 38 │     h(*q, (c ? 2 : *q++));
+    │        ┬            ─┬─  
+    │        ╰───────────────── read here
+    │                      │   
+    │                      ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:42:5 ]
+    │
+ 42 │     h(*q, 1 + (c ? *q++ : 2));
+    │     ────────────┬────────────  
+    │                 ╰────────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:42:8 ]
+    │
+ 42 │     h(*q, 1 + (c ? *q++ : 2));
+    │        ┬            ─┬─  
+    │        ╰───────────────── read here
+    │                      │   
+    │                      ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0402]: this uses `q`, which may have been freed
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:46:5 ]
+    │
+ 46 │     h(*q, f(*q++));
+    │     ───────┬──────  
+    │            ╰──────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:46:5 ]
+    │
+ 46 │     h(*q, f(*q++));
+    │     ───────┬──────  
+    │            ╰──────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:46:8 ]
+    │
+ 46 │     h(*q, f(*q++));
+    │        ┬     ─┬─  
+    │        ╰────────── read here
+    │               │   
+    │               ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0402]: this uses `q`, which may have been freed
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:50:5 ]
+    │
+ 50 │     h(*q, (q++, fp)(0));
+    │     ─────────┬─────────  
+    │              ╰─────────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:50:5 ]
+    │
+ 50 │     h(*q, (q++, fp)(0));
+    │     ─────────┬─────────  
+    │              ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:50:8 ]
+    │
+ 50 │     h(*q, (q++, fp)(0));
+    │        ┬   ─┬─  
+    │        ╰──────── read here
+    │             │   
+    │             ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:54:5 ]
+    │
+ 54 │     h(*q, (long)*q++);
+    │     ────────┬────────  
+    │             ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:54:8 ]
+    │
+ 54 │     h(*q, (long)*q++);
+    │        ┬         ─┬─  
+    │        ╰────────────── read here
+    │                   │   
+    │                   ╰─── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:58:5 ]
+    │
+ 58 │     return (q++)[*q];
+    │     ────────┬────────  
+    │             ╰────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:58:12 ]
+    │
+ 58 │     return (q++)[*q];
+    │            ────┬────  
+    │                ╰────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0409]: this reads `q`, which another operand of the same expression writes
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:58:19 ]
+    │
+ 58 │     return (q++)[*q];
+    │             ─┬─   ┬  
+    │              ╰─────── written here
+    │                   │  
+    │                   ╰── read here
+────╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression
+error[SC0403]: this may move `q` while it is null
+   ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:6:12 ]
+   │
+ 6 │     h(*q, *++q);
+   │            ─┬─  
+   │             ╰─── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:10:12 ]
+    │
+ 10 │     h(*q, *--q);
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:14:5 ]
+    │
+ 14 │     h(*q, *q--);
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:14:12 ]
+    │
+ 14 │     h(*q, *q--);
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:18:11 ]
+    │
+ 18 │     h(*q, -*q++);
+    │           ──┬──  
+    │             ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:18:13 ]
+    │
+ 18 │     h(*q, -*q++);
+    │             ─┬─  
+    │              ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:11 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │           ───┬───  
+    │              ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:22:14 ]
+    │
+ 22 │     h(*q, q[*q++]);
+    │              ─┬─  
+    │               ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:26:5 ]
+    │
+ 26 │     h(*q, (q++)[0]);
+    │     ───────┬───────  
+    │            ╰───────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:26:12 ]
+    │
+ 26 │     h(*q, (q++)[0]);
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:30:12 ]
+    │
+ 30 │     h(*q, (q++ ? 1 : 2));
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:34:5 ]
+    │
+ 34 │     h(*q, (c ? *q++ : 2));
+    │     ──────────┬──────────  
+    │               ╰──────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:34:12 ]
+    │
+ 34 │     h(*q, (c ? *q++ : 2));
+    │            ──────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:34:17 ]
+    │
+ 34 │     h(*q, (c ? *q++ : 2));
+    │                 ─┬─  
+    │                  ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:38:5 ]
+    │
+ 38 │     h(*q, (c ? 2 : *q++));
+    │     ──────────┬──────────  
+    │               ╰──────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:38:12 ]
+    │
+ 38 │     h(*q, (c ? 2 : *q++));
+    │            ──────┬─────  
+    │                  ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:38:21 ]
+    │
+ 38 │     h(*q, (c ? 2 : *q++));
+    │                     ─┬─  
+    │                      ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:42:5 ]
+    │
+ 42 │     h(*q, 1 + (c ? *q++ : 2));
+    │     ────────────┬────────────  
+    │                 ╰────────────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:42:16 ]
+    │
+ 42 │     h(*q, 1 + (c ? *q++ : 2));
+    │                ──────┬─────  
+    │                      ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:42:21 ]
+    │
+ 42 │     h(*q, 1 + (c ? *q++ : 2));
+    │                     ─┬─  
+    │                      ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:46:11 ]
+    │
+ 46 │     h(*q, f(*q++));
+    │           ───┬───  
+    │              ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:46:14 ]
+    │
+ 46 │     h(*q, f(*q++));
+    │              ─┬─  
+    │               ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:50:11 ]
+    │
+ 50 │     h(*q, (q++, fp)(0));
+    │           ──────┬─────  
+    │                 ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:50:12 ]
+    │
+ 50 │     h(*q, (q++, fp)(0));
+    │            ─┬─  
+    │             ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:54:11 ]
+    │
+ 54 │     h(*q, (long)*q++);
+    │           ─────┬────  
+    │                ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:54:18 ]
+    │
+ 54 │     h(*q, (long)*q++);
+    │                  ─┬─  
+    │                   ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may move a null pointer
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:58:12 ]
+    │
+ 58 │     return (q++)[*q];
+    │            ────┬────  
+    │                ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it
+error[SC0403]: this may move `q` while it is null
+    ╭─[ a_write_one_level_below_an_unsequenced_operand_is_still_reported.c:58:13 ]
+    │
+ 58 │     return (q++)[*q];
+    │             ─┬─  
+    │              ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before moving it

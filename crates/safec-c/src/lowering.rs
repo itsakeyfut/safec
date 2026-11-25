@@ -398,6 +398,7 @@ pub fn lower(
         refused_structs: HashSet::new(),
         memcpy: None,
         vla_types: HashMap::new(),
+        writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
         typedef_locals: Vec::new(),
         argument_copies: Vec::new(),
@@ -443,6 +444,9 @@ struct Lowering<'a> {
     /// `LocalId` means a local of one function only, as `Builder::bit_fields`
     /// learned (#1206 review).
     vla_types: HashMap<LocalId, TyId>,
+    /// Whether each expression, or anything below it, assigns, increments or
+    /// decrements, by [`ExprId::index`]. See [`writes_below`].
+    writes_below: Vec<bool>,
     /// The local each variable length array type a typedef declared has its
     /// length worked out into, and where: what an object or a `sizeof` of
     /// the type reads (#1294).
@@ -6599,6 +6603,8 @@ impl Lowering<'_> {
     /// A worklist rather than recursion, as every walk of an expression here
     /// is, because an operand is as deep as its source.
     fn accesses(&self, operand: ExprId, as_place: bool) -> Vec<(LocalId, Span, bool)> {
+        #[cfg(test)]
+        ACCESS_WALKS.with(|walks| walks.set(walks.get() + 1));
         let mut found = Vec::new();
         // The expression, and whether it is read as a place rather than for
         // its value. Pushed in reverse, so they come off in source order.
@@ -6710,6 +6716,26 @@ impl Lowering<'_> {
     /// On the tree, because the conflict is between the operands as written
     /// and not in the order they were lowered.
     fn unsequenced(&self, function: &Function, node: ExprId) -> Vec<Element> {
+        // **No write below, nothing to report**: every element this builds
+        // needs one operand to write by name, and an assignment is one
+        // itself. Asked first, because walking each operand whole at every
+        // node made `a + a + ... + a` quadratic: ten thousand terms took 27
+        // seconds to lower, one test that was most of `safec-c`'s suite
+        // (#1330). Mutation: ask every node;
+        // `a_chain_with_no_write_walks_no_operand` fails.
+        let operands: &[ExprId] = match self.ast.expr(node) {
+            Expr::Binary { lhs, rhs, .. } => &[*lhs, *rhs],
+            Expr::Subscript { base, index, .. } => &[*base, *index],
+            Expr::Call { arguments, .. } => arguments,
+            _ => &[],
+        };
+        if !matches!(self.ast.expr(node), Expr::Assign { .. })
+            && !operands
+                .iter()
+                .any(|operand| self.writes_below[operand.index()])
+        {
+            return Vec::new();
+        }
         let (each, between, at): (Vec<_>, Between, Span) = match self.ast.expr(node) {
             Expr::Call {
                 arguments, span, ..
@@ -7093,6 +7119,65 @@ impl Lowering<'_> {
             .iter()
             .any(|&(reserved, _)| reserved == name)
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many times [`Lowering::accesses`] has walked an operand on this
+    /// thread, so a test can say a walk was skipped rather than time it.
+    pub(crate) static ACCESS_WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Whether each expression of `ast`, or anything below it, assigns,
+/// increments or decrements, indexed by [`ExprId::index`].
+///
+/// **One pass in id order**, since a node is pushed only after the nodes it
+/// holds (`Ast::push_expr` takes them as ids), so each child's answer is
+/// there before its parent asks. Over every child, which is all
+/// [`Lowering::accesses`] walks and more, so a write it finds there is one
+/// this finds: one this counts and that does not makes a node asked rather
+/// than skipped, which costs time and changes no answer.
+///
+/// Mutation: count no write; sixteen cases reporting an unsequenced access
+/// go silent, `a_dereference_in_an_argument_another_argument_writes_is_reported`
+/// among them.
+fn writes_below(ast: &Ast) -> Vec<bool> {
+    let mut writes: Vec<bool> = Vec::new();
+    for id in ast.expr_ids() {
+        let below = |ids: &[ExprId]| ids.iter().any(|child| writes[child.index()]);
+        let written = match ast.expr(id) {
+            Expr::Assign { .. } => true,
+            Expr::Unary { op, operand, .. } => {
+                matches!(
+                    op,
+                    AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec
+                ) || below(&[*operand])
+            }
+            Expr::Binary { lhs, rhs, .. } | Expr::Comma { lhs, rhs, .. } => below(&[*lhs, *rhs]),
+            Expr::Subscript { base, index, .. } => below(&[*base, *index]),
+            Expr::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => below(&[*condition, *then, *otherwise]),
+            Expr::Call {
+                callee, arguments, ..
+            } => below(&[*callee]) || below(arguments),
+            Expr::Member { base, .. } => below(&[*base]),
+            Expr::SizeofExpr { operand, .. } | Expr::Cast { operand, .. } => below(&[*operand]),
+            Expr::Number { .. }
+            | Expr::Character { .. }
+            | Expr::String { .. }
+            | Expr::Length { .. }
+            | Expr::Identifier { .. }
+            | Expr::Enumerator { .. }
+            | Expr::SizeofType { .. }
+            | Expr::Error { .. } => false,
+        };
+        writes.push(written);
+    }
+    writes
 }
 
 /// Whether an operand is non-zero, as a value.

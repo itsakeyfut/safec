@@ -4093,6 +4093,15 @@ cases! {
         // per call; the fifth goes silent, or reports twice.
         an_argument_read_while_another_argument_writes_it_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An unsequenced write one level below the operand asked, under a
+        // prefix or postfix step, a unary operator, a subscript, a
+        // conditional's three operands, a call's argument or callee, or a
+        // cast, is reported as one directly in the operand is (#1330): the
+        // lowering skips an operand with no write below it, so each of these
+        // is what `writes_below` has to see. Mutation: drop any one arm of
+        // `writes_below`, or the `Subscript` base from the operands
+        // `unsequenced` asks; that function goes silent.
+        a_write_one_level_below_an_unsequenced_operand_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_read_in_an_argument_another_argument_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_inside_a_comma_is_unsequenced_against_another_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         two_arguments_writing_one_pointer_are_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
