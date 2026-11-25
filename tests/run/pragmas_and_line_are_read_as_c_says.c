@@ -49,5 +49,9 @@ int main(void) {
     if (__LINE__ != 2147483647) fails |= 64;
 #line 1 "C:\\dir\\x.y"
     if (!same(__FILE__, "C:\\dir\\x.y")) fails |= 128;
+/* Every escape read, as `clang` reads it, and a line feed written back
+   as `\n`. */
+#line 1 "t\tz\x41\101\nb.c"
+    if (!same(__FILE__, "t\tzAA\nb.c")) fails |= 256;
     return fails;
 }

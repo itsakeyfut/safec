@@ -1,0 +1,9 @@
+error[SC0104]: this line marker is not read
+   ╭─[ a_line_marker_closes_only_a_level_its_own_file_opened.h:1:1 ]
+   │
+ 1 │ # 5 "m.c" 2
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: its flag `2` closes a level no flag `1` in its file opened
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`

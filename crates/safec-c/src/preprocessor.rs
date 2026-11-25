@@ -248,6 +248,11 @@ struct Reading {
     /// Acted on there, one in an argument the body drops took effect, and
     /// one the body uses twice took effect once. Found by review.
     in_arguments: usize,
+    /// How many levels line markers' flag `1` has opened and `2` not yet
+    /// closed, in each file, which a `2` with none open in its own file is
+    /// refused for, as `clang` refuses it. Counted for the input as a whole,
+    /// a header's `2` closed its includer's `1`. Found by review.
+    marker_levels: HashMap<FileId, usize>,
 }
 
 /// What a `#line` makes of the lines after it, in the file it is in.
@@ -602,6 +607,7 @@ pub fn prelude(
         once: HashSet::new(),
         renumbered: HashMap::new(),
         in_arguments: 0,
+        marker_levels: HashMap::new(),
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -1148,8 +1154,8 @@ fn read_includes(
                             // the whole answer.
                             .with_note(
                                 "`#include \"...\"`, `#define` and `#undef`, the conditional \
-                                 directives, `#pragma`, `#line`, `#error` and `#warning` are \
-                                 read",
+                                 directives, `#pragma`, `#line` and line markers, `#error` and \
+                                 `#warning` are read",
                             )
                             .with_note("the line is one token and is not compiled"),
                         ),
@@ -1438,9 +1444,15 @@ fn used_at(mut span: Span, sources: &SourceMap) -> Span {
     span
 }
 
-/// `name` as a string literal: a `\\` before each `\\` and `"` in it.
+/// `name` as a string literal, as `clang` writes `__FILE__`: a `\\` before
+/// each `\\` and `"` in it, and a line feed as `\n`, every other character as
+/// it is.
 fn quoted(name: &str) -> String {
-    format!("\"{}\"", name.replace('\\', "\\\\").replace('"', "\\\""))
+    let escaped = name
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n");
+    format!("\"{escaped}\"")
 }
 
 /// The name `__FILE__` gives `file`, as `clang 22.1.8 -E` writes it: an
