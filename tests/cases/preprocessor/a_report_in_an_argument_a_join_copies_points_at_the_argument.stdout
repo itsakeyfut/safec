@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_report_in_an_argument_a_join_copies_points_at_the_argument.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_report_in_an_argument_a_join_copies_points_at_the_argument.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "q"
+  Local "_2" "int" parameter "x"
+  Local "_3" "int"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_report_in_an_argument_a_join_copies_points_at_the_argument.c:5:5 generated
+    Call a_report_in_an_argument_a_join_copies_points_at_the_argument.c:5:5 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_report_in_an_argument_a_join_copies_points_at_the_argument.c:5:5 generated
+    Operation a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:14 written
+      Destination "_3"
+      Binary "Add"
+        Constant 1
+        Copy "_1"
+          Deref
+    Operation a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:14 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Copy "_2"
+    Operation a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:14 generated
+    Return

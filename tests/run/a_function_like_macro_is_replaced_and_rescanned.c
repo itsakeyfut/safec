@@ -9,6 +9,8 @@ int F = 2;
 #define DECL(d) d
 #define SUB(a) a-1
 #define register id(4)
+#define PASTE(a, b) a ## b
+#define id2(y) PASTE(y, 0)
 #define SQ(x) ((x) * (x))
 #define x x+1
 #define id(y) y
@@ -44,5 +46,6 @@ int main(void) {
     if (d != 3) fails |= 32768;
     if (SUB(5 -) != 6) fails |= 65536;
     if (id(register) != 4) fails |= 131072;
+    if (id2(x) != 11) fails |= 262144;
     return fails != 0;
 }

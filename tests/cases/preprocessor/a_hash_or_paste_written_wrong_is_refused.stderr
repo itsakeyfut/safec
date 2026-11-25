@@ -26,19 +26,34 @@ error[SC0119]: `##` has nothing before it in the replacement list
    │ ┬  
    │ ╰── directive begins here
 ───╯
-error[SC0119]: `##` makes `+-`, which is not one token
-   ╭─[ a_hash_or_paste_written_wrong_is_refused.c:7:9 ]
+error[SC0119]: `##` has nothing between it and the `##` before it
+   ╭─[ a_hash_or_paste_written_wrong_is_refused.c:7:1 ]
    │
- 7 │ int v = P(+, -);
+ 7 │ #define TWICE(a, b) a ## ## b
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `##` makes `+-`, which is not one token
+   ╭─[ a_hash_or_paste_written_wrong_is_refused.c:9:9 ]
+   │
+ 9 │ int v = P(+, -);
    │         ┬  
    │         ╰── expanded here
 ───╯
   = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined
 error[SC0119]: `##` makes `@@`, which is not one token
-   ╭─[ a_hash_or_paste_written_wrong_is_refused.c:8:9 ]
-   │
- 8 │ int w = P(@, @);
-   │         ┬  
-   │         ╰── expanded here
-───╯
+    ╭─[ a_hash_or_paste_written_wrong_is_refused.c:10:9 ]
+    │
+ 10 │ int w = P(@, @);
+    │         ┬  
+    │         ╰── expanded here
+────╯
+  = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined
+error[SC0119]: `##` makes `+-`, which is not one token
+    ╭─[ a_hash_or_paste_written_wrong_is_refused.c:11:9 ]
+    │
+ 11 │ int b = BAD;
+    │         ─┬─  
+    │          ╰─── expanded here
+────╯
   = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined
