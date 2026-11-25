@@ -316,37 +316,95 @@ enum Escapes {
     /// `\"` and `\\` read, every other kept as written: what `_Pragma`
     /// does (C17 6.10.9 p1).
     QuotesAndBackslashes,
-    /// `\"` and `\\` read, any other refused: a `#line` name, which
-    /// `clang` reads every escape of, `"t\tz.c"` a tab. Read as written,
-    /// its `__FILE__` was another string than `clang`'s.
-    OnlyQuotesAndBackslashes,
+    /// Every escape read as a string literal's is (C17 6.4.4.4), and the
+    /// text refused where its bytes are not UTF-8: a `#line` or line
+    /// marker's name, which `clang` reads so. Refused where any escape but
+    /// `\"` and `\\` was in it, a `.i` naming a header outside ASCII, which
+    /// `clang -E` writes as `\303\251`, was not read. Found by review.
+    Every,
 }
 
 /// The text of `literal`, a string literal with no prefix, its quotes
 /// dropped and its escapes read as `escapes` says; `None` for any other.
 fn destringized(literal: &str, escapes: Escapes) -> Option<String> {
     let body = literal.strip_prefix('"')?.strip_suffix('"')?;
-    let mut text = String::with_capacity(body.len());
-    let mut chars = body.chars();
+    let mut bytes = Vec::with_capacity(body.len());
+    let mut chars = body.chars().peekable();
+    let push = |bytes: &mut Vec<u8>, c: char| {
+        bytes.extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes());
+    };
+    // Up to `most` digits of `radix` next, as one value, and how many there
+    // were; `None` past what `u32` holds.
+    let digits = |chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+                  radix: u32,
+                  most: usize|
+     -> Option<(u32, usize)> {
+        let mut value = 0_u32;
+        let mut count = 0;
+        while count < most {
+            let Some(digit) = chars.peek().and_then(|c| c.to_digit(radix)) else {
+                break;
+            };
+            value = value.checked_mul(radix)?.checked_add(digit)?;
+            chars.next();
+            count += 1;
+        }
+        Some((value, count))
+    };
+    let byte = |value: u32| u8::try_from(value).ok();
     while let Some(c) = chars.next() {
         if c != '\\' {
-            text.push(c);
+            push(&mut bytes, c);
             continue;
         }
-        match (chars.next()?, escapes) {
-            (escaped @ ('"' | '\\'), _) => text.push(escaped),
+        let escaped = chars.next()?;
+        match (escaped, escapes) {
+            ('"' | '\\', _) => push(&mut bytes, escaped),
             (other, Escapes::QuotesAndBackslashes) => {
-                text.push('\\');
-                text.push(other);
+                push(&mut bytes, '\\');
+                push(&mut bytes, other);
             }
-            (_, Escapes::OnlyQuotesAndBackslashes) => return None,
+            (simple, Escapes::Every) => match simple {
+                '\'' | '?' => push(&mut bytes, simple),
+                'a' => bytes.push(0x07),
+                'b' => bytes.push(0x08),
+                'f' => bytes.push(0x0c),
+                'n' => bytes.push(b'\n'),
+                'r' => bytes.push(b'\r'),
+                't' => bytes.push(b'\t'),
+                'v' => bytes.push(0x0b),
+                // One to three octal digits, this one the first.
+                '0'..='7' => {
+                    let (rest, count) = digits(&mut chars, 8, 2)?;
+                    let first = simple.to_digit(8)? * 8_u32.pow(u32::try_from(count).ok()?);
+                    bytes.push(byte(first + rest)?);
+                }
+                'x' => match digits(&mut chars, 16, usize::MAX)? {
+                    (value, 1..) => bytes.push(byte(value)?),
+                    _ => return None,
+                },
+                'u' | 'U' => {
+                    let most = if simple == 'u' { 4 } else { 8 };
+                    let (value, count) = digits(&mut chars, 16, most)?;
+                    if count != most {
+                        return None;
+                    }
+                    push(&mut bytes, char::from_u32(value)?);
+                }
+                _ => return None,
+            },
         }
     }
-    Some(text)
+    String::from_utf8(bytes).ok()
 }
 
 /// The greatest line `#line` may name (C17 6.10.4 p3).
 const LAST_LINE: u64 = 2_147_483_647;
+
+/// The greatest line a line marker may name, which is not C's and so not
+/// bound by C's limit: `clang` reads up to this and refuses past it. Found
+/// by review.
+const LAST_MARKED_LINE: u64 = 4_294_967_295;
 
 /// Which directive renumbers the lines after it.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -355,10 +413,10 @@ enum Form {
     Line,
     /// GNU's `# N "name" flags`, measured against `clang 22.1.8`: line `0`
     /// is read, since GCC writes `# 0 "x.c"` at the head of a `.i` and
-    /// `clang` reads it; and after the name, flags `1` to `4`, rising, `1`
-    /// opening a level and `2` closing one, `3` and `4` read and ignored,
-    /// since what they change here is no more than which warnings a header
-    /// gets. See #618's second design, Q3.
+    /// `clang` reads it; and after the name, `1` or `2`, then `3`, then `4`
+    /// after a `3`, `1` opening a level of its file and `2` closing one, `3`
+    /// and `4` read and ignored, since what they change here is no more than
+    /// which warnings a header gets. See #618's second design, Q3.
     Marker,
 }
 
@@ -376,9 +434,9 @@ fn line(
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
-    let (what, lowest) = match form {
-        Form::Line => ("this `#line`", 1),
-        Form::Marker => ("this line marker", 0),
+    let (what, lowest, highest) = match form {
+        Form::Line => ("this `#line`", 1, LAST_LINE),
+        Form::Marker => ("this line marker", 0, LAST_MARKED_LINE),
     };
     let refuse = |diagnostics: &mut DiagnosticSink, why: String| {
         let read_as = match form {
@@ -387,9 +445,9 @@ fn line(
                  string literal with no prefix after it if it names the file"
             ),
             Form::Marker => format!(
-                "a line marker is read as a line from 0 to {LAST_LINE} in decimal digits, a \
-                 string literal with no prefix if it names the file, and after that flags `1` \
-                 to `4`, rising, `1` and `2` not both"
+                "a line marker is read as a line from 0 to {LAST_MARKED_LINE} in decimal \
+                 digits, a string literal with no prefix if it names the file, and after that \
+                 `1` or `2`, then `3`, then `4` after a `3`"
             ),
         };
         diagnostics.report(
@@ -429,7 +487,7 @@ fn line(
     let line = digits
         .parse::<u64>()
         .ok()
-        .filter(|line| (lowest..=LAST_LINE).contains(line));
+        .filter(|line| (lowest..=highest).contains(line));
     let Some(line) = line else {
         return refuse(diagnostics, format!("`{digits}` is not such a line"));
     };
@@ -437,40 +495,45 @@ fn line(
         None => None,
         Some(name) => {
             let written = sources.snippet(name.span);
-            let Some(read) = destringized(written, Escapes::OnlyQuotesAndBackslashes) else {
+            let Some(read) = destringized(written, Escapes::Every) else {
                 return refuse(
                     diagnostics,
                     format!(
-                        "`{written}` is not a string literal with no prefix and no escape \
-                         but `\\\\` and `\\\"`"
+                        "`{written}` is not a string literal with no prefix whose escapes make \
+                         UTF-8 text"
                     ),
                 );
             };
             Some(read)
         }
     };
-    let mut read = Vec::with_capacity(flags.len());
+    // `1` or `2`, then `3`, then `4` after a `3`, as `clang` reads them.
+    // Read as any rising run of `1` to `4`, `4` alone and `1 2` were. Found
+    // by review.
+    let mut read: Vec<u8> = Vec::with_capacity(flags.len());
     for (flag, _) in flags {
         let written = sources.snippet(flag.span);
-        match written.parse::<u8>() {
-            Ok(flag @ 1..=4) if read.last().is_none_or(|last| *last < flag) => read.push(flag),
-            _ => return refuse(diagnostics, format!("`{written}` is not a flag here")),
-        }
+        let wanted = match (written.parse::<u8>(), read.last()) {
+            (Ok(flag @ (1 | 2)), None) | (Ok(flag @ 3), None | Some(1 | 2)) => Some(flag),
+            (Ok(4), Some(3)) => Some(4),
+            _ => None,
+        };
+        let Some(flag) = wanted else {
+            return refuse(diagnostics, format!("`{written}` is not a flag here"));
+        };
+        read.push(flag);
     }
-    if read.contains(&1) && read.contains(&2) {
-        return refuse(diagnostics, "it both opens and closes a level".to_owned());
-    }
-    if read.contains(&2) {
-        let Some(open) = reading.marker_levels.checked_sub(1) else {
+    let levels = reading.marker_levels.entry(directive.file()).or_default();
+    match read.first() {
+        Some(2) if *levels == 0 => {
             return refuse(
                 diagnostics,
-                "its flag `2` closes a level no flag `1` opened".to_owned(),
+                "its flag `2` closes a level no flag `1` in its file opened".to_owned(),
             );
-        };
-        reading.marker_levels = open;
-    }
-    if read.contains(&1) {
-        reading.marker_levels += 1;
+        }
+        Some(2) => *levels -= 1,
+        Some(1) => *levels += 1,
+        _ => {}
     }
 
     // Counted from the line after the directive's, which is line `line`.
@@ -563,15 +626,19 @@ mod tests {
     }
 
     /// `_Pragma`'s literal is read as C17 6.10.9 says, `\"` and `\\` and no
-    /// other; a `#line` name with any other escape is refused, since `clang`
-    /// reads it as something else; and a literal with a prefix is neither.
+    /// other; a `#line` or line marker's name has every escape read as a
+    /// string literal's, as `clang` reads it, and is refused where that is
+    /// not UTF-8 or an escape is not C's; and a literal with a prefix is
+    /// neither.
     ///
-    /// Mutations: keep the quotes, read `\"` as written, or keep `\t` in a
-    /// `#line` name; an assertion fails.
+    /// Mutations: keep the quotes, read `\"` as written, keep `\t` in a name
+    /// as written, read an octal escape past three digits, read `\u` with
+    /// fewer than four digits, or take bytes that are not UTF-8; an
+    /// assertion fails.
     #[test]
     fn a_literal_is_destringized_as_its_use_reads_it() {
         let pragma = Escapes::QuotesAndBackslashes;
-        let line = Escapes::OnlyQuotesAndBackslashes;
+        let line = Escapes::Every;
         assert_eq!(destringized("\"once\"", pragma).as_deref(), Some("once"));
         assert_eq!(
             destringized(r#""message(\"a\\b\")""#, pragma).as_deref(),
@@ -582,7 +649,23 @@ mod tests {
             destringized(r#""C:\\dir\\x.y""#, line).as_deref(),
             Some(r"C:\dir\x.y")
         );
-        assert_eq!(destringized(r#""t\tz.c""#, line), None);
+        assert_eq!(destringized(r#""t\tz.c""#, line).as_deref(), Some("t\tz.c"));
+        assert_eq!(
+            destringized(r#""\303\251 d'x.h""#, line).as_deref(),
+            Some("\u{e9} d'x.h")
+        );
+        assert_eq!(
+            destringized(r#""a\x41\101\0061\?.c""#, line).as_deref(),
+            Some("aAA\u{6}1?.c")
+        );
+        assert_eq!(
+            destringized(r#""é\U0001F600.c""#, line).as_deref(),
+            Some("\u{e9}\u{1F600}.c")
+        );
+        assert_eq!(destringized(r#""\u0e9.c""#, line), None);
+        assert_eq!(destringized(r#""\303.c""#, line), None);
+        assert_eq!(destringized(r#""\x.c""#, line), None);
+        assert_eq!(destringized(r#""\q.c""#, line), None);
         assert_eq!(destringized("L\"once\"", pragma), None);
         assert_eq!(destringized("u8\"x.c\"", line), None);
     }

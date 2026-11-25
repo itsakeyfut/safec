@@ -29,5 +29,13 @@ int main(void) {
     if (__LINE__ != 8 || !same(__FILE__, "C:\\dir\\x.y")) fails |= 64;
 # 70
     if (__LINE__ != 70 || !same(__FILE__, "C:\\dir\\x.y")) fails |= 128;
+/* Not C's `#line`, so not bound by its limit; and a name outside ASCII
+   as `clang -E` writes it, in octal. */
+# 4294967295 "big.c"
+    if (__LINE__ != 4294967295) fails |= 256;
+# 1 "\303\251.h" 1 3
+    if (__LINE__ != 1) fails |= 512;
+# 90 "m.c" 2
+    if (__LINE__ != 90) fails |= 1024;
     return fails;
 }

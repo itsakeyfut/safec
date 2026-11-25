@@ -10703,19 +10703,25 @@ cases! {
         // program is compiled. Mutation: report it as an error; the case
         // exits 1 and its `.stdout` goes.
         a_warning_directive_is_reported_and_the_run_goes_on: ["--emit", "ast"],
-        // Each `#line` C17 6.10.4 does not define, and a name `clang` would
-        // read another way, `\t` a tab; and one whose operand is a call
-        // refused, which is that report alone. Mutations: drop the bound, or
-        // read every escape as `_Pragma` does; that line's report goes.
+        // Each `#line` C17 6.10.4 does not define; a name with an escape C
+        // has none of, `\q`, or whose escapes make no UTF-8, `\303` alone;
+        // and one whose operand is a call refused, which is that report
+        // alone. Mutations: drop the bound, read every escape as `_Pragma`
+        // does, or take bytes that are not UTF-8; that line's report goes.
         // Read on past the refused call; a second report joins it.
         a_line_directive_written_wrong_is_refused: ["--emit", "ast"],
         // Each line marker `clang` refuses: a flag `2` with no level a `1`
         // opened, a flag out of range, flags not rising, a name that is no
-        // string literal, `1` and `2` both, a flag that is no number, and a
-        // flag a macro makes `40`, since a marker is macro-replaced as `clang`
-        // replaces it. Mutations: drop the level count, the range, the
-        // order, or the test for `1` and `2` both; that line's report goes.
+        // string literal, `1` and `2` both, a flag that is no number, a flag
+        // a macro makes `40`, since a marker is macro-replaced as `clang`
+        // replaces it, a `4` with no `3` before it, and `3` twice.
+        // Mutations: drop the level count, the range, or the order, or let a
+        // `4` or a `2` follow anything; that line's report goes.
         a_line_marker_written_wrong_is_refused: ["--emit", "ast"],
+        // A flag `2` closes only a level a `1` in its own file opened, as
+        // `clang` counts them, so a header cannot close its includer's.
+        // Mutation: count levels for the input as a whole; this is read.
+        a_line_marker_closes_only_a_level_its_own_file_opened: ["--emit", "ast"],
         // A `#line` in a header renumbers that header, and its includer
         // goes on counting its own lines under its own name. Mutation: look
         // up what `#line` said by any file but the use's; `after` is `502`.

@@ -5,8 +5,8 @@ error[SC0104]: this line marker is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: its flag `2` closes a level no flag `1` opened
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: its flag `2` closes a level no flag `1` in its file opened
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_written_wrong_is_refused.c:3:1 ]
    │
@@ -15,7 +15,7 @@ error[SC0104]: this line marker is not read
    │ ╰── directive begins here
 ───╯
   = note: `5` is not a flag here
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_written_wrong_is_refused.c:4:1 ]
    │
@@ -24,7 +24,7 @@ error[SC0104]: this line marker is not read
    │ ╰── directive begins here
 ───╯
   = note: `1` is not a flag here
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_written_wrong_is_refused.c:5:1 ]
    │
@@ -32,8 +32,8 @@ error[SC0104]: this line marker is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `x` is not a string literal with no prefix and no escape but `\\` and `\"`
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: `x` is not a string literal with no prefix whose escapes make UTF-8 text
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_written_wrong_is_refused.c:6:1 ]
    │
@@ -41,8 +41,8 @@ error[SC0104]: this line marker is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: it both opens and closes a level
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: `2` is not a flag here
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_written_wrong_is_refused.c:7:1 ]
    │
@@ -51,13 +51,31 @@ error[SC0104]: this line marker is not read
    │ ╰── directive begins here
 ───╯
   = note: `x` is not a flag here
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
 error[SC0104]: this line marker is not read
-   ╭─[ a_line_marker_written_wrong_is_refused.c:9:1 ]
+   ╭─[ a_line_marker_written_wrong_is_refused.c:8:1 ]
    │
- 9 │ # 50 "x.c" N
+ 8 │ # 1 "h.h" 4
    │ ┬  
    │ ╰── directive begins here
 ───╯
+  = note: `4` is not a flag here
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
+error[SC0104]: this line marker is not read
+   ╭─[ a_line_marker_written_wrong_is_refused.c:9:1 ]
+   │
+ 9 │ # 1 "h.h" 3 3
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `3` is not a flag here
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
+error[SC0104]: this line marker is not read
+    ╭─[ a_line_marker_written_wrong_is_refused.c:11:1 ]
+    │
+ 11 │ # 50 "x.c" N
+    │ ┬  
+    │ ╰── directive begins here
+────╯
   = note: `40` is not a flag here
-  = note: a line marker is read as a line from 0 to 2147483647 in decimal digits, a string literal with no prefix if it names the file, and after that flags `1` to `4`, rising, `1` and `2` not both
+  = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`

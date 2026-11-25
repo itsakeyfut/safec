@@ -50,7 +50,7 @@ error[SC0104]: this `#line` is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `x` is not a string literal with no prefix and no escape but `\\` and `\"`
+  = note: `x` is not a string literal with no prefix whose escapes make UTF-8 text
   = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
 error[SC0104]: this `#line` is not read
    ╭─[ a_line_directive_written_wrong_is_refused.c:7:1 ]
@@ -68,16 +68,16 @@ error[SC0104]: this `#line` is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `u8"a.c"` is not a string literal with no prefix and no escape but `\\` and `\"`
+  = note: `u8"a.c"` is not a string literal with no prefix whose escapes make UTF-8 text
   = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
 error[SC0104]: this `#line` is not read
    ╭─[ a_line_directive_written_wrong_is_refused.c:9:1 ]
    │
- 9 │ #line 1 "t\tz.c"
+ 9 │ #line 1 "\q.c"
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `"t\tz.c"` is not a string literal with no prefix and no escape but `\\` and `\"`
+  = note: `"\q.c"` is not a string literal with no prefix whose escapes make UTF-8 text
   = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
 error[SC0119]: this call of `F` has no `)`
     ╭─[ a_line_directive_written_wrong_is_refused.c:11:7 ]
@@ -87,3 +87,12 @@ error[SC0119]: this call of `F` has no `)`
     │       ╰── called here
 ────╯
   = note: its arguments run on to the end of the file
+error[SC0104]: this `#line` is not read
+    ╭─[ a_line_directive_written_wrong_is_refused.c:12:1 ]
+    │
+ 12 │ #line 1 "\303.c"
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: `"\303.c"` is not a string literal with no prefix whose escapes make UTF-8 text
+  = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
