@@ -416,7 +416,8 @@ impl Resolution {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
-                | Type::Pointer(_) => return true,
+                | Type::Pointer(_)
+                | Type::VaList => return true,
                 Type::Void | Type::Function { .. } => return false,
                 // The one a `const` copy of it was bound as, see
                 // [`Resolution::bound`].
@@ -1104,7 +1105,7 @@ impl Resolver<'_> {
                         }
                     }
                 }
-                Type::Void => {}
+                Type::Void | Type::VaList => {}
                 Type::Pointer(pointee) => pending.push(Step::Type(*pointee)),
                 Type::Array {
                     element,
@@ -1494,7 +1495,9 @@ impl Resolver<'_> {
             // unwalked, `(struct S *)p` reached a comparison with a struct
             // bound to no tag and panicked. Mutation: walk no type name here;
             // `a_struct_pointer_cast_is_read` panics.
-            if let Expr::Cast { ty, .. } | Expr::SizeofType { ty, .. } = *expr {
+            if let Expr::Cast { ty, .. } | Expr::SizeofType { ty, .. } | Expr::VaArg { ty, .. } =
+                *expr
+            {
                 self.walk_type(ty, diagnostics);
             }
 
@@ -1852,6 +1855,7 @@ impl Resolver<'_> {
                             // `(void)` is parsed as an empty list, so neither these nor
                             // `void` arrive from this parser; a struct is no row's.
                             Type::Void
+                            | Type::VaList
                             | Type::Array { .. }
                             | Type::Function { .. }
                             | Type::Struct { .. } => None,
@@ -2268,6 +2272,7 @@ fn push_declarator(ast: &Ast, root: TypeId, pending: &mut Vec<Step>) {
                 sign: _,
             }
             | Type::Void
+            | Type::VaList
             | Type::Struct { .. } => break,
         };
     }

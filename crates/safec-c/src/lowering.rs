@@ -32,17 +32,17 @@ use crate::ast::{
     Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters,
     Stmt, StmtId, Storage, Type,
 };
-use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
+use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, VaOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::cut_words;
 use crate::sema::{Resolution, TagId};
 use crate::types::Types;
 use safec_ir::ir::DOES_NOT_RETURN;
 use safec_ir::ir::{
-    Between, BinOp, Bits, Block, BlockId, Called, Declared, Element, FuncId, Function, Length,
-    Linkage, LocalId, Operand, Operation, Origin, Parameter, Passes, Place, Projection, Promise,
-    Rvalue, Shape, Signature, Static, StaticId, StaticInit, StructId, Terminator, TranslationUnit,
-    Ty, TyId, UnOp,
+    Between, BinOp, Bits, Block, BlockId, Called, Declared, Element, FuncId, Function, Intrinsic,
+    Length, Linkage, LocalId, Operand, Operation, Origin, Parameter, Passes, Place, Projection,
+    Promise, Rvalue, Shape, Signature, Static, StaticId, StaticInit, StructId, Terminator,
+    TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -900,6 +900,8 @@ fn sequences(expr: &Expr) -> bool {
         | Expr::SizeofType { .. }
         | Expr::SizeofExpr { .. }
         | Expr::Cast { .. }
+        | Expr::VaOp { .. }
+        | Expr::VaArg { .. }
         | Expr::Error { .. } => false,
     }
 }
@@ -1592,6 +1594,26 @@ impl Lowering<'_> {
         parameters: &Parameters,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<(TyId, Vec<Parameter>)> {
+        // **No list crosses a call** (#1214): C adjusts a parameter of an
+        // array type to a pointer (6.7.6.3 p7), so where `__builtin_va_list`
+        // is an array `clang` passes the caller's list by address and the
+        // callee reads it on, while the IR's array would be copied. Passed
+        // so, a `vprintf`-style function read a copy and its caller's list
+        // never moved. Refused rather than laid out per target, as passing
+        // or returning one is refused at the call. Mutation: lower it as
+        // any type; `a_list_is_no_parameter_and_no_result_yet` builds.
+        let crosses_a_list = matches!(self.ast.ty(returns), Type::VaList)
+            || matches!(parameters, Parameters::Prototype(parameters)
+                if parameters.iter().any(|parameter| matches!(self.ast.ty(parameter.ty), Type::VaList)));
+        if crosses_a_list {
+            diagnostics.report(
+                Diagnostic::error("cannot compile a `__builtin_va_list` passed to or returned from a function yet")
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(name, "declared here"))
+                    .with_note("pass a pointer to the list instead"),
+            );
+            return None;
+        }
         let mut returns = self.ty(name, returns, diagnostics)?;
         let mut lowered = Vec::new();
         // **A struct returned by value goes where the caller says**, through
@@ -1938,6 +1960,7 @@ impl Lowering<'_> {
                     sign: _,
                 }
                 | Type::Void
+                | Type::VaList
                 | Type::Function { .. }
                 | Type::Struct { .. } => {
                     return true;
@@ -1998,7 +2021,8 @@ impl Lowering<'_> {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
-                | Type::Void => {}
+                | Type::Void
+                | Type::VaList => {}
             }
         }
         Some(())
@@ -2133,18 +2157,7 @@ impl Lowering<'_> {
         else {
             return None;
         };
-        // **Defining one is #1214's**: a body reads what was passed past its
-        // parameters through `va_arg`, which nothing here lowers yet. A
-        // declaration is read, and called (#1213).
-        if *variadic {
-            diagnostics.report(
-                Diagnostic::error("cannot compile the definition of a variadic function yet")
-                    .with_code(LOWERING)
-                    .with_label(Label::primary(name, "defined with `...` here"))
-                    .with_note("a variadic function can be declared and called; defining one is not read yet"),
-            );
-            return None;
-        }
+        let variadic = *variadic;
         let (returns, parameters) = (*returns, parameters.clone());
         let returns_reads_only =
             matches!(self.ast.ty(returns), Type::Pointer(pointee) if self.read_only(*pointee));
@@ -2153,6 +2166,11 @@ impl Lowering<'_> {
         let mut function = Function::with_parameters(name, returns, lowered);
         if !self.standing_prototyped(name, &parameters) {
             function = function.unprototyped();
+        }
+        // **A body that reads past its parameters**, through
+        // `__builtin_va_start` (#1214). See ADR-0126.
+        if variadic {
+            function = function.variadic();
         }
         if returns_reads_only {
             function.mark_returns_reads_only();
@@ -2605,6 +2623,7 @@ impl Lowering<'_> {
                 Type::Array { element, .. } => ty = *element,
                 Type::Integer { .. }
                 | Type::Void
+                | Type::VaList
                 | Type::Pointer(_)
                 | Type::Function { .. }
                 | Type::Struct { .. } => return false,
@@ -2645,6 +2664,23 @@ impl Lowering<'_> {
                     };
                 }
                 Type::Void => break Ty::Void,
+                // **An array of integers as wide as the list is aligned**,
+                // as many as fill the target's size: the size and alignment
+                // `clang` gives it, and nothing any reader takes for a
+                // pointer, whatever the target makes it (#1214). See
+                // ADR-0126.
+                Type::VaList => {
+                    let (size, align) = self.unit.target().va_list();
+                    derivations.push(Some(size / align));
+                    break Ty::Integer {
+                        rank: if align == 8 {
+                            Rank::LongLong
+                        } else {
+                            Rank::Int
+                        },
+                        sign: safec_ir::ir::Sign::Unsigned,
+                    };
+                }
                 Type::Pointer(pointee) => {
                     derivations.push(None);
                     current = *pointee;
@@ -3960,6 +3996,10 @@ impl Lowering<'_> {
                 Expr::Call { .. } | Expr::Conditional { .. } | Expr::Cast { .. } => {
                     return !self.is_void(id);
                 }
+                // **No value, as a call to a function returning `void` has
+                // none** (#1214). Mutation: answer `true`;
+                // `a_va_start_or_va_end_is_a_void_expression_anywhere` panics.
+                Expr::VaOp { .. } => return false,
                 Expr::Comma { rhs, .. } => id = *rhs,
                 _ => return true,
             }
@@ -4067,7 +4107,7 @@ impl Lowering<'_> {
                         .count()
             }
             // One operand, so nothing beside it.
-            Expr::Unary { .. } | Expr::Cast { .. } => 1,
+            Expr::Unary { .. } | Expr::Cast { .. } | Expr::VaOp { .. } | Expr::VaArg { .. } => 1,
             // Written out rather than `_`, so a kind added later is asked.
             // These sequence, have no operands, or are refused.
             Expr::Number { .. }
@@ -4131,10 +4171,13 @@ impl Lowering<'_> {
             Expr::Cast { operand, .. } => self.inert(*operand),
             // Its operand is not evaluated (C17 6.5.3.4 p2).
             Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => true,
+            // Each writes a list.
             Expr::Assign { .. }
             | Expr::Call { .. }
             | Expr::Subscript { .. }
             | Expr::Member { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => false,
         }
     }
@@ -4254,6 +4297,23 @@ impl Lowering<'_> {
             | Expr::Member { .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Place(id));
+            }
+            // **The lists' places, and nothing else**: `__builtin_va_start`'s
+            // last parameter only says where the arguments begin, and is not
+            // evaluated (#1214).
+            Expr::VaOp { op, operands, .. } => {
+                tasks.push(Task::Finish(id));
+                let lists = match op {
+                    VaOp::Start | VaOp::End => &operands[..1],
+                    VaOp::Copy => &operands[..],
+                };
+                for &list in lists.iter().rev() {
+                    tasks.push(Task::Place(list));
+                }
+            }
+            Expr::VaArg { list, .. } => {
+                tasks.push(Task::Finish(id));
+                tasks.push(Task::Place(*list));
             }
             Expr::Unary { op, operand, .. } => {
                 tasks.push(Task::Finish(id));
@@ -4508,6 +4568,8 @@ impl Lowering<'_> {
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
             | Expr::Cast { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => {
                 // **A struct value that is not an object is not lowered yet**,
                 // and is not the program's fault: a copy, an argument and a
@@ -4655,6 +4717,55 @@ impl Lowering<'_> {
             Expr::Cast { operand, span, .. } => {
                 let (operand, span) = (*operand, *span);
                 self.cast(builder, id, operand, span, values, diagnostics)?;
+            }
+            // **A call to no function, handed the lists' addresses**, which
+            // the memory check reads as a call to code it cannot read, and
+            // the backend as LLVM's intrinsic. It writes nowhere and pushes
+            // no value, as a call to a function returning `void` does
+            // (#1214). See ADR-0126.
+            Expr::VaOp { op, span, .. } => {
+                let (op, span) = (*op, *span);
+                let count = match op {
+                    VaOp::Start | VaOp::End => 1,
+                    VaOp::Copy => 2,
+                };
+                let lists = places.split_off(places.len() - count);
+                // `&*p` being `p` (C17 6.5.3.2 p3), so a list reached
+                // through a pointer is handed that pointer, as a struct's
+                // address is. Handed `&*p`, the memory check read a list in
+                // a heap block as an address it could not place, and doubted
+                // the block's `free`.
+                let arguments: Vec<Operand> = lists
+                    .into_iter()
+                    .map(|list| self.struct_address_of(builder, list, span))
+                    .collect();
+                let intrinsic = match op {
+                    VaOp::Start => Intrinsic::VaStart,
+                    VaOp::End => Intrinsic::VaEnd,
+                    VaOp::Copy => Intrinsic::VaCopy,
+                };
+                let then = builder.function.reserve_block();
+                builder.end(Terminator::Call {
+                    callee: Called::Intrinsic(intrinsic),
+                    arguments,
+                    destination: None,
+                    then: Some(then),
+                    origin: Origin::Written(span),
+                });
+                builder.switch(then);
+            }
+            // The next argument, read out of the list into a temporary of
+            // the type it is read as (#1214). See ADR-0126.
+            Expr::VaArg { span, .. } => {
+                let span = *span;
+                let list = places.pop().expect("a list");
+                let into = self.temporary(builder, id, diagnostics)?;
+                builder.push(Operation {
+                    place: Place::local(into),
+                    value: Rvalue::VaArg(list),
+                    origin: Origin::Written(span),
+                });
+                values.push(Operand::Copy(Place::local(into)));
             }
             // A `sizeof` with no value is of a variable length array, whose
             // length is the local it was worked out into, times its
@@ -5331,6 +5442,8 @@ impl Lowering<'_> {
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
             | Expr::Cast { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => {}
         }
 
@@ -5546,6 +5659,7 @@ impl Lowering<'_> {
         let signed = match self.ast.ty(declared) {
             Type::Integer { rank, sign } => self.unit.target().integer(*rank, *sign).signed(),
             Type::Void
+            | Type::VaList
             | Type::Pointer(_)
             | Type::Array { .. }
             | Type::Function { .. }
@@ -6115,6 +6229,8 @@ impl Lowering<'_> {
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
             | Expr::Cast { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => {}
         }
 
@@ -6301,7 +6417,9 @@ impl Lowering<'_> {
         let value = values.pop().expect("an operand");
         let pointer = |ty: Option<TypeId>, ast: &Ast| match ty.map(|ty| ast.ty(ty)) {
             Some(Type::Pointer(_) | Type::Array { .. } | Type::Function { .. }) => true,
-            Some(Type::Integer { .. } | Type::Void | Type::Struct { .. }) | None => false,
+            Some(Type::Integer { .. } | Type::Void | Type::Struct { .. } | Type::VaList) | None => {
+                false
+            }
         };
         let (to, from) = (
             pointer(self.types.of(id), self.ast),
@@ -6682,6 +6800,11 @@ impl Lowering<'_> {
                 Expr::Cast { operand, .. } => work.push((*operand, false)),
                 // A member is refused before anything reads it, the other two
                 // name nothing, and `sizeof` evaluates nothing.
+                // A list is written in place, and is no pointer.
+                Expr::VaArg { list, .. } => work.push((*list, true)),
+                Expr::VaOp { operands, .. } => {
+                    work.extend(operands.iter().rev().map(|&operand| (operand, true)));
+                }
                 Expr::SizeofType { .. }
                 | Expr::SizeofExpr { .. }
                 | Expr::Member { .. }
@@ -6791,6 +6914,8 @@ impl Lowering<'_> {
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
             | Expr::Cast { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => return Vec::new(),
         };
         let mut said: Vec<LocalId> = Vec::new();
@@ -6976,6 +7101,8 @@ impl Lowering<'_> {
                 Expr::Cast { operand, .. } => work.push((*operand, ordered)),
                 // Its operand is not evaluated, so it writes nothing.
                 Expr::SizeofType { .. } | Expr::SizeofExpr { .. } => {}
+                // A list is written, and is no pointer an assignment stores.
+                Expr::VaOp { .. } | Expr::VaArg { .. } => {}
                 Expr::Identifier { .. }
                 | Expr::Number { .. }
                 | Expr::Enumerator { .. }
@@ -7097,7 +7224,9 @@ impl Lowering<'_> {
                         .map(|&(_, passes)| passes)
                         == Some(Passes::StructReturn)
                 }),
-            Called::Through(Operand::Constant(_) | Operand::Function(_)) => false,
+            Called::Through(Operand::Constant(_) | Operand::Function(_)) | Called::Intrinsic(_) => {
+                false
+            }
         }
     }
 
@@ -7146,7 +7275,8 @@ fn writes_below(ast: &Ast) -> Vec<bool> {
     for id in ast.expr_ids() {
         let below = |ids: &[ExprId]| ids.iter().any(|child| writes[child.index()]);
         let written = match ast.expr(id) {
-            Expr::Assign { .. } => true,
+            // Each writes a list.
+            Expr::Assign { .. } | Expr::VaOp { .. } | Expr::VaArg { .. } => true,
             Expr::Unary { op, operand, .. } => {
                 matches!(
                     op,

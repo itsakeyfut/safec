@@ -29,7 +29,7 @@
 use crate::ast::{
     Ast, Attribute, BinOp, Declaration, Enumeration, Enumerator, EnumeratorId, Expr, ExprId,
     ForStart, Function, InitDeclarator, Item, Nullability, Parameters, Specifier, Stmt, StmtId,
-    Storage, Type, TypeId, UnOp, spell_type,
+    Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -777,12 +777,21 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         };
     }
 
+    // **`__builtin_va_list` is a typedef name every file has**, as it is to
+    // `clang`, so a declaration of one reads as any typedef's, and a header
+    // can define `va_list` over it (#1214). See ADR-0126.
+    let mut ast = Ast::new();
+    let va_list = ast.push_type(Type::VaList);
+    let mut file = Scope::default();
+    file.names
+        .insert("__builtin_va_list".to_owned(), Named::Typedef(va_list));
+
     Parser {
         tokens,
         sources,
         next_brace,
         at: 0,
-        ast: Ast::new(),
+        ast,
         failed: false,
         reported: 0,
         budget: tokens.len() + 1,
@@ -791,7 +800,7 @@ pub fn parse(tokens: &Preprocessed, sources: &SourceMap, diagnostics: &mut Diagn
         switches: 0,
         storage: None,
         typedef: false,
-        names: vec![Scope::default()],
+        names: vec![file],
         declaring: false,
         enumerated: false,
         tag_written: false,
@@ -2666,6 +2675,7 @@ impl Parser<'_> {
                     sign: _,
                 }
                 | Type::Void
+                | Type::VaList
                 | Type::Pointer(_)
                 | Type::Struct { .. } => written,
             };
@@ -3861,6 +3871,53 @@ impl Parser<'_> {
         base
     }
 
+    /// One of the builtins `<stdarg.h>` is spelled over, from its name to
+    /// the `)`: `op` for `__builtin_va_start`, `__builtin_va_end` and
+    /// `__builtin_va_copy`, whose operands are expressions, and `None` for
+    /// `__builtin_va_arg`, whose second is a type name (#1214).
+    fn va_builtin(&mut self, op: Option<VaOp>, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let start = self.advance().span;
+        self.advance();
+        let Some(op) = op else {
+            let list = self.assignment(diagnostics);
+            if self
+                .expect(TokenKind::Punct(Punct::Comma), "`,`", diagnostics)
+                .is_none()
+            {
+                return self.ast.push_expr(Expr::Error { span: start });
+            }
+            let Some(ty) = self.type_name(diagnostics) else {
+                return self.ast.push_expr(Expr::Error { span: start });
+            };
+            if self
+                .expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)
+                .is_none()
+            {
+                return self.ast.push_expr(Expr::Error { span: start });
+            }
+            let span = self.join(start, self.previous().span, diagnostics);
+            return self.ast.push_expr(Expr::VaArg { list, ty, span });
+        };
+        let mut operands = vec![self.assignment(diagnostics)];
+        while operands.len() < op.arity() {
+            if self
+                .expect(TokenKind::Punct(Punct::Comma), "`,`", diagnostics)
+                .is_none()
+            {
+                return self.ast.push_expr(Expr::Error { span: start });
+            }
+            operands.push(self.assignment(diagnostics));
+        }
+        if self
+            .expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_expr(Expr::Error { span: start });
+        }
+        let span = self.join(start, self.previous().span, diagnostics);
+        self.ast.push_expr(Expr::VaOp { op, operands, span })
+    }
+
     /// The arguments of a call, from the `(` that is there to the `)`.
     ///
     /// Each argument is an assignment-expression, which is the whole of what
@@ -4053,6 +4110,28 @@ impl Parser<'_> {
 
         if self.check(TokenKind::String) {
             return self.string(span, diagnostics);
+        }
+
+        // **The builtins `<stdarg.h>` is spelled over**, read as `clang`
+        // reads them, by name and only where a `(` follows (#1214). See
+        // ADR-0126.
+        if self.check(TokenKind::Identifier)
+            && self.peek_at(1).kind == TokenKind::Punct(Punct::LeftParen)
+        {
+            let builtin = match self.sources.snippet(span) {
+                "__builtin_va_start" => Some(Some(VaOp::Start)),
+                "__builtin_va_end" => Some(Some(VaOp::End)),
+                "__builtin_va_copy" => Some(Some(VaOp::Copy)),
+                "__builtin_va_arg" => Some(None),
+                _ => None,
+            };
+            if let Some(op) = builtin {
+                return self.deeper(
+                    diagnostics,
+                    |parser, diagnostics| parser.va_builtin(op, diagnostics),
+                    |parser, span| parser.ast.push_expr(Expr::Error { span }),
+                );
+            }
         }
 
         if self.check(TokenKind::Identifier) {

@@ -202,6 +202,13 @@ programs! {
     /// a `short` past the parameters unpromoted; this runs to the wrong
     /// result.
     a_variadic_function_is_called_with_its_arguments_promoted,
+    /// A variadic function defined and its arguments read with the
+    /// `__builtin_va_*` builtins: `int`s in a loop, a pointer, a `long long`,
+    /// and a copy of the list that reads on (#1214). Mutation: write LLVM's
+    /// `va_arg` on Windows rather than walking the list's pointer; this runs
+    /// to the wrong result there, the second `int` read as 0. Refuse a
+    /// variadic definition again; this does not build.
+    a_variadic_function_reads_its_arguments,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

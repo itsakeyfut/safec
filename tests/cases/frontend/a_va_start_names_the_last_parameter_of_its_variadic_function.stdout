@@ -1,0 +1,56 @@
+Function a_va_start_names_the_last_parameter_of_its_variadic_function.c:1:1 "fixed" "int (int)"
+  Parameter a_va_start_names_the_last_parameter_of_its_variadic_function.c:1:11 "n" "int"
+  Compound a_va_start_names_the_last_parameter_of_its_variadic_function.c:1:18
+    Declaration a_va_start_names_the_last_parameter_of_its_variadic_function.c:2:5 "a" "__builtin_va_list"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:3:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:3:5 "__builtin_va_start"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:3:24 "a"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:3:27 "n"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:4:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:4:5 "__builtin_va_end"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:4:22 "a"
+    Return a_va_start_names_the_last_parameter_of_its_variadic_function.c:5:5
+      Number a_va_start_names_the_last_parameter_of_its_variadic_function.c:5:12 "0"
+Function a_va_start_names_the_last_parameter_of_its_variadic_function.c:7:1 "not_the_last" "int (int, int, ...)"
+  Parameter a_va_start_names_the_last_parameter_of_its_variadic_function.c:7:18 "n" "int"
+  Parameter a_va_start_names_the_last_parameter_of_its_variadic_function.c:7:25 "m" "int"
+  Compound a_va_start_names_the_last_parameter_of_its_variadic_function.c:7:37
+    Declaration a_va_start_names_the_last_parameter_of_its_variadic_function.c:8:5 "a" "__builtin_va_list"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:9:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:9:5 "__builtin_va_start"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:9:24 "a"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:9:27 "n"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:10:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:10:5 "__builtin_va_end"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:10:22 "a"
+    Return a_va_start_names_the_last_parameter_of_its_variadic_function.c:11:5
+      Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:11:12 "m"
+Function a_va_start_names_the_last_parameter_of_its_variadic_function.c:13:1 "not_a_list" "int (int, ...)"
+  Parameter a_va_start_names_the_last_parameter_of_its_variadic_function.c:13:16 "n" "int"
+  Compound a_va_start_names_the_last_parameter_of_its_variadic_function.c:13:28
+    Declaration a_va_start_names_the_last_parameter_of_its_variadic_function.c:14:5 "p" "int *"
+      Number a_va_start_names_the_last_parameter_of_its_variadic_function.c:14:14 "0"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:15:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:15:5 "__builtin_va_start"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:15:24 "p"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:15:27 "n"
+    Return a_va_start_names_the_last_parameter_of_its_variadic_function.c:16:5
+      Number a_va_start_names_the_last_parameter_of_its_variadic_function.c:16:12 "0"
+Function a_va_start_names_the_last_parameter_of_its_variadic_function.c:18:1 "copied_by_assignment" "int (int, ...)"
+  Parameter a_va_start_names_the_last_parameter_of_its_variadic_function.c:18:26 "n" "int"
+  Compound a_va_start_names_the_last_parameter_of_its_variadic_function.c:18:38
+    Declaration a_va_start_names_the_last_parameter_of_its_variadic_function.c:19:5 "a" "__builtin_va_list"
+    Declaration a_va_start_names_the_last_parameter_of_its_variadic_function.c:20:5 "b" "__builtin_va_list"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:21:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:21:5 "__builtin_va_start"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:21:24 "a"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:21:27 "n"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:22:5
+      Assign a_va_start_names_the_last_parameter_of_its_variadic_function.c:22:5 "="
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:22:5 "b"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:22:9 "a"
+    Expression a_va_start_names_the_last_parameter_of_its_variadic_function.c:23:5
+      VaOp a_va_start_names_the_last_parameter_of_its_variadic_function.c:23:5 "__builtin_va_end"
+        Identifier a_va_start_names_the_last_parameter_of_its_variadic_function.c:23:22 "a"
+    Return a_va_start_names_the_last_parameter_of_its_variadic_function.c:24:5
+      Number a_va_start_names_the_last_parameter_of_its_variadic_function.c:24:12 "0"

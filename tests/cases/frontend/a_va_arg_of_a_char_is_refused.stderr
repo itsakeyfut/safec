@@ -1,0 +1,8 @@
+error[SC0306]: `__builtin_va_arg` cannot read a `char`
+   ╭─[ a_va_arg_of_a_char_is_refused.c:4:14 ]
+   │
+ 4 │     char c = __builtin_va_arg(a, char);
+   │              ────────────┬────────────  
+   │                          ╰────────────── the default argument promotions make it an `int`
+───╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined

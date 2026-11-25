@@ -1,0 +1,115 @@
+Target "x86_64-pc-windows-msvc"
+Function a_va_start_or_va_end_is_a_void_expression_anywhere.c:1:5 "cast_to_void"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "unsigned long long[1]" "a"
+  Local "_3" "unsigned long long (*)[1]"
+  Local "_4" "unsigned long long (*)[1]"
+  Block "bb0" entry
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:3:11 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:3:11 written "VaStart" "bb1"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:3:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:4:5 generated
+      Destination "_4"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:4:5 written "VaEnd" "bb2"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:4:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:5:12 generated
+    Return
+Function a_va_start_or_va_end_is_a_void_expression_anywhere.c:8:5 "in_a_comma"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "unsigned long long[1]" "a"
+  Local "_3" "unsigned long long (*)[1]"
+  Local "_4" "int"
+  Local "_5" "unsigned long long (*)[1]"
+  Block "bb0" entry
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:5 written "VaStart" "bb1"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:31 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:31 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:10:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:11:13 generated
+      Destination "_5"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:11:13 written "VaEnd" "bb2"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:11:13 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:11:13 generated
+    Return
+Function a_va_start_or_va_end_is_a_void_expression_anywhere.c:14:5 "on_both_arms"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "unsigned long long[1]" "a"
+  Local "_3" "unsigned long long (*)[1]"
+  Local "_4" "unsigned long long (*)[1]"
+  Local "_5" "unsigned long long (*)[1]"
+  Block "bb0" entry
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:16:5 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:16:5 written "VaStart" "bb1"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:16:5 generated
+    Branch a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:5 written "bb3" "bb4"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:18:12 generated
+    Return
+  Block "bb3"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:9 generated
+      Destination "_4"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:9 written "VaEnd" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:5 generated
+    Operation a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:31 generated
+      Destination "_5"
+      Address
+        Place "_2"
+    Call a_va_start_or_va_end_is_a_void_expression_anywhere.c:17:31 written "VaEnd" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Goto "bb2"
+  Block "bb6"
+    Goto "bb2"

@@ -278,7 +278,8 @@ fn verdict(
         | Kind::ComparedApart
         | Kind::SubtractedApart
         | Kind::FunctionConverted
-        | Kind::CalledUnprototyped => true,
+        | Kind::CalledUnprototyped
+        | Kind::VariadicFunction => true,
         // Never asked: it is built by `memory::read_only`, about no free.
         Kind::WritesReadOnly => true,
         // Never asked: it is built by `memory::assigned` from where a local
@@ -1379,7 +1380,8 @@ fn leaving(
         | Rvalue::Static(_)
         | Rvalue::Unary { .. }
         | Rvalue::Binary { .. }
-        | Rvalue::Reinterpret(_) => Some((Fit::Unknown, None)),
+        | Rvalue::Reinterpret(_)
+        | Rvalue::VaArg(_) => Some((Fit::Unknown, None)),
     }
 }
 
@@ -1595,7 +1597,8 @@ fn contents_leaving(
         | Rvalue::Static(_)
         | Rvalue::Unary { .. }
         | Rvalue::Binary { .. }
-        | Rvalue::Reinterpret(_) => Levels::default(),
+        | Rvalue::Reinterpret(_)
+        | Rvalue::VaArg(_) => Levels::default(),
     };
     // **The receiver's first level at least as wide as `carried`**, where
     // its memory says so rather than its type (#1079): `memcpy(vo, in, 8)`
@@ -1632,7 +1635,8 @@ fn contents_leaving(
                 | Rvalue::Static(_)
                 | Rvalue::Unary { .. }
                 | Rvalue::Binary { .. }
-                | Rvalue::Reinterpret(_) => None,
+                | Rvalue::Reinterpret(_)
+                | Rvalue::VaArg(_) => None,
             };
             say_leaving(
                 findings,

@@ -84,6 +84,10 @@ pub(crate) fn live_in(function: &Function) -> Vec<Vec<bool>> {
                             always[place.local.index()] = true;
                             reads_of_operand(&Operand::Copy(place.clone()), &mut read, &written);
                         }
+                        // The list is read, and moved on in place.
+                        Rvalue::VaArg(place) => {
+                            reads_of_operand(&Operand::Copy(place.clone()), &mut read, &written);
+                        }
                     }
                     writes_to(&operation.place, &mut read, &mut written);
                 }

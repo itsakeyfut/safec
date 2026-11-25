@@ -18,9 +18,9 @@ use std::fmt::Write as _;
 
 use crate::abi::{self, Class, Piece};
 use safec_ir::ir::{
-    BinOp, BlockId, Called, Element, FuncId, Function, Length, Linkage, LocalId, Operand,
-    Operation, Passes, Place, Projection, Rvalue, Signature, StaticId, StaticInit, Terminator,
-    TranslationUnit, Ty, TyId, UnOp,
+    BinOp, BlockId, Called, Element, FuncId, Function, Intrinsic, Length, Linkage, LocalId,
+    Operand, Operation, Passes, Place, Projection, Rvalue, Signature, StaticId, StaticInit,
+    Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 
 /// What a call passes and returns, as the IR lays it out: the one shape
@@ -151,6 +151,7 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         at: None,
         returned_in: None,
         stack_saved: false,
+        va_used: false,
     };
 
     for id in unit.statics() {
@@ -166,6 +167,12 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
     if emitter.stack_saved {
         out.push_str("\ndeclare ptr @llvm.stacksave.p0()\n");
         out.push_str("declare void @llvm.stackrestore.p0(ptr)\n");
+    }
+    // Once a list of variadic arguments has been started, ended or copied.
+    if emitter.va_used {
+        out.push_str("\ndeclare void @llvm.va_start.p0(ptr)\n");
+        out.push_str("declare void @llvm.va_end.p0(ptr)\n");
+        out.push_str("declare void @llvm.va_copy.p0.p0(ptr, ptr)\n");
     }
 
     emitter.refusals
@@ -218,6 +225,9 @@ struct Emitter<'a> {
     /// Whether a variable length array's storage was made, so the module
     /// needs `llvm.stacksave` and `llvm.stackrestore` declared (#1209).
     stack_saved: bool,
+    /// Whether a list of variadic arguments was started, ended or copied, so
+    /// the module needs the three intrinsics declared (#1214).
+    va_used: bool,
 }
 
 /// What a struct parameter or result crosses a call as, with the struct's
@@ -1496,6 +1506,7 @@ impl Emitter<'_> {
                 self.global_name(*id)
             }
             Rvalue::Reinterpret(from) => self.reinterpret(function, from, to, out)?,
+            Rvalue::VaArg(list) => self.va_arg(function, list, to, out)?,
         };
 
         let address = self.address(function, &operation.place, out)?;
@@ -1627,6 +1638,143 @@ impl Emitter<'_> {
         }
     }
 
+    /// An operation on a list of variadic arguments: `llvm.va_start`,
+    /// `llvm.va_end` or `llvm.va_copy`, each handed the lists' addresses,
+    /// which is what LLVM takes on every target (#1214). See ADR-0126.
+    fn intrinsic(
+        &mut self,
+        function: &Function,
+        intrinsic: Intrinsic,
+        arguments: &[Operand],
+        then: Option<BlockId>,
+        out: &mut String,
+    ) -> Refuses<()> {
+        let mut lists = Vec::with_capacity(arguments.len());
+        for argument in arguments {
+            let Operand::Copy(place) = argument else {
+                unreachable!("the lowering hands an operation on a list the list's address")
+            };
+            let (value, _) = self.read(function, place, out)?;
+            lists.push(format!("ptr {value}"));
+        }
+        let name = match intrinsic {
+            Intrinsic::VaStart => "llvm.va_start.p0",
+            Intrinsic::VaEnd => "llvm.va_end.p0",
+            Intrinsic::VaCopy => "llvm.va_copy.p0.p0",
+        };
+        self.va_used = true;
+        writeln!(out, "  call void @{name}({})", lists.join(", "))
+            .expect("writing to a string cannot fail");
+        match then {
+            Some(then) => writeln!(out, "  br label %bb{}", then.index()),
+            None => writeln!(out, "  unreachable"),
+        }
+        .expect("writing to a string cannot fail");
+        Ok(())
+    }
+
+    /// The next argument past a variadic function's parameters, read as
+    /// `to` out of the list at `list` (#1214), as `clang 22.1.8` writes it
+    /// on each target, measured with `-S -emit-llvm -O0`. See ADR-0127.
+    ///
+    /// - **Where the list is a pointer into the arguments**, Windows,
+    ///   `i686`, `armv7` and `wasm32`, the pointer is read, the value loaded
+    ///   where it points, and the pointer moved past as many pointer-wide
+    ///   slots as the value fills, an 8-byte value first aligned to 8 on
+    ///   `armv7` and `wasm32`. LLVM's own `va_arg` moves a pointer past an
+    ///   `int` by 4 on Windows, where every argument fills 8, and read the
+    ///   second of two `int`s as 0. Mutation: write `va_arg` there;
+    ///   `a_variadic_function_reads_its_arguments` in `tests/run.rs` runs to
+    ///   the wrong result on Windows.
+    /// - On `aarch64-apple-darwin` and the System V `x86_64` targets, LLVM's
+    ///   `va_arg`, which lowers each as its convention says.
+    /// - **Refused on `aarch64-unknown-linux-gnu`**, where LLVM's `va_arg`
+    ///   reads the caller's stack and not the register save area AAPCS64
+    ///   puts the first arguments in. See ADR-0126. Mutation: write it there
+    ///   too; `a_variadic_argument_is_not_read_on_aarch64_linux_yet` builds.
+    fn va_arg(
+        &mut self,
+        function: &Function,
+        list: &Place,
+        to: TyId,
+        out: &mut String,
+    ) -> Refuses<String> {
+        if self.unit.target().triple() == "aarch64-unknown-linux-gnu" {
+            return self.refuse(
+                "a variadic argument read on `aarch64-unknown-linux-gnu`, where LLVM's `va_arg` does not read the AAPCS64 register save area",
+            );
+        }
+        assert!(
+            self.unit.integer(to).is_some() || self.unit.ty(to).is_pointer(),
+            "the type check reads an argument as an integer or a pointer alone",
+        );
+        let address = self.address(function, list, out)?;
+        let wanted = self.spell(to);
+        let target = self.unit.target();
+        let triple = target.triple();
+        let walks_a_pointer = triple.contains("-windows-")
+            || triple.starts_with("i686-")
+            || triple.starts_with("armv7-")
+            || triple.starts_with("wasm32-");
+        // **On System V `x86_64`, only out of a list that is a plain local**:
+        // LLVM's `va_arg` read through any other address, a pointer to a
+        // list, a member or a static, reloads the list's address at `-O0`
+        // from a stack slot it never wrote, and the program crashed where
+        // `clang`'s own expansion runs. Refused there until that expansion
+        // is written here. See ADR-0127. Mutation: write it there too;
+        // `a_variadic_argument_is_read_only_out_of_a_local_list_on_x86_64_linux`
+        // builds.
+        if triple.starts_with("x86_64-")
+            && !triple.contains("-windows-")
+            && !list.steps().is_empty()
+        {
+            return self.refuse(
+                "a variadic argument read out of a list that is not the function's own local, on System V `x86_64`",
+            );
+        }
+        if !walks_a_pointer {
+            let value = self.temp();
+            writeln!(out, "  {value} = va_arg ptr {address}, {wanted}")
+                .expect("writing to a string cannot fail");
+            return Ok(value);
+        }
+        let Some(size) = self.unit.size_of(to) else {
+            return self.refuse(format!(
+                "a variadic argument read as a `{wanted}` of no size"
+            ));
+        };
+        let bits = target.pointer_bits();
+        let slot = u64::from(bits / 8);
+        let mut at = self.temp();
+        writeln!(out, "  {at} = load ptr, ptr {address}").expect("writing to a string cannot fail");
+        if size > slot && (triple.starts_with("armv7-") || triple.starts_with("wasm32-")) {
+            let (raw, bumped, masked, aligned) =
+                (self.temp(), self.temp(), self.temp(), self.temp());
+            let mask = -i128::from(size);
+            writeln!(out, "  {raw} = ptrtoint ptr {at} to i{bits}")
+                .expect("writing to a string cannot fail");
+            writeln!(out, "  {bumped} = add i{bits} {raw}, {}", size - 1)
+                .expect("writing to a string cannot fail");
+            writeln!(out, "  {masked} = and i{bits} {bumped}, {mask}")
+                .expect("writing to a string cannot fail");
+            writeln!(out, "  {aligned} = inttoptr i{bits} {masked} to ptr")
+                .expect("writing to a string cannot fail");
+            at = aligned;
+        }
+        let filled = size.div_ceil(slot) * slot;
+        let (value, next) = (self.temp(), self.temp());
+        writeln!(out, "  {value} = load {wanted}, ptr {at}")
+            .expect("writing to a string cannot fail");
+        writeln!(
+            out,
+            "  {next} = getelementptr i8, ptr {at}, i{bits} {filled}"
+        )
+        .expect("writing to a string cannot fail");
+        writeln!(out, "  store ptr {next}, ptr {address}")
+            .expect("writing to a string cannot fail");
+        Ok(value)
+    }
+
     /// Enter another function, and come back, or not where the IR says the
     /// callee does not return.
     fn call(
@@ -1639,6 +1787,9 @@ impl Emitter<'_> {
         out: &mut String,
     ) -> Refuses<()> {
         let unit = self.unit;
+        if let Called::Intrinsic(intrinsic) = callee {
+            return self.intrinsic(function, *intrinsic, arguments, then, out);
+        }
         // **A function this unit names, or the one a pointer points at**,
         // read as one shape so both cross the call as the target's C ABI
         // says (#1212). A call through a pointer calls the pointer's value,
@@ -1685,6 +1836,7 @@ impl Emitter<'_> {
                 let (value, _) = self.read(function, place, out)?;
                 (value, callable)
             }
+            Called::Intrinsic(_) => unreachable!("an intrinsic was written above"),
         };
         let returns = callable.returns;
         let parameters: Vec<TyId> = callable.parameters.iter().map(|&(ty, _)| ty).collect();
@@ -1972,9 +2124,11 @@ impl Emitter<'_> {
                 } else {
                     ""
                 };
+                // `...` too, so `llvm.va_start` has arguments to read
+                // past these (#1214).
                 writeln!(
                     out,
-                    "define {linkage}{returns} {name}({}) {{",
+                    "define {linkage}{returns} {name}({}{ellipsis}) {{",
                     named.join(", ")
                 )
                 .expect("writing to a string cannot fail");

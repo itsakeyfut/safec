@@ -246,6 +246,16 @@ impl Allocations<'_> {
     /// `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
     /// `freed_through_a_pointer` goes silent.
     pub(super) fn callee(&self, called: &Called) -> Callee {
+        // **An operation on a list reads only the lists it is handed**,
+        // which hold no pointer this check follows: it frees, keeps and
+        // writes nothing else. Read as code this check cannot read, every
+        // pointer parameter of a variadic definition was doubted after its
+        // `__builtin_va_start` (#1214). Mutation: answer `Callee::Opaque`;
+        // `a_pointer_parameter_is_not_doubted_after_va_start` reports
+        // `SC0402`. See ADR-0126.
+        if let Called::Intrinsic(_) = called {
+            return Callee::Reads;
+        }
         let Some(id) = called.direct() else {
             return Callee::Opaque;
         };
@@ -379,6 +389,9 @@ impl Allocations<'_> {
             // contents are gone. **A function's address names
             // `Why::Function` besides**, so a read through it as data,
             // stored and read back, is doubted. See ADR-0125.
+            // The lowering writes what `va_arg` reads into a temporary of
+            // its own and copies that out, so no store is one.
+            Rvalue::VaArg(_) => unreachable!("a `VaArg` is written into a local"),
             Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
             | Rvalue::Address(_)
             | Rvalue::Static(_)
@@ -1850,6 +1863,8 @@ impl Allocations<'_> {
                 .unit
                 .functions()
                 .any(|id| self.unit.function(id).hatch()),
+            // An operation on a list runs no function.
+            Called::Intrinsic(_) => false,
         }
     }
 
@@ -1893,6 +1908,8 @@ impl Allocations<'_> {
                     | Ty::Struct(_) => Vec::new(),
                 }
             }
+            // A list's address, read as its own type.
+            Called::Intrinsic(_) => Vec::new(),
         }
     }
 
@@ -3723,7 +3740,8 @@ impl Allocations<'_> {
                         | Rvalue::Static(_)
                         | Rvalue::Unary { .. }
                         | Rvalue::Binary { .. }
-                        | Rvalue::Reinterpret(_) => None,
+                        | Rvalue::Reinterpret(_)
+                        | Rvalue::VaArg(_) => None,
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -4008,7 +4026,8 @@ impl Allocations<'_> {
                     // or a write through it as data is doubted as through a
                     // lost value is. See ADR-0125.
                     Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
-                    | Rvalue::Reinterpret(_) => {
+                    | Rvalue::Reinterpret(_)
+                    | Rvalue::VaArg(_) => {
                         let mut held = Held::from_marks(
                             value.referents(),
                             Marks {
@@ -4041,6 +4060,15 @@ impl Allocations<'_> {
                         );
                         if let Rvalue::Use(Operand::Function(_)) = &operation.value {
                             held.name_unknown(Why::Function);
+                        }
+                        // **A pointer `va_arg` read names `Why::Variadic`**:
+                        // nothing here says what the caller passed, so a use
+                        // of it is doubted. See ADR-0126. Mutation: name
+                        // nothing; `dereferenced` in
+                        // `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used`
+                        // goes silent.
+                        if let Rvalue::VaArg(_) = &operation.value {
+                            held.name_unknown(Why::Variadic);
                         }
                         value.replace(at, held);
                     }

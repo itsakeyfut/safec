@@ -71,8 +71,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve, solve_first_turn_within};
 use crate::ir::{
-    BlockId, DOES_NOT_RETURN, Element, FuncId, Function, LocalId, Operand, Origin, Place,
-    Projection, Rvalue, Shape, Terminator, TranslationUnit, Ty,
+    BlockId, Called, DOES_NOT_RETURN, Element, FuncId, Function, Intrinsic, LocalId, Operand,
+    Origin, Place, Projection, Rvalue, Shape, Terminator, TranslationUnit, Ty,
 };
 use crate::source::{SourceMap, Span};
 use std::collections::HashMap;
@@ -95,6 +95,145 @@ struct Assigned {
     /// The watched struct locals, by the generated addresses that reach
     /// them. See [`Watch::structs`].
     structs: Watch,
+    /// The watched lists of variadic arguments. See [`Lists::of`].
+    lists: Lists,
+}
+
+/// The local lists of variadic arguments watched here, and the
+/// temporaries holding the address of each that the operations on lists
+/// are handed (#1214).
+///
+/// **A list is assigned by `__builtin_va_start` or by `__builtin_va_copy`
+/// into it**, and read by `__builtin_va_arg`, `__builtin_va_end` and
+/// `__builtin_va_copy` out of it, which C17 7.16.1 p3 and 7.16.1.4 p3 make
+/// undefined before it was started: a read of what nothing wrote, as a
+/// pointer's is. Its address is taken for those operations alone, so a
+/// local whose address goes anywhere else is not watched, as any local
+/// whose address is taken is not. See ADR-0126.
+#[derive(Default)]
+struct Lists {
+    /// Each list, by the temporary holding its address.
+    by_address: HashMap<LocalId, LocalId>,
+    /// The lists, in no order.
+    lists: Vec<LocalId>,
+}
+
+impl Lists {
+    /// The named locals of `function` that are lists: read by
+    /// `Rvalue::VaArg` or handed to an intrinsic, with every address taken
+    /// of them handed to intrinsics and nowhere else.
+    fn of(function: &Function) -> Self {
+        let mut by_address = HashMap::new();
+        let mut handed: Vec<LocalId> = Vec::new();
+        let mut lists: Vec<LocalId> = Vec::new();
+        for block in function.blocks() {
+            for element in &block.elements {
+                if let Element::Assign(operation) = element {
+                    if let (Shape::Local, Rvalue::Address(taken)) =
+                        (operation.place.shape(), &operation.value)
+                    {
+                        if taken.steps().is_empty() {
+                            by_address.insert(operation.place.local, taken.local);
+                        }
+                    }
+                    if let Rvalue::VaArg(list) = &operation.value {
+                        if list.steps().is_empty() {
+                            lists.push(list.local);
+                        }
+                    }
+                }
+            }
+            if let Terminator::Call {
+                callee: Called::Intrinsic(_),
+                arguments,
+                ..
+            } = &block.terminator
+            {
+                for argument in arguments {
+                    if let Operand::Copy(place) = argument {
+                        if let Some(&list) = by_address.get(&place.local) {
+                            handed.push(place.local);
+                            lists.push(list);
+                        }
+                    }
+                }
+            }
+        }
+        // An address read anywhere but as an intrinsic's argument lets the
+        // list be written where this does not look.
+        let escapes = |temporary: LocalId| {
+            function.blocks().any(|block| {
+                block.elements.iter().any(|element| {
+                    element_reads(element)
+                        .iter()
+                        .any(|&(local, _)| local == temporary)
+                }) || match &block.terminator {
+                    Terminator::Call {
+                        callee: Called::Intrinsic(_),
+                        ..
+                    } => false,
+                    terminator => terminator_reads(terminator)
+                        .iter()
+                        .any(|&(local, _)| local == temporary),
+                }
+            })
+        };
+        lists.sort_by_key(|local| local.index());
+        lists.dedup();
+        lists.retain(|&list| {
+            function.name_of(list).is_some()
+                && by_address
+                    .iter()
+                    .filter(|&(_, &of)| of == list)
+                    .all(|(&temporary, _)| !escapes(temporary))
+        });
+        by_address.retain(|temporary, list| lists.contains(list) && handed.contains(temporary));
+        Lists { by_address, lists }
+    }
+
+    /// The list `argument` is the address of, where it is one watched.
+    fn list(&self, argument: Option<&Operand>) -> Option<LocalId> {
+        match argument? {
+            Operand::Copy(place) if place.steps().is_empty() => {
+                self.by_address.get(&place.local).copied()
+            }
+            _ => None,
+        }
+    }
+
+    /// The list `terminator` starts, or copies into. Mutation: answer
+    /// nothing; `a_list_read_before_it_was_started_is_reported`'s
+    /// `started` reports `SC0411`.
+    fn written(&self, terminator: &Terminator) -> Option<LocalId> {
+        match terminator {
+            Terminator::Call {
+                callee: Called::Intrinsic(Intrinsic::VaStart | Intrinsic::VaCopy),
+                arguments,
+                ..
+            } => self.list(arguments.first()),
+            _ => None,
+        }
+    }
+
+    /// The lists `terminator` reads: the one it ends, or the one it copies
+    /// out of, at the call.
+    fn read(&self, terminator: &Terminator) -> Vec<(LocalId, Span)> {
+        let Terminator::Call {
+            callee: Called::Intrinsic(intrinsic),
+            arguments,
+            origin,
+            ..
+        } = terminator
+        else {
+            return Vec::new();
+        };
+        let read = match intrinsic {
+            Intrinsic::VaStart => None,
+            Intrinsic::VaEnd => self.list(arguments.first()),
+            Intrinsic::VaCopy => self.list(arguments.get(1)),
+        };
+        read.map(|list| (list, origin.span())).into_iter().collect()
+    }
 }
 
 /// The struct locals watched here, and the temporaries the lowering reaches
@@ -245,7 +384,8 @@ impl Watch {
                         lost.extend(escapes(lhs));
                         lost.extend(escapes(rhs));
                     }
-                    Rvalue::Address(_) | Rvalue::Static(_) => {}
+                    // A list holds nothing this check watches.
+                    Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::VaArg(_) => {}
                 }
             }
             match &block.terminator {
@@ -406,6 +546,9 @@ impl Analysis for Assigned {
         if let Some(local) = self.structs.copied_into(terminator) {
             value[local.index()] = true;
         }
+        if let Some(list) = self.lists.written(terminator) {
+            value[list.index()] = true;
+        }
         if let Terminator::Call {
             destination: Some(place),
             ..
@@ -438,6 +581,13 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                 }
                 // The address of a static object reads no local.
                 Rvalue::Static(_) => {}
+                // **The list is read, a plain local's too**, which is where
+                // it is read before `__builtin_va_start`; through a pointer,
+                // the pointer is (#1214). Mutation: read only through a
+                // projection, as `place_reads` does; `before_start` in
+                // `a_list_read_before_it_was_started_is_reported` goes
+                // silent.
+                Rvalue::VaArg(place) => reads.push((place.local, at)),
                 // An address reads a local only where it goes through it,
                 // `&*p`: `&a[0]`, which converts an array (#621), reads
                 // nothing, and `&p` reads nothing either.
@@ -531,7 +681,12 @@ type At = (BlockId, usize);
 /// Mutation: ask only the local itself here;
 /// `a_struct_local_nothing_wrote_is_reported_where_it_is_copied`'s
 /// `written_on_both_arms` is doubted.
-fn assigns(function: &Function, structs: &Watch, (block, index): At, local: LocalId) -> bool {
+fn assigns(
+    function: &Function,
+    (structs, lists): (&Watch, &Lists),
+    (block, index): At,
+    local: LocalId,
+) -> bool {
     let block = function.block(block);
     match block.elements.get(index) {
         Some(Element::Assign(operation)) => {
@@ -548,6 +703,9 @@ fn assigns(function: &Function, structs: &Watch, (block, index): At, local: Loca
                 Terminator::Call { destination: Some(place), .. }
                     if (match place.shape() { Shape::Local => true, Shape::Deref(_) | Shape::Indexed => false }) && place.local == local
             ) || structs.copied_into(&block.terminator) == Some(local)
+                // **And a list started or copied into**, as the transfer
+                // counts it, so that the two agree (#1214).
+                || lists.written(&block.terminator) == Some(local)
         }
     }
 }
@@ -577,7 +735,7 @@ fn reachable(function: &Function, from: BlockId) -> Vec<bool> {
 /// the blocks and cost seconds at the size the memory check still reads.
 fn assigned_between(
     function: &Function,
-    structs: &Watch,
+    watched: (&Watch, &Lists),
     order: &[BlockId],
     reach: &[Vec<bool>],
     target: BlockId,
@@ -591,7 +749,7 @@ fn assigned_between(
             return false;
         }
         (0..=block.elements.len()).any(|index| {
-            if !assigns(function, structs, (id, index), local) {
+            if !assigns(function, watched, (id, index), local) {
                 return false;
             }
             if id == read.0 && index < read.1 {
@@ -701,6 +859,10 @@ pub(super) fn findings(
     for local in structs.watched() {
         watched.set(LocalIdx::of(local));
     }
+    let lists = Lists::of(function);
+    for &list in &lists.lists {
+        watched.set(LocalIdx::of(list));
+    }
     if !watched.any() {
         return;
     }
@@ -708,6 +870,7 @@ pub(super) fn findings(
         watched,
         locals,
         structs,
+        lists,
     };
     let cfg = Cfg::of(function);
     let solution = solve(&analysis, function, &cfg);
@@ -792,6 +955,7 @@ pub(super) fn findings(
         for (local, at) in terminator_reads(&block.terminator)
             .into_iter()
             .chain(copied)
+            .chain(analysis.lists.read(&block.terminator))
         {
             if value[local.index()] {
                 doubted.push((local, at, (id, block.elements.len())));
@@ -892,7 +1056,7 @@ pub(super) fn findings(
                 .find(|&(target, _)| {
                     !assigned_between(
                         function,
-                        &analysis.structs,
+                        (&analysis.structs, &analysis.lists),
                         cfg.order(),
                         &reach,
                         target,

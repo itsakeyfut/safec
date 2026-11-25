@@ -25,7 +25,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, BinOp, Declaration, EnumerationId, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator,
-    Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, spell_type,
+    Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -73,7 +73,12 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// subscript, 6.5.3.2 p2 for `*`, 6.5.3.3 p1 for unary `+`, `-`, `~` and `!`,
 /// 6.5.2.2 p1 for a callee, the operand of a call's `()`, 6.5.15 p2,
 /// 6.8.4.1 p1 and 6.8.5 p2 for the condition of `?:`, `if`, `while` and
-/// `for`, and 6.5.15 p3 for the pair of a conditional's arms.
+/// `for`, and 6.5.15 p3 for the pair of a conditional's arms. And an operand
+/// of the builtins `<stdarg.h>` is spelled over that 7.16.1 makes undefined
+/// where it is written: a list that is no lvalue of `__builtin_va_list`, a
+/// `__builtin_va_start` naming anything but the last parameter of the
+/// variadic function it is in, and a `__builtin_va_arg` of a type the default
+/// argument promotions change (#1214).
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -508,6 +513,7 @@ fn integer_of(ast: &Ast, ty: TypeId) -> Option<(Rank, Sign)> {
     match ast.ty(ty) {
         Type::Integer { rank, sign } => Some((*rank, *sign)),
         Type::Void
+        | Type::VaList
         | Type::Pointer(_)
         | Type::Array { .. }
         | Type::Function { .. }
@@ -538,6 +544,16 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
         }
         | Expr::SizeofType { ty: _, span: _ }
         | Expr::Error { span: _ } => Vec::new(),
+        Expr::VaOp {
+            op: _,
+            operands,
+            span: _,
+        } => operands.clone(),
+        Expr::VaArg {
+            list,
+            ty: _,
+            span: _,
+        } => vec![*list],
         Expr::Unary {
             op: _,
             operand,
@@ -874,7 +890,8 @@ impl Checker<'_> {
                         rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                         sign: _,
                     }
-                    | Type::Void => break,
+                    | Type::Void
+                    | Type::VaList => break,
                 }
             }
         }
@@ -1408,6 +1425,8 @@ impl Checker<'_> {
                         | Expr::Assign { .. }
                         | Expr::Conditional { .. }
                         | Expr::Call { .. }
+                        | Expr::VaOp { .. }
+                        | Expr::VaArg { .. }
                         | Expr::Subscript { .. }
                         | Expr::Member { .. }
                         | Expr::SizeofType { .. }
@@ -1425,6 +1444,8 @@ impl Checker<'_> {
                     )
                 }
                 Type::Array { .. } => continue,
+                // Refused by `assignable`, as an assignment of one is.
+                Type::VaList => continue,
                 Type::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
@@ -1510,6 +1531,7 @@ impl Checker<'_> {
                         sign: _,
                     }
                     | Type::Void
+                    | Type::VaList
                     | Type::Pointer(_)
                     | Type::Array { .. }
                     | Type::Struct { .. } => {
@@ -1922,6 +1944,7 @@ impl Checker<'_> {
                 sign: _,
             }
             | Type::Pointer(_)
+            | Type::VaList
             | Type::Array {
                 length: Some(_), ..
             } => false,
@@ -1939,6 +1962,7 @@ impl Checker<'_> {
                 Some(u128::from(self.target.integer(rank, sign).bits() / 8))
             }
             Type::Pointer(_) => Some(u128::from(self.target.pointer_bits() / 8)),
+            Type::VaList => Some(u128::from(self.target.va_list().0)),
             Type::Array {
                 element, length, ..
             } => {
@@ -2018,7 +2042,11 @@ impl Checker<'_> {
                 let count = u64::try_from(self.values[length?.index()]?).ok()?;
                 Some((size.checked_mul(count)?, align))
             }
-            Type::Integer { .. } | Type::Pointer(_) | Type::Void | Type::Function { .. } => Some((
+            Type::Integer { .. }
+            | Type::Pointer(_)
+            | Type::VaList
+            | Type::Void
+            | Type::Function { .. } => Some((
                 u64::try_from(self.bytes_of(ast, ty)?).ok()?,
                 self.align_of(ast, ty)?,
             )),
@@ -2031,6 +2059,7 @@ impl Checker<'_> {
         match *ast.ty(ty) {
             Type::Integer { rank, .. } => Some(self.target.alignment(Some(rank))),
             Type::Pointer(_) => Some(self.target.alignment(None)),
+            Type::VaList => Some(self.target.va_list().1),
             Type::Array { element, .. } => self.align_of(ast, element),
             Type::Struct { .. } => self.struct_layout(ast, ty).map(|(_, align)| align),
             Type::Void | Type::Function { .. } => None,
@@ -2231,6 +2260,8 @@ impl Checker<'_> {
             | Expr::Subscript { .. }
             | Expr::Member { .. }
             | Expr::Call { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => false,
         }
     }
@@ -2293,6 +2324,7 @@ impl Checker<'_> {
                 sign: _,
             }
             | Type::Void
+            | Type::VaList
             | Type::Function { .. } => None,
         };
         let Some(structure) = structure else {
@@ -2922,6 +2954,8 @@ impl Checker<'_> {
                 self.sizeof(ast, id, ty, span, diagnostics)
             }
             Expr::Cast { ty, operand, span } => self.cast(ast, ty, operand, span, diagnostics),
+            Expr::VaOp { op, operands, span } => self.va_op(ast, op, &operands, span, diagnostics),
+            Expr::VaArg { list, ty, span } => self.va_arg(ast, list, ty, span, diagnostics),
             Expr::Error { .. } => None,
         }
     }
@@ -2963,6 +2997,7 @@ impl Checker<'_> {
             }
             Type::Integer { .. }
             | Type::Pointer(_)
+            | Type::VaList
             | Type::Array {
                 length: Some(_), ..
             }
@@ -3052,7 +3087,9 @@ impl Checker<'_> {
         let to_scalar = match ast.ty(ty) {
             Type::Void => return Some(ty),
             Type::Integer { .. } | Type::Pointer(_) => true,
-            Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => false,
+            Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } | Type::VaList => {
+                false
+            }
         };
         let from = self.types[operand.index()]?;
         let from_scalar = match ast.ty(from) {
@@ -3060,7 +3097,7 @@ impl Checker<'_> {
             | Type::Pointer(_)
             | Type::Array { .. }
             | Type::Function { .. } => true,
-            Type::Void | Type::Struct { .. } => false,
+            Type::Void | Type::Struct { .. } | Type::VaList => false,
         };
         if to_scalar && from_scalar {
             return Some(ty);
@@ -3125,6 +3162,7 @@ impl Checker<'_> {
                     sign: _,
                 }
                 | Type::Void
+                | Type::VaList
                 | Type::Struct { .. } => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
@@ -3189,7 +3227,7 @@ impl Checker<'_> {
                     Type::Pointer(_) | Type::Array { .. } | Type::Function { .. } => {
                         matches!(op, UnOp::Not)
                     }
-                    Type::Void | Type::Struct { .. } => false,
+                    Type::Void | Type::Struct { .. } | Type::VaList => false,
                 };
                 if !takes {
                     let spelled = self.spelled(ast, ty);
@@ -3346,6 +3384,7 @@ impl Checker<'_> {
                     sign: _,
                 }
                 | Type::Void
+                | Type::VaList
                 | Type::Array { .. }
                 | Type::Function { .. }
                 | Type::Struct { .. } => None,
@@ -3937,6 +3976,9 @@ impl Checker<'_> {
                 .compatible_unqualified(ast, left, right)
                 .then_some(left),
             (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
+            // No operator takes one, and a list chosen by `?:` would be a
+            // copy of one, which only `__builtin_va_copy` makes (#1214).
+            (Type::VaList, _) | (_, Type::VaList) => None,
         };
 
         if paired.is_none() {
@@ -3989,7 +4031,7 @@ impl Checker<'_> {
             // A struct, like `void`, is an operand of no operator here, so
             // it is wrong alone whatever is beside it.
             Refused::Pairing => match ast.ty(left) {
-                Type::Void | Type::Struct { .. } => true,
+                Type::Void | Type::Struct { .. } | Type::VaList => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
                 Type::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
@@ -4057,9 +4099,142 @@ impl Checker<'_> {
                 sign: _,
             }
             | Type::Void
+            | Type::VaList
             | Type::Pointer(_)
             | Type::Struct { .. } => ty,
         }
+    }
+
+    /// `__builtin_va_start`, `__builtin_va_end` or `__builtin_va_copy`,
+    /// which return nothing (C17 7.16.1.2 to 7.16.1.4), and whose operands
+    /// are lists, and for `__builtin_va_start` the function's last parameter
+    /// after its list. See ADR-0126.
+    fn va_op(
+        &mut self,
+        ast: &mut Ast,
+        op: VaOp,
+        operands: &[ExprId],
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let lists = match op {
+            VaOp::Start | VaOp::End => &operands[..1],
+            VaOp::Copy => operands,
+        };
+        let mut fine = true;
+        for &list in lists {
+            fine &= self.va_list_operand(ast, op.as_str(), list, diagnostics);
+        }
+        // **The last parameter of the variadic function it is in**, which
+        // 7.16.1.4 p4 makes undefined to get wrong and which is known where
+        // it is written. A parameter is in scope only in its own function's
+        // body, so a name resolving to the last parameter of a variadic
+        // definition is that function's. Mutation: accept any name;
+        // `a_va_start_names_the_last_parameter_of_its_variadic_function`'s
+        // `not_the_last` builds.
+        if op == VaOp::Start {
+            let last = operands[1];
+            let named = matches!(ast.expr(last), Expr::Identifier { .. })
+                .then(|| self.resolution.resolved(last))
+                .flatten()
+                .map(|binding| self.resolution.binding(binding).name);
+            let is_last = named.is_some_and(|name| {
+                ast.items().iter().any(|item| match item {
+                    Item::Function(function) => matches!(
+                        ast.ty(function.ty),
+                        Type::Function {
+                            parameters: Parameters::Prototype(parameters),
+                            variadic: true,
+                            ..
+                        } if parameters.last().and_then(|last| last.name) == Some(name)
+                    ),
+                    Item::Declaration { .. } | Item::Error { .. } => false,
+                })
+            });
+            if !is_last {
+                fine = false;
+                diagnostics.report(
+                    Diagnostic::error(
+                        "`__builtin_va_start` names something other than the last parameter of a variadic function it is in",
+                    )
+                    .with_code(OPERANDS)
+                    .with_label(Label::primary(ast.expr(last).span(), "this"))
+                    .with_label(Label::secondary(span, "in this"))
+                    .with_note("C17 7.16.1.4 p4 makes anything but the last parameter before the `...` undefined"),
+                );
+            }
+        }
+        fine.then(|| ast.push_type(Type::Void))
+    }
+
+    /// `__builtin_va_arg(list, ty)`, of type `ty`: a complete object type the
+    /// default argument promotions leave as it is, since the argument
+    /// arrived promoted and C17 7.16.1.1 p2 makes reading it as another type
+    /// undefined. See ADR-0126.
+    fn va_arg(
+        &mut self,
+        ast: &mut Ast,
+        list: ExprId,
+        ty: TypeId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let fine = self.va_list_operand(ast, "__builtin_va_arg", list, diagnostics);
+        // Mutation: drop the promotion test; `a_va_arg_of_a_char_is_refused`
+        // builds.
+        let why = if ast.is_promoted_by_default(ty) {
+            Some("the default argument promotions make it an `int`")
+        } else {
+            match ast.ty(ty) {
+                Type::Integer { .. } | Type::Pointer(_) => None,
+                Type::Void | Type::Function { .. } | Type::Array { .. } => {
+                    Some("it is no complete object type an argument can have")
+                }
+                Type::Struct { .. } => Some("a struct passed past the parameters is not read yet"),
+                Type::VaList => Some("a list is passed as no argument here"),
+            }
+        };
+        if let Some(why) = why {
+            let spelled = self.spelled(ast, ty);
+            diagnostics.report(
+                Diagnostic::error(format!("`__builtin_va_arg` cannot read a `{spelled}`"))
+                    .with_code(OPERANDS)
+                    .with_label(Label::primary(span, why))
+                    .with_note("C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined"),
+            );
+            return None;
+        }
+        fine.then_some(ty)
+    }
+
+    /// Whether `list`, an operand of `builtin`, is an lvalue of type
+    /// `__builtin_va_list`, reporting it where it is not.
+    fn va_list_operand(
+        &mut self,
+        ast: &Ast,
+        builtin: &str,
+        list: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        let Some(ty) = self.types[list.index()] else {
+            return false;
+        };
+        if matches!(ast.ty(ty), Type::VaList)
+            && matches!(self.designates(ast, list), Designates::Object)
+        {
+            return true;
+        }
+        let spelled = self.spelled(ast, ty);
+        diagnostics.report(
+            Diagnostic::error(format!("`{builtin}` cannot take `{spelled}`"))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(
+                    ast.expr(list).span(),
+                    format!("this is `{spelled}`"),
+                ))
+                .with_note("C17 7.16.1 p1 asks a `va_list` object of each of these"),
+        );
+        false
     }
 
     /// What `id` designates, from its shape and its type.
@@ -4141,7 +4316,9 @@ impl Checker<'_> {
             | Expr::SizeofType { .. }
             | Expr::SizeofExpr { .. }
             | Expr::Cast { .. }
-            | Expr::Call { .. } => Designates::Value,
+            | Expr::Call { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. } => Designates::Value,
             Expr::Error { span: _ } => Designates::Unknown,
         }
     }
@@ -4467,7 +4644,9 @@ impl Checker<'_> {
             (Type::Array { .. } | Type::Function { .. }, _) => None,
             // p1 and p2 want arithmetic or pointer operands, which a struct
             // is neither.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
+            (Type::Struct { .. } | Type::VaList, _) | (_, Type::Struct { .. } | Type::VaList) => {
+                Some(false)
+            }
             (
                 Type::Integer {
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
@@ -4534,6 +4713,7 @@ impl Checker<'_> {
                 sign: _,
             } => return,
             Type::Void
+            | Type::VaList
             | Type::Pointer(_)
             | Type::Array { .. }
             | Type::Function { .. }
@@ -5004,6 +5184,7 @@ impl Checker<'_> {
                     sign: _,
                 }
                 | Type::Void
+                | Type::VaList
                 | Type::Pointer(_)
                 | Type::Array { .. }
                 | Type::Function { .. }
@@ -5134,6 +5315,13 @@ impl Checker<'_> {
                 Type::Function { .. },
             ) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _) => None,
+            // **A list is filled only by `__builtin_va_start` or
+            // `__builtin_va_copy`** (C17 7.16.1 p1): on some targets it is an
+            // array, which nothing assigns, and on the others a copy made by
+            // `=` is no list `va_arg` may read. So none is assigned,
+            // initialized, passed or returned, as `clang` lets one be where
+            // it is a pointer (#1214).
+            (Type::VaList, _) | (_, Type::VaList) => Some(false),
             // p1: a structure type compatible with the target's, which two
             // structs are when they are one tag, and nothing else.
             (Type::Struct { .. }, Type::Struct { .. }) => {
@@ -5362,6 +5550,8 @@ impl Checker<'_> {
             | Expr::Subscript { .. }
             | Expr::Member { .. }
             | Expr::Call { .. }
+            | Expr::VaOp { .. }
+            | Expr::VaArg { .. }
             | Expr::Error { .. } => None,
         }
     }
@@ -5624,7 +5814,8 @@ impl OperandClass {
             } => Some(Self::Arithmetic),
             Type::Pointer(pointee) => Some(Self::Pointer(*pointee)),
             Type::Void => Some(Self::Void),
-            Type::Struct { .. } => Some(Self::Struct),
+            // An operand of no operator, as a struct is.
+            Type::Struct { .. } | Type::VaList => Some(Self::Struct),
             Type::Array { .. } | Type::Function { .. } => None,
         }
     }
@@ -5660,6 +5851,7 @@ fn unsteppable(
             sign: _,
         }
         | Type::Pointer(_)
+        | Type::VaList
         | Type::Array { .. } => None,
     }
 }

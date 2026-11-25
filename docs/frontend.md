@@ -787,8 +787,21 @@ least one parameter is part of the function type, a declaration without
 it or with `()` conflicts with it (C17 6.7.6.3 p15), and a call passes
 each argument past the parameters after the default argument promotions,
 a `char` or a `short` as an `int` (6.5.2.2 p7). The memory check reads
-such a call as any call to code it cannot read. Defining one is refused
-until #1214, and so is a struct passed past the parameters.
+such a call as any call to code it cannot read. A struct passed past the
+parameters is refused (#1325).
+
+A variadic function can be defined (#1214), its arguments read with the
+builtins `<stdarg.h>` is spelled over: `__builtin_va_list`, a typedef name
+every file has, and `__builtin_va_start`, `__builtin_va_arg`,
+`__builtin_va_end` and `__builtin_va_copy`. The type check holds
+`__builtin_va_start` to the last parameter of the variadic function it is
+in and `__builtin_va_arg` to a type the promotions leave alone (C17
+7.16.1), and a list is copied only by `__builtin_va_copy`. The memory check
+doubts every use of a pointer `__builtin_va_arg` reads (ADR-0126). The
+backend reads an argument as `clang` does on each target (ADR-0127), and
+refuses one on `aarch64-unknown-linux-gnu`, and on System V `x86_64` out of a
+list that is not the function's own local (#1333). A list is passed to and
+returned from no function yet.
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and

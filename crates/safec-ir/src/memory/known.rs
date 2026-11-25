@@ -2147,7 +2147,8 @@ impl Known {
             | Why::LostRead
             | Why::UnreplacedRead
             | Why::Forged
-            | Why::Function => true,
+            | Why::Function
+            | Why::Variadic => true,
         }
     }
 

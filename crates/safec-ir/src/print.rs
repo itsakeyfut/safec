@@ -611,7 +611,7 @@ fn dump_rvalue(
             dump_operand(sources, unit, lhs, depth + 1, out);
             dump_operand(sources, unit, rhs, depth + 1, out);
         }
-        Rvalue::Address(place) => {
+        Rvalue::Address(place) | Rvalue::VaArg(place) => {
             out.push('\n');
             dump_place(sources, unit, "Place", place, depth + 1, out);
         }
@@ -691,6 +691,7 @@ fn dump_terminator(
             match callee {
                 Called::Direct(id) => write!(out, " {:?}", unit.function(*id).spelled(sources)),
                 Called::Through(_) => write!(out, " through"),
+                Called::Intrinsic(intrinsic) => write!(out, " {:?}", intrinsic.name()),
             }
             .expect("writing to a string cannot fail");
             // A call with no continuation names no block and says why, so the

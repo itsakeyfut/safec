@@ -1,0 +1,37 @@
+error[SC0306]: `__builtin_va_start` names something other than the last parameter of a variadic function it is in
+   ╭─[ a_va_start_names_the_last_parameter_of_its_variadic_function.c:3:27 ]
+   │
+ 3 │     __builtin_va_start(a, n);
+   │     ────────────┬─────────┬─  
+   │                 ╰───────────── in this
+   │                           │   
+   │                           ╰─── this
+───╯
+  = note: C17 7.16.1.4 p4 makes anything but the last parameter before the `...` undefined
+error[SC0306]: `__builtin_va_start` names something other than the last parameter of a variadic function it is in
+   ╭─[ a_va_start_names_the_last_parameter_of_its_variadic_function.c:9:27 ]
+   │
+ 9 │     __builtin_va_start(a, n);
+   │     ────────────┬─────────┬─  
+   │                 ╰───────────── in this
+   │                           │   
+   │                           ╰─── this
+───╯
+  = note: C17 7.16.1.4 p4 makes anything but the last parameter before the `...` undefined
+error[SC0306]: `__builtin_va_start` cannot take `int *`
+    ╭─[ a_va_start_names_the_last_parameter_of_its_variadic_function.c:15:24 ]
+    │
+ 15 │     __builtin_va_start(p, n);
+    │                        ┬  
+    │                        ╰── this is `int *`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0302]: cannot assign `__builtin_va_list` to `__builtin_va_list`
+    ╭─[ a_va_start_names_the_last_parameter_of_its_variadic_function.c:22:9 ]
+    │
+ 22 │     b = a;
+    │     ┬   ┬  
+    │     ╰────── this holds `__builtin_va_list`
+    │         │  
+    │         ╰── this is `__builtin_va_list`
+────╯

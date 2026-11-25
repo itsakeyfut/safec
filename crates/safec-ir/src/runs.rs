@@ -220,7 +220,8 @@ fn head_test(
                         Rvalue::Unary { .. }
                         | Rvalue::Address(_)
                         | Rvalue::Static(_)
-                        | Rvalue::Reinterpret(_) => None,
+                        | Rvalue::Reinterpret(_)
+                        | Rvalue::VaArg(_) => None,
                     }
                 } else {
                     None

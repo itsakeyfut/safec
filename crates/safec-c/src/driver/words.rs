@@ -996,6 +996,14 @@ pub(super) fn memory_finding(
         ),
         // The conversion's code, since it is the same question: whether
         // the function a pointer reaches has the type it is called as.
+        // The conversion's code again: whether the function a pointer
+        // reaches has the type it is called as.
+        (Kind::VariadicFunction, Conclusion::Unknown | Conclusion::Unsafe, _) => (
+            FUNCTION_CONVERTED,
+            "this reads a pointer to a function past the parameters, which nothing says the caller passed".to_owned(),
+            "a call through it to a function of a different type is undefined, and this check cannot see the caller",
+            "pass the function through a parameter of its own type",
+        ),
         (Kind::CalledUnprototyped, Conclusion::Unknown | Conclusion::Unsafe, _) => (
             FUNCTION_CONVERTED,
             "this calls through a pointer whose type does not declare the function's parameters".to_owned(),

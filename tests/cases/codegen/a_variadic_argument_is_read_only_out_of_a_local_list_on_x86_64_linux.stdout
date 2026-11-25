@@ -1,0 +1,3 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+declare i32 @through_a_pointer(ptr)
