@@ -40,24 +40,31 @@ error[SC0104]: a `##` beside `__VA_OPT__` is not read yet
    │ ┬  
    │ ╰── directive begins here
 ───╯
-error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
-   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:9:9 ]
+error[SC0104]: a `##` beside `__VA_OPT__` is not read yet
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:7:1 ]
    │
- 9 │ int v = __VA_ARGS__;
-   │         ─────┬─────  
-   │              ╰─────── written here
+ 7 │ #define AFTER(a, ...) __VA_OPT__(b) ## a
+   │ ┬  
+   │ ╰── directive begins here
 ───╯
-error[SC0119]: `TWO` takes at least 2 arguments, and is given 1
+error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
     ╭─[ va_args_outside_a_variadic_macro_is_refused.c:10:9 ]
     │
- 10 │ int w = TWO(1);
+ 10 │ int v = __VA_ARGS__;
+    │         ─────┬─────  
+    │              ╰─────── written here
+────╯
+error[SC0119]: `TWO` takes at least 2 arguments, and is given 1
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:11:9 ]
+    │
+ 11 │ int w = TWO(1);
     │         ───┬──  
     │            ╰──── called here
 ────╯
 error[SC0104]: this call of `ONLY` keeps the comma before `__VA_ARGS__` in one C mode and not the other
-    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:11:9 ]
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:12:9 ]
     │
- 11 │ int x = ONLY();
+ 12 │ int x = ONLY();
     │         ──┬─  
     │           ╰─── called here
 ────╯

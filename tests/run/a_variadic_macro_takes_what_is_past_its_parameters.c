@@ -5,6 +5,7 @@
 #define O(fmt, ...) count(fmt __VA_OPT__(,) __VA_ARGS__)
 #define S(...) #__VA_ARGS__
 #define SO(...) #__VA_OPT__(x __VA_ARGS__ y)
+#define SO2(...) #__VA_OPT__((__VA_ARGS__))
 #define FIRST(x, ...) x
 #define REST(x, ...) __VA_ARGS__
 
@@ -34,6 +35,7 @@ int main(void) {
     if (!streq(SO(), "")) fails |= 512;
     if (!streq(SO(1), "x 1 y")) fails |= 1024;
     if (!streq(SO(EMPTY), "")) fails |= 2048;
+    if (!streq(SO2(1), "(1)")) fails |= 16384;
     if (FIRST(7) != 7) fails |= 4096;
     if (f(REST(0, 4, 5)) != 9) fails |= 8192;
     return fails != 0;

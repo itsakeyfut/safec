@@ -4,6 +4,7 @@
 #define UNCLOSED(...) __VA_OPT__(a
 #define NESTED(...) __VA_OPT__(__VA_OPT__(a))
 #define BESIDE(a, ...) a ## __VA_OPT__(b)
+#define AFTER(a, ...) __VA_OPT__(b) ## a
 #define TWO(a, b, ...) a
 #define ONLY(...) f(0, ## __VA_ARGS__)
 int v = __VA_ARGS__;

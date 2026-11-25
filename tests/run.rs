@@ -270,7 +270,9 @@ programs! {
     /// arguments are left out, and `L(1)` is refused; split the variable
     /// arguments at their commas, and `REST(0, 4, 5)` has too many; write
     /// `__VA_OPT__`'s content whatever the arguments are, and `O(1, EMPTY)`
-    /// passes a comma and nothing.
+    /// passes a comma and nothing; stringize its text's spaces as white
+    /// space, and `SO2(1)` is `"( 1 )"`; write nothing for `#` on an empty
+    /// one, and `SO()` is no expression.
     a_variadic_macro_takes_what_is_past_its_parameters,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
