@@ -1,0 +1,36 @@
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_function_like_call_held_whole_is_checked_as_written.c:9:5 ]
+   │
+ 3 │ #define USE_THEN_FREE(q) (*q = 1, free(q))
+   │                                   ──┬──  
+   │                                     ╰──── freed here
+   │ 
+ 6 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 8 │     USE_THEN_FREE(p);
+   │     ────────┬───────  
+   │             ╰───────── `USE_THEN_FREE` expanded here
+ 9 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0401]: this frees `r`, which was freed already
+    ╭─[ a_function_like_call_held_whole_is_checked_as_written.c:13:5 ]
+    │
+ 10 │     int *r = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 12 │     *r = 1, free(r);
+    │             ───┬───  
+    │                ╰───── freed here
+ 13 │     free(r);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

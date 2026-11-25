@@ -1,18 +1,20 @@
 //! Directives, read between the lexer and the parser.
 //!
 //! What it reads is `#include "file"`, whose file's tokens, themselves
-//! preprocessed, take the directive's place; object-like `#define` and
-//! `#undef`, whose macros' names are replaced by their replacement lists,
-//! rescanned (C17 6.10.3); and `#ifdef`, `#ifndef`, `#else` and `#endif`,
-//! which choose the groups that are compiled (6.10.1). Every other directive
-//! is refused as `SC0104`, `#include <file>` among them, which needs a search
-//! path and a system header this compiler cannot read yet anyway, and so are
-//! function-like macros, `#`, `##`, `#if` and `#elif`.
+//! preprocessed, take the directive's place; `#define` and `#undef`, whose
+//! macros' names are replaced by their replacement lists, a function-like
+//! one's with its arguments written in, rescanned (C17 6.10.3); and
+//! `#ifdef`, `#ifndef`, `#else` and `#endif`, which choose the groups that
+//! are compiled (6.10.1). Every other directive is refused as `SC0104`,
+//! `#include <file>` among them, which needs a search path and a system
+//! header this compiler cannot read yet anyway, and so are variadic macros,
+//! `#`, `##`, `#if` and `#elif`.
 //!
 //! Each inclusion and each expansion is a file of its own in the source map,
 //! so a diagnostic in a header names the header, one in an expansion is shown
 //! at its `#define` and its use, and two of either never share a span. See
-//! ADR-0054. The translation unit is preprocessed whole before it is
+//! ADR-0054, and ADR-0128 for a function-like macro's call, whose arguments
+//! are written into the one file its expansion is. The translation unit is preprocessed whole before it is
 //! parsed, for the reason that record gives.
 
 use std::collections::{HashMap, HashSet};
@@ -22,10 +24,12 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Remedy};
 use crate::driver::{Access, reason};
-use crate::lexer::{UNSUPPORTED_SPLICE, is_identifier, lex, unexpected_characters};
+use crate::lexer::{
+    UNSUPPORTED_SPLICE, is_identifier, lex, lex_replacement, unexpected_characters,
+};
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
-use safec_ir::source::{Cut, Edge, FileId, FileName, SourceMap, Span};
+use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
 
 // `SC01xx` with the lexer's, because the topic is the same: what a line of the
@@ -53,6 +57,10 @@ const UNBALANCED: Code = Code::new("SC0115");
 const EXTRA_TOKENS: Code = Code::new("SC0116");
 /// A `#define` or an `#undef` of a name the implementation predefines.
 const PREDEFINED_AGAIN: Code = Code::new("SC0117");
+/// A function-like macro's call written wrong: no `)`, or another number of
+/// arguments than it has parameters. One code, because the fix is the same:
+/// the call, written again.
+const MALFORMED_CALL: Code = Code::new("SC0119");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -93,6 +101,29 @@ const MAX_EXPANSIONS: usize = 65536;
 /// past it the next expansion is refused, once.
 const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
 
+/// How deep one call's arguments may hold calls, one inside the next.
+///
+/// Each level is read by a frame loop of its own, on the native stack, so
+/// past a depth the process overflowed it with nothing said: `I(I(...I(1)))`
+/// a thousand deep did, where C17 5.2.4.1 asks for 63 levels of nested
+/// parentheses. Past this the innermost call is refused, once per call
+/// refused. Found by review.
+const MAX_ARGUMENT_DEPTH: usize = 200;
+
+/// How many bytes the calls of one use may write into their expansions.
+///
+/// [`MAX_EXPANSIONS`] counts expansions, and a call copies its argument
+/// once per use of its parameter, so a chain of calls each using its
+/// parameter twice doubles what it copies at every level while counting a
+/// handful of expansions: twenty-four such levels took 36 s and printed a
+/// 27 MB diagnostic. Found by review. This sits far above what a real
+/// program's macros write for one use.
+const MAX_SUBSTITUTED: usize = 1 << 22;
+
+/// How many bytes the calls of one input may write in all, for the reason
+/// [`MAX_EXPANSIONS_IN_ALL`] bounds an input as well as a use.
+const MAX_SUBSTITUTED_IN_ALL: usize = 1 << 26;
+
 /// The files being read, the macros defined, and how many inclusions and
 /// expansions there have been so far.
 ///
@@ -120,6 +151,23 @@ struct Reading {
     /// Every name `-D` or `-U` named, which `#ifdef` and `#ifndef` answer
     /// whether or not the compiler might predefine it. See ADR-0059.
     settled: HashSet<String>,
+    /// Where, in each file, a name sits that was not replaced because its
+    /// macro was being replaced, by its file and its start. It is never
+    /// replaced (C17 6.10.3.4 p2), even once copied out of an argument into
+    /// a call's expansion, where its macro may no longer be open: with
+    /// `#define x x+1` and `#define id(y) y`, `id(x)` is `x+1`, and
+    /// forgetting the mark made it `x+1+1`. See ADR-0128.
+    painted: HashSet<(FileId, u32)>,
+    /// How many arguments are being replaced, one inside another. A use
+    /// starts a tree of its own only outside every expansion and every
+    /// argument, so a call's arguments count toward the bound of the use
+    /// they are in.
+    arguments: usize,
+    /// Bytes the calls of the use being read have written, which
+    /// [`MAX_SUBSTITUTED`] bounds, and those of the whole input, which
+    /// [`MAX_SUBSTITUTED_IN_ALL`] does.
+    substituted: usize,
+    substituted_in_all: usize,
 }
 
 /// An object-like macro.
@@ -133,6 +181,31 @@ struct Macro {
     /// before it: what two definitions are compared by (C17 6.10.3 p1).
     tokens: Vec<(String, bool)>,
     origin: Origin,
+    /// `None` for an object-like macro.
+    parameters: Option<Parameters>,
+}
+
+/// A function-like macro's parameters, and where its replacement list uses
+/// them.
+#[derive(Clone, Debug)]
+struct Parameters {
+    /// In order. Compared, with the tokens, by a second definition (C17
+    /// 6.10.3 p2).
+    names: Vec<String>,
+    /// Each use of a parameter in the replacement list: its start and end,
+    /// counted from the list's start, and which parameter it names.
+    uses: Vec<(u32, u32, usize)>,
+}
+
+/// What a name the frame loop meets becomes.
+enum Replaced {
+    /// An expansion, read in the name's place.
+    Frame(Frame),
+    /// The name itself, handed on.
+    Kept,
+    /// Nothing: a call refused, whose name and arguments are dropped with the
+    /// report already made.
+    Dropped,
 }
 
 /// What defined a macro.
@@ -234,6 +307,10 @@ pub fn prelude(
         open_macros: HashMap::new(),
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
+        painted: HashSet::new(),
+        arguments: 0,
+        substituted: 0,
+        substituted_in_all: 0,
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -248,6 +325,7 @@ pub fn prelude(
             name,
             name_at,
             body,
+            parameters,
         } = macro_form(directive)
         else {
             panic!("a predefined line that is not a `#define`: {directive}");
@@ -259,6 +337,7 @@ pub fn prelude(
             name,
             name_at,
             body,
+            parameters,
             origin,
             sources,
             &mut reading,
@@ -275,6 +354,7 @@ pub fn prelude(
                 defined: nowhere,
                 tokens: Vec::new(),
                 origin: Origin::Dynamic,
+                parameters: None,
             },
         );
     }
@@ -481,17 +561,7 @@ fn read_includes(
                 );
             }
             if let Some(instance) = frame.instance {
-                match &instance {
-                    Instance::Inclusion { .. } => {
-                        reading.open.pop();
-                    }
-                    Instance::Expansion { name, .. } => {
-                        reading.open_expansions -= 1;
-                        if let Some(open) = reading.open_macros.get_mut(name) {
-                            *open -= 1;
-                        }
-                    }
-                }
+                closed(&instance, reading);
                 if let Some((first, last)) = frame.extent {
                     sources.set_extent(instance.file(), first, last);
                     // What the frame below was handed in its place, now that
@@ -636,12 +706,14 @@ fn read_includes(
                             name,
                             name_at,
                             body,
+                            parameters,
                         } => define(
                             &text,
                             token.span,
                             name,
                             name_at,
                             body,
+                            parameters,
                             Origin::Written,
                             sources,
                             reading,
@@ -695,14 +767,27 @@ fn read_includes(
                                  or an `#undef`",
                             ),
                         ),
-                        MacroForm::FunctionLike => diagnostics.report(
+                        MacroForm::Parameters => diagnostics.report(
                             refused(
                                 &text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
-                                "function-like macros are not read yet",
+                                "this parameter list is not read",
                             )
-                            .with_note("only an object-like `#define` is read yet"),
+                            .with_note(
+                                "a function-like macro's parameters are read when each is a \
+                                 name of ASCII letters, digits and `_`, none named twice, \
+                                 between `(` and `)`",
+                            ),
+                        ),
+                        MacroForm::Variadic => diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "variadic macros are not read yet",
+                            )
+                            .with_note("a macro with `...` among its parameters is not read yet"),
                         ),
                         MacroForm::Spliced => diagnostics.report(
                             refused(
@@ -730,8 +815,8 @@ fn read_includes(
                             // reader does not have and one that stopped being
                             // the whole answer.
                             .with_note(
-                                "`#include \"...\"`, an object-like `#define` and `#undef`, \
-                                 `#ifdef`, `#ifndef`, `#else` and `#endif` are read",
+                                "`#include \"...\"`, `#define` and `#undef`, `#ifdef`, \
+                                 `#ifndef`, `#else` and `#endif` are read",
                             )
                             .with_note("the line is one token and is not compiled"),
                         ),
@@ -747,12 +832,13 @@ fn read_includes(
             // a dereference written out as `SC0403` passed in silence. Found
             // by review.
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
-                match expansion(token, sources, reading, diagnostics) {
-                    Some(frame) => frames.push(frame),
-                    None => {
+                match replacement(&mut frames, token, sources, reading, diagnostics) {
+                    Replaced::Frame(frame) => frames.push(frame),
+                    Replaced::Kept => {
                         emitted(&mut frames, token.span);
                         spliced.push(token);
                     }
+                    Replaced::Dropped => {}
                 }
             }
             // Reported here, where it is compiled, and not where it was
@@ -777,19 +863,48 @@ fn read_includes(
     }
 }
 
-/// The frame `token` expands to, if it names a macro, or `None` where it is
-/// left as it is.
+/// What `token`, a name the innermost of `frames` was reading, becomes.
 ///
 /// A keyword or an annotation is a name here too, since preprocessing knows
 /// only identifiers (C17 6.4 p1), so `#define int long` and `#define
-/// _Nonnull` are macros. A name is left as it is
-/// where an expansion of it is open, which is the rule that a macro is not
-/// replaced inside its own replacement (6.10.3.4 p2): an object-like macro's
-/// rescan reads only its replacement list, so the open expansions are
-/// exactly the replacements in progress.
+/// _Nonnull` are macros. A name is kept where an expansion of it is open,
+/// which is the rule that a macro is not replaced inside its own replacement
+/// (6.10.3.4 p2): a rescan reads only its replacement, since a call whose
+/// `(` lies past it is refused, so the open expansions are exactly the
+/// replacements in progress. Such a name is marked, and kept wherever it is
+/// copied to after, as that rule says. See [`Reading::painted`].
 ///
 /// Mutation: drop the open-expansion check. `#define X X + 1` expands for
 /// ever, and the bound refuses it.
+fn replacement(
+    frames: &mut [Frame],
+    token: Token,
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Replaced {
+    let name = sources.snippet(token.span);
+    let Some(defined) = reading.macros.get(name) else {
+        return Replaced::Kept;
+    };
+    let at = (token.span.file(), token.span.start());
+    if reading.painted.contains(&at) {
+        return Replaced::Kept;
+    }
+    if reading.open_macros.get(name).is_some_and(|open| *open > 0) {
+        reading.painted.insert(at);
+        return Replaced::Kept;
+    }
+    match defined.parameters.clone() {
+        Some(parameters) => call(frames, token, parameters, sources, reading, diagnostics),
+        None => {
+            expansion(token, sources, reading, diagnostics).map_or(Replaced::Kept, Replaced::Frame)
+        }
+    }
+}
+
+/// The frame `token`, the name of an object-like macro whose expansion is
+/// not open, expands to, or `None` where it is refused and left as it is.
 fn expansion(
     token: Token,
     sources: &mut SourceMap,
@@ -811,15 +926,32 @@ fn expansion(
         return None;
     }
     let spelled = defined.spelled;
-    if reading.open_macros.get(name).is_some_and(|open| *open > 0) {
+    let name = name.to_owned();
+    begin_use(reading);
+    if !admitted(token, &name, reading, diagnostics) {
         return None;
     }
-    let name = name.to_owned();
+    let file = sources.expand(spelled, token.span);
+    Some(instance(file, token.span, name, sources, diagnostics))
+}
 
-    // A use written outside any expansion starts a tree of its own.
-    if reading.open_expansions == 0 {
+/// Start a tree of expansions for a use written outside any expansion and
+/// any argument, which [`MAX_EXPANSIONS`] bounds on its own.
+fn begin_use(reading: &mut Reading) {
+    if reading.open_expansions == 0 && reading.arguments == 0 {
         reading.expansions = 0;
+        reading.substituted = 0;
     }
+}
+
+/// Count an expansion of `name`, used at `token`, and open it; or refuse it
+/// past a bound, said once.
+fn admitted(
+    token: Token,
+    name: &str,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> bool {
     if reading.expansions_in_all >= MAX_EXPANSIONS_IN_ALL {
         if reading.expansions_in_all == MAX_EXPANSIONS_IN_ALL {
             reading.expansions_in_all += 1;
@@ -832,7 +964,7 @@ fn expansion(
                     )),
             );
         }
-        return None;
+        return false;
     }
     // Once, at the first past the bound, as `SC0112` is said.
     if reading.expansions >= MAX_EXPANSIONS {
@@ -848,30 +980,431 @@ fn expansion(
                     )),
             );
         }
-        return None;
+        return false;
     }
     reading.expansions += 1;
     reading.expansions_in_all += 1;
-    *reading.open_macros.entry(name.clone()).or_insert(0) += 1;
+    *reading.open_macros.entry(name.to_owned()).or_insert(0) += 1;
     reading.open_expansions += 1;
+    true
+}
 
-    let file = sources.expand(spelled, token.span);
+/// The frame that reads `file`, an expansion of `name` used at `at`.
+fn instance(
+    file: FileId,
+    at: Span,
+    name: String,
+    sources: &SourceMap,
+    diagnostics: &mut DiagnosticSink,
+) -> Frame {
     // Lexed here, where it is used, so a character no token can begin is
     // reported at each use, which is where C makes it an error. That is
     // `read_includes`' to do for every frame, this one included.
-    let tokens = lex(file, &sources.file_owned(file), diagnostics);
-    Some(Frame {
+    let tokens = lex_replacement(file, &sources.file_owned(file), diagnostics);
+    Frame {
         tokens,
         cursor: 0,
-        instance: Some(Instance::Expansion {
-            file,
-            at: token.span,
-            name,
-        }),
+        instance: Some(Instance::Expansion { file, at, name }),
         extent: None,
         conditionals: Vec::new(),
         skipped_depth: 0,
-    })
+    }
+}
+
+/// Close what `instance` opened, now that its frame has ended.
+fn closed(instance: &Instance, reading: &mut Reading) {
+    match instance {
+        Instance::Inclusion { .. } => {
+            reading.open.pop();
+        }
+        Instance::Expansion { name, .. } => {
+            reading.open_expansions -= 1;
+            if let Some(open) = reading.open_macros.get_mut(name) {
+                *open -= 1;
+            }
+        }
+    }
+}
+
+/// A call of the function-like macro `token` names, whose expansion is not
+/// open: its arguments read out of the innermost frame, each replaced on its
+/// own (C17 6.10.3.1 p1), and written into its replacement list as one
+/// expansion, used at the whole call. See ADR-0128.
+///
+/// `Kept` where no `(` follows the name, since a name with none is not a
+/// call (6.10.3 p10).
+fn call(
+    frames: &mut [Frame],
+    token: Token,
+    parameters: Parameters,
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Replaced {
+    let name = sources.snippet(token.span).to_owned();
+    let Some((top, below)) = frames.split_last_mut() else {
+        return Replaced::Kept;
+    };
+    let next = |frame: &Frame| {
+        frame
+            .tokens
+            .get(frame.cursor)
+            .copied()
+            .filter(|next| !next.is_eof())
+    };
+    let opens = |token: Token| token.kind == TokenKind::Punct(Punct::LeftParen);
+    match next(top) {
+        Some(after) if opens(after) => {}
+        Some(_) => return Replaced::Kept,
+        None => {
+            // The name ends the file it is read from, and C reads on into
+            // what that file was used in for its `(`. A call so spread over
+            // two files has no one span for its use (ADR-0128), so it is
+            // refused; read as no call it would compile something else.
+            let after = below.iter().rev().find_map(next);
+            if after.is_some_and(opens) {
+                diagnostics.report(
+                    Diagnostic::error(
+                        "a call whose name ends an expansion or a file is not read yet",
+                    )
+                    .with_code(UNSUPPORTED_DIRECTIVE)
+                    .with_label(Label::primary(token.span, "its name is here"))
+                    .with_note(format!(
+                        "the `(` after `{name}` is outside what its name was read from"
+                    )),
+                );
+                return Replaced::Dropped;
+            }
+            return Replaced::Kept;
+        }
+    }
+
+    // Collected to the `)` that closes the call, split at each comma outside
+    // any parentheses (6.10.3 p11).
+    let mut arguments: Vec<Vec<Token>> = vec![Vec::new()];
+    let mut depth = 0_usize;
+    let mut close = None;
+    let mut directive = None;
+    let mut at = top.cursor + 1;
+    while let Some(&argument) = top.tokens.get(at) {
+        if argument.is_eof() {
+            break;
+        }
+        at += 1;
+        match argument.kind {
+            TokenKind::Punct(Punct::LeftParen) => depth += 1,
+            TokenKind::Punct(Punct::RightParen) if depth == 0 => {
+                close = Some(argument);
+                break;
+            }
+            TokenKind::Punct(Punct::RightParen) => depth -= 1,
+            TokenKind::Punct(Punct::Comma) if depth == 0 => {
+                arguments.push(Vec::new());
+                continue;
+            }
+            TokenKind::Directive => {
+                directive.get_or_insert(argument);
+            }
+            _ => {}
+        }
+        if let Some(last) = arguments.last_mut() {
+            last.push(argument);
+        }
+    }
+    top.cursor = at;
+
+    let Some(close) = close else {
+        // Ending an expansion or an included file, C reads on past it for
+        // the `)` (C17 6.10.3.4 p1), and the call then has no one span for
+        // its use, as one whose `(` lies past it has none. Only the input
+        // ending is a call that is never closed.
+        let report = if top.instance.is_some() {
+            Diagnostic::error(
+                "a call whose arguments run past an expansion or a file is not read yet",
+            )
+            .with_code(UNSUPPORTED_DIRECTIVE)
+            .with_label(Label::primary(token.span, "called here"))
+            .with_note(format!(
+                "the `)` of `{name}` is outside what its name was read from"
+            ))
+        } else {
+            Diagnostic::error(format!("this call of `{name}` has no `)`"))
+                .with_code(MALFORMED_CALL)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note("its arguments run on to the end of the file")
+        };
+        diagnostics.report(report);
+        return Replaced::Dropped;
+    };
+    // C17 6.10.3 p11 leaves a directive there undefined. Read as a directive
+    // it would be one the call's arguments also hold; read as tokens it would
+    // be compiled as code.
+    if let Some(directive) = directive {
+        diagnostics.report(
+            Diagnostic::error("a directive inside a macro's arguments is not read")
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(
+                    directive.span,
+                    "inside the arguments of this call",
+                ))
+                .with_label(Label::secondary(token.span, "called here"))
+                .with_note("C17 6.10.3 p11 leaves what it means undefined"),
+        );
+        return Replaced::Dropped;
+    }
+    // `F()` for a macro of no parameters is a call of none.
+    if parameters.names.is_empty() && arguments.len() == 1 && arguments[0].is_empty() {
+        arguments.clear();
+    }
+    if arguments.len() != parameters.names.len() {
+        let count = |n: usize| {
+            if n == 1 {
+                "1 argument".to_owned()
+            } else {
+                format!("{n} arguments")
+            }
+        };
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`{name}` takes {}, and is given {}",
+                count(parameters.names.len()),
+                arguments.len()
+            ))
+            .with_code(MALFORMED_CALL)
+            .with_label(Label::primary(
+                Span::new(token.span.file(), token.span.start(), close.span.end()),
+                "called here",
+            )),
+        );
+        return Replaced::Dropped;
+    }
+
+    begin_use(reading);
+    if reading.arguments >= MAX_ARGUMENT_DEPTH {
+        diagnostics.report(
+            Diagnostic::error("this call is nested too deep in other calls' arguments")
+                .with_code(TOO_MANY_EXPANSIONS)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(format!(
+                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
+                )),
+        );
+        return Replaced::Dropped;
+    }
+    // Only an argument the body uses is replaced: C replaces one before
+    // substituting it (C17 6.10.3.1 p1), and one never substituted is never
+    // replaced, so `#define K(x) 7` used as `K(H(1, 2))` asks nothing of `H`.
+    // Replacing every one refused that. Found by review.
+    let arguments: Vec<Vec<Token>> = arguments
+        .into_iter()
+        .enumerate()
+        .map(|(index, argument)| {
+            if parameters.uses.iter().any(|&(_, _, used)| used == index) {
+                replaced(argument, sources, reading, diagnostics)
+            } else {
+                Vec::new()
+            }
+        })
+        .collect();
+    let Some(spelled) = reading.macros.get(&name).map(|defined| defined.spelled) else {
+        unreachable!(
+            "`{name}` was a macro when its call began and nothing in an argument can undefine it"
+        );
+    };
+    let (text, pieces, painted) = substituted(spelled, &parameters, &arguments, sources, reading);
+    if !written_within_bounds(token, text.len(), reading, diagnostics)
+        || !admitted(token, &name, reading, diagnostics)
+    {
+        return Replaced::Dropped;
+    }
+    let at = Span::new(token.span.file(), token.span.start(), close.span.end());
+    let file = sources.substitute(text, pieces, at);
+    reading
+        .painted
+        .extend(painted.into_iter().map(|offset| (file, offset)));
+    Replaced::Frame(instance(file, at, name, sources, diagnostics))
+}
+
+/// Count `length` bytes a call at `token` writes into its expansion, or
+/// refuse it past [`MAX_SUBSTITUTED`] or [`MAX_SUBSTITUTED_IN_ALL`], each
+/// said once.
+fn written_within_bounds(
+    token: Token,
+    length: usize,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> bool {
+    let use_was_open = reading.substituted <= MAX_SUBSTITUTED;
+    let input_was_open = reading.substituted_in_all <= MAX_SUBSTITUTED_IN_ALL;
+    reading.substituted = reading.substituted.saturating_add(length);
+    reading.substituted_in_all = reading.substituted_in_all.saturating_add(length);
+    let (bound, of) = if reading.substituted_in_all > MAX_SUBSTITUTED_IN_ALL {
+        if !input_was_open {
+            return false;
+        }
+        (MAX_SUBSTITUTED_IN_ALL, "this input")
+    } else if reading.substituted > MAX_SUBSTITUTED {
+        if !use_was_open {
+            return false;
+        }
+        (MAX_SUBSTITUTED, "the use this is in")
+    } else {
+        return true;
+    };
+    diagnostics.report(
+        Diagnostic::error("this call writes too much into its expansion")
+            .with_code(TOO_MANY_EXPANSIONS)
+            .with_label(Label::primary(token.span, "called here"))
+            .with_note(format!(
+                "more than {bound} bytes are written into the expansions of {of}"
+            )),
+    );
+    false
+}
+
+/// The text of a call's expansion: the replacement list at `spelled`, each
+/// use of a parameter written as its argument's tokens, already replaced;
+/// with where each run of it was copied from, and where in it a name sits
+/// that is never replaced.
+///
+/// The body's runs are copied byte for byte, and an argument's tokens with
+/// one space where they were apart. An argument is set off by a space from
+/// what touches it, so it cannot run into the body's text: `-x` with `-1`
+/// for `x` is `- -1`, where `--1` would be another token.
+fn substituted(
+    spelled: Span,
+    parameters: &Parameters,
+    arguments: &[Vec<Token>],
+    sources: &SourceMap,
+    reading: &Reading,
+) -> (String, Vec<Piece>, Vec<u32>) {
+    let body = sources.snippet(spelled);
+    let mut text = String::new();
+    let mut pieces = Vec::new();
+    let mut painted = Vec::new();
+    let run = |text: &mut String, pieces: &mut Vec<Piece>, start: u32, end: u32| {
+        if start < end {
+            pieces.push(Piece {
+                offset: text.len() as u32,
+                from: Span::new(
+                    spelled.file(),
+                    spelled.start() + start,
+                    spelled.start() + end,
+                ),
+            });
+            text.push_str(&body[start as usize..end as usize]);
+        }
+    };
+    let apart = |text: &mut String| {
+        if !text.is_empty() && !text.ends_with(' ') {
+            text.push(' ');
+        }
+    };
+    let mut copied = 0;
+    for &(start, end, index) in &parameters.uses {
+        run(&mut text, &mut pieces, copied, start);
+        apart(&mut text);
+        let mut last: Option<Token> = None;
+        for &token in &arguments[index] {
+            // Tokens written side by side are one run, so a span over
+            // several, `free(p)`, is placed over all of them.
+            let touching = last.is_some_and(|last| {
+                last.span.file() == token.span.file() && last.span.end() == token.span.start()
+            });
+            match pieces.last_mut() {
+                Some(piece) if touching => {
+                    piece.from = Span::new(piece.from.file(), piece.from.start(), token.span.end());
+                }
+                _ => {
+                    if last.is_some() {
+                        apart(&mut text);
+                    }
+                    pieces.push(Piece {
+                        offset: text.len() as u32,
+                        from: token.span,
+                    });
+                }
+            }
+            let offset = text.len() as u32;
+            if reading
+                .painted
+                .contains(&(token.span.file(), token.span.start()))
+            {
+                painted.push(offset);
+            }
+            text.push_str(sources.snippet(token.span));
+            last = Some(token);
+        }
+        if end < body.len() as u32 {
+            apart(&mut text);
+        }
+        copied = end;
+    }
+    run(&mut text, &mut pieces, copied, body.len() as u32);
+    // An empty replacement list, or one of an empty argument alone, is
+    // still copied from somewhere.
+    if pieces.first().is_none_or(|piece| piece.offset != 0) {
+        pieces.insert(
+            0,
+            Piece {
+                offset: 0,
+                from: Span::new(spelled.file(), spelled.start(), spelled.start()),
+            },
+        );
+    }
+    (text, pieces, painted)
+}
+
+/// `tokens`, an argument, replaced as if they were the rest of a file (C17
+/// 6.10.3.1 p1): every macro in them expanded and every expansion read
+/// through, and what would have been handed on given back.
+///
+/// The frame stack is this argument's own, so a name ending it is no call
+/// whatever follows the argument, as C reads it in isolation; the macros
+/// open around the call stay open, and the bounds count on.
+fn replaced(
+    tokens: Vec<Token>,
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Vec<Token> {
+    reading.arguments += 1;
+    let mut frames = vec![Frame {
+        tokens,
+        cursor: 0,
+        instance: None,
+        extent: None,
+        conditionals: Vec::new(),
+        skipped_depth: 0,
+    }];
+    let mut handed = Vec::new();
+    while let Some(frame) = frames.last_mut() {
+        let next = frame.tokens.get(frame.cursor).copied();
+        frame.cursor += 1;
+        let Some(token) = next else {
+            if let Some(Frame {
+                instance: Some(instance),
+                ..
+            }) = frames.pop()
+            {
+                closed(&instance, reading);
+            }
+            continue;
+        };
+        match token.kind {
+            TokenKind::Eof => {}
+            TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
+                match replacement(&mut frames, token, sources, reading, diagnostics) {
+                    Replaced::Frame(frame) => frames.push(frame),
+                    Replaced::Kept => handed.push(token),
+                    Replaced::Dropped => {}
+                }
+            }
+            _ => handed.push(token),
+        }
+    }
+    reading.arguments -= 1;
+    handed
 }
 
 /// Record `#define name body`, or refuse it.
@@ -888,6 +1421,7 @@ fn define(
     name: &str,
     name_at: u32,
     body: (u32, u32),
+    parameters: Option<Vec<&str>>,
     origin: Origin,
     sources: &mut SourceMap,
     reading: &mut Reading,
@@ -931,17 +1465,43 @@ fn define(
         ));
         end = token.span.end();
     }
+    // Where the list names a parameter, by the scan's offsets, which count
+    // from the list's start.
+    let parameters = parameters.map(|names| Parameters {
+        uses: scan
+            .iter()
+            .filter(|token| {
+                matches!(
+                    token.kind,
+                    TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_)
+                )
+            })
+            .filter_map(|token| {
+                let index = names
+                    .iter()
+                    .position(|name| *name == scratch.snippet(token.span))?;
+                Some((token.span.start(), token.span.end(), index))
+            })
+            .collect(),
+        names: names.into_iter().map(str::to_owned).collect(),
+    });
 
     if let Some(earlier) = reading.macros.get(name) {
         if earlier.origin != Origin::Written && standard(name) {
             diagnostics.report(predefined_again(name, named, "defined again here", earlier));
-        } else if earlier.tokens != tokens {
+        } else if earlier.tokens != tokens
+            || earlier.parameters.as_ref().map(|earlier| &earlier.names)
+                != parameters.as_ref().map(|parameters| &parameters.names)
+        {
             diagnostics.report(
                 Diagnostic::error(format!("`{name}` is defined again differently"))
                     .with_code(REDEFINED)
                     .with_label(Label::primary(named, "defined again here"))
                     .with_label(Label::secondary(earlier.defined, "defined here first"))
-                    .with_note("a macro may be defined again only with the same replacement list"),
+                    .with_note(
+                        "a macro may be defined again only with the same parameters and \
+                         replacement list",
+                    ),
             );
         }
         return;
@@ -953,6 +1513,7 @@ fn define(
             defined: directive,
             tokens,
             origin,
+            parameters,
         },
     );
 }
@@ -1228,15 +1789,21 @@ fn standard(name: &str) -> bool {
 enum MacroForm<'a> {
     /// `#define name body`, with the offsets of the name and of the body's
     /// start and end in the directive's text.
+    /// `parameters` is a function-like macro's, written `name(a, b)`.
     Define {
         name: &'a str,
         name_at: u32,
         body: (u32, u32),
+        parameters: Option<Vec<&'a str>>,
     },
     /// `#undef name`.
     Undef { name: &'a str },
-    /// `#define name(`, a function-like macro.
-    FunctionLike,
+    /// `#define name(` with a parameter list this does not read: one not
+    /// closed, a parameter that is not an ASCII name, or one named twice,
+    /// which C17 6.10.3 p6 forbids.
+    Parameters,
+    /// `#define name(` with `...` among its parameters.
+    Variadic,
     /// `#define defined` or `#undef defined`.
     Defined,
     /// A `#define` or an `#undef` whose name is not one this reads, such as
@@ -1299,15 +1866,39 @@ fn macro_form(text: &str) -> MacroForm<'_> {
     if spliced(text) {
         return MacroForm::Spliced;
     }
-    if after.starts_with('(') {
-        return MacroForm::FunctionLike;
-    }
-    if !(after.is_empty() || after.starts_with(blank)) {
+    let name_at = (text.len() - rest.len()) as u32;
+    // `(` straight after the name makes it function-like (C17 6.10.3 p3),
+    // and its list runs to the first `)`, since a parameter holds none.
+    let (parameters, after) = if let Some(list) = after.strip_prefix('(') {
+        let Some(close) = list.find(')') else {
+            return MacroForm::Parameters;
+        };
+        let mut names = Vec::new();
+        if !list[..close].trim_matches(blank).is_empty() {
+            for parameter in list[..close].split(',') {
+                let parameter = parameter.trim_matches(blank);
+                if parameter.ends_with("...") {
+                    return MacroForm::Variadic;
+                }
+                if parameter.is_empty()
+                    || parameter.starts_with(|c: char| c.is_ascii_digit())
+                    || !parameter.chars().all(identifier)
+                    || parameter == "__VA_ARGS__"
+                    || names.contains(&parameter)
+                {
+                    return MacroForm::Parameters;
+                }
+                names.push(parameter);
+            }
+        }
+        (Some(names), &list[close + 1..])
+    } else if after.is_empty() || after.starts_with(blank) {
+        (None, after)
+    } else {
         return MacroForm::Unread {
             directive: "#define",
         };
-    }
-    let name_at = (text.len() - rest.len()) as u32;
+    };
     let body = after.trim_start_matches(blank);
     let start = text.len() - body.len();
     let end = start + body.trim_end_matches(blank).len();
@@ -1315,6 +1906,7 @@ fn macro_form(text: &str) -> MacroForm<'_> {
         name,
         name_at,
         body: (start as u32, end as u32),
+        parameters,
     }
 }
 
@@ -2527,7 +3119,7 @@ mod tests {
             "#include X\n",
             "#include \"a.h\" // \\\nint x;\n",
             "#include \"a.h\"\n",
-            "#define F(x) x\n",
+            "#define F(...) x\n",
             "#define G a ## b\n",
             "#define H \\\nint x;\n",
         ] {
@@ -2621,6 +3213,74 @@ mod tests {
             "{:?}",
             diagnostics.diagnostics().first()
         );
+    }
+
+    /// A file of function-like calls, one a line, past the bound for one use,
+    /// is read: each call written outside any expansion and argument starts
+    /// a use of its own.
+    ///
+    /// Mutations: drop `begin_use` from `call`, or leave `Reading::arguments`
+    /// raised after an argument; the count never starts again and the last
+    /// call is refused as `SC0113`.
+    #[test]
+    fn a_function_like_macro_called_on_many_lines_is_not_bounded_as_one_tree() {
+        let mut text = String::from("#define ID(x) x\n");
+        for at in 0..=MAX_EXPANSIONS {
+            text.push_str(&format!("int v{at} = ID(1);\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        assert!(
+            !diagnostics.has_errors(),
+            "{:?}",
+            diagnostics.diagnostics().first()
+        );
+    }
+
+    /// A call's arguments count toward the bound of the use they are in:
+    /// two arguments each just under it are refused together.
+    ///
+    /// Mutation: start a use at an expansion inside an argument, in
+    /// `begin_use`; each argument is counted on its own and nothing is
+    /// refused.
+    #[test]
+    fn a_call_s_arguments_count_toward_its_use_s_bound() {
+        let mut text = String::from("#define M0 1\n");
+        for at in 1..=15 {
+            text.push_str(&format!("#define M{at} M{} M{}\n", at - 1, at - 1));
+        }
+        text.push_str("#define P(a, b) a b\nint v[] = { P(M15, M15) };\n");
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0113"]);
     }
 
     /// Many uses of trees under the bound for one use are refused once

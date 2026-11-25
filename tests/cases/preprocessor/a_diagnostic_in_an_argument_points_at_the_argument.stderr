@@ -1,0 +1,33 @@
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_diagnostic_in_an_argument_points_at_the_argument.c:6:10 ]
+   │
+ 5 │     CALL(free(p));
+   │     ──────┬─┬────  
+   │           ╰──────── `CALL` expanded here
+   │             │      
+   │             ╰────── freed here
+ 6 │     CALL(free(p));
+   │     ──────┬─┬────  
+   │           ╰──────── `CALL` expanded here
+   │             │      
+   │             ╰────── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_diagnostic_in_an_argument_points_at_the_argument.c:7:10 ]
+   │
+ 5 │     CALL(free(p));
+   │     ──────┬─┬────  
+   │           ╰──────── `CALL` expanded here
+   │             │      
+   │             ╰────── freed here
+   │ 
+ 7 │     CALL(free  (p));
+   │     ───────┬───────  
+   │            ╰───────── freed again here
+   │            │         
+   │            ╰───────── `CALL` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

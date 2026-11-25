@@ -1,4 +1,4 @@
-#define F(x) x
+#define F(...) x
 #define G a ## b
 #define S # s
 

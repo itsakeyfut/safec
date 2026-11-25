@@ -1,0 +1,20 @@
+error[SC0113]: this call writes too much into its expansion
+   ╭─[ a_call_that_writes_too_much_into_its_expansion_is_refused.c:2:15 ]
+   │
+ 2 │ #define D2(x) D1(D1(x))
+   │               ─┬  
+   │                ╰── called here
+ 3 │ #define D4(x) D2(D2(x))
+   │                  ─┬─  
+   │                   ╰─── `D2` expanded here
+ 4 │ #define D8(x) D4(D4(x))
+   │               ───┬──  
+   │                  ╰──── `D4` expanded here
+ 5 │ #define D16(x) D8(D8(x))
+   │                ───┬──  
+   │                   ╰──── `D8` expanded here
+ 6 │ int v[] = { D16(D4(D2(1))) };
+   │             ───────┬──────  
+   │                    ╰──────── `D16` expanded here
+───╯
+  = note: more than 4194304 bytes are written into the expansions of the use this is in

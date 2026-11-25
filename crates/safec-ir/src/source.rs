@@ -87,12 +87,31 @@ pub enum FileName {
     /// other, and within one every comparison answers as it does for the body
     /// written out.
     Expansion {
-        /// The replacement list in its `#define`, whose text this file holds
-        /// byte for byte.
-        spelled: Span,
-        /// The macro's name where it was used.
+        /// Where each run of this file's text was copied from, in order of
+        /// offset, the first at 0: for an object-like macro one piece, its
+        /// replacement list, which this file holds byte for byte; for a
+        /// function-like one, the runs of its body and each argument's
+        /// tokens. See ADR-0128.
+        pieces: Vec<Piece>,
+        /// The macro's name where it was used, or for a function-like macro
+        /// the call, from its name to its `)`.
         at: Span,
     },
+}
+
+/// A run of an expansion's text and what it was copied from.
+///
+/// `from` need not be as long as the run: an argument copied with one space
+/// where it was separated is shorter or longer than it was written, and an
+/// offset past `from`'s end is placed at that end. See ADR-0128.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Piece {
+    /// Where the run starts in the expansion.
+    pub offset: u32,
+    /// What it was copied from: a run of a replacement list in its
+    /// `#define`, or one of an argument's tokens where it was written, which
+    /// may be in another expansion.
+    pub from: Span,
 }
 
 impl fmt::Display for FileName {
@@ -476,12 +495,40 @@ impl SourceMap {
     /// If `at` is not in a file already in the map, for the reason
     /// [`SourceMap::include`] gives.
     pub fn expand(&mut self, spelled: Span, at: Span) -> FileId {
+        let text = self.snippet(spelled).to_owned();
+        self.substitute(
+            text,
+            vec![Piece {
+                offset: 0,
+                from: spelled,
+            }],
+            at,
+        )
+    }
+
+    /// Add an expansion holding `text`, whose runs were copied from
+    /// `pieces`, used at `at`: what a function-like macro's call becomes,
+    /// its arguments written into its body. See ADR-0128.
+    ///
+    /// # Panics
+    ///
+    /// If `at` is not in a file already in the map, for the reason
+    /// [`SourceMap::include`] gives, or if `pieces` does not start at 0 and
+    /// rise, which [`SourceMap::written`] searches it by.
+    pub fn substitute(&mut self, text: String, pieces: Vec<Piece>, at: Span) -> FileId {
         assert!(
             at.file().index() < self.files.len(),
             "an expansion's use {at:?} is in no file already registered, so its chain would have no root"
         );
-        let text = self.snippet(spelled).to_owned();
-        self.add(FileName::Expansion { spelled, at }, text)
+        assert!(
+            pieces.first().is_some_and(|piece| piece.offset == 0)
+                && pieces.windows(2).all(|two| two[0].offset < two[1].offset)
+                && pieces
+                    .last()
+                    .is_some_and(|piece| piece.offset as usize <= text.len()),
+            "an expansion's pieces {pieces:?} do not start at 0 and rise within its text"
+        );
+        self.add(FileName::Expansion { pieces, at }, text)
     }
 
     /// Add a file that is not on disk.
@@ -540,29 +587,44 @@ impl SourceMap {
 
     /// The name of the macro `file` is an expansion of, as it was written at
     /// the use, or `None` for a file that is not an expansion.
+    ///
+    /// A function-like macro's use is its whole call, and the name is what
+    /// begins it: quoting the call put every argument into a message, 27 MB
+    /// of one. Found by review.
     pub fn macro_name(&self, file: FileId) -> Option<&str> {
         match self.file(file).name() {
-            FileName::Expansion { at, .. } => Some(self.snippet(*at)),
+            FileName::Expansion { at, .. } => {
+                let used = self.snippet(*at);
+                let length = used
+                    .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                    .unwrap_or(used.len());
+                Some(&used[..length])
+            }
             FileName::Real(_) | FileName::Virtual(_) | FileName::Inclusion { .. } => None,
         }
     }
 
-    /// `span` where its text is written: a span in an expansion is moved to
-    /// the same offset in its replacement list's `#define`, and any other span
-    /// is itself. One step, because a replacement list is always written in a
-    /// file a `#define` is in, never in another expansion.
+    /// `span` where its text is written: a span in an expansion is moved,
+    /// through the piece its start is in, to the same offset in what that
+    /// piece was copied from, and again while that is an expansion; any other
+    /// span is itself. An argument written inside another macro's body is
+    /// copied from that expansion, which is why this repeats.
     ///
     /// What a report and a dump place a span at, so a reader is pointed at a
-    /// file that exists and a line that holds the text. An expansion's text is
-    /// its replacement list byte for byte, so an offset in one is the same
-    /// offset from the other's start. An inclusion is a file on disk, and is
-    /// written where it is.
+    /// file that exists and a line that holds the text. A span is placed by
+    /// its start's piece, its end kept within that piece's `from`, since a
+    /// span across two pieces has no one place it was written. An inclusion
+    /// is a file on disk, and is written where it is. See ADR-0128.
     pub fn written(&self, mut span: Span) -> Span {
-        if let FileName::Expansion { spelled, .. } = self.file(span.file()).name() {
+        while let FileName::Expansion { pieces, .. } = self.file(span.file()).name() {
+            let index = pieces.partition_point(|piece| piece.offset <= span.start()) - 1;
+            let piece = pieces[index];
+            let into =
+                |offset: u32| (piece.from.start() + (offset - piece.offset)).min(piece.from.end());
             span = Span::new(
-                spelled.file(),
-                spelled.start() + span.start(),
-                spelled.start() + span.end(),
+                piece.from.file(),
+                into(span.start()),
+                into(span.end().max(span.start())),
             );
         }
         span
@@ -1126,6 +1188,81 @@ mod tests {
             map.locate(Span::new(b, 0, 1), main),
             Some(Span::new(main, 36, 37))
         );
+    }
+
+    /// A span in a call's expansion is written through the piece its start
+    /// is in: a run of the body in its `#define`, an argument where it was
+    /// written, through another expansion where it was written in one, and
+    /// its end kept within that piece. See ADR-0128.
+    ///
+    /// Mutation: place every offset through the first piece. The argument's
+    /// span lands in the body.
+    #[test]
+    fn a_span_in_a_call_s_expansion_is_written_where_each_piece_was() {
+        let mut map = SourceMap::new();
+        // `F`'s body `(x)` at 13..16, used as `F(A)` at 33..37, and `A`'s
+        // body `7` at 27..28.
+        let main = map.add_virtual(
+            "t.c",
+            "#define F(x) (x)
+#define A 7
+int F(A);
+",
+        );
+        let a = map.expand(Span::new(main, 27, 28), Span::new(main, 35, 36));
+        let text = "( 7 )".to_owned();
+        let call = map.substitute(
+            text,
+            vec![
+                Piece {
+                    offset: 0,
+                    from: Span::new(main, 13, 14),
+                },
+                Piece {
+                    offset: 2,
+                    from: Span::new(a, 0, 1),
+                },
+                Piece {
+                    offset: 4,
+                    from: Span::new(main, 15, 16),
+                },
+            ],
+            Span::new(main, 33, 37),
+        );
+
+        assert_eq!(map.written(Span::new(call, 0, 1)), Span::new(main, 13, 14));
+        assert_eq!(map.written(Span::new(call, 2, 3)), Span::new(main, 27, 28));
+        assert_eq!(map.written(Span::new(call, 4, 5)), Span::new(main, 15, 16));
+        // From the argument to the end: placed at the argument, its end
+        // kept within it.
+        assert_eq!(map.written(Span::new(call, 2, 5)), Span::new(main, 27, 28));
+    }
+
+    /// An expansion's pieces start at 0, rise, and stay within its text,
+    /// which `written` searches them by; a list that does not is refused
+    /// where it is registered rather than answered wrong later.
+    ///
+    /// Mutation: drop any one of the three tests in `substitute`'s
+    /// assertion; one of these does not panic.
+    #[test]
+    fn an_expansion_s_pieces_that_do_not_start_at_0_and_rise_are_refused() {
+        let pieces = |offsets: &[u32]| -> Vec<Piece> {
+            offsets
+                .iter()
+                .map(|&offset| Piece {
+                    offset,
+                    from: Span::new(FileId(0), 0, 1),
+                })
+                .collect()
+        };
+        for offsets in [&[1][..], &[0, 2, 2][..], &[0, 9][..]] {
+            let mut map = SourceMap::new();
+            let main = map.add_virtual("t.c", "abc");
+            let refused = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                map.substitute("abc".to_owned(), pieces(offsets), Span::new(main, 0, 1))
+            }));
+            assert!(refused.is_err(), "{offsets:?} was registered");
+        }
     }
 
     /// A span in an expansion is written in its macro's `#define`, at the

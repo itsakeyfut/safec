@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its rule that an expansion's text is its replacement list byte for byte superseded by ADR-0128)"
 date: 2026-10-19
 decision-makers: itsakeyfut
 ---

@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its sentence that any other `#pragma` stays refused superseded by ADR-0129)"
 date: 2026-10-23
 decision-makers: itsakeyfut
 ---
