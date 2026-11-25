@@ -21,3 +21,13 @@ int integers_are_not_doubted(int n, ...) {
     __builtin_va_end(a);
     return x + n;
 }
+int before_the_end(int n, ...) {
+    __builtin_va_list a;
+    __builtin_va_start(a, n);
+    int *p = __builtin_va_arg(a, int *);
+    int v = 0;
+    if (p)
+        v = *p;
+    __builtin_va_end(a);
+    return v;
+}

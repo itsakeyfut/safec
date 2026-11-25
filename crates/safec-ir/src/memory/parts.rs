@@ -1873,7 +1873,8 @@ impl Held {
                 // **A lost value too**: nothing here says what the caller
                 // passed, so nothing this check names is what it points at,
                 // and a use of it is doubted. See ADR-0126. Mutation: answer
-                // it as `from_caller`; `dereferenced` in
+                // it as `from_caller`, which is believed until a call this
+                // check cannot read; `before_the_end` in
                 // `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used`
                 // goes silent.
                 Why::Variadic => unrecorded.lost = true,

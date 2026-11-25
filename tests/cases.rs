@@ -139,10 +139,12 @@ cases! {
         // ADR-0126): `dereferenced` is doubted even after its null test,
         // since nothing here says what the caller passed, and
         // `null_tested_nowhere` is `SC0403` beside it. An integer read so is
-        // asked nothing. Mutations: name nothing for it in `transfer.rs`, or
-        // read `Why::Variadic` as `from_caller` in `parts.rs`, and
-        // `dereferenced` goes silent; answer it `NonNull` in the nullability
-        // check, and `null_tested_nowhere` loses its `SC0403`.
+        // asked nothing. Mutations: name nothing for it in `transfer.rs`, and
+        // `dereferenced` goes silent; read `Why::Variadic` as `from_caller`
+        // in `parts.rs`, believed until a call this check cannot read, and
+        // `before_the_end`, read before `__builtin_va_end`, does; answer it
+        // `NonNull` in the nullability check, and `null_tested_nowhere`
+        // loses its `SC0403`.
         a_pointer_va_arg_reads_is_doubted_wherever_it_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
