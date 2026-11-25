@@ -1,0 +1,6 @@
+Declaration the_line_macro_is_written_where_it_is_used.c:2:1 "line" "int"
+  Number the_line_macro_is_written_where_it_is_used.c:2:12 "2"
+Function the_line_macro_is_written_where_it_is_used.c:5:1 "main" "int (void)"
+  Compound the_line_macro_is_written_where_it_is_used.c:5:16
+    Return the_line_macro_is_written_where_it_is_used.c:5:18
+      Number the_line_macro_is_written_where_it_is_used.c:5:25 "0"

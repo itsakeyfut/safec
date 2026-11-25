@@ -170,6 +170,11 @@ struct Reading {
     expansions: usize,
     /// What the input is compiled for, which decides what is predefined.
     target: Target,
+    /// When the translation started, in seconds since 1970 in UTC, which
+    /// `__DATE__` and `__TIME__` write: `SOURCE_DATE_EPOCH` where it is set,
+    /// the clock otherwise, read once per build; or the value of a
+    /// `SOURCE_DATE_EPOCH` that is not a number of seconds. See ADR-0130.
+    started: Result<u64, String>,
     /// Every expansion this input has made.
     expansions_in_all: usize,
     /// How many expansions of each name are open, and of all names: what the
@@ -540,6 +545,7 @@ pub fn prelude(
         open_macros: HashMap::new(),
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
+        started: started(),
         painted: HashSet::new(),
         unspaced: HashSet::new(),
         arguments: 0,
@@ -1156,8 +1162,36 @@ fn replacement(
         return Replaced::Dropped;
     }
     let Some(defined) = reading.macros.get(name) else {
+        // A name one compiler for the target predefines and another does
+        // not has no one meaning in code either: refused as `#ifdef`
+        // refuses it, where it was otherwise undeclared to one build and a
+        // value to the other. Only the unsettled names: a reserved name no
+        // target predefines, `__func__` or a builtin's, is code's own.
+        // See ADR-0055.
+        if token.kind == TokenKind::Identifier
+            && !reading.settled.contains(name)
+            && unsettled(reading.target).contains(&name)
+        {
+            diagnostics.report(
+                Diagnostic::error(format!("`{name}` is a name the implementation may define"))
+                    .with_code(UNSUPPORTED_DIRECTIVE)
+                    .with_label(Label::primary(token.span, "used here"))
+                    .with_note(format!(
+                        "`{name}` is defined in some builds for this target and not in others"
+                    ))
+                    .with_remedy(Remedy::new(format!(
+                        "say whether the build defines it: `-D {name}` if it does, `-U {name}` if \
+                     it does not"
+                    ))),
+            );
+            return Replaced::Dropped;
+        }
         return Replaced::Kept;
     };
+    if defined.origin == Origin::Dynamic {
+        return dynamic(token, leading, sources, reading, diagnostics)
+            .map_or(Replaced::Dropped, Replaced::Frame);
+    }
     let at = (token.span.file(), token.span.start());
     if reading.painted.contains(&at) {
         return Replaced::Kept;
@@ -1193,18 +1227,6 @@ fn expansion(
 ) -> Option<Frame> {
     let name = sources.snippet(token.span);
     let defined = reading.macros.get(name)?;
-    if defined.origin == Origin::Dynamic {
-        diagnostics.report(
-            Diagnostic::error(format!("`{name}` is not read yet"))
-                .with_code(UNSUPPORTED_DIRECTIVE)
-                .with_label(Label::primary(token.span, "used here"))
-                .with_note(
-                    "its value is the place or the time it is used, which this does not write \
-                     yet",
-                ),
-        );
-        return None;
-    }
     let spelled = defined.spelled;
     let edits = defined.edits.clone();
     let name = name.to_owned();
@@ -1268,6 +1290,135 @@ fn unwritten_report(token: Token, unwritten: Unwritten) -> Diagnostic {
                 "its joins made more than {MAX_PASTED} bytes of text to read"
             )),
     }
+}
+
+/// The expansion of `token`, one of [`DYNAMIC`]: the place or the time of
+/// its use, written as `clang` writes it (ADR-0130). Its one piece is copied
+/// from the use, which is where a report in it points.
+fn dynamic(
+    token: Token,
+    leading: bool,
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Option<Frame> {
+    let name = sources.snippet(token.span).to_owned();
+    let text = match name.as_str() {
+        "__LINE__" => {
+            let at = used_at(token.span, sources);
+            (sources.file(at.file()).line_index(at.end()) + 1).to_string()
+        }
+        "__FILE__" => {
+            let at = used_at(token.span, sources);
+            let named = sources.file(at.file()).name().to_string();
+            format!("\"{}\"", named.replace('\\', "\\\\").replace('"', "\\\""))
+        }
+        _ => {
+            let seconds = match &reading.started {
+                Ok(seconds) => *seconds,
+                Err(value) => {
+                    diagnostics.report(
+                        Diagnostic::error("`SOURCE_DATE_EPOCH` is not a number of seconds")
+                            .with_code(UNSUPPORTED_DIRECTIVE)
+                            .with_label(Label::primary(token.span, "used here"))
+                            .with_note(format!("it is `{value}`, and `{name}` is written from it")),
+                    );
+                    return None;
+                }
+            };
+            let (date, time) = civil(seconds);
+            if name == "__DATE__" { date } else { time }
+        }
+    };
+    begin_use(reading);
+    if !admitted(token, &name, reading, diagnostics) {
+        return None;
+    }
+    let pieces = vec![Piece {
+        offset: 0,
+        from: token.span,
+    }];
+    let file = sources.substitute(text, pieces, token.span);
+    Some(instance(
+        file,
+        (token.span, leading),
+        name,
+        sources,
+        diagnostics,
+    ))
+}
+
+/// Where `span`, a token's, is used, as `__LINE__` and `__FILE__` say it
+/// (measured with `clang 22.1.8 -E`): a token of a replacement list where
+/// the outermost use of its macro ends, the `)` of a call over two lines;
+/// one copied from an argument where the argument was written.
+fn used_at(mut span: Span, sources: &SourceMap) -> Span {
+    while let FileName::Expansion { pieces, at } = sources.file(span.file()).name() {
+        let index = pieces.partition_point(|piece| piece.offset <= span.start()) - 1;
+        let from = pieces[index].from;
+        // Copied from an argument: written inside the call's parentheses.
+        let argument = from.file() == at.file()
+            && at.start() <= from.start()
+            && from.end() <= at.end()
+            && from != *at;
+        span = if argument {
+            from
+        } else {
+            Span::new(at.file(), at.end(), at.end())
+        };
+    }
+    span
+}
+
+/// When the translation started, for [`Reading::started`].
+fn started() -> Result<u64, String> {
+    started_from(std::env::var("SOURCE_DATE_EPOCH").ok())
+}
+
+/// [`started`], given what `SOURCE_DATE_EPOCH` is set to, if it is.
+fn started_from(epoch: Option<String>) -> Result<u64, String> {
+    match epoch {
+        Some(value) => value.trim().parse::<u64>().map_err(|_| value),
+        None => Ok(std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_secs())),
+    }
+}
+
+/// `__DATE__` and `__TIME__` for `seconds` since 1970 in UTC: `"Mmm dd
+/// yyyy"`, the day padded with a space, and `"hh:mm:ss"` (C17 6.10.8.1).
+///
+/// The civil date of a day count, by the proleptic Gregorian calendar's
+/// 400-year cycle of 146,097 days, counted from 1 March so a leap day ends
+/// its year.
+fn civil(seconds: u64) -> (String, String) {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let days = seconds / 86_400;
+    let of_day = seconds % 86_400;
+    // Days since 0000-03-01, 719,468 of them before 1970-01-01.
+    let shifted = days + 719_468;
+    let era = shifted / 146_097;
+    let of_era = shifted % 146_097;
+    let year_of_era = (of_era - of_era / 1_460 + of_era / 36_524 - of_era / 146_096) / 365;
+    let day_of_year = of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_from_march = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * month_from_march + 2) / 5 + 1;
+    let month = if month_from_march < 10 {
+        month_from_march + 3
+    } else {
+        month_from_march - 9
+    };
+    let year = year_of_era + era * 400 + u64::from(month <= 2);
+    let date = format!("\"{} {day:>2} {year}\"", MONTHS[month as usize - 1]);
+    let time = format!(
+        "\"{:02}:{:02}:{:02}\"",
+        of_day / 3_600,
+        of_day / 60 % 60,
+        of_day % 60
+    );
+    (date, time)
 }
 
 /// Start a tree of expansions for a use written outside any expansion and
@@ -2554,7 +2705,7 @@ fn predefined_again(name: &str, at: Span, what: &str, earlier: &Macro) -> Diagno
 }
 
 /// The names C17 6.10.8.1 requires whose value is the place or the time of
-/// their use, which `#ifdef` answers and nothing expands yet.
+/// their use, which [`dynamic`] writes.
 const DYNAMIC: [&str; 4] = ["__FILE__", "__LINE__", "__DATE__", "__TIME__"];
 
 /// The `#define` lines `target` predefines: what C17 6.10.8.1 requires and
@@ -4305,6 +4456,42 @@ mod tests {
         assert_eq!(sources.snippet(string), "%:");
         let first_join = text.find("##").expect("the chain has a `##`") as u32;
         assert_eq!(written("vwz"), Span::new(file, first_join, first_join + 2));
+    }
+
+    /// `__DATE__` and `__TIME__` of a number of seconds are the UTC civil
+    /// date and time: the epoch, a leap day, and the last second of 2099,
+    /// a year a century rule skips. See ADR-0130.
+    ///
+    /// Mutation: count from 1 January rather than 1 March, or pad the day
+    /// with a `0`; one fails.
+    #[test]
+    fn the_date_and_time_of_a_number_of_seconds_are_what_utc_says() {
+        assert_eq!(
+            civil(0),
+            ("\"Jan  1 1970\"".to_owned(), "\"00:00:00\"".to_owned())
+        );
+        assert_eq!(
+            civil(951_782_400),
+            ("\"Feb 29 2000\"".to_owned(), "\"00:00:00\"".to_owned())
+        );
+        assert_eq!(
+            civil(4_102_444_799),
+            ("\"Dec 31 2099\"".to_owned(), "\"23:59:59\"".to_owned())
+        );
+    }
+
+    /// `SOURCE_DATE_EPOCH` is read as seconds, and a value that is not is
+    /// kept to be refused at a use rather than read as now.
+    ///
+    /// Mutation: read the clock where it does not parse. The second
+    /// assertion fails.
+    #[test]
+    fn source_date_epoch_is_read_as_seconds_or_refused() {
+        assert_eq!(started_from(Some(" 42 ".to_owned())), Ok(42));
+        assert_eq!(
+            started_from(Some("tomorrow".to_owned())),
+            Err("tomorrow".to_owned())
+        );
     }
 
     /// A file of function-like calls, one a line, past the bound for one use,

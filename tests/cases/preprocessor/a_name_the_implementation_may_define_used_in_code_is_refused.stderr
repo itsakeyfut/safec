@@ -1,0 +1,18 @@
+error[SC0104]: `__STDC_VERSION__` is a name the implementation may define
+   ╭─[ a_name_the_implementation_may_define_used_in_code_is_refused.c:2:16 ]
+   │
+ 2 │ long version = __STDC_VERSION__;
+   │                ────────┬───────  
+   │                        ╰───────── used here
+───╯
+  = note: `__STDC_VERSION__` is defined in some builds for this target and not in others
+  = help: say whether the build defines it: `-D __STDC_VERSION__` if it does, `-U __STDC_VERSION__` if it does not
+error[SC0104]: `__x86_64__` is a name the implementation may define
+   ╭─[ a_name_the_implementation_may_define_used_in_code_is_refused.c:3:11 ]
+   │
+ 3 │ int x86 = __x86_64__;
+   │           ─────┬────  
+   │                ╰────── used here
+───╯
+  = note: `__x86_64__` is defined in some builds for this target and not in others
+  = help: say whether the build defines it: `-D __x86_64__` if it does, `-U __x86_64__` if it does not

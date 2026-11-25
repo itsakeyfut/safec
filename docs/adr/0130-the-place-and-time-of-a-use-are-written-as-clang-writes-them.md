@@ -56,10 +56,15 @@ nothing else of that record.
 
 ### Confirmation
 
-Owed by #1219: a case under `SOURCE_DATE_EPOCH=0` that compares both
-strings, run; a case with `__LINE__` in a call over two lines, run.
-Mutations: write the local time where `SOURCE_DATE_EPOCH` is set, or the
-line of the name, and the run's exit code changes.
+* Taking the clock where `SOURCE_DATE_EPOCH` is set, or the line of a
+  call's name rather than of its `)`, or of an argument's use rather than
+  where it was written:
+  `the_place_and_time_of_a_use_are_what_clang_writes` in `tests/run`,
+  built with `SOURCE_DATE_EPOCH=0`, runs to another exit code.
+* Counting the date from 1 January, or padding the day with `0`:
+  `the_date_and_time_of_a_number_of_seconds_are_what_utc_says` in
+  `crates/safec-c/src/preprocessor.rs`.
+* `#line` changing the name and the line is owed by #1220.
 
 ### Consequences
 
