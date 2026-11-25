@@ -298,8 +298,17 @@ programs! {
     /// evaluated, the operators and their precedence, `?:`, character and
     /// octal, hex and unsigned constants, and an `#if` inside a skipped
     /// group not evaluated. Mutations: put back the refusal of `#if`, and
-    /// this does not build; compile no group of an `#if`, and `taken` is 0; compare `-1 > 0u` as signed; evaluate the right
+    /// this does not build; compile no group of an `#if`, and `taken` is 0;
+    /// compare `-1 > 0u` as signed; evaluate the right
     /// of `&&` always, or an `#elif` after a taken group; each fails a bit.
+    /// Also, in `more`, each relational operator both ways, the truth
+    /// tables of `||` and `&&`, short circuits through `||` and `?:` that
+    /// must not refuse, precedence written without parentheses, every
+    /// unsigned operator, a decimal constant past `intmax_t`, `'\x7f'`, and
+    /// `#elif 0` then `#else`. Mutations: drop the equal half of `<=` or
+    /// `>=`, swap two precedence levels, evaluate a dead arm of `?:` or
+    /// `||`, compute an unsigned operator as signed or its result as
+    /// signed; each sets a bit.
     an_if_chooses_by_its_constant_expression,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its

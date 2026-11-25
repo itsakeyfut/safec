@@ -4498,6 +4498,8 @@ mod tests {
     /// handed over. A refused `#if` is one whose expression divides by zero,
     /// or that asks about a name the implementation may define. Mutation:
     /// compile the group after a refused `#if`. `a`, or `i`, is handed over.
+    /// Mutation: leave a refused `#elif` unsettled, or taking. `k`, or `j`,
+    /// is.
     /// Mutation: take a second `#else` as the first is taken. `e` is.
     /// Mutation: take the group of an `#ifdef` whose name is not read. `g`
     /// is.
@@ -4506,7 +4508,8 @@ mod tests {
         let text = "#if 1 / 0\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
                     #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n\
                     #ifdef A$B\nint g;\n#endif\n\
-                    #if __GNUC__\nint h;\n#else\nint i;\n#endif\n";
+                    #if __GNUC__\nint h;\n#else\nint i;\n#endif\n\
+                    #if 0\n#elif 1 / 0\nint j;\n#else\nint k;\n#endif\n";
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();

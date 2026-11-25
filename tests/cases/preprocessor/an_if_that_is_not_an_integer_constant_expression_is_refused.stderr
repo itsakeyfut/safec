@@ -145,3 +145,67 @@ error[SC0120]: this overflows `intmax_t`
     │     ╰── here
 ────╯
   = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this constant is too large for `uintmax_t`
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:39:5 ]
+    │
+ 39 │ #if 0x1ffffffffffffffffffffffffffffffff
+    │     ─────────────────┬─────────────────  
+    │                      ╰─────────────────── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` is not an integer constant expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:41:5 ]
+    │
+ 41 │ #if 1x
+    │     ─┬  
+    │      ╰── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` is not an integer constant expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:43:1 ]
+    │
+ 43 │ #if 1 ? 2
+    │ ────┬────  
+    │     ╰────── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0104]: this character constant is not read in a condition yet
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:45:5 ]
+    │
+ 45 │ #if L'a'
+    │     ──┬─  
+    │       ╰─── here
+────╯
+  = note: a constant of one character, with no prefix, is read
+error[SC0120]: this `#if` is not an integer constant expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:47:5 ]
+    │
+ 47 │ #if '
+    │     ┬  
+    │     ╰── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` is not an integer constant expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:49:7 ]
+    │
+ 49 │ #if (1, 2)
+    │       ┬  
+    │       ╰── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` goes on after its expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:51:7 ]
+    │
+ 51 │ #if 1 defined(A)
+    │       ─────┬────  
+    │            ╰────── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` nests deeper than 256
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:53:262 ]
+    │
+ 53 │ #if ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+    │                                                                                                                                                                                                                                                                      ┬  
+    │                                                                                                                                                                                                                                                                      ╰── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled

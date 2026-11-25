@@ -10460,11 +10460,16 @@ cases! {
         // constant past `uintmax_t`, `defined` made by a macro or naming
         // nothing, a `(` never closed, a line going on after its expression,
         // a character constant of two characters, a call written wrong, which
-        // is its own refusal and no more, and a left shift and a negation
-        // past `intmax_t`, each refused (C17 6.10.1, 6.6). Mutations: drop
-        // any one check in `condition.rs`, or go on evaluating after a
-        // refusal in the line's replacement; its report goes or another
-        // comes.
+        // is its own refusal and no more, a left shift and a negation past
+        // `intmax_t`, a constant past `u128`, a malformed one, a `?` with no
+        // `:`, a prefixed character, a `'` never closed (which panicked),
+        // an evaluated comma, a `defined` where the line should end (placed
+        // at the `defined`, not in the file its answer is made in), and 300
+        // parentheses (a thousand overflowed the stack), each refused (C17
+        // 6.10.1, 6.6). Mutations: drop any one check in `condition.rs`,
+        // place an answer where it is made, or go on evaluating after a
+        // refusal in the line's replacement; its report goes, moves, or
+        // another comes.
         an_if_that_is_not_an_integer_constant_expression_is_refused: ["--emit", "ast"],
         // A character constant is valued as the target's `char` holds it:
         // `'\377'` is -1 where `char` is signed and 255 where it is not
@@ -10606,6 +10611,11 @@ cases! {
         // its groups is handed over is asked of the tokens, in
         // `no_group_of_a_refused_or_doubled_conditional_is_handed_over`.
         a_refused_if_s_endif_is_matched: ["--emit", "ast"],
+        // An `#if` or `#elif` whose line ends in a splice is refused by the
+        // frame loop and not evaluated as well, which would report the `\`
+        // again. Mutation: evaluate a spliced `#if` or `#elif`; a second
+        // report comes.
+        a_spliced_if_or_elif_is_not_evaluated: ["--emit", "ast"],
         // C joins the empty line below to the `#ifndef`'s.
         // Mutation: read a conditional whatever its line ends in. It exits 0.
         a_conditional_ending_in_a_splice_is_refused: ["--emit", "ast"],

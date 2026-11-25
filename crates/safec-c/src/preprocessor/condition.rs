@@ -46,13 +46,12 @@ pub(super) fn evaluate(
         return None;
     }
 
-    // `defined`, read before anything is replaced (C17 6.10.1 p4). Its
-    // answers are tokens of a file of their own, `0` and `1`.
-    let answers = sources.add_virtual("defined", "0 1");
-    let answer = |defined: bool| {
-        let at = if defined { 2 } else { 0 };
-        Token::new(TokenKind::Number, Span::new(answers, at, at + 1))
-    };
+    // `defined`, read before anything is replaced (C17 6.10.1 p4). Each
+    // answer is a token of a file of its own, `0` or `1`, one per `defined`,
+    // so a report at one is placed back at the `defined` it answers: placed
+    // in that file, the caret showed `0 1`, text the reader never wrote.
+    // Found by review.
+    let mut answered: Vec<(usize, bool, Span)> = Vec::new();
     let mut line = Vec::with_capacity(tokens.len());
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
@@ -78,9 +77,30 @@ pub(super) fn evaluate(
             diagnostics.report(undecidable_report(text, directive, what, spelled));
             return None;
         }
-        line.push(answer(reading.macros.contains_key(spelled)));
+        let end = tokens[at + if opened { 3 } else { 1 }].span.end();
+        let asked = Span::new(token.span.file(), token.span.start(), end);
+        answered.push((line.len(), reading.macros.contains_key(spelled), asked));
+        line.push(token);
         at += if opened { 4 } else { 2 };
     }
+    let answers = (!answered.is_empty()).then(|| {
+        let text: Vec<&str> = answered
+            .iter()
+            .map(|&(_, defined, _)| if defined { "1" } else { "0" })
+            .collect();
+        sources.add_virtual("defined", text.join(" "))
+    });
+    if let Some(answers) = answers {
+        for (index, &(at, _, _)) in answered.iter().enumerate() {
+            let start = 2 * index as u32;
+            line[at] = Token::new(TokenKind::Number, Span::new(answers, start, start + 1));
+        }
+    }
+    // Where a token is placed in a report: an answer at its `defined`.
+    let placed = |span: Span| match answers {
+        Some(answers) if span.file() == answers => answered[span.start() as usize / 2].2,
+        _ => span,
+    };
 
     // Replaced as an argument is, as a use of its own.
     let errors = diagnostics.error_count();
@@ -94,6 +114,7 @@ pub(super) fn evaluate(
     let mut items = Vec::with_capacity(line.len());
     for &(token, _) in &line {
         let spelled = sources.snippet(token.span);
+        let token = Token::new(token.kind, placed(token.span));
         let item = match token.kind {
             _ if is_name(token) => {
                 // C17 6.10.1 p4 leaves `defined` made by a macro undefined.
@@ -154,6 +175,16 @@ pub(super) fn evaluate(
             // A plain character constant of one character, valued as the
             // target's `char` holds it: `'\xff'` is -1 where `char` is
             // signed and 255 where it is not.
+            // One never closed, `#if '`, is not a constant at all, and
+            // sliced as one it panicked. Found by review.
+            TokenKind::Character if spelled.len() < 2 || !spelled.ends_with('\'') => {
+                refuse(
+                    diagnostics,
+                    &format!("this `{what}` is not an integer constant expression"),
+                    token.span,
+                );
+                return None;
+            }
             TokenKind::Character if spelled.starts_with('\'') => {
                 let values = crate::literal::unescape(&spelled[1..spelled.len() - 1]).ok();
                 let Some(&[value]) = values.as_deref() else {
@@ -166,7 +197,7 @@ pub(super) fn evaluate(
                     return None;
                 };
                 let value = i128::from(value);
-                let value = if character.signed() && value > character.max() {
+                let value = if value > character.max() {
                     value - (1i128 << character.bits())
                 } else {
                     value
@@ -198,6 +229,7 @@ pub(super) fn evaluate(
     let mut parser = Parser {
         items: &items,
         at: 0,
+        depth: 0,
         what,
         end: directive,
     };
@@ -292,12 +324,47 @@ type Refused = (String, Span);
 struct Parser<'a> {
     items: &'a [Item],
     at: usize,
+    /// How deep the reading is in parentheses, `?:` and unary operators,
+    /// which [`MAX_DEPTH`] bounds.
+    depth: usize,
     what: &'static str,
     /// Where a line that ends too soon is reported.
     end: Span,
 }
 
+/// How deep a condition may nest before it is refused rather than read on
+/// the native stack: a thousand `(` overflowed it with nothing said. Found by
+/// review. The parser of C refuses past the same depth.
+const MAX_DEPTH: usize = 256;
+
 impl Parser<'_> {
+    /// One level deeper, or the refusal past [`MAX_DEPTH`].
+    fn deeper(&mut self) -> Result<(), Refused> {
+        self.depth += 1;
+        if self.depth > MAX_DEPTH {
+            return Err((
+                format!("this `{}` nests deeper than {MAX_DEPTH}", self.what),
+                self.here(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// An expression with its commas (C17 6.5.17), which an integer
+    /// constant expression may hold only where it is not evaluated (6.6 p3):
+    /// `0 && (1, 2)` is 0, and `(1, 2)` evaluated is refused.
+    fn expression(&mut self, live: bool) -> Result<Value, Refused> {
+        let mut value = self.conditional(live)?;
+        while self.peek() == Some(Punct::Comma) {
+            if live {
+                return Err(self.not_constant(self.here()));
+            }
+            self.at += 1;
+            value = self.conditional(live)?;
+        }
+        Ok(value)
+    }
+
     fn not_constant(&self, at: Span) -> Refused {
         (
             format!("this `{}` is not an integer constant expression", self.what),
@@ -329,12 +396,14 @@ impl Parser<'_> {
         if !self.eat(Punct::Question) {
             return Ok(condition);
         }
+        self.deeper()?;
         let taken = condition.bits != 0;
-        let then = self.conditional(live && taken)?;
+        let then = self.expression(live && taken)?;
         if !self.eat(Punct::Colon) {
             return Err(self.not_constant(self.here()));
         }
         let otherwise = self.conditional(live && !taken)?;
+        self.depth -= 1;
         // The usual arithmetic conversions bring both to one type
         // (C17 6.5.15 p5).
         let unsigned = then.unsigned || otherwise.unsigned;
@@ -430,11 +499,19 @@ impl Parser<'_> {
             // The type of a shift is its left operand's (C17 6.5.7 p3), and a
             // count below zero or past the width is undefined.
             Punct::LessLess | Punct::GreaterGreater => {
-                if (!right.unsigned && sr < 0) || r >= 64 {
+                // A count below zero is past 63 as `uintmax_t` bits.
+                if r >= 64 {
                     return if live {
                         refuse("this shifts by a count below zero or past 63")
                     } else {
-                        Ok(Value::signed(0))
+                        // Not evaluated, it still has its type, which `?:`
+                        // converts the other arm to (C17 6.5.15 p5): made
+                        // `intmax_t`, `(1 ? -1 : 1u << 64) < 0` took the
+                        // group C does not. Found by review.
+                        Ok(Value {
+                            bits: 0,
+                            unsigned: left.unsigned,
+                        })
                     };
                 }
                 let count = r as u32;
@@ -471,7 +548,8 @@ impl Parser<'_> {
                     return if live {
                         refuse("this divides by zero")
                     } else {
-                        Ok(Value::signed(0))
+                        // Its type all the same, as a shift's above.
+                        Ok(Value { bits: 0, unsigned })
                     };
                 }
                 if unsigned {
@@ -501,10 +579,12 @@ impl Parser<'_> {
             }
             Some(Item::Operator(Punct::LeftParen, _)) => {
                 self.at += 1;
-                let value = self.conditional(live)?;
+                self.deeper()?;
+                let value = self.expression(live)?;
                 if !self.eat(Punct::RightParen) {
                     return Err(self.not_constant(self.here()));
                 }
+                self.depth -= 1;
                 Ok(value)
             }
             Some(Item::Operator(
@@ -513,7 +593,9 @@ impl Parser<'_> {
             )) => {
                 let operator = *operator;
                 self.at += 1;
+                self.deeper()?;
                 let value = self.unary(live)?;
+                self.depth -= 1;
                 match operator {
                     Punct::Plus => Ok(value),
                     Punct::Tilde => Ok(Value {
