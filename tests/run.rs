@@ -298,7 +298,7 @@ programs! {
     /// evaluated, the operators and their precedence, `?:`, character and
     /// octal, hex and unsigned constants, and an `#if` inside a skipped
     /// group not evaluated. Mutations: put back the refusal of `#if`, and
-    /// this does not build; compare `-1 > 0u` as signed; evaluate the right
+    /// this does not build; compile no group of an `#if`, and `taken` is 0; compare `-1 > 0u` as signed; evaluate the right
     /// of `&&` always, or an `#elif` after a taken group; each fails a bit.
     an_if_chooses_by_its_constant_expression,
     /// A struct a function reaches only through pointers is laid out where

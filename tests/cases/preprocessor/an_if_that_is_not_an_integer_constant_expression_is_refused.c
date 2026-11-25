@@ -22,6 +22,8 @@
 #endif
 #if defined
 #endif
+#if defined(X
+#endif
 #if (1
 #endif
 #if 1 2

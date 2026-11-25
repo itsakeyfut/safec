@@ -4,6 +4,11 @@
 
 int main(void) {
     int fails = 0;
+    int taken = 0;
+#if 1
+    taken = 1;
+#endif
+    if (!taken) fails |= 16384;
 #if N > 2 && defined(N) && defined N
 #else
     fails |= 1;

@@ -90,49 +90,57 @@ error[SC0120]: `defined` names no macro
     │        ╰───── here
 ────╯
   = note: none of this conditional's groups from this `#if` on is compiled
-error[SC0120]: this `#if` is not an integer constant expression
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:25:1 ]
+error[SC0120]: `defined` names no macro
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:25:5 ]
     │
- 25 │ #if (1
+ 25 │ #if defined(X
+    │     ───┬───  
+    │        ╰───── here
+────╯
+  = note: none of this conditional's groups from this `#if` on is compiled
+error[SC0120]: this `#if` is not an integer constant expression
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:27:1 ]
+    │
+ 27 │ #if (1
     │ ───┬──  
     │    ╰──── here
 ────╯
   = note: none of this conditional's groups from this `#if` on is compiled
 error[SC0120]: this `#if` goes on after its expression
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:27:7 ]
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:29:7 ]
     │
- 27 │ #if 1 2
+ 29 │ #if 1 2
     │       ┬  
     │       ╰── here
 ────╯
   = note: none of this conditional's groups from this `#if` on is compiled
 error[SC0104]: this character constant is not read in a condition yet
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:29:5 ]
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:31:5 ]
     │
- 29 │ #if 'ab'
+ 31 │ #if 'ab'
     │     ──┬─  
     │       ╰─── here
 ────╯
   = note: a constant of one character is read
 error[SC0119]: `ONE` takes 1 argument, and is given 2
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:31:5 ]
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:33:5 ]
     │
- 31 │ #if ONE(1, 2)
+ 33 │ #if ONE(1, 2)
     │     ────┬────  
     │         ╰────── called here
 ────╯
 error[SC0120]: this overflows `intmax_t`
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:33:7 ]
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:35:7 ]
     │
- 33 │ #if 1 << 63
+ 35 │ #if 1 << 63
     │       ─┬  
     │        ╰── here
 ────╯
   = note: none of this conditional's groups from this `#if` on is compiled
 error[SC0120]: this overflows `intmax_t`
-    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:35:5 ]
+    ╭─[ an_if_that_is_not_an_integer_constant_expression_is_refused.c:37:5 ]
     │
- 35 │ #if -(-9223372036854775807 - 1)
+ 37 │ #if -(-9223372036854775807 - 1)
     │     ┬  
     │     ╰── here
 ────╯
