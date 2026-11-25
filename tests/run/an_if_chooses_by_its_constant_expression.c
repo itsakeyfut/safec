@@ -208,6 +208,26 @@ int main(void) {
 #else
     more |= 1LL << 33;
 #endif
+#if !(1 && 0)
+#else
+    more |= 1LL << 35;
+#endif
+#if !(0 && 1)
+#else
+    more |= 1LL << 36;
+#endif
+#if (-8 >> 1u) < 0
+#else
+    more |= 1LL << 37;
+#endif
+#if !((1 ? -1 : 1u / 0) < 0)
+#else
+    more |= 1LL << 38;
+#endif
+#if !((1 ? -1 : 1u << 64) < 0)
+#else
+    more |= 1LL << 39;
+#endif
 #if 0
 #elif 0
     more |= 1LL << 40;
