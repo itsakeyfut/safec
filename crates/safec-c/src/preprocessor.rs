@@ -24,7 +24,9 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Remedy};
 use crate::driver::{Access, reason};
-use crate::lexer::{UNSUPPORTED_SPLICE, is_identifier, lex, unexpected_characters};
+use crate::lexer::{
+    UNSUPPORTED_SPLICE, is_identifier, lex, lex_replacement, unexpected_characters,
+};
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
@@ -99,6 +101,29 @@ const MAX_EXPANSIONS: usize = 65536;
 /// past it the next expansion is refused, once.
 const MAX_EXPANSIONS_IN_ALL: usize = 2 * MAX_EXPANSIONS;
 
+/// How deep one call's arguments may hold calls, one inside the next.
+///
+/// Each level is read by a frame loop of its own, on the native stack, so
+/// past a depth the process overflowed it with nothing said: `I(I(...I(1)))`
+/// a thousand deep did, where C17 5.2.4.1 asks for 63 levels of nested
+/// parentheses. Past this the innermost call is refused, once per call
+/// refused. Found by review.
+const MAX_ARGUMENT_DEPTH: usize = 200;
+
+/// How many bytes the calls of one use may write into their expansions.
+///
+/// [`MAX_EXPANSIONS`] counts expansions, and a call copies its argument
+/// once per use of its parameter, so a chain of calls each using its
+/// parameter twice doubles what it copies at every level while counting a
+/// handful of expansions: twenty-four such levels took 36 s and printed a
+/// 27 MB diagnostic. Found by review. This sits far above what a real
+/// program's macros write for one use.
+const MAX_SUBSTITUTED: usize = 1 << 22;
+
+/// How many bytes the calls of one input may write in all, for the reason
+/// [`MAX_EXPANSIONS_IN_ALL`] bounds an input as well as a use.
+const MAX_SUBSTITUTED_IN_ALL: usize = 1 << 26;
+
 /// The files being read, the macros defined, and how many inclusions and
 /// expansions there have been so far.
 ///
@@ -138,6 +163,11 @@ struct Reading {
     /// argument, so a call's arguments count toward the bound of the use
     /// they are in.
     arguments: usize,
+    /// Bytes the calls of the use being read have written, which
+    /// [`MAX_SUBSTITUTED`] bounds, and those of the whole input, which
+    /// [`MAX_SUBSTITUTED_IN_ALL`] does.
+    substituted: usize,
+    substituted_in_all: usize,
 }
 
 /// An object-like macro.
@@ -279,6 +309,8 @@ pub fn prelude(
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
         painted: HashSet::new(),
         arguments: 0,
+        substituted: 0,
+        substituted_in_all: 0,
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -908,6 +940,7 @@ fn expansion(
 fn begin_use(reading: &mut Reading) {
     if reading.open_expansions == 0 && reading.arguments == 0 {
         reading.expansions = 0;
+        reading.substituted = 0;
     }
 }
 
@@ -967,7 +1000,7 @@ fn instance(
     // Lexed here, where it is used, so a character no token can begin is
     // reported at each use, which is where C makes it an error. That is
     // `read_includes`' to do for every frame, this one included.
-    let tokens = lex(file, &sources.file_owned(file), diagnostics);
+    let tokens = lex_replacement(file, &sources.file_owned(file), diagnostics);
     Frame {
         tokens,
         cursor: 0,
@@ -1081,12 +1114,26 @@ fn call(
     top.cursor = at;
 
     let Some(close) = close else {
-        diagnostics.report(
+        // Ending an expansion or an included file, C reads on past it for
+        // the `)` (C17 6.10.3.4 p1), and the call then has no one span for
+        // its use, as one whose `(` lies past it has none. Only the input
+        // ending is a call that is never closed.
+        let report = if top.instance.is_some() {
+            Diagnostic::error(
+                "a call whose arguments run past an expansion or a file is not read yet",
+            )
+            .with_code(UNSUPPORTED_DIRECTIVE)
+            .with_label(Label::primary(token.span, "called here"))
+            .with_note(format!(
+                "the `)` of `{name}` is outside what its name was read from"
+            ))
+        } else {
             Diagnostic::error(format!("this call of `{name}` has no `)`"))
                 .with_code(MALFORMED_CALL)
                 .with_label(Label::primary(token.span, "called here"))
-                .with_note("its arguments run on to the end of what it is read from"),
-        );
+                .with_note("its arguments run on to the end of the file")
+        };
+        diagnostics.report(report);
         return Replaced::Dropped;
     };
     // C17 6.10.3 p11 leaves a directive there undefined. Read as a directive
@@ -1133,26 +1180,86 @@ fn call(
     }
 
     begin_use(reading);
+    if reading.arguments >= MAX_ARGUMENT_DEPTH {
+        diagnostics.report(
+            Diagnostic::error("this call is nested too deep in other calls' arguments")
+                .with_code(TOO_MANY_EXPANSIONS)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(format!(
+                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
+                )),
+        );
+        return Replaced::Dropped;
+    }
+    // Only an argument the body uses is replaced: C replaces one before
+    // substituting it (C17 6.10.3.1 p1), and one never substituted is never
+    // replaced, so `#define K(x) 7` used as `K(H(1, 2))` asks nothing of `H`.
+    // Replacing every one refused that. Found by review.
     let arguments: Vec<Vec<Token>> = arguments
         .into_iter()
-        .map(|argument| replaced(argument, sources, reading, diagnostics))
+        .enumerate()
+        .map(|(index, argument)| {
+            if parameters.uses.iter().any(|&(_, _, used)| used == index) {
+                replaced(argument, sources, reading, diagnostics)
+            } else {
+                Vec::new()
+            }
+        })
         .collect();
     let Some(spelled) = reading.macros.get(&name).map(|defined| defined.spelled) else {
         unreachable!(
             "`{name}` was a macro when its call began and nothing in an argument can undefine it"
         );
     };
-    if !admitted(token, &name, reading, diagnostics) {
+    let (text, pieces, painted) = substituted(spelled, &parameters, &arguments, sources, reading);
+    if !written_within_bounds(token, text.len(), reading, diagnostics)
+        || !admitted(token, &name, reading, diagnostics)
+    {
         return Replaced::Dropped;
     }
-
-    let (text, pieces, painted) = substituted(spelled, &parameters, &arguments, sources, reading);
     let at = Span::new(token.span.file(), token.span.start(), close.span.end());
     let file = sources.substitute(text, pieces, at);
     reading
         .painted
         .extend(painted.into_iter().map(|offset| (file, offset)));
     Replaced::Frame(instance(file, at, name, sources, diagnostics))
+}
+
+/// Count `length` bytes a call at `token` writes into its expansion, or
+/// refuse it past [`MAX_SUBSTITUTED`] or [`MAX_SUBSTITUTED_IN_ALL`], each
+/// said once.
+fn written_within_bounds(
+    token: Token,
+    length: usize,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> bool {
+    let use_was_open = reading.substituted <= MAX_SUBSTITUTED;
+    let input_was_open = reading.substituted_in_all <= MAX_SUBSTITUTED_IN_ALL;
+    reading.substituted = reading.substituted.saturating_add(length);
+    reading.substituted_in_all = reading.substituted_in_all.saturating_add(length);
+    let (bound, of) = if reading.substituted_in_all > MAX_SUBSTITUTED_IN_ALL {
+        if !input_was_open {
+            return false;
+        }
+        (MAX_SUBSTITUTED_IN_ALL, "this input")
+    } else if reading.substituted > MAX_SUBSTITUTED {
+        if !use_was_open {
+            return false;
+        }
+        (MAX_SUBSTITUTED, "the use this is in")
+    } else {
+        return true;
+    };
+    diagnostics.report(
+        Diagnostic::error("this call writes too much into its expansion")
+            .with_code(TOO_MANY_EXPANSIONS)
+            .with_label(Label::primary(token.span, "called here"))
+            .with_note(format!(
+                "more than {bound} bytes are written into the expansions of {of}"
+            )),
+    );
+    false
 }
 
 /// The text of a call's expansion: the replacement list at `spelled`, each
@@ -3106,6 +3213,74 @@ mod tests {
             "{:?}",
             diagnostics.diagnostics().first()
         );
+    }
+
+    /// A file of function-like calls, one a line, past the bound for one use,
+    /// is read: each call written outside any expansion and argument starts
+    /// a use of its own.
+    ///
+    /// Mutations: drop `begin_use` from `call`, or leave `Reading::arguments`
+    /// raised after an argument; the count never starts again and the last
+    /// call is refused as `SC0113`.
+    #[test]
+    fn a_function_like_macro_called_on_many_lines_is_not_bounded_as_one_tree() {
+        let mut text = String::from("#define ID(x) x\n");
+        for at in 0..=MAX_EXPANSIONS {
+            text.push_str(&format!("int v{at} = ID(1);\n"));
+        }
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        assert!(
+            !diagnostics.has_errors(),
+            "{:?}",
+            diagnostics.diagnostics().first()
+        );
+    }
+
+    /// A call's arguments count toward the bound of the use they are in:
+    /// two arguments each just under it are refused together.
+    ///
+    /// Mutation: start a use at an expansion inside an argument, in
+    /// `begin_use`; each argument is counted on its own and nothing is
+    /// refused.
+    #[test]
+    fn a_call_s_arguments_count_toward_its_use_s_bound() {
+        let mut text = String::from("#define M0 1\n");
+        for at in 1..=15 {
+            text.push_str(&format!("#define M{at} M{} M{}\n", at - 1, at - 1));
+        }
+        text.push_str("#define P(a, b) a b\nint v[] = { P(M15, M15) };\n");
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+
+        let codes: Vec<String> = diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(codes, ["SC0113"]);
     }
 
     /// Many uses of trees under the bound for one use are refused once

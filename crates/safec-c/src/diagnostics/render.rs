@@ -607,7 +607,10 @@ fn written(sources: &SourceMap, diagnostic: &Diagnostic) -> Diagnostic {
         {
             let expanded = Label::secondary(
                 sources.written(*at),
-                format!("`{}` expanded here", sources.snippet(*at)),
+                format!(
+                    "`{}` expanded here",
+                    sources.macro_name(file).unwrap_or_default()
+                ),
             );
             if !uses.contains(&expanded) {
                 uses.push(expanded);

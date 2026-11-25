@@ -88,6 +88,29 @@ pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) 
         text: source.contents(),
         offset: 0,
         at_line_start: true,
+        directives: true,
+    }
+    .run(diagnostics)
+}
+
+/// Scan a macro's expansion, where no `#` begins a directive.
+///
+/// What a replacement holds is tokens, and is not processed as a directive
+/// even where it resembles one (C17 6.10.3.4 p3). An expansion's text starts
+/// a file of its own, so its first `#` sits where a line begins, and scanned
+/// as [`lex`] scans a file, `F(# define X 3)` with `#define F(x) x` defined
+/// `X`. Found by review.
+pub(crate) fn lex_replacement(
+    file: FileId,
+    source: &SourceFile,
+    diagnostics: &mut DiagnosticSink,
+) -> Vec<Token> {
+    Lexer {
+        file,
+        text: source.contents(),
+        offset: 0,
+        at_line_start: true,
+        directives: false,
     }
     .run(diagnostics)
 }
@@ -134,6 +157,9 @@ struct Lexer<'a> {
     /// token, which is why `clang` records it there, but nothing outside this
     /// scan wants it today, and tokens are built in one place.
     at_line_start: bool,
+    /// Whether a `#` that begins a line begins a directive: false for a
+    /// macro's expansion, as [`lex_replacement`] says.
+    directives: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -150,7 +176,8 @@ impl<'a> Lexer<'a> {
             // so this asks what the scan is about to take rather than what the
             // next character is: `##` is one token and begins no directive,
             // and `%:` is `#` (C17 6.4.6 p3) and begins one.
-            let kind = if self.at_line_start
+            let kind = if self.directives
+                && self.at_line_start
                 && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
             {
                 self.scan_directive()

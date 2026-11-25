@@ -10221,7 +10221,9 @@ cases! {
         // and noted at the call (ADR-0128). Mutation: place every offset of
         // an expansion through its first piece in `SourceMap::written`; the
         // caret moves into `CALL`'s body. Make each of an argument's tokens a
-        // piece of its own; the caret covers `free` alone.
+        // piece of its own; the caret covers `free` alone. Merge tokens that
+        // are apart into one piece; the third caret, over `free  (p)`, ends
+        // a byte short.
         a_diagnostic_in_an_argument_points_at_the_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Too few arguments, too many, a directive among them, and none
         // closed (C17 6.10.3 p4, p11), each refused. Mutation: drop the
@@ -10232,10 +10234,34 @@ cases! {
         // until #1336. Mutation: answer `Kept` where the frame ends; `F` is
         // handed on as a name, and is `SC0301`, undeclared.
         a_call_whose_name_came_out_of_an_expansion_is_refused: ["--emit", "ast"],
-        // A parameter named twice (C17 6.10.3 p6), one that is not a name, a
-        // list never closed, and `__VA_ARGS__` as a parameter, each refused.
-        // Mutation: drop the test for a name seen before; `TWICE` is read.
+        // A parameter named twice (C17 6.10.3 p6), one led by a digit, one
+        // holding a `$`, an empty one, a list never closed, and
+        // `__VA_ARGS__` as a parameter, each refused. Mutations: drop the
+        // test for a name seen before, for an empty name, or for a character
+        // no name holds, or read an unclosed list to the line's end; one of
+        // `TWICE`, `EMPTY`, `DOLLAR` and `UNCLOSED` is read.
         a_parameter_list_written_wrong_is_refused: ["--emit", "ast"],
+        // What a replacement holds is tokens, not a directive, even where
+        // it starts with `#` (C17 6.10.3.4 p3), so `F(# define READ(p) 0)`
+        // is `#`, `define`... handed to the parser and refused, as `clang`
+        // refuses it, and `READ(p)` stays a dereference. Mutation: scan an
+        // expansion as a file is scanned, in `instance`; the arguments
+        // redefine `READ` and this is silent.
+        an_argument_that_begins_with_a_hash_is_not_a_directive: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C reads past an expansion for a call's `)` (C17 6.10.3.4 p1), and
+        // such a call has no one span for its use (ADR-0128), so it is
+        // refused as not read yet, not as a call never closed. Mutation:
+        // drop the test for an expansion's frame; it says `SC0119`.
+        a_call_whose_arguments_run_past_an_expansion_is_refused: ["--emit", "ast"],
+        // A thousand calls, each inside the last's argument, are refused at
+        // `MAX_ARGUMENT_DEPTH` rather than read on the native stack.
+        // Mutation: drop the bound; the process overflows its stack.
+        a_call_nested_too_deep_in_arguments_is_refused: ["--emit", "ast"],
+        // Calls that double what they copy at each level are refused once
+        // past `MAX_SUBSTITUTED`, after a handful of counted expansions.
+        // Mutation: drop the bound; this runs for seconds and prints a
+        // diagnostic megabytes long instead.
+        a_call_that_writes_too_much_into_its_expansion_is_refused: ["--emit", "ast"],
         // `#define N (*p)`, the usual way to write one. Mutation: join the
         // climb from its operands' spans. `N + 1` starts at `*`, partway
         // through the expansion, and is refused.

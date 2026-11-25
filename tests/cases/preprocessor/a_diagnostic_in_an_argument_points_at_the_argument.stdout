@@ -16,4 +16,9 @@ Function a_diagnostic_in_an_argument_points_at_the_argument.c:4:6 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_diagnostic_in_an_argument_points_at_the_argument.c:6:10 generated
+    ArgumentsEvaluated a_diagnostic_in_an_argument_points_at_the_argument.c:7:10 generated
+    Call a_diagnostic_in_an_argument_points_at_the_argument.c:7:10 written "free" "bb3"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_diagnostic_in_an_argument_points_at_the_argument.c:7:10 generated
     Return

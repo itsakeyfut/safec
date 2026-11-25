@@ -30,4 +30,4 @@ error[SC0119]: this call of `ONE` has no `)`
    │            ─┬─  
    │             ╰─── called here
 ───╯
-  = note: its arguments run on to the end of what it is read from
+  = note: its arguments run on to the end of the file

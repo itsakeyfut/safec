@@ -4,4 +4,5 @@ void free(void *p);
 void f(int * _Nonnull p) {
     CALL(free(p));
     CALL(free(p));
+    CALL(free  (p));
 }

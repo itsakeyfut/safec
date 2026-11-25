@@ -587,9 +587,19 @@ impl SourceMap {
 
     /// The name of the macro `file` is an expansion of, as it was written at
     /// the use, or `None` for a file that is not an expansion.
+    ///
+    /// A function-like macro's use is its whole call, and the name is what
+    /// begins it: quoting the call put every argument into a message, 27 MB
+    /// of one. Found by review.
     pub fn macro_name(&self, file: FileId) -> Option<&str> {
         match self.file(file).name() {
-            FileName::Expansion { at, .. } => Some(self.snippet(*at)),
+            FileName::Expansion { at, .. } => {
+                let used = self.snippet(*at);
+                let length = used
+                    .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                    .unwrap_or(used.len());
+                Some(&used[..length])
+            }
             FileName::Real(_) | FileName::Virtual(_) | FileName::Inclusion { .. } => None,
         }
     }
@@ -1180,12 +1190,6 @@ mod tests {
         );
     }
 
-    /// A span in an expansion is written in its macro's `#define`, at the
-    /// same offset, even where the expansion is nested in another; a span
-    /// anywhere else is itself.
-    ///
-    /// Mutation: place the span by its expansion's `at` rather than its
-    /// `spelled`. `B`'s span lands on `A`'s body.
     /// A span in a call's expansion is written through the piece its start
     /// is in: a run of the body in its `#define`, an argument where it was
     /// written, through another expansion where it was written in one, and
@@ -1234,6 +1238,39 @@ int F(A);
         assert_eq!(map.written(Span::new(call, 2, 5)), Span::new(main, 27, 28));
     }
 
+    /// An expansion's pieces start at 0, rise, and stay within its text,
+    /// which `written` searches them by; a list that does not is refused
+    /// where it is registered rather than answered wrong later.
+    ///
+    /// Mutation: drop any one of the three tests in `substitute`'s
+    /// assertion; one of these does not panic.
+    #[test]
+    fn an_expansion_s_pieces_that_do_not_start_at_0_and_rise_are_refused() {
+        let pieces = |offsets: &[u32]| -> Vec<Piece> {
+            offsets
+                .iter()
+                .map(|&offset| Piece {
+                    offset,
+                    from: Span::new(FileId(0), 0, 1),
+                })
+                .collect()
+        };
+        for offsets in [&[1][..], &[0, 2, 2][..], &[0, 9][..]] {
+            let mut map = SourceMap::new();
+            let main = map.add_virtual("t.c", "abc");
+            let refused = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                map.substitute("abc".to_owned(), pieces(offsets), Span::new(main, 0, 1))
+            }));
+            assert!(refused.is_err(), "{offsets:?} was registered");
+        }
+    }
+
+    /// A span in an expansion is written in its macro's `#define`, at the
+    /// same offset, even where the expansion is nested in another; a span
+    /// anywhere else is itself.
+    ///
+    /// Mutation: place the span by its expansion's `at` rather than its
+    /// `spelled`. `B`'s span lands on `A`'s body.
     #[test]
     fn a_span_in_an_expansion_is_written_in_its_define() {
         let (map, main, a, b) = expansions();

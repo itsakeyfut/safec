@@ -11,7 +11,7 @@ error[SC0401]: this frees `p`, which was freed already
    │ 
  8 │     USE_THEN_FREE(p);
    │     ────────┬───────  
-   │             ╰───────── `USE_THEN_FREE(p)` expanded here
+   │             ╰───────── `USE_THEN_FREE` expanded here
  9 │     free(p);
    │     ───┬───  
    │        ╰───── freed again here
