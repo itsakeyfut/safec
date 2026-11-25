@@ -11,6 +11,7 @@ int F = 2;
 #define register id(4)
 #define PASTE(a, b) a ## b
 #define id2(y) PASTE(y, 0)
+#define POPT(...) __VA_OPT__(__VA_ARGS__)
 #define SQ(x) ((x) * (x))
 #define x x+1
 #define id(y) y
@@ -47,5 +48,6 @@ int main(void) {
     if (SUB(5 -) != 6) fails |= 65536;
     if (id(register) != 4) fails |= 131072;
     if (id2(x) != 11) fails |= 262144;
+    if (POPT(x) != 2) fails |= 524288;
     return fails != 0;
 }

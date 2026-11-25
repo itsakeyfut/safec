@@ -10160,8 +10160,26 @@ cases! {
         // (C17 6.10.3.4 p2). Mutation: drop the open-expansion check in
         // `replacement`. It expands until the bound refuses it as `SC0113`.
         a_macro_that_names_itself_is_expanded_once: ["--emit", "ast"],
-        // Mutation: read `...` as a parameter. The report goes.
-        a_variadic_macro_is_not_read_yet: ["--emit", "ast"],
+        // GNU's named `args...`, and `...` before the last parameter, are
+        // refused (C17 6.10.3 p12 allows only `...` last). Mutation: read a
+        // parameter ending in `...` as `...`; a report goes.
+        a_named_variadic_parameter_is_not_read_yet: ["--emit", "ast"],
+        // `__VA_ARGS__` and `__VA_OPT__` outside a variadic macro's list
+        // (C17 6.10.3 p5, C23 6.10.5.2), `__VA_OPT__` unclosed, inside
+        // another, or beside `##`, too few arguments, and `F()` for a macro
+        // of `...` alone with `, ## __VA_ARGS__`, whose comma C's and GNU's
+        // modes disagree on (ADR-0055), are each refused; and so are
+        // `__VA_OPT__` with no `(`, `__VA_OPT__` in code, and `, ## y` for a
+        // named `y`, an ordinary join making `,1`. Mutations: drop the test
+        // for a variadic macro, a nesting, a `##` before or after
+        // `__VA_OPT__`, a `(` or `)` after it, a count, the mode, or a
+        // name in code, or read `, ## y` as GNU's comma; a report goes.
+        va_args_outside_a_variadic_macro_is_refused: ["--emit", "ast"],
+        // `L(1,)` passes the variable arguments empty, so `, ## __VA_ARGS__`
+        // keeps its comma, as `clang` and GCC's manual do, and `count(1,)`
+        // is refused by the parser. Mutation: read an empty one as left
+        // out; this compiles.
+        an_empty_variable_argument_keeps_the_comma: ["--emit", "ast"],
         // `#` with no parameter after it in a function-like macro, `##`
         // first, last or twice over, and a join that makes `+-` or `@@` in a
         // call or in an object-like macro, each refused as `SC0119` (C17
@@ -10190,6 +10208,10 @@ cases! {
         // refused rather than read in the square of their length. Mutation:
         // drop the bound; this is read.
         a_long_chain_of_joins_is_refused: ["--emit", "ast"],
+        // Two `__VA_OPT__`s each joining just under `MAX_PASTED` pass it
+        // together and are refused. Mutation: count each `__VA_OPT__`'s
+        // joins apart; this is read.
+        joins_split_over_va_opts_count_toward_one_bound: ["--emit", "ast"],
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],

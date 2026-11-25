@@ -230,8 +230,9 @@ programs! {
     /// `id(register)` with `#define register id(4)`, which must be
     /// replaced there, before `id` is open, or its own `id` is kept. A name
     /// kept inside its own expansion stays kept when a join copies it,
-    /// `id2(x)` being `x + 10`. Mutation: leave its mark behind in a join;
-    /// it is `x+1 + 10`. Mutations: look the mark up at offset 0, or scan the
+    /// `id2(x)` being `x + 10`, and when `__VA_OPT__` writes it, `POPT(x)`.
+    /// Mutations: leave its mark behind in a join, or in `__VA_OPT__`'s
+    /// text; it is `x+1 + 10`, or `x+1+1`. Mutations: look the mark up at offset 0, or scan the
     /// frames below outermost first, or replace an unused argument, or join
     /// an argument's tokens, or set nothing off after an argument, or offer
     /// no keyword for replacement inside an argument; each fails one.
@@ -261,6 +262,35 @@ programs! {
     /// leave a piece where a join made nothing, and `CX(,)` panics; write a
     /// join touching the list, and `M` is `v---w`.
     stringizing_and_pasting_make_what_c_says,
+    /// `...` and `__VA_ARGS__` (C17 6.10.3.1 p2): the arguments past the
+    /// named ones, commas and all, replaced; left out entirely; GNU's
+    /// `, ## __VA_ARGS__` dropping its comma where they are left out; C23's
+    /// `__VA_OPT__` writing its content only where they replace to a token,
+    /// and `#__VA_OPT__` stringizing it (#1217). Mutations: put back the
+    /// refusal of `...`, and this does not build; keep the comma where the
+    /// arguments are left out, and `L(1)` is refused; split the variable
+    /// arguments at their commas, and `REST(0, 4, 5)` has too many; write
+    /// `__VA_OPT__`'s content whatever the arguments are, and `O(1, EMPTY)`
+    /// passes a comma and nothing; stringize its text's spaces as white
+    /// space, and `SO2(1)` is `"( 1 )"`; write nothing for `#` on an empty
+    /// one, and `SO()` is no expression.
+    a_variadic_macro_takes_what_is_past_its_parameters,
+    /// Variadic macros stringized against what `clang 22.1.8 -E` writes for
+    /// each, every expected string taken from its output: GNU's comma with
+    /// its arguments as written (`F(F(1), F(2,3))` keeps the inner `F` as
+    /// `F`, C17 6.10.3.1 p1), left out with the white space before it,
+    /// given empty, joined on (`z(a , b1)`); the white space of an
+    /// expansion to nothing kept before the next token (`[ E]` is `[ ]`);
+    /// `__VA_OPT__` with a named parameter, with `#`, `##` and GNU's comma
+    /// inside, of white space alone, empty (`EV(1)` panicked once). Found
+    /// by review. Mutations: replace the comma's arguments first; keep the
+    /// space before a dropped comma; read a longer comma run as a plain
+    /// join; drop an empty expansion's white space; replace no argument
+    /// `__VA_OPT__` uses alone, or not its own; shift no edit but a
+    /// parameter's into `__VA_OPT__`; write a piece for content of white
+    /// space; read `x ## __VA_ARGS__` as GNU's comma; each changes a string
+    /// or panics.
+    variadic_macros_write_what_clang_writes,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

@@ -1,0 +1,7 @@
+Declaration an_empty_variable_argument_keeps_the_comma.c:1:1 "count" "int (int, ...)"
+  Parameter an_empty_variable_argument_keeps_the_comma.c:1:11 "n" "int"
+Declaration an_empty_variable_argument_keeps_the_comma.c:4:1 "v" "int"
+  Call an_empty_variable_argument_keeps_the_comma.c:2:21
+    Identifier an_empty_variable_argument_keeps_the_comma.c:2:21 "count"
+    Number an_empty_variable_argument_keeps_the_comma.c:4:11 "1"
+    Error an_empty_variable_argument_keeps_the_comma.c:2:46

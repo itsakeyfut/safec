@@ -1,0 +1,11 @@
+error[SC0201]: expected an expression
+   ╭─[ an_empty_variable_argument_keeps_the_comma.c:2:46 ]
+   │
+ 2 │ #define L(fmt, ...) count(fmt, ## __VA_ARGS__)
+   │                                              ┬  
+   │                                              ╰── this cannot begin one
+   │ 
+ 4 │ int v = L(1,);
+   │         ──┬──  
+   │           ╰──── `L` expanded here
+───╯
