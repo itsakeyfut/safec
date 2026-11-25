@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its sentence that using `__FILE__`, `__LINE__`, `__DATE__` or `__TIME__` in code is refused superseded by ADR-0130)"
 date: 2026-10-20
 decision-makers: itsakeyfut
 ---
