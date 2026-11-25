@@ -10,6 +10,9 @@
 #define GE E F
 #define STR(x) #x
 #define XSTR(x) STR(x)
+#define EMPTY_CALL(x)
+#define GE2 EMPTY_CALL
+#define X 1+GE2()
 
 static int same(const char *a, const char *b) {
     while (*a && *a == *b) {
@@ -28,5 +31,8 @@ int main(void) {
     if (ID(G)(5) != 6) fails |= 16;
     if (GE(6) != 7) fails |= 32;
     if (!same(XSTR(G(7)), "((7) + 1)")) fails |= 64;
+    /* No white space after `+`: `GE2` had none before it, and the call
+       it closes into writes nothing. */
+    if (!same(XSTR([ X]), "[ 1+]")) fails |= 128;
     return fails;
 }

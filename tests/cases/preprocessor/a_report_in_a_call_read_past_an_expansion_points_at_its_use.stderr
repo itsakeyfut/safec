@@ -1,0 +1,22 @@
+error[SC0103]: unexpected character
+   ╭─[ a_report_in_a_call_read_past_an_expansion_points_at_its_use.c:1:19 ]
+   │
+ 1 │ #define h(x, y) x @ y
+   │                   ┬  
+   │                   ╰── not part of any token
+   │ 
+ 3 │ int d = OPEN 2);
+   │         ───┬───  
+   │            ╰───── `OPEN` expanded here
+───╯
+error[SC0103]: unexpected character
+   ╭─[ a_report_in_a_call_read_past_an_expansion_points_at_its_use.c:4:16 ]
+   │
+ 4 │ #define F(x) x @
+   │                ┬  
+   │                ╰── not part of any token
+   │ 
+ 6 │ int e = G(1);
+   │         ──┬─  
+   │           ╰─── `G` expanded here
+───╯

@@ -33,3 +33,38 @@ error[SC0104]: a call whose name ends an expansion that handed code over before 
     │            ╰─── `f` expanded here
 ────╯
   = note: the `(` after `g` is outside what its name was read from
+error[SC0104]: a call whose name ends an expansion that handed code over before it is not read yet
+    ╭─[ a_call_out_of_an_expansion_that_handed_something_over_is_refused.c:2:16 ]
+    │
+  2 │ #define G2 2 + F
+    │                ┬  
+    │                ╰── its name is here
+    │ 
+ 12 │ int p = ID(G2(1));
+    │            ─┬  
+    │             ╰── `G2` expanded here
+────╯
+  = note: the `(` after `F` is outside what its name was read from
+error[SC0104]: a call whose name ends an expansion that handed code over before it is not read yet
+    ╭─[ a_call_out_of_an_expansion_that_handed_something_over_is_refused.c:14:16 ]
+    │
+ 14 │ #define G3 TWO F
+    │                ┬  
+    │                ╰── its name is here
+ 15 │ int q = ID(G3(1));
+    │            ─┬  
+    │             ╰── `G3` expanded here
+────╯
+  = note: the `(` after `F` is outside what its name was read from
+error[SC0104]: a call whose name ends an expansion that handed code over before it is not read yet
+    ╭─[ a_call_out_of_an_expansion_that_handed_something_over_is_refused.c:14:16 ]
+    │
+ 14 │ #define G3 TWO F
+    │                ┬  
+    │                ╰── its name is here
+    │ 
+ 16 │ int r = G3(1);
+    │         ─┬  
+    │          ╰── `G3` expanded here
+────╯
+  = note: the `(` after `F` is outside what its name was read from

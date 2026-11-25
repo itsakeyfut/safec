@@ -10290,8 +10290,18 @@ cases! {
         // `#define G2 2 + F`, `OPEN 2)` with `x +` before the call, and C17
         // 6.10.3.4 p4's own `f(2)(9)`, whose `f(2)` hands over `2*` before
         // `g`. Mutation: read past an expansion whatever it handed over; the
-        // three are read.
+        // three are read. Inside an argument too, whose expansions keep
+        // their extents as the file's do, and through an expansion that
+        // handed its code over from one of its own, `TWO` in `G3`.
+        // Mutations: keep no extent in `replaced`, or hand none below where
+        // a frame there ends; `ID(G2(1))` or `ID(G3(1))` is read.
         a_call_out_of_an_expansion_that_handed_something_over_is_refused: ["--emit", "ast"],
+        // A report in the expansion of a call read past an expansion is
+        // placed in the call's body and noted as expanded at the whole use,
+        // from the expansion's own use to the `)`. Mutation: start the use
+        // at the call's name rather than lifting it; the note's caret leaves
+        // `OPEN 2)` or `G(1)`.
+        a_report_in_a_call_read_past_an_expansion_points_at_its_use: ["--emit", "ast"],
         // Arguments that run past the end of an included file into its
         // includer are refused, as GCC refuses them (Q1). Mutation: read past
         // an inclusion as past an expansion; the call is read.
