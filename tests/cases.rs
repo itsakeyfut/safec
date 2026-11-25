@@ -10278,11 +10278,24 @@ cases! {
         // closed (C17 6.10.3 p4, p11), each refused. Mutation: drop the
         // count test; `two` and `three` are read.
         a_function_like_call_written_wrong_is_refused: ["--emit", "ast"],
-        // `#define G F` used as `G(1)`: the call's `(` is past the expansion
-        // its name came from, so it has no one use (ADR-0128) and is refused
-        // until #1336. Mutation: answer `Kept` where the frame ends; `F` is
-        // handed on as a name, and is `SC0301`, undeclared.
-        a_call_whose_name_came_out_of_an_expansion_is_refused: ["--emit", "ast"],
+        // `#define G F` used as `G(1)`: C reads past the expansion the name
+        // ended for its `(` (C17 6.10.3.4 p1), and `G` handed nothing else
+        // over, so the call is read, used from `G` to its `)`. Mutation:
+        // answer `Kept` where the frame ends; `F` is handed on as a name, and
+        // is `SC0301`, undeclared.
+        a_call_whose_name_comes_out_of_an_alias_is_read: ["--emit", "ast"],
+        // Read past an expansion that handed code over before the name, or
+        // before the call, the call's use would overlap what it handed over,
+        // so each is refused (#618's second design, Q4): `G2(1)` with
+        // `#define G2 2 + F`, `OPEN 2)` with `x +` before the call, and C17
+        // 6.10.3.4 p4's own `f(2)(9)`, whose `f(2)` hands over `2*` before
+        // `g`. Mutation: read past an expansion whatever it handed over; the
+        // three are read.
+        a_call_out_of_an_expansion_that_handed_something_over_is_refused: ["--emit", "ast"],
+        // Arguments that run past the end of an included file into its
+        // includer are refused, as GCC refuses them (Q1). Mutation: read past
+        // an inclusion as past an expansion; the call is read.
+        a_call_whose_arguments_run_past_an_included_file_are_refused: ["--emit", "ast"],
         // A parameter named twice (C17 6.10.3 p6), one led by a digit, one
         // holding a `$`, an empty one, a list never closed, and
         // `__VA_ARGS__` as a parameter, each refused. Mutations: drop the
@@ -10297,11 +10310,11 @@ cases! {
         // expansion as a file is scanned, in `instance`; the arguments
         // redefine `READ` and this is silent.
         an_argument_that_begins_with_a_hash_is_not_a_directive: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // C reads past an expansion for a call's `)` (C17 6.10.3.4 p1), and
-        // such a call has no one span for its use (ADR-0128), so it is
-        // refused as not read yet, not as a call never closed. Mutation:
-        // drop the test for an expansion's frame; it says `SC0119`.
-        a_call_whose_arguments_run_past_an_expansion_is_refused: ["--emit", "ast"],
+        // C reads past an expansion for a call's `)` (C17 6.10.3.4 p1), as
+        // with `#define OPEN f(1,` used as `OPEN 2)`, C17 6.10.3.5 EXAMPLE
+        // 3's `h 5)` shape; the call is used from `OPEN` to its `)`.
+        // Mutation: stop collecting where the expansion ends; it is refused.
+        a_call_whose_arguments_run_past_an_expansion_are_read: ["--emit", "ast"],
         // A thousand calls, each inside the last's argument, are refused at
         // `MAX_ARGUMENT_DEPTH` rather than read on the native stack.
         // Mutation: drop the bound; the process overflows its stack.
