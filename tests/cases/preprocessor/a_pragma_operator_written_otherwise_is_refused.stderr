@@ -1,0 +1,43 @@
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_written_otherwise_is_refused.c:1:1 ]
+   │
+ 1 │ _Pragma('o')
+   │ ───┬───  
+   │    ╰───── written here
+───╯
+  = note: `_Pragma` is read with `(`, a string literal with no prefix but `L`, and `)` after it, all three written in the same place
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_written_otherwise_is_refused.c:2:1 ]
+   │
+ 2 │ _Pragma once
+   │ ───┬───  
+   │    ╰───── written here
+───╯
+  = note: `_Pragma` is read with `(`, a string literal with no prefix but `L`, and `)` after it, all three written in the same place
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_written_otherwise_is_refused.c:3:1 ]
+   │
+ 3 │ _Pragma x "once")
+   │ ───┬───  
+   │    ╰───── written here
+───╯
+  = note: `_Pragma` is read with `(`, a string literal with no prefix but `L`, and `)` after it, all three written in the same place
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_written_otherwise_is_refused.c:4:1 ]
+   │
+ 4 │ _Pragma("once" x)
+   │ ───┬───  
+   │    ╰───── written here
+───╯
+  = note: `_Pragma` is read with `(`, a string literal with no prefix but `L`, and `)` after it, all three written in the same place
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_written_otherwise_is_refused.c:5:16 ]
+   │
+ 5 │ #define PRAGMA _Pragma
+   │                ───┬───  
+   │                   ╰───── written here
+ 6 │ PRAGMA("once")
+   │ ───┬──  
+   │    ╰──── `PRAGMA` expanded here
+───╯
+  = note: `_Pragma` is read with `(`, a string literal with no prefix but `L`, and `)` after it, all three written in the same place

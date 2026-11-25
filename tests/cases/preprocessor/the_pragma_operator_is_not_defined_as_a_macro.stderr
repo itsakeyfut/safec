@@ -1,0 +1,15 @@
+error[SC0104]: `_Pragma` is an operator, and is not defined as a macro
+   ╭─[ the_pragma_operator_is_not_defined_as_a_macro.c:1:9 ]
+   │
+ 1 │ #define _Pragma(x)
+   │         ───┬───  
+   │            ╰───── defined here
+───╯
+error[SC0104]: `#pragma pack` is not read
+   ╭─[ the_pragma_operator_is_not_defined_as_a_macro.c:2:9 ]
+   │
+ 2 │ _Pragma("pack(1)")
+   │         ────┬────  
+   │             ╰────── written here
+───╯
+  = note: ignoring it would change what the program is

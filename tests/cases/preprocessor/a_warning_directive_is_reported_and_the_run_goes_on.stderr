@@ -1,0 +1,14 @@
+warning[SC0122]: this build is untested
+   ╭─[ a_warning_directive_is_reported_and_the_run_goes_on.c:1:1 ]
+   │
+ 1 │ #warning this build is untested
+   │ ┬  
+   │ ╰── written here
+───╯
+warning[SC0122]: `#warning`
+   ╭─[ a_warning_directive_is_reported_and_the_run_goes_on.c:2:1 ]
+   │
+ 2 │ #warning
+   │ ┬  
+   │ ╰── written here
+───╯

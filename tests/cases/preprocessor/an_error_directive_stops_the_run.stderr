@@ -1,0 +1,7 @@
+error[SC0121]: this build is not supported
+   ╭─[ an_error_directive_stops_the_run.c:1:1 ]
+   │
+ 1 │ #error this build is not supported
+   │ ┬  
+   │ ╰── written here
+───╯

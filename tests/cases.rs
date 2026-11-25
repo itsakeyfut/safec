@@ -10596,6 +10596,77 @@ cases! {
         // it. Mutations: refuse a settled name in code, or leave an
         // `#undef`ed one unsettled; one of the two is refused.
         a_name_the_build_settles_is_read_in_code: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-U__x86_64__"],
+        // A header with `#pragma once` included twice is read once
+        // (ADR-0129), and includes itself after it as `clang` lets it, the
+        // mark asked before whether it is open. Mutations: leave
+        // `#pragma once` unread; `once` is defined twice. Ask the mark after;
+        // the header's own `#include` is `SC0110`.
+        a_header_marked_once_is_read_once: ["--emit", "ast"],
+        // The same, the pragma spelled by a `_Pragma` a macro writes, which
+        // marks the file the macro is used in (C17 6.10.9). Mutation: mark
+        // the file the `_Pragma` is written in; that is the expansion, which
+        // has no path, and `once` is defined twice.
+        a_header_a_macro_marks_once_with_the_pragma_operator_is_read_once: ["--emit", "ast"],
+        // `clang` reads the input again where it is included after
+        // `#pragma once`, and warns. Mutation: mark the input as a header is
+        // marked; the warning goes.
+        a_pragma_once_in_the_input_is_warned_about_and_ignored: ["--emit", "ast"],
+        // ADR-0129's refused class, by the directive and by `_Pragma`, and
+        // `GCC visibility` (ADR-0132). Mutations: read `pack` or
+        // `GCC visibility` as ignored; its report goes.
+        a_pragma_that_changes_the_program_is_refused: ["--emit", "ast"],
+        // `GCC error` and `GCC warning` report their string as `#error` and
+        // `#warning` would, as `clang` does, and one with no string is
+        // refused as `clang` refuses it. Mutation: read them as unknown; the
+        // error is a warning and the case exits 0.
+        a_gcc_error_or_warning_pragma_is_reported_as_its_directive_is: ["--emit", "ast"],
+        // Mutation: let a `#define _Pragma` through; nothing is reported for
+        // it, and the `#pragma pack(1)` it was meant to drop is refused.
+        the_pragma_operator_is_not_defined_as_a_macro: ["--emit", "ast"],
+        // ADR-0129's ignored class: nothing reported, and the program is
+        // compiled. Mutation: warn about an ignored pragma as an unknown one
+        // is warned about; a `.stderr` appears.
+        a_pragma_ignoring_which_changes_nothing_is_ignored_silently: ["--emit", "ast"],
+        // Mutation: drop the warning; the `.stderr` loses both `SC0118`s.
+        an_unknown_pragma_is_warned_about_and_ignored: ["--emit", "ast"],
+        // `_Pragma` read only as `( string-literal )` written in one place.
+        // Mutations: drop the refusal; the reports go and the parser meets
+        // what is left. Drop the test of the `(` or of the `)`; the third or
+        // the fourth line is read as `once`.
+        a_pragma_operator_written_otherwise_is_refused: ["--emit", "ast"],
+        // `#error` stops the run with its line as the message (C17 6.10.5),
+        // white space around it dropped. Mutations: report it as a warning;
+        // the case exits 0. Keep the white space after it; the message moves.
+        an_error_directive_stops_the_run: ["--emit", "ast"],
+        // `#warning`, C23's, as `clang` reads it in C17: reported, and the
+        // program is compiled. Mutation: report it as an error; the case
+        // exits 1 and its `.stdout` goes.
+        a_warning_directive_is_reported_and_the_run_goes_on: ["--emit", "ast"],
+        // Each `#line` C17 6.10.4 does not define, and a name `clang` would
+        // read another way, `\t` a tab; and one whose operand is a call
+        // refused, which is that report alone. Mutations: drop the bound, or
+        // read every escape as `_Pragma` does; that line's report goes.
+        // Read on past the refused call; a second report joins it.
+        a_line_directive_written_wrong_is_refused: ["--emit", "ast"],
+        // A `#line` in a header renumbers that header, and its includer
+        // goes on counting its own lines under its own name. Mutation: look
+        // up what `#line` said by any file but the use's; `after` is `502`.
+        a_line_directive_in_a_header_renumbers_that_header_alone: ["--emit", "ast"],
+        // The operands of each `#line` are a use of their own, so each is
+        // given the whole bound on expansions, as `#if`'s line is: here
+        // 32767 each, three times. Mutation: count them against the use
+        // before; the third is `SC0113`.
+        line_directives_each_count_their_expansions_on_their_own: ["--emit", "ast"],
+        // `#line` renumbers `__LINE__` and `__FILE__` alone, and a report
+        // points at the line in the file a reader can open: this pins it,
+        // `:8:5`, against a change that makes diagnostics read what `#line`
+        // said, which would name `elsewhere.c:103`.
+        a_diagnostic_after_a_line_directive_points_at_the_physical_line: ["--emit", "safety-ir", "--safety", "memory", "--target", "x86_64-pc-windows-msvc"],
+        // The line below a splice is joined to it before any directive is
+        // read, and the lexer read it on its own. Mutations: drop the
+        // refusal, or keep it for `#pragma` alone; the other three lines'
+        // reports change.
+        a_pragma_line_error_or_warning_whose_line_ends_in_a_splice_is_refused: ["--emit", "ast"],
         // C17 6.10.8 p2, for the names it lists. Mutation: let a `#define`
         // or `#undef` of a predefined name through. Nothing is reported.
         a_predefined_macro_defined_again_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],

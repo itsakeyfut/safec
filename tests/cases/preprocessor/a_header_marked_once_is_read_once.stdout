@@ -1,0 +1,9 @@
+Function a_header_marked_once_is_read_once.h:3:1 "once" "int (void)"
+  Compound a_header_marked_once_is_read_once.h:3:16
+    Return a_header_marked_once_is_read_once.h:3:18
+      Number a_header_marked_once_is_read_once.h:3:25 "0"
+Function a_header_marked_once_is_read_once.c:4:1 "main" "int (void)"
+  Compound a_header_marked_once_is_read_once.c:4:16
+    Return a_header_marked_once_is_read_once.c:4:18
+      Call a_header_marked_once_is_read_once.c:4:25
+        Identifier a_header_marked_once_is_read_once.c:4:25 "once"

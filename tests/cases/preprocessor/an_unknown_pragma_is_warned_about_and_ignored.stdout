@@ -1,0 +1,4 @@
+Function an_unknown_pragma_is_warned_about_and_ignored.c:4:1 "main" "int (void)"
+  Compound an_unknown_pragma_is_warned_about_and_ignored.c:4:16
+    Return an_unknown_pragma_is_warned_about_and_ignored.c:4:18
+      Number an_unknown_pragma_is_warned_about_and_ignored.c:4:25 "0"

@@ -1,0 +1,48 @@
+error[SC0104]: `#pragma pack` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:1:1 ]
+   │
+ 1 │ #pragma pack(4)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma push_macro` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:2:1 ]
+   │
+ 2 │ #pragma push_macro("X")
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma comment` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:3:1 ]
+   │
+ 3 │ #pragma comment(lib, "x")
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma clang assume_nonnull` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:4:1 ]
+   │
+ 4 │ #pragma clang assume_nonnull begin
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma GCC poison` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:5:9 ]
+   │
+ 5 │ _Pragma("GCC poison gets")
+   │         ────────┬────────  
+   │                 ╰────────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma GCC visibility` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:6:1 ]
+   │
+ 6 │ #pragma GCC visibility push(hidden)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is

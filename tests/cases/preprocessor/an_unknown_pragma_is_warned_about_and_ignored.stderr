@@ -1,0 +1,16 @@
+warning[SC0118]: this `#pragma` is not read, and is ignored
+   ╭─[ an_unknown_pragma_is_warned_about_and_ignored.c:1:1 ]
+   │
+ 1 │ #pragma omp parallel for
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: C17 6.10.6 p1 lets a compiler ignore a pragma it does not know
+warning[SC0118]: this `#pragma` is not read, and is ignored
+   ╭─[ an_unknown_pragma_is_warned_about_and_ignored.c:2:9 ]
+   │
+ 2 │ _Pragma("unroll 4")
+   │         ─────┬────  
+   │              ╰────── written here
+───╯
+  = note: C17 6.10.6 p1 lets a compiler ignore a pragma it does not know

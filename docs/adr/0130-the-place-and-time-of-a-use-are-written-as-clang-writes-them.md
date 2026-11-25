@@ -64,7 +64,10 @@ nothing else of that record.
 * Counting the date from 1 January, or padding the day with `0`:
   `the_date_and_time_of_a_number_of_seconds_are_what_utc_says` in
   `crates/safec-c/src/preprocessor.rs`.
-* `#line` changing the name and the line is owed by #1220.
+* `#line` left unread, or counted from its own line rather than the
+  next: `pragmas_and_line_are_read_as_c_says` in `tests/run` runs to
+  another exit code; and renumbering a diagnostic's line moves the caret
+  of `a_diagnostic_after_a_line_directive_points_at_the_physical_line`.
 
 ### Consequences
 

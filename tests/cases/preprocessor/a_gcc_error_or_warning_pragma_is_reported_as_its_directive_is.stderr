@@ -1,0 +1,29 @@
+warning[SC0122]: this build is untested
+   ╭─[ a_gcc_error_or_warning_pragma_is_reported_as_its_directive_is.c:1:1 ]
+   │
+ 1 │ #pragma GCC warning "this build is untested"
+   │ ┬  
+   │ ╰── written here
+───╯
+warning[SC0122]: so is this one
+   ╭─[ a_gcc_error_or_warning_pragma_is_reported_as_its_directive_is.c:2:1 ]
+   │
+ 2 │ #pragma GCC warning("so is this one")
+   │ ┬  
+   │ ╰── written here
+───╯
+error[SC0121]: this build is not supported
+   ╭─[ a_gcc_error_or_warning_pragma_is_reported_as_its_directive_is.c:3:9 ]
+   │
+ 3 │ _Pragma("GCC error \"this build is not supported\"")
+   │         ─────────────────────┬─────────────────────  
+   │                              ╰─────────────────────── written here
+───╯
+error[SC0104]: this `#pragma GCC warning` is not read
+   ╭─[ a_gcc_error_or_warning_pragma_is_reported_as_its_directive_is.c:4:1 ]
+   │
+ 4 │ #pragma GCC warning
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: it is read with a string literal after it, or one in `(` and `)`
