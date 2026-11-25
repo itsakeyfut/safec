@@ -209,6 +209,15 @@ programs! {
     /// to the wrong result there, the second `int` read as 0. Refuse a
     /// variadic definition again; this does not build.
     a_variadic_function_reads_its_arguments,
+    /// Function-like macros called and rescanned as C17 6.10.3 says: an
+    /// argument over two lines, a call inside an argument, a parenthesised
+    /// comma, a call of no arguments, an argument set off from the body's
+    /// `-`, a name with no `(` left alone, and `id(x)` with `#define x x+1`
+    /// read as `x+1` (#1215). Mutations: put back the refusal of a
+    /// function-like `#define`, and this does not build; drop the mark on a
+    /// name kept inside its own expansion, and `id(x)` is `x+1+1`; set no
+    /// argument off from the body, and `NEG(-1)` is `--1`.
+    a_function_like_macro_is_replaced_and_rescanned,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

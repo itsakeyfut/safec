@@ -8,7 +8,7 @@ error[SC0114]: `N` is defined again differently
    │         ┬  
    │         ╰── defined again here
 ───╯
-  = note: a macro may be defined again only with the same replacement list
+  = note: a macro may be defined again only with the same parameters and replacement list
 error[SC0114]: `M` is defined again differently
    ╭─[ a_macro_defined_again_differently_is_refused.c:4:9 ]
    │
@@ -19,4 +19,26 @@ error[SC0114]: `M` is defined again differently
    │         ┬  
    │         ╰── defined again here
 ───╯
-  = note: a macro may be defined again only with the same replacement list
+  = note: a macro may be defined again only with the same parameters and replacement list
+error[SC0114]: `P` is defined again differently
+   ╭─[ a_macro_defined_again_differently_is_refused.c:6:9 ]
+   │
+ 5 │ #define P(a, b) a
+   │ ────────┬────────  
+   │         ╰────────── defined here first
+ 6 │ #define P(a, c) a
+   │         ┬  
+   │         ╰── defined again here
+───╯
+  = note: a macro may be defined again only with the same parameters and replacement list
+error[SC0114]: `Q` is defined again differently
+   ╭─[ a_macro_defined_again_differently_is_refused.c:8:9 ]
+   │
+ 7 │ #define Q(a) 1
+   │ ───────┬──────  
+   │        ╰──────── defined here first
+ 8 │ #define Q 1
+   │         ┬  
+   │         ╰── defined again here
+───╯
+  = note: a macro may be defined again only with the same parameters and replacement list

@@ -1,0 +1,33 @@
+error[SC0119]: `TWO` takes 2 arguments, and is given 1
+   ╭─[ a_function_like_call_written_wrong_is_refused.c:4:11 ]
+   │
+ 4 │ int two = TWO(1);
+   │           ───┬──  
+   │              ╰──── called here
+───╯
+error[SC0119]: `ONE` takes 1 argument, and is given 2
+   ╭─[ a_function_like_call_written_wrong_is_refused.c:5:13 ]
+   │
+ 5 │ int three = ONE(1, 2);
+   │             ────┬────  
+   │                 ╰────── called here
+───╯
+error[SC0104]: a directive inside a macro's arguments is not read
+   ╭─[ a_function_like_call_written_wrong_is_refused.c:7:1 ]
+   │
+ 6 │ int inside = ONE(
+   │              ─┬─  
+   │               ╰─── called here
+ 7 │ #define Z 1
+   │ ─────┬─────  
+   │      ╰─────── inside the arguments of this call
+───╯
+  = note: C17 6.10.3 p11 leaves what it means undefined
+error[SC0119]: this call of `ONE` has no `)`
+   ╭─[ a_function_like_call_written_wrong_is_refused.c:9:12 ]
+   │
+ 9 │ int open = ONE(1 + 2;
+   │            ─┬─  
+   │             ╰─── called here
+───╯
+  = note: its arguments run on to the end of what it is read from

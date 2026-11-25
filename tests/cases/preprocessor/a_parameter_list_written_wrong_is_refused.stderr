@@ -1,0 +1,32 @@
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:1:1 ]
+   │
+ 1 │ #define TWICE(a, a) a
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:2:1 ]
+   │
+ 2 │ #define DIGIT(1) 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:3:1 ]
+   │
+ 3 │ #define OPEN(a a
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:4:1 ]
+   │
+ 4 │ #define NAMED(__VA_ARGS__) 0
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`

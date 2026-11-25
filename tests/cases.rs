@@ -10158,11 +10158,11 @@ cases! {
         a_diagnostic_in_an_expansion_shows_the_body_and_the_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `#define x x + 1`: the `x` in the body is not replaced again
         // (C17 6.10.3.4 p2). Mutation: drop the open-expansion check in
-        // `expansion`. It expands until the bound refuses it as `SC0113`.
+        // `replacement`. It expands until the bound refuses it as `SC0113`.
         a_macro_that_names_itself_is_expanded_once: ["--emit", "ast"],
-        // Mutation: read `F(` as an object-like macro, or let `##` and `#`
-        // through. A report goes.
-        a_function_like_macro_and_stringizing_are_not_read_yet: ["--emit", "ast"],
+        // Mutation: read `...` as a parameter, or let `##` and `#` through.
+        // A report goes.
+        a_variadic_macro_and_stringizing_are_not_read_yet: ["--emit", "ast"],
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],
@@ -10204,6 +10204,37 @@ cases! {
         // Mutation: have `SourceMap::join` answer a cut for any two spans in
         // different files. It is refused.
         a_call_holding_a_whole_expansion_is_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function-like macro's call is one expansion of its body with the
+        // arguments written in (ADR-0128), so ADR-0054's cut holds for it:
+        // `F(p)(p)` with `#define F(q) (x = *q) + release` starts the outer
+        // call at `release`, partway through. Mutation: write each argument
+        // as an expansion of its own beside the body's; the call is joined
+        // and checked rather than refused.
+        a_function_like_call_that_cuts_its_expansion_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call holding the whole expansion is checked as written out: the
+        // double free after `USE_THEN_FREE(p)` is reported as the one after
+        // `*r = 1, free(r)` is (#1215). Mutation: put back the refusal of a
+        // function-like `#define`; this is refused instead.
+        a_function_like_call_held_whole_is_checked_as_written: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A diagnostic in an argument is placed where the argument was
+        // written, through the piece of the expansion it was copied from,
+        // and noted at the call (ADR-0128). Mutation: place every offset of
+        // an expansion through its first piece in `SourceMap::written`; the
+        // caret moves into `CALL`'s body.
+        a_diagnostic_in_an_argument_points_at_the_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Too few arguments, too many, a directive among them, and none
+        // closed (C17 6.10.3 p4, p11), each refused. Mutation: drop the
+        // count test; `two` and `three` are read.
+        a_function_like_call_written_wrong_is_refused: ["--emit", "ast"],
+        // `#define G F` used as `G(1)`: the call's `(` is past the expansion
+        // its name came from, so it has no one use (ADR-0128) and is refused
+        // until #1336. Mutation: answer `Kept` where the frame ends; `G(1)`
+        // is read as a name and an `int` called, as `SC0303`.
+        a_call_whose_name_came_out_of_an_expansion_is_refused: ["--emit", "ast"],
+        // A parameter named twice (C17 6.10.3 p6), one that is not a name, a
+        // list never closed, and `__VA_ARGS__` as a parameter, each refused.
+        // Mutation: drop the test for a name seen before; `TWICE` is read.
+        a_parameter_list_written_wrong_is_refused: ["--emit", "ast"],
         // `#define N (*p)`, the usual way to write one. Mutation: join the
         // climb from its operands' spans. `N + 1` starts at `*`, partway
         // through the expansion, and is refused.

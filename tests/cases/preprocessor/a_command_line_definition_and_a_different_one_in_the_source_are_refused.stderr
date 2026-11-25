@@ -11,4 +11,4 @@ error[SC0114]: `N` is defined again differently
    │ ─────┬─────  
    │      ╰─────── defined here first
 ───╯
-  = note: a macro may be defined again only with the same replacement list
+  = note: a macro may be defined again only with the same parameters and replacement list
