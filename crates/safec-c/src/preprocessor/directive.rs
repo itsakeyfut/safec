@@ -306,12 +306,13 @@ fn line(
         [] => return refuse(diagnostics, "it names no line".to_owned()),
         _ => return refuse(diagnostics, "it goes on past a line and a name".to_owned()),
     };
+    // Decimal digits alone, whatever the token: `parse` takes nothing else
+    // but a sign, and no token here begins with one. `08` is eight, as C
+    // reads it.
     let digits = sources.snippet(number.span);
-    let line = Some(digits)
-        .filter(|digits| {
-            number.kind == TokenKind::Number && digits.bytes().all(|byte| byte.is_ascii_digit())
-        })
-        .and_then(|digits| digits.parse::<u64>().ok())
+    let line = digits
+        .parse::<u64>()
+        .ok()
         .filter(|line| (1..=LAST_LINE).contains(line));
     let Some(line) = line else {
         return refuse(diagnostics, format!("`{digits}` is not such a line"));
@@ -320,10 +321,7 @@ fn line(
         None => None,
         Some(name) => {
             let written = sources.snippet(name.span);
-            let read = (name.kind == TokenKind::String)
-                .then(|| destringized(written, Escapes::OnlyQuotesAndBackslashes))
-                .flatten();
-            let Some(read) = read else {
+            let Some(read) = destringized(written, Escapes::OnlyQuotesAndBackslashes) else {
                 return refuse(
                     diagnostics,
                     format!(
