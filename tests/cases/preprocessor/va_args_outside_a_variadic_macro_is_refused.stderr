@@ -1,0 +1,64 @@
+error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:1:1 ]
+   │
+ 1 │ #define OBJ __VA_ARGS__
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:2:1 ]
+   │
+ 2 │ #define FN(x) __VA_ARGS__
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `__VA_OPT__` is read only in a variadic macro's replacement list
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:3:1 ]
+   │
+ 3 │ #define OPT(x) __VA_OPT__(x)
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `__VA_OPT__` has no `)`
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:4:1 ]
+   │
+ 4 │ #define UNCLOSED(...) __VA_OPT__(a
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `__VA_OPT__` is inside another
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:5:1 ]
+   │
+ 5 │ #define NESTED(...) __VA_OPT__(__VA_OPT__(a))
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0104]: a `##` beside `__VA_OPT__` is not read yet
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:6:1 ]
+   │
+ 6 │ #define BESIDE(a, ...) a ## __VA_OPT__(b)
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+error[SC0119]: `__VA_ARGS__` is read only in a variadic macro's replacement list
+   ╭─[ va_args_outside_a_variadic_macro_is_refused.c:9:9 ]
+   │
+ 9 │ int v = __VA_ARGS__;
+   │         ─────┬─────  
+   │              ╰─────── written here
+───╯
+error[SC0119]: `TWO` takes at least 2 arguments, and is given 1
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:10:9 ]
+    │
+ 10 │ int w = TWO(1);
+    │         ───┬──  
+    │            ╰──── called here
+────╯
+error[SC0104]: this call of `ONLY` keeps the comma before `__VA_ARGS__` in one C mode and not the other
+    ╭─[ va_args_outside_a_variadic_macro_is_refused.c:11:9 ]
+    │
+ 11 │ int x = ONLY();
+    │         ──┬─  
+    │           ╰─── called here
+────╯
+  = note: a macro whose only parameter is `...`, called with nothing, has its variable arguments left out under GNU's mode and empty under C's

@@ -261,6 +261,17 @@ programs! {
     /// leave a piece where a join made nothing, and `CX(,)` panics; write a
     /// join touching the list, and `M` is `v---w`.
     stringizing_and_pasting_make_what_c_says,
+    /// `...` and `__VA_ARGS__` (C17 6.10.3.1 p2): the arguments past the
+    /// named ones, commas and all, replaced; left out entirely; GNU's
+    /// `, ## __VA_ARGS__` dropping its comma where they are left out; C23's
+    /// `__VA_OPT__` writing its content only where they replace to a token,
+    /// and `#__VA_OPT__` stringizing it (#1217). Mutations: put back the
+    /// refusal of `...`, and this does not build; keep the comma where the
+    /// arguments are left out, and `L(1)` is refused; split the variable
+    /// arguments at their commas, and `REST(0, 4, 5)` has too many; write
+    /// `__VA_OPT__`'s content whatever the arguments are, and `O(1, EMPTY)`
+    /// passes a comma and nothing.
+    a_variadic_macro_takes_what_is_past_its_parameters,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

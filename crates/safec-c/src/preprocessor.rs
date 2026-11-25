@@ -7,9 +7,11 @@
 //! `#ifdef`, `#ifndef`, `#else` and `#endif`, which choose the groups that
 //! are compiled (6.10.1). Every other directive is refused as `SC0104`,
 //! `#include <file>` among them, which needs a search path and a system
-//! header this compiler cannot read yet anyway, and so are variadic macros,
-//! `#if` and `#elif`. `#` and `##` in a replacement list make a string
-//! literal and join two tokens (6.10.3.2, 6.10.3.3).
+//! header this compiler cannot read yet anyway, and so are `#if` and
+//! `#elif`. `#` and `##` in a replacement list make a string literal and
+//! join two tokens (6.10.3.2, 6.10.3.3), and a macro whose parameters end in
+//! `...` takes the arguments past them as `__VA_ARGS__` (6.10.3 p12), with
+//! GNU's `, ## __VA_ARGS__` and C23's `__VA_OPT__`.
 //!
 //! Each inclusion and each expansion is a file of its own in the source map,
 //! so a diagnostic in a header names the header, one in an expansion is shown
@@ -63,6 +65,14 @@ const PREDEFINED_AGAIN: Code = Code::new("SC0117");
 /// `##` with nothing on one side; a `##` that makes no one token. One code,
 /// because the fix is the same: the macro or its call, written again.
 const MALFORMED_MACRO: Code = Code::new("SC0119");
+
+/// What a variadic macro's arguments past its named parameters are named in
+/// its replacement list (C17 6.10.3 p12), and the name of its last parameter
+/// in [`Parameters::names`].
+const VA_ARGS: &str = "__VA_ARGS__";
+/// C23's `__VA_OPT__ ( ... )`, read in a variadic macro's list (C23
+/// 6.10.5.2).
+const VA_OPT: &str = "__VA_OPT__";
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -229,6 +239,24 @@ enum Edit {
         operator: (u32, u32),
         spaced: bool,
     },
+    /// GNU's `, ## __VA_ARGS__`: the comma and the variable arguments where
+    /// they were given, even empty, and nothing where they were left out.
+    /// `comma` is the comma, what it is copied from.
+    Comma {
+        start: u32,
+        end: u32,
+        index: usize,
+        comma: (u32, u32),
+        spaced: bool,
+    },
+    /// `__VA_OPT__ ( ... )`, or `#` and one: `operand` is an
+    /// [`Operand::Optional`].
+    Optional {
+        start: u32,
+        end: u32,
+        operand: Operand,
+        spaced: bool,
+    },
     /// Operands joined by `##`, written as one text with each join's two
     /// tokens made one (6.10.3.3). `operator` is the first `##`, what the
     /// text is copied from.
@@ -251,15 +279,125 @@ enum Operand {
     Stringized(usize),
     /// A token of the list, by its start and end.
     Token(u32, u32),
+    /// `__VA_OPT__ ( content )`: the content, written as a list is, where
+    /// the variable arguments, `index`, have a token once replaced, and
+    /// nothing where they have none (C23 6.10.5.2). `inner` are its edits,
+    /// counted from the content's start; `stringized` where `#` is before
+    /// it, and `operator` is that `#` and `__VA_OPT__`, or `__VA_OPT__`.
+    Optional {
+        index: usize,
+        content: (u32, u32),
+        inner: Vec<Edit>,
+        stringized: bool,
+        operator: (u32, u32),
+    },
+}
+
+impl Edit {
+    /// This edit counted from `by` bytes later in the list.
+    fn shifted(self, by: u32) -> Self {
+        let less = |at: u32| at - by;
+        match self {
+            Self::Parameter {
+                start,
+                end,
+                index,
+                spaced,
+            } => Self::Parameter {
+                start: less(start),
+                end: less(end),
+                index,
+                spaced,
+            },
+            Self::Stringized {
+                start,
+                end,
+                index,
+                operator,
+                spaced,
+            } => Self::Stringized {
+                start: less(start),
+                end: less(end),
+                index,
+                operator: (less(operator.0), less(operator.1)),
+                spaced,
+            },
+            Self::Comma {
+                start,
+                end,
+                index,
+                comma,
+                spaced,
+            } => Self::Comma {
+                start: less(start),
+                end: less(end),
+                index,
+                comma: (less(comma.0), less(comma.1)),
+                spaced,
+            },
+            Self::Optional { .. } => {
+                unreachable!("a `__VA_OPT__` is never inside another, which `edits_in` refuses")
+            }
+            Self::Pasted {
+                start,
+                end,
+                operands,
+                operator,
+                spaced,
+            } => Self::Pasted {
+                start: less(start),
+                end: less(end),
+                operands: operands
+                    .into_iter()
+                    .map(|(operand, spaced)| {
+                        let operand = match operand {
+                            Operand::Token(start, end) => Operand::Token(less(start), less(end)),
+                            other => other,
+                        };
+                        (operand, spaced)
+                    })
+                    .collect(),
+                operator: (less(operator.0), less(operator.1)),
+                spaced,
+            },
+        }
+    }
+
+    /// Whether this edit, or one inside it, writes argument `index` replaced.
+    fn replaces(&self, index: usize) -> bool {
+        match self {
+            Self::Parameter { index: used, .. } | Self::Comma { index: used, .. } => *used == index,
+            Self::Optional {
+                operand:
+                    Operand::Optional {
+                        index: used, inner, ..
+                    },
+                ..
+            } => *used == index || inner.iter().any(|edit| edit.replaces(index)),
+            Self::Optional { .. } | Self::Stringized { .. } | Self::Pasted { .. } => false,
+        }
+    }
+
+    /// Whether this edit is GNU's `, ## __VA_ARGS__`.
+    fn is_comma(&self) -> bool {
+        matches!(self, Self::Comma { .. })
+    }
 }
 
 /// A function-like macro's parameters, and where its replacement list uses
 /// them.
 #[derive(Clone, Debug)]
 struct Parameters {
-    /// In order. Compared, with the tokens, by a second definition (C17
-    /// 6.10.3 p2).
+    /// In order, a variadic macro's last named [`VA_ARGS`]. Compared, with
+    /// the tokens, by a second definition (C17 6.10.3 p2).
     names: Vec<String>,
+}
+
+impl Parameters {
+    /// Whether `...` ends the parameters.
+    fn variadic(&self) -> bool {
+        self.names.last().is_some_and(|name| name == VA_ARGS)
+    }
 }
 
 /// What a name the frame loop meets becomes.
@@ -854,9 +992,12 @@ fn read_includes(
                                 &text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
-                                "variadic macros are not read yet",
+                                "this variadic parameter list is not read",
                             )
-                            .with_note("a macro with `...` among its parameters is not read yet"),
+                            .with_note(
+                                "`...` is read as the last parameter; a named one such as \
+                                 `args...` is not read yet",
+                            ),
                         ),
                         MacroForm::Spliced => diagnostics.report(
                             refused(
@@ -956,6 +1097,18 @@ fn replacement(
         .last()
         .is_some_and(|frame| spaced(frame, frame.cursor - 1, reading));
     let name = sources.snippet(token.span);
+    // Each is read only where a variadic macro's list names it, and there
+    // it is replaced before anything is read (C17 6.10.3 p5, C23 6.10.5.2).
+    if name == VA_ARGS || name == VA_OPT {
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`{name}` is read only in a variadic macro's replacement list"
+            ))
+            .with_code(MALFORMED_MACRO)
+            .with_label(Label::primary(token.span, "written here")),
+        );
+        return Replaced::Dropped;
+    }
     let Some(defined) = reading.macros.get(name) else {
         return Replaced::Kept;
     };
@@ -1016,7 +1169,7 @@ fn expansion(
         // No argument to copy, so nothing it writes is marked, and it
         // writes no more than its list; what its joins scanned is what the
         // bounds on written text count.
-        let written = match substituted(spelled, &edits, (&[], &[]), sources, reading) {
+        let written = match substituted(spelled, &edits, (&[], &[], false), sources, reading) {
             Ok(written) => written,
             Err(unwritten) => {
                 diagnostics.report(unwritten_report(token, unwritten));
@@ -1237,7 +1390,12 @@ fn call(
                 break;
             }
             TokenKind::Punct(Punct::RightParen) => depth -= 1,
-            TokenKind::Punct(Punct::Comma) if depth == 0 => {
+            // A variadic macro's arguments past its named parameters are
+            // one, the commas between them in it (C17 6.10.3.1 p2).
+            TokenKind::Punct(Punct::Comma)
+                if depth == 0
+                    && !(parameters.variadic() && arguments.len() == parameters.names.len()) =>
+            {
                 arguments.push(Vec::new());
                 continue;
             }
@@ -1295,6 +1453,39 @@ fn call(
     if parameters.names.is_empty() && arguments.len() == 1 && arguments[0].is_empty() {
         arguments.clear();
     }
+    // A variadic macro given only its named arguments has its variable ones
+    // left out, which `, ## __VA_ARGS__` asks of; given them empty, they
+    // are there and empty. Both are what `clang` and GCC's manual do.
+    let named = parameters.names.len() - usize::from(parameters.variadic());
+    let mut omitted = false;
+    if parameters.variadic() && arguments.len() == named {
+        arguments.push(Vec::new());
+        omitted = true;
+    }
+    // `F()` for `#define F(...) f(a, ## __VA_ARGS__)` leaves them out in
+    // GNU's mode and passes them empty in C's, so the comma is there in one
+    // build and not the other. A mode is part of the build, as ADR-0055
+    // says, and this is refused rather than answered for one.
+    if parameters.variadic()
+        && named == 0
+        && !omitted
+        && arguments.first().is_some_and(Vec::is_empty)
+        && edits.iter().any(Edit::is_comma)
+    {
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "this call of `{name}` keeps the comma before `__VA_ARGS__` in one C mode and not \
+                 the other"
+            ))
+            .with_code(UNSUPPORTED_DIRECTIVE)
+            .with_label(Label::primary(token.span, "called here"))
+            .with_note(
+                "a macro whose only parameter is `...`, called with nothing, has its variable \
+                 arguments left out under GNU's mode and empty under C's",
+            ),
+        );
+        return Replaced::Dropped;
+    }
     if arguments.len() != parameters.names.len() {
         let count = |n: usize| {
             if n == 1 {
@@ -1303,10 +1494,15 @@ fn call(
                 format!("{n} arguments")
             }
         };
+        let at_least = if parameters.variadic() {
+            "at least "
+        } else {
+            ""
+        };
         diagnostics.report(
             Diagnostic::error(format!(
-                "`{name}` takes {}, and is given {}",
-                count(parameters.names.len()),
+                "`{name}` takes {at_least}{}, and is given {}",
+                count(named),
                 arguments.len()
             ))
             .with_code(MALFORMED_MACRO)
@@ -1335,11 +1531,7 @@ fn call(
     // beside `#` or `##`, is never replaced, so `#define K(x) 7` used as
     // `K(H(1, 2))` asks nothing of `H`. Replacing every one refused that.
     // Found by review.
-    let substituted_at = |index: usize| {
-        edits
-            .iter()
-            .any(|edit| matches!(edit, Edit::Parameter { index: used, .. } if *used == index))
-    };
+    let substituted_at = |index: usize| edits.iter().any(|edit| edit.replaces(index));
     let replaced_arguments: Vec<Vec<(Token, bool)>> = arguments
         .iter()
         .enumerate()
@@ -1361,7 +1553,7 @@ fn call(
     let written = substituted(
         spelled,
         &edits,
-        (&replaced_arguments, &arguments),
+        (&replaced_arguments, &arguments, omitted),
         sources,
         reading,
     );
@@ -1477,11 +1669,13 @@ enum Unwritten {
 fn substituted(
     spelled: Span,
     edits: &[Edit],
-    arguments: (&[Argument], &[Argument]),
+    arguments: (&[Argument], &[Argument], bool),
     sources: &SourceMap,
     reading: &Reading,
 ) -> Result<Written, Unwritten> {
-    let (replaced, written) = arguments;
+    // `omitted` is whether a variadic macro's variable arguments were left
+    // out, which `, ## __VA_ARGS__` asks.
+    let (replaced, written, omitted) = arguments;
     let body = sources.snippet(spelled);
     let mut out = Written::default();
     let in_body = |start: u32, end: u32| {
@@ -1530,6 +1724,36 @@ fn substituted(
         });
         out.text.push_str(rest);
     };
+    // An argument's tokens, the first with the white space `first` says, or
+    // its own: written side by side where they were, so a span over several,
+    // `free(p)`, is placed over all of them, and marked where never replaced.
+    let write_argument = |out: &mut Written, tokens: &[(Token, bool)], first: Option<bool>| {
+        let mut last: Option<Token> = None;
+        for &(token, leading) in tokens {
+            let touching = last.is_some_and(|last| {
+                last.span.file() == token.span.file() && last.span.end() == token.span.start()
+            });
+            match (last, first) {
+                (None, Some(spaced)) => before(out, spaced, false),
+                (None, None) => before(out, leading, false),
+                (Some(_), _) => before(out, leading, touching),
+            }
+            match out.pieces.last_mut() {
+                Some(piece) if touching && !out.text.ends_with(' ') => {
+                    piece.from = Span::new(piece.from.file(), piece.from.start(), token.span.end());
+                }
+                _ => out.pieces.push(Piece {
+                    offset: out.text.len() as u32,
+                    from: token.span,
+                }),
+            }
+            if is_painted(token) {
+                out.painted.push(out.text.len() as u32);
+            }
+            out.text.push_str(sources.snippet(token.span));
+            last = Some(token);
+        }
+    };
     let mut copied = 0;
     for edit in edits {
         let (start, end, spaced) = match *edit {
@@ -1539,42 +1763,84 @@ fn substituted(
             | Edit::Stringized {
                 start, end, spaced, ..
             }
+            | Edit::Comma {
+                start, end, spaced, ..
+            }
+            | Edit::Optional {
+                start, end, spaced, ..
+            }
             | Edit::Pasted {
                 start, end, spaced, ..
             } => (start, end, spaced),
         };
         run(&mut out, copied, start);
         match edit {
-            Edit::Parameter { index, .. } => {
-                let mut last: Option<Token> = None;
-                for &(token, leading) in &replaced[*index] {
-                    // Tokens written side by side are one run, so a span over
-                    // several, `free(p)`, is placed over all of them.
-                    let touching = last.is_some_and(|last| {
-                        last.span.file() == token.span.file()
-                            && last.span.end() == token.span.start()
+            Edit::Comma { index, comma, .. } => {
+                if !omitted {
+                    before(&mut out, spaced, false);
+                    out.pieces.push(Piece {
+                        offset: out.text.len() as u32,
+                        from: in_body(comma.0, comma.1),
                     });
-                    match last {
-                        // The first has the white space its parameter has.
-                        None => before(&mut out, spaced, false),
-                        Some(_) => before(&mut out, leading, touching),
-                    }
-                    match out.pieces.last_mut() {
-                        Some(piece) if touching && !out.text.ends_with(' ') => {
-                            piece.from =
-                                Span::new(piece.from.file(), piece.from.start(), token.span.end());
-                        }
-                        _ => out.pieces.push(Piece {
-                            offset: out.text.len() as u32,
-                            from: token.span,
-                        }),
-                    }
-                    if is_painted(token) {
-                        out.painted.push(out.text.len() as u32);
-                    }
-                    out.text.push_str(sources.snippet(token.span));
-                    last = Some(token);
+                    out.text.push(',');
+                    write_argument(&mut out, &replaced[*index], None);
                 }
+            }
+            Edit::Optional {
+                operand:
+                    Operand::Optional {
+                        index,
+                        content,
+                        inner,
+                        stringized,
+                        operator,
+                    },
+                ..
+            } => {
+                // Nothing where the variable arguments replace to no token,
+                // which `#` makes `""` of.
+                if replaced[*index].is_empty() && *stringized {
+                    before(&mut out, spaced, false);
+                    out.pieces.push(Piece {
+                        offset: out.text.len() as u32,
+                        from: in_body(operator.0, operator.1),
+                    });
+                    out.text.push_str("\"\"");
+                } else if !replaced[*index].is_empty() {
+                    let within = Span::new(
+                        spelled.file(),
+                        spelled.start() + content.0,
+                        spelled.start() + content.1,
+                    );
+                    let made = substituted(within, inner, arguments, sources, reading)?;
+                    if *stringized {
+                        before(&mut out, spaced, false);
+                        out.pieces.push(Piece {
+                            offset: out.text.len() as u32,
+                            from: in_body(operator.0, operator.1),
+                        });
+                        out.text.push_str(&stringized_text(&made));
+                    } else if !made.text.trim().is_empty() {
+                        before(&mut out, spaced, false);
+                        let base = out.text.len() as u32;
+                        out.pieces.extend(made.pieces.iter().map(|piece| Piece {
+                            offset: base + piece.offset,
+                            from: piece.from,
+                        }));
+                        out.painted.extend(made.painted.iter().map(|at| base + at));
+                        out.unspaced
+                            .extend(made.unspaced.iter().map(|at| base + at));
+                        out.scanned += made.scanned;
+                        out.text.push_str(&made.text);
+                    }
+                }
+            }
+            Edit::Optional { .. } => {
+                unreachable!("an optional edit holds an optional operand, as `edits_in` builds it")
+            }
+            // The first token has the white space its parameter has.
+            Edit::Parameter { index, .. } => {
+                write_argument(&mut out, &replaced[*index], Some(spaced));
             }
             Edit::Stringized {
                 index, operator, ..
@@ -1611,6 +1877,9 @@ fn substituted(
                             operand_spaced,
                             None,
                         )],
+                        Operand::Optional { .. } => {
+                            unreachable!("`edits_in` refuses a `##` beside `__VA_OPT__`")
+                        }
                     };
                     // An empty argument is a placemarker, and a join with one
                     // is the other side (C17 6.10.3.3 p3). What a join makes
@@ -1687,6 +1956,24 @@ fn stringized(tokens: &[(Token, bool)], sources: &SourceMap) -> String {
     }
     text.push('"');
     text
+}
+
+/// What `#` makes of `made`, the text a `__VA_OPT__` wrote (C23 6.10.5.2):
+/// its tokens as [`stringized`] spells an argument's, white space before one
+/// where the text has some that was not written only to keep two apart.
+fn stringized_text(made: &Written) -> String {
+    let mut scratch = SourceMap::new();
+    let file = scratch.add_virtual("__VA_OPT__", made.text.as_str());
+    let tokens = lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new());
+    let mut spelled: Vec<(Token, bool)> = Vec::new();
+    let mut end = None;
+    for token in tokens.into_iter().filter(|token| !token.is_eof()) {
+        let apart = end.is_some_and(|end| end != token.span.start())
+            && !made.unspaced.contains(&token.span.start());
+        spelled.push((token, apart));
+        end = Some(token.span.end());
+    }
+    stringized(&spelled, &scratch)
 }
 
 /// Whether `text`, two tokens written touching, is one preprocessing token
@@ -1816,8 +2103,8 @@ fn define(
     let scan = lex_replacement(scanned, scratch.file(scanned), &mut DiagnosticSink::new());
     let edits = match edits(&scan, &scratch, parameters.as_deref()) {
         Ok(edits) => edits,
-        Err(message) => {
-            diagnostics.report(refused(text, directive, MALFORMED_MACRO, message));
+        Err((code, message)) => {
+            diagnostics.report(refused(text, directive, code, message));
             return;
         }
     };
@@ -1878,12 +2165,32 @@ fn edits(
     scan: &[Token],
     scratch: &SourceMap,
     parameters: Option<&[&str]>,
-) -> Result<Vec<Edit>, &'static str> {
+) -> Result<Vec<Edit>, (Code, &'static str)> {
     let tokens: Vec<Token> = scan
         .iter()
         .copied()
         .filter(|token| !token.is_eof())
         .collect();
+    edits_in(&tokens, scratch, parameters, true)
+}
+
+/// [`edits`] of `tokens`, a replacement list or, not `outermost`, the
+/// content of a `__VA_OPT__` in one.
+fn edits_in(
+    tokens: &[Token],
+    scratch: &SourceMap,
+    parameters: Option<&[&str]>,
+    outermost: bool,
+) -> Result<Vec<Edit>, (Code, &'static str)> {
+    // A variadic macro's last parameter is `__VA_ARGS__`, as `macro_form`
+    // names it.
+    let variadic = parameters
+        .and_then(|names| names.last())
+        .is_some_and(|name| *name == VA_ARGS);
+    let va = parameters.map_or(0, |names| names.len().saturating_sub(1));
+    let named = |token: Token, name: &str| {
+        token.kind == TokenKind::Identifier && scratch.snippet(token.span) == name
+    };
     let parameter = |token: Token| {
         let named = matches!(
             token.kind,
@@ -1900,6 +2207,55 @@ fn edits(
         at.checked_sub(1)
             .is_some_and(|before| tokens[before].span.end() != tokens[at].span.start())
     };
+    // `__VA_OPT__ ( content )` at `at`, a stringizing if `hashed`: the
+    // operand, and the index just past its `)`.
+    let optional =
+        |at: usize, hashed: Option<u32>| -> Result<(Operand, usize), (Code, &'static str)> {
+            if !variadic {
+                return Err((
+                    MALFORMED_MACRO,
+                    "`__VA_OPT__` is read only in a variadic macro's replacement list",
+                ));
+            }
+            if !outermost {
+                return Err((MALFORMED_MACRO, "`__VA_OPT__` is inside another"));
+            }
+            let open = tokens
+                .get(at + 1)
+                .filter(|open| open.kind == TokenKind::Punct(Punct::LeftParen))
+                .ok_or((MALFORMED_MACRO, "`__VA_OPT__` is followed by no `(`"))?;
+            let mut depth = 0_usize;
+            let mut close = None;
+            for (index, token) in tokens.iter().enumerate().skip(at + 2) {
+                match token.kind {
+                    TokenKind::Punct(Punct::LeftParen) => depth += 1,
+                    TokenKind::Punct(Punct::RightParen) if depth == 0 => {
+                        close = Some(index);
+                        break;
+                    }
+                    TokenKind::Punct(Punct::RightParen) => depth -= 1,
+                    _ => {}
+                }
+            }
+            let close = close.ok_or((MALFORMED_MACRO, "`__VA_OPT__` has no `)`"))?;
+            let content = (open.span.end(), tokens[close].span.start());
+            let inner = edits_in(&tokens[at + 2..close], scratch, parameters, false)?
+                .into_iter()
+                .map(|edit| edit.shifted(content.0))
+                .collect();
+            let operator = match hashed {
+                Some(hash) => (hash, tokens[at].span.end()),
+                None => (tokens[at].span.start(), tokens[at].span.end()),
+            };
+            let operand = Operand::Optional {
+                index: va,
+                content,
+                inner,
+                stringized: hashed.is_some(),
+                operator,
+            };
+            Ok((operand, close + 1))
+        };
     let mut edits = Vec::new();
     // The run being read: each operand with its start, its end, its first
     // token's end, and whether white space is before it; and the run's
@@ -1929,6 +2285,38 @@ fn edits(
                     spaced: *spaced,
                 });
             }
+            ([(operand @ Operand::Optional { .. }, start, end, _, spaced)], _) => {
+                edits.push(Edit::Optional {
+                    start: *start,
+                    end: *end,
+                    operand: operand.clone(),
+                    spaced: *spaced,
+                });
+            }
+            // GNU's `, ## __VA_ARGS__`: the comma goes where the variable
+            // arguments are left out, and nothing is joined where they are
+            // not. See `call`.
+            (
+                [
+                    (Operand::Token(comma_start, comma_end), start, _, _, spaced),
+                    (Operand::Parameter(index), _, end, _, _),
+                ],
+                Some(_),
+            ) if variadic
+                && *index == va
+                && tokens.iter().any(|token| {
+                    token.span.start() == *comma_start
+                        && token.kind == TokenKind::Punct(Punct::Comma)
+                }) =>
+            {
+                edits.push(Edit::Comma {
+                    start: *start,
+                    end: *end,
+                    index: *index,
+                    comma: (*comma_start, *comma_end),
+                    spaced: *spaced,
+                });
+            }
             ([(_, start, _, _, spaced), .., (_, _, end, _, _)], Some(operator)) => {
                 edits.push(Edit::Pasted {
                     start: *start,
@@ -1947,37 +2335,65 @@ fn edits(
         }
         run.clear();
     };
+    let beside_optional = (
+        UNSUPPORTED_DIRECTIVE,
+        "a `##` beside `__VA_OPT__` is not read yet",
+    );
     let mut joining = false;
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
         if token.kind == TokenKind::Punct(Punct::HashHash) {
             if run.is_empty() {
-                return Err("`##` has nothing before it in the replacement list");
+                return Err((
+                    MALFORMED_MACRO,
+                    "`##` has nothing before it in the replacement list",
+                ));
             }
             if joining {
-                return Err("`##` has nothing between it and the `##` before it");
+                return Err((
+                    MALFORMED_MACRO,
+                    "`##` has nothing between it and the `##` before it",
+                ));
+            }
+            if matches!(run.last(), Some((Operand::Optional { .. }, ..))) {
+                return Err(beside_optional);
             }
             first_join.get_or_insert((token.span.start(), token.span.end()));
             joining = true;
             at += 1;
             continue;
         }
-        let (operand, end, taken) =
+        let (operand, end, next) =
             if parameters.is_some() && token.kind == TokenKind::Punct(Punct::Hash) {
-                let named = tokens.get(at + 1).copied().and_then(|next| {
-                    parameter(next).map(|index| (Operand::Stringized(index), next.span.end()))
-                });
-                let Some((operand, end)) = named else {
-                    return Err("`#` is followed by no parameter");
-                };
-                (operand, end, 2)
+                match tokens.get(at + 1).copied() {
+                    Some(after) if named(after, VA_OPT) => {
+                        let (operand, next) = optional(at + 1, Some(token.span.start()))?;
+                        (operand, tokens[next - 1].span.end(), next)
+                    }
+                    Some(after) => match parameter(after) {
+                        Some(index) => (Operand::Stringized(index), after.span.end(), at + 2),
+                        None => return Err((MALFORMED_MACRO, "`#` is followed by no parameter")),
+                    },
+                    None => return Err((MALFORMED_MACRO, "`#` is followed by no parameter")),
+                }
+            } else if named(token, VA_OPT) {
+                let (operand, next) = optional(at, None)?;
+                (operand, tokens[next - 1].span.end(), next)
+            } else if named(token, VA_ARGS) && !variadic {
+                return Err((
+                    MALFORMED_MACRO,
+                    "`__VA_ARGS__` is read only in a variadic macro's replacement list",
+                ));
             } else {
                 let operand = parameter(token).map_or(
                     Operand::Token(token.span.start(), token.span.end()),
                     Operand::Parameter,
                 );
-                (operand, token.span.end(), 1)
+                (operand, token.span.end(), at + 1)
             };
+        if joining && matches!(operand, Operand::Optional { .. }) {
+            return Err(beside_optional);
+        }
         if !joining {
             flush(&mut run, &mut first_join, &mut edits);
         }
@@ -1989,10 +2405,13 @@ fn edits(
             spaced(at),
         ));
         joining = false;
-        at += taken;
+        at = next;
     }
     if joining {
-        return Err("`##` has nothing after it in the replacement list");
+        return Err((
+            MALFORMED_MACRO,
+            "`##` has nothing after it in the replacement list",
+        ));
     }
     flush(&mut run, &mut first_join, &mut edits);
     Ok(edits)
@@ -2282,7 +2701,8 @@ enum MacroForm<'a> {
     /// closed, a parameter that is not an ASCII name, or one named twice,
     /// which C17 6.10.3 p6 forbids.
     Parameters,
-    /// `#define name(` with `...` among its parameters.
+    /// `#define name(` with `...` before its last parameter, or a named
+    /// variadic parameter such as GNU's `args...`.
     Variadic,
     /// `#define defined` or `#undef defined`.
     Defined,
@@ -2355,8 +2775,14 @@ fn macro_form(text: &str) -> MacroForm<'_> {
         };
         let mut names = Vec::new();
         if !list[..close].trim_matches(blank).is_empty() {
-            for parameter in list[..close].split(',') {
+            let count = list[..close].split(',').count();
+            for (at, parameter) in list[..close].split(',').enumerate() {
                 let parameter = parameter.trim_matches(blank);
+                // `...` last names the rest `__VA_ARGS__` (C17 6.10.3 p12).
+                if parameter == "..." && at + 1 == count {
+                    names.push(VA_ARGS);
+                    continue;
+                }
                 if parameter.ends_with("...") {
                     return MacroForm::Variadic;
                 }
@@ -3602,7 +4028,7 @@ mod tests {
             "#include X\n",
             "#include \"a.h\" // \\\nint x;\n",
             "#include \"a.h\"\n",
-            "#define F(...) x\n",
+            "#define F(args...) x\n",
             "#define G ## b\n",
             "#define H \\\nint x;\n",
         ] {

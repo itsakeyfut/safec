@@ -1,0 +1,16 @@
+error[SC0104]: this variadic parameter list is not read
+   ╭─[ a_named_variadic_parameter_is_not_read_yet.c:1:1 ]
+   │
+ 1 │ #define F(args...) args
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `...` is read as the last parameter; a named one such as `args...` is not read yet
+error[SC0104]: this variadic parameter list is not read
+   ╭─[ a_named_variadic_parameter_is_not_read_yet.c:2:1 ]
+   │
+ 2 │ #define G(..., x) x
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `...` is read as the last parameter; a named one such as `args...` is not read yet
