@@ -1,0 +1,8 @@
+error[SC0113]: this expansion joins too much with `##`
+   ╭─[ a_long_chain_of_joins_is_refused.c:2:5 ]
+   │
+ 2 │ int A;
+   │     ┬  
+   │     ╰── expanded here
+───╯
+  = note: its joins made more than 65536 bytes of text to read

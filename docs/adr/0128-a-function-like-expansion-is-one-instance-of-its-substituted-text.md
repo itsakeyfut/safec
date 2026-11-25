@@ -90,7 +90,9 @@ list byte for byte, and nothing else of that record.
   `crates/safec-ir/src/source.rs` fails.
 * Reading a name that ends an expansion as no call where `(` follows it:
   `a_call_whose_name_came_out_of_an_expansion_is_refused` is `SC0301`.
-* The text `#` and `##` make is owed by #1216.
+* Copying the text `#` and `##` make from the whole run they stand for
+  rather than from the operator:
+  `a_report_in_pasted_text_points_at_the_paste` widens its caret.
 
 ### Consequences
 

@@ -10160,9 +10160,36 @@ cases! {
         // (C17 6.10.3.4 p2). Mutation: drop the open-expansion check in
         // `replacement`. It expands until the bound refuses it as `SC0113`.
         a_macro_that_names_itself_is_expanded_once: ["--emit", "ast"],
-        // Mutation: read `...` as a parameter, or let `##` and `#` through.
-        // A report goes.
-        a_variadic_macro_and_stringizing_are_not_read_yet: ["--emit", "ast"],
+        // Mutation: read `...` as a parameter. The report goes.
+        a_variadic_macro_is_not_read_yet: ["--emit", "ast"],
+        // `#` with no parameter after it in a function-like macro, `##`
+        // first, last or twice over, and a join that makes `+-` or `@@` in a
+        // call or in an object-like macro, each refused as `SC0119` (C17
+        // 6.10.3.2 p1, 6.10.3.3 p1, p3); in an object-like macro `#` is a
+        // token like any other. Mutations: drop the test that a `#` is
+        // followed by a parameter, or that a `##` has something on each side
+        // or between it and the last, or that a join is one token, or that it
+        // is not a run of characters no token begins, or the object-like
+        // join's report; a report goes or changes.
+        a_hash_or_paste_written_wrong_is_refused: ["--emit", "ast"],
+        // `f ## ree(p)` makes `free`, and the double free is reported there,
+        // the text a join made copied from its `##` in the `#define`
+        // (ADR-0128). Mutation: copy it from the whole run the join stands
+        // for; the caret covers `f ## ree` rather than `##`.
+        a_report_in_pasted_text_points_at_the_paste: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A token of an argument a join copies unchanged is placed where it
+        // was written, and only what the join made at the `##`. Mutation:
+        // copy every token of a join from its `##`; the use of `q` points
+        // at the `#define`.
+        a_report_in_an_argument_a_join_copies_points_at_the_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `L#x` is `L` and a string, not a wide string: what `#` makes is set
+        // off from the token before it. Mutation: write it touching; this
+        // compiles.
+        a_token_before_a_stringized_argument_stays_apart: ["--emit", "ast"],
+        // Four hundred joins, each scanned whole, pass `MAX_PASTED` and are
+        // refused rather than read in the square of their length. Mutation:
+        // drop the bound; this is read.
+        a_long_chain_of_joins_is_refused: ["--emit", "ast"],
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],

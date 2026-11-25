@@ -1,0 +1,19 @@
+Target "x86_64-pc-windows-msvc"
+Function a_report_in_pasted_text_points_at_the_paste.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_report_in_pasted_text_points_at_the_paste.c:4:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull "q"
+  Block "bb0" entry
+    ArgumentsEvaluated a_report_in_pasted_text_points_at_the_paste.c:2:23 generated
+    Call a_report_in_pasted_text_points_at_the_paste.c:2:23 written "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_report_in_pasted_text_points_at_the_paste.c:2:23 generated
+    ArgumentsEvaluated a_report_in_pasted_text_points_at_the_paste.c:2:23 generated
+    Call a_report_in_pasted_text_points_at_the_paste.c:2:23 written "free" "bb2"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_report_in_pasted_text_points_at_the_paste.c:2:23 generated
+    Return

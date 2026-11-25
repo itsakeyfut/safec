@@ -1,0 +1,26 @@
+error[SC0402]: this uses `q` after it was freed
+   ╭─[ a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:14 ]
+   │
+ 5 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed here
+ 6 │     return C(1 + *q + x, );
+   │            ──┬────┬───────  
+   │              ╰────────────── used here
+   │                   │         
+   │                   ╰───────── `C` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference `q` while it is null
+   ╭─[ a_report_in_an_argument_a_join_copies_points_at_the_argument.c:6:14 ]
+   │
+ 6 │     return C(1 + *q + x, );
+   │            ──┬────┬───────  
+   │              ╰────────────── this check cannot say this is not null
+   │                   │         
+   │                   ╰───────── `C` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

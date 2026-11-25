@@ -1,0 +1,12 @@
+error[SC0207]: this use of `WIDE` is not read where it is yet
+   ╭─[ a_token_before_a_stringized_argument_stays_apart.c:1:17 ]
+   │
+ 1 │ #define WIDE(x) L#x
+   │                 ┬  
+   │                 ╰── ends partway through `WIDE`'s expansion
+   │ 
+ 3 │ unsigned long n = sizeof WIDE(a);
+   │                          ───┬───  
+   │                             ╰───── `WIDE` expanded here
+───╯
+  = note: safec reads an included file or a macro's expansion only where everything it builds over it holds all of it or none of it

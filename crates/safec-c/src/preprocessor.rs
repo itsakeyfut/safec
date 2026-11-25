@@ -8,7 +8,8 @@
 //! are compiled (6.10.1). Every other directive is refused as `SC0104`,
 //! `#include <file>` among them, which needs a search path and a system
 //! header this compiler cannot read yet anyway, and so are variadic macros,
-//! `#`, `##`, `#if` and `#elif`.
+//! `#if` and `#elif`. `#` and `##` in a replacement list make a string
+//! literal and join two tokens (6.10.3.2, 6.10.3.3).
 //!
 //! Each inclusion and each expansion is a file of its own in the source map,
 //! so a diagnostic in a header names the header, one in an expansion is shown
@@ -57,10 +58,11 @@ const UNBALANCED: Code = Code::new("SC0115");
 const EXTRA_TOKENS: Code = Code::new("SC0116");
 /// A `#define` or an `#undef` of a name the implementation predefines.
 const PREDEFINED_AGAIN: Code = Code::new("SC0117");
-/// A function-like macro's call written wrong: no `)`, or another number of
-/// arguments than it has parameters. One code, because the fix is the same:
-/// the call, written again.
-const MALFORMED_CALL: Code = Code::new("SC0119");
+/// A macro written or used wrong: a call with no `)`, or another number of
+/// arguments than it has parameters; a `#` with no parameter after it, a
+/// `##` with nothing on one side; a `##` that makes no one token. One code,
+/// because the fix is the same: the macro or its call, written again.
+const MALFORMED_MACRO: Code = Code::new("SC0119");
 
 /// How many files may be being read at once, the input among them.
 ///
@@ -124,6 +126,16 @@ const MAX_SUBSTITUTED: usize = 1 << 22;
 /// [`MAX_EXPANSIONS_IN_ALL`] bounds an input as well as a use.
 const MAX_SUBSTITUTED_IN_ALL: usize = 1 << 26;
 
+/// How many bytes the `##`s of one expansion may make for the scan to read.
+///
+/// Each join is scanned whole to ask whether it is one token, and a chain
+/// joins onto what it has made so far, so `a##a##...##a` scans the square
+/// of its length: 8,000 joins took 2.4 s a use, and forty uses ran past a
+/// minute with nothing said. Found by review. A join real code makes is a
+/// name or a number, far under this; what is scanned also counts toward
+/// [`MAX_SUBSTITUTED`] and [`MAX_SUBSTITUTED_IN_ALL`] like written text.
+const MAX_PASTED: usize = 1 << 16;
+
 /// The files being read, the macros defined, and how many inclusions and
 /// expansions there have been so far.
 ///
@@ -158,6 +170,12 @@ struct Reading {
     /// `#define x x+1` and `#define id(y) y`, `id(x)` is `x+1`, and
     /// forgetting the mark made it `x+1+1`. See ADR-0128.
     painted: HashSet<(FileId, u32)>,
+    /// Where, in each expansion, a token sits that a space was written
+    /// before only to keep it apart from what is before it, by its file and
+    /// its start. C has no white space there, and `#` reads none: with
+    /// `#define VERSION MAJOR.MINOR`, `XSTR(VERSION)` is `"1.2"`, where
+    /// reading the space made it `"1 . 2"`. Found by review.
+    unspaced: HashSet<(FileId, u32)>,
     /// How many arguments are being replaced, one inside another. A use
     /// starts a tree of its own only outside every expansion and every
     /// argument, so a call's arguments count toward the bound of the use
@@ -183,6 +201,56 @@ struct Macro {
     origin: Origin,
     /// `None` for an object-like macro.
     parameters: Option<Parameters>,
+    /// What a use writes as something other than the list's own text, in
+    /// order: each parameter, each `#`, each run joined by `##`. Empty for
+    /// most object-like macros, whose expansion is the list byte for byte.
+    edits: Vec<Edit>,
+}
+
+/// A part of a replacement list a use writes as something other than its own
+/// text, by its start and end counted from the list's start.
+#[derive(Clone, Debug)]
+enum Edit {
+    /// A parameter, written as its argument replaced (C17 6.10.3.1).
+    /// `spaced`, here and below, is whether white space is before it in the
+    /// list, which its first token has.
+    Parameter {
+        start: u32,
+        end: u32,
+        index: usize,
+        spaced: bool,
+    },
+    /// `#` and a parameter, written as its argument as a string literal
+    /// (6.10.3.2). `operator` is the `#`, what the literal is copied from.
+    Stringized {
+        start: u32,
+        end: u32,
+        index: usize,
+        operator: (u32, u32),
+        spaced: bool,
+    },
+    /// Operands joined by `##`, written as one text with each join's two
+    /// tokens made one (6.10.3.3). `operator` is the first `##`, what the
+    /// text is copied from.
+    Pasted {
+        start: u32,
+        end: u32,
+        /// Each with whether white space is before it in the list.
+        operands: Vec<(Operand, bool)>,
+        operator: (u32, u32),
+        spaced: bool,
+    },
+}
+
+/// One side of a `##`.
+#[derive(Clone, Debug)]
+enum Operand {
+    /// A parameter: its argument as written, not replaced.
+    Parameter(usize),
+    /// `#` and a parameter.
+    Stringized(usize),
+    /// A token of the list, by its start and end.
+    Token(u32, u32),
 }
 
 /// A function-like macro's parameters, and where its replacement list uses
@@ -192,9 +260,6 @@ struct Parameters {
     /// In order. Compared, with the tokens, by a second definition (C17
     /// 6.10.3 p2).
     names: Vec<String>,
-    /// Each use of a parameter in the replacement list: its start and end,
-    /// counted from the list's start, and which parameter it names.
-    uses: Vec<(u32, u32, usize)>,
 }
 
 /// What a name the frame loop meets becomes.
@@ -308,6 +373,7 @@ pub fn prelude(
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
         painted: HashSet::new(),
+        unspaced: HashSet::new(),
         arguments: 0,
         substituted: 0,
         substituted_in_all: 0,
@@ -355,6 +421,7 @@ pub fn prelude(
                 tokens: Vec::new(),
                 origin: Origin::Dynamic,
                 parameters: None,
+                edits: Vec::new(),
             },
         );
     }
@@ -546,6 +613,7 @@ fn read_includes(
         extent: None,
         conditionals: Vec::new(),
         skipped_depth: 0,
+        leading: false,
     }];
     while let Some(frame) = frames.last_mut() {
         let next = frame.tokens.get(frame.cursor).copied();
@@ -665,6 +733,7 @@ fn read_includes(
                                 extent: None,
                                 conditionals: Vec::new(),
                                 skipped_depth: 0,
+                                leading: false,
                             });
                         }
                     }
@@ -883,6 +952,9 @@ fn replacement(
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Replaced {
+    let leading = frames
+        .last()
+        .is_some_and(|frame| spaced(frame, frame.cursor - 1, reading));
     let name = sources.snippet(token.span);
     let Some(defined) = reading.macros.get(name) else {
         return Replaced::Kept;
@@ -896,17 +968,26 @@ fn replacement(
         return Replaced::Kept;
     }
     match defined.parameters.clone() {
-        Some(parameters) => call(frames, token, parameters, sources, reading, diagnostics),
-        None => {
-            expansion(token, sources, reading, diagnostics).map_or(Replaced::Kept, Replaced::Frame)
+        Some(parameters) => {
+            let edits = defined.edits.clone();
+            call(
+                frames,
+                (token, leading),
+                (parameters, edits),
+                sources,
+                reading,
+                diagnostics,
+            )
         }
+        None => expansion((token, leading), sources, reading, diagnostics)
+            .map_or(Replaced::Kept, Replaced::Frame),
     }
 }
 
 /// The frame `token`, the name of an object-like macro whose expansion is
 /// not open, expands to, or `None` where it is refused and left as it is.
 fn expansion(
-    token: Token,
+    (token, leading): (Token, bool),
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
@@ -926,13 +1007,68 @@ fn expansion(
         return None;
     }
     let spelled = defined.spelled;
+    let edits = defined.edits.clone();
     let name = name.to_owned();
     begin_use(reading);
+    // A list with `##` in it is written out, its joins made; any other is
+    // copied as it is.
+    if !edits.is_empty() {
+        // No argument to copy, so nothing it writes is marked, and it
+        // writes no more than its list; what its joins scanned is what the
+        // bounds on written text count.
+        let written = match substituted(spelled, &edits, (&[], &[]), sources, reading) {
+            Ok(written) => written,
+            Err(unwritten) => {
+                diagnostics.report(unwritten_report(token, unwritten));
+                return None;
+            }
+        };
+        if !written_within_bounds(token, written.scanned, reading, diagnostics)
+            || !admitted(token, &name, reading, diagnostics)
+        {
+            return None;
+        }
+        let file = sources.substitute(written.text, written.pieces, token.span);
+        reading
+            .unspaced
+            .extend(written.unspaced.into_iter().map(|offset| (file, offset)));
+        return Some(instance(
+            file,
+            (token.span, leading),
+            name,
+            sources,
+            diagnostics,
+        ));
+    }
     if !admitted(token, &name, reading, diagnostics) {
         return None;
     }
     let file = sources.expand(spelled, token.span);
-    Some(instance(file, token.span, name, sources, diagnostics))
+    Some(instance(
+        file,
+        (token.span, leading),
+        name,
+        sources,
+        diagnostics,
+    ))
+}
+
+/// The report for an expansion at `token` that `substituted` did not write.
+fn unwritten_report(token: Token, unwritten: Unwritten) -> Diagnostic {
+    match unwritten {
+        Unwritten::Unpasted(pasted) => {
+            Diagnostic::error(format!("`##` makes `{pasted}`, which is not one token"))
+                .with_code(MALFORMED_MACRO)
+                .with_label(Label::primary(token.span, "expanded here"))
+                .with_note("C17 6.10.3.3 p3 leaves a join that makes no one token undefined")
+        }
+        Unwritten::TooLong => Diagnostic::error("this expansion joins too much with `##`")
+            .with_code(TOO_MANY_EXPANSIONS)
+            .with_label(Label::primary(token.span, "expanded here"))
+            .with_note(format!(
+                "its joins made more than {MAX_PASTED} bytes of text to read"
+            )),
+    }
 }
 
 /// Start a tree of expansions for a use written outside any expansion and
@@ -992,7 +1128,7 @@ fn admitted(
 /// The frame that reads `file`, an expansion of `name` used at `at`.
 fn instance(
     file: FileId,
-    at: Span,
+    (at, leading): (Span, bool),
     name: String,
     sources: &SourceMap,
     diagnostics: &mut DiagnosticSink,
@@ -1008,6 +1144,7 @@ fn instance(
         extent: None,
         conditionals: Vec::new(),
         skipped_depth: 0,
+        leading,
     }
 }
 
@@ -1035,8 +1172,8 @@ fn closed(instance: &Instance, reading: &mut Reading) {
 /// call (6.10.3 p10).
 fn call(
     frames: &mut [Frame],
-    token: Token,
-    parameters: Parameters,
+    (token, leading): (Token, bool),
+    (parameters, edits): (Parameters, Vec<Edit>),
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
@@ -1081,7 +1218,8 @@ fn call(
 
     // Collected to the `)` that closes the call, split at each comma outside
     // any parentheses (6.10.3 p11).
-    let mut arguments: Vec<Vec<Token>> = vec![Vec::new()];
+    // Each token with whether C has white space before it, which `#` reads.
+    let mut arguments: Vec<Vec<(Token, bool)>> = vec![Vec::new()];
     let mut depth = 0_usize;
     let mut close = None;
     let mut directive = None;
@@ -1090,6 +1228,7 @@ fn call(
         if argument.is_eof() {
             break;
         }
+        let spaced = spaced(top, at, reading);
         at += 1;
         match argument.kind {
             TokenKind::Punct(Punct::LeftParen) => depth += 1,
@@ -1108,7 +1247,7 @@ fn call(
             _ => {}
         }
         if let Some(last) = arguments.last_mut() {
-            last.push(argument);
+            last.push((argument, spaced));
         }
     }
     top.cursor = at;
@@ -1129,7 +1268,7 @@ fn call(
             ))
         } else {
             Diagnostic::error(format!("this call of `{name}` has no `)`"))
-                .with_code(MALFORMED_CALL)
+                .with_code(MALFORMED_MACRO)
                 .with_label(Label::primary(token.span, "called here"))
                 .with_note("its arguments run on to the end of the file")
         };
@@ -1170,7 +1309,7 @@ fn call(
                 count(parameters.names.len()),
                 arguments.len()
             ))
-            .with_code(MALFORMED_CALL)
+            .with_code(MALFORMED_MACRO)
             .with_label(Label::primary(
                 Span::new(token.span.file(), token.span.start(), close.span.end()),
                 "called here",
@@ -1191,16 +1330,24 @@ fn call(
         );
         return Replaced::Dropped;
     }
-    // Only an argument the body uses is replaced: C replaces one before
-    // substituting it (C17 6.10.3.1 p1), and one never substituted is never
-    // replaced, so `#define K(x) 7` used as `K(H(1, 2))` asks nothing of `H`.
-    // Replacing every one refused that. Found by review.
-    let arguments: Vec<Vec<Token>> = arguments
-        .into_iter()
+    // Only an argument the body substitutes is replaced: C replaces one before
+    // substituting it (C17 6.10.3.1 p1), and one never substituted, or only
+    // beside `#` or `##`, is never replaced, so `#define K(x) 7` used as
+    // `K(H(1, 2))` asks nothing of `H`. Replacing every one refused that.
+    // Found by review.
+    let substituted_at = |index: usize| {
+        edits
+            .iter()
+            .any(|edit| matches!(edit, Edit::Parameter { index: used, .. } if *used == index))
+    };
+    let replaced_arguments: Vec<Vec<(Token, bool)>> = arguments
+        .iter()
         .enumerate()
         .map(|(index, argument)| {
-            if parameters.uses.iter().any(|&(_, _, used)| used == index) {
-                replaced(argument, sources, reading, diagnostics)
+            if substituted_at(index) {
+                let leading = argument.first().is_some_and(|&(_, leading)| leading);
+                let tokens = argument.iter().map(|&(token, _)| token).collect();
+                replaced(tokens, leading, sources, reading, diagnostics)
             } else {
                 Vec::new()
             }
@@ -1211,18 +1358,38 @@ fn call(
             "`{name}` was a macro when its call began and nothing in an argument can undefine it"
         );
     };
-    let (text, pieces, painted) = substituted(spelled, &parameters, &arguments, sources, reading);
-    if !written_within_bounds(token, text.len(), reading, diagnostics)
-        || !admitted(token, &name, reading, diagnostics)
+    let written = substituted(
+        spelled,
+        &edits,
+        (&replaced_arguments, &arguments),
+        sources,
+        reading,
+    );
+    let written = match written {
+        Ok(written) => written,
+        Err(unwritten) => {
+            diagnostics.report(unwritten_report(token, unwritten));
+            return Replaced::Dropped;
+        }
+    };
+    if !written_within_bounds(
+        token,
+        written.text.len() + written.scanned,
+        reading,
+        diagnostics,
+    ) || !admitted(token, &name, reading, diagnostics)
     {
         return Replaced::Dropped;
     }
     let at = Span::new(token.span.file(), token.span.start(), close.span.end());
-    let file = sources.substitute(text, pieces, at);
+    let file = sources.substitute(written.text, written.pieces, at);
     reading
         .painted
-        .extend(painted.into_iter().map(|offset| (file, offset)));
-    Replaced::Frame(instance(file, at, name, sources, diagnostics))
+        .extend(written.painted.into_iter().map(|offset| (file, offset)));
+    reading
+        .unspaced
+        .extend(written.unspaced.into_iter().map(|offset| (file, offset)));
+    Replaced::Frame(instance(file, (at, leading), name, sources, diagnostics))
 }
 
 /// Count `length` bytes a call at `token` writes into its expansion, or
@@ -1262,112 +1429,293 @@ fn written_within_bounds(
     false
 }
 
-/// The text of a call's expansion: the replacement list at `spelled`, each
-/// use of a parameter written as its argument's tokens, already replaced;
-/// with where each run of it was copied from, and where in it a name sits
-/// that is never replaced.
+/// An argument's tokens, each with whether C has white space before it.
+type Argument = Vec<(Token, bool)>;
+
+/// What `substituted` writes for an expansion.
+#[derive(Default)]
+struct Written {
+    text: String,
+    /// Where each run of `text` was copied from. See ADR-0128.
+    pieces: Vec<Piece>,
+    /// Where in `text` a name sits that is never replaced. See
+    /// [`Reading::painted`].
+    painted: Vec<u32>,
+    /// Where in `text` a token sits that a space was written before only to
+    /// keep it apart from what is before it. See [`Reading::unspaced`].
+    unspaced: Vec<u32>,
+    /// How many bytes its joins made for the scan to read.
+    scanned: usize,
+}
+
+/// Why `substituted` wrote nothing.
+enum Unwritten {
+    /// A `##` made this, which is not one token.
+    Unpasted(String),
+    /// The `##`s of one expansion made more than [`MAX_PASTED`] bytes of
+    /// text to scan, each join scanning all it had made so far.
+    TooLong,
+}
+
+/// The text of an expansion: the replacement list at `spelled`, each of its
+/// `edits` written in: a parameter as its argument's tokens, already
+/// replaced (`arguments.0`); `#` and one as that argument as written, a
+/// string literal (`arguments.1`); a run joined by `##` with each join's two
+/// tokens made one. Each argument token comes with whether C has white space
+/// before it.
 ///
-/// The body's runs are copied byte for byte, and an argument's tokens with
-/// one space where they were apart. An argument is set off by a space from
-/// what touches it, so it cannot run into the body's text: `-x` with `-1`
-/// for `x` is `- -1`, where `--1` would be another token.
+/// The list's runs are copied byte for byte. A token written where C has
+/// white space before it gets a space; one where C has none is written
+/// touching what is before it only where both came from one file side by
+/// side, and otherwise gets a space too, so it cannot run into what is
+/// before it (`-x` with `-1` for `x` is `- -1`, where `--1` would be
+/// another token), and that space is recorded as no white space, which is
+/// what `#` reads (C17 6.10.3.2 p2): `xstr(INCFILE(2).h)` is `"vers2.h"`.
+/// What `#` and `##` make is copied from the operator in the `#define`, as
+/// ADR-0128 says, and an argument token a join copies unchanged from where
+/// it was written.
 fn substituted(
     spelled: Span,
-    parameters: &Parameters,
-    arguments: &[Vec<Token>],
+    edits: &[Edit],
+    arguments: (&[Argument], &[Argument]),
     sources: &SourceMap,
     reading: &Reading,
-) -> (String, Vec<Piece>, Vec<u32>) {
+) -> Result<Written, Unwritten> {
+    let (replaced, written) = arguments;
     let body = sources.snippet(spelled);
-    let mut text = String::new();
-    let mut pieces = Vec::new();
-    let mut painted = Vec::new();
-    let run = |text: &mut String, pieces: &mut Vec<Piece>, start: u32, end: u32| {
-        if start < end {
-            pieces.push(Piece {
-                offset: text.len() as u32,
-                from: Span::new(
-                    spelled.file(),
-                    spelled.start() + start,
-                    spelled.start() + end,
-                ),
-            });
-            text.push_str(&body[start as usize..end as usize]);
+    let mut out = Written::default();
+    let in_body = |start: u32, end: u32| {
+        Span::new(
+            spelled.file(),
+            spelled.start() + start,
+            spelled.start() + end,
+        )
+    };
+    let is_painted = |token: Token| {
+        reading
+            .painted
+            .contains(&(token.span.file(), token.span.start()))
+    };
+    // What goes before a token about to be written: nothing at the start,
+    // where it has what its use has; a space where C has white space; and
+    // otherwise nothing where it may touch, or a space recorded as none.
+    let before = |out: &mut Written, spaced: bool, may_touch: bool| {
+        if out.text.is_empty() || out.text.ends_with(char::is_whitespace) {
+            return;
+        }
+        if spaced {
+            out.text.push(' ');
+        } else if !may_touch {
+            out.text.push(' ');
+            out.unspaced.push(out.text.len() as u32);
         }
     };
-    let apart = |text: &mut String| {
-        if !text.is_empty() && !text.ends_with(' ') {
-            text.push(' ');
+    // A run of the list, copied byte for byte. One that begins with a token
+    // where the edit before it ended has no white space between them, so it
+    // is set off and recorded as touching.
+    let run = |out: &mut Written, start: u32, end: u32| {
+        if start >= end {
+            return;
         }
+        let rest = &body[start as usize..end as usize];
+        let white = rest.starts_with(char::is_whitespace)
+            || rest.starts_with("/*")
+            || rest.starts_with("//");
+        if start > 0 && !white {
+            before(out, false, false);
+        }
+        out.pieces.push(Piece {
+            offset: out.text.len() as u32,
+            from: in_body(start, end),
+        });
+        out.text.push_str(rest);
     };
     let mut copied = 0;
-    for &(start, end, index) in &parameters.uses {
-        run(&mut text, &mut pieces, copied, start);
-        apart(&mut text);
-        let mut last: Option<Token> = None;
-        for &token in &arguments[index] {
-            // Tokens written side by side are one run, so a span over
-            // several, `free(p)`, is placed over all of them.
-            let touching = last.is_some_and(|last| {
-                last.span.file() == token.span.file() && last.span.end() == token.span.start()
-            });
-            match pieces.last_mut() {
-                Some(piece) if touching => {
-                    piece.from = Span::new(piece.from.file(), piece.from.start(), token.span.end());
-                }
-                _ => {
-                    if last.is_some() {
-                        apart(&mut text);
-                    }
-                    pieces.push(Piece {
-                        offset: text.len() as u32,
-                        from: token.span,
+    for edit in edits {
+        let (start, end, spaced) = match *edit {
+            Edit::Parameter {
+                start, end, spaced, ..
+            }
+            | Edit::Stringized {
+                start, end, spaced, ..
+            }
+            | Edit::Pasted {
+                start, end, spaced, ..
+            } => (start, end, spaced),
+        };
+        run(&mut out, copied, start);
+        match edit {
+            Edit::Parameter { index, .. } => {
+                let mut last: Option<Token> = None;
+                for &(token, leading) in &replaced[*index] {
+                    // Tokens written side by side are one run, so a span over
+                    // several, `free(p)`, is placed over all of them.
+                    let touching = last.is_some_and(|last| {
+                        last.span.file() == token.span.file()
+                            && last.span.end() == token.span.start()
                     });
+                    match last {
+                        // The first has the white space its parameter has.
+                        None => before(&mut out, spaced, false),
+                        Some(_) => before(&mut out, leading, touching),
+                    }
+                    match out.pieces.last_mut() {
+                        Some(piece) if touching && !out.text.ends_with(' ') => {
+                            piece.from =
+                                Span::new(piece.from.file(), piece.from.start(), token.span.end());
+                        }
+                        _ => out.pieces.push(Piece {
+                            offset: out.text.len() as u32,
+                            from: token.span,
+                        }),
+                    }
+                    if is_painted(token) {
+                        out.painted.push(out.text.len() as u32);
+                    }
+                    out.text.push_str(sources.snippet(token.span));
+                    last = Some(token);
                 }
             }
-            let offset = text.len() as u32;
-            if reading
-                .painted
-                .contains(&(token.span.file(), token.span.start()))
-            {
-                painted.push(offset);
+            Edit::Stringized {
+                index, operator, ..
+            } => {
+                before(&mut out, spaced, false);
+                out.pieces.push(Piece {
+                    offset: out.text.len() as u32,
+                    from: in_body(operator.0, operator.1),
+                });
+                out.text.push_str(&stringized(&written[*index], sources));
             }
-            text.push_str(sources.snippet(token.span));
-            last = Some(token);
-        }
-        if end < body.len() as u32 {
-            apart(&mut text);
+            Edit::Pasted {
+                operands, operator, ..
+            } => {
+                // Each operand as the tokens it stands for: each with whether
+                // C has white space before it, and the token it was copied
+                // from, where it was copied unchanged.
+                let mut joined: Vec<(String, bool, Option<Token>)> = Vec::new();
+                for &(ref operand, operand_spaced) in operands {
+                    let tokens: Vec<(String, bool, Option<Token>)> = match *operand {
+                        Operand::Parameter(index) => written[index]
+                            .iter()
+                            .enumerate()
+                            .map(|(at, &(token, leading))| {
+                                let leading = if at == 0 { operand_spaced } else { leading };
+                                (sources.snippet(token.span).to_owned(), leading, Some(token))
+                            })
+                            .collect(),
+                        Operand::Stringized(index) => {
+                            vec![(stringized(&written[index], sources), operand_spaced, None)]
+                        }
+                        Operand::Token(start, end) => vec![(
+                            body[start as usize..end as usize].to_owned(),
+                            operand_spaced,
+                            None,
+                        )],
+                    };
+                    // An empty argument is a placemarker, and a join with one
+                    // is the other side (C17 6.10.3.3 p3). What a join makes
+                    // has the white space its left side has.
+                    let mut tokens = tokens.into_iter();
+                    match (joined.pop(), tokens.next()) {
+                        (Some((left, leading, _)), Some((right, _, _))) => {
+                            let pasted = format!("{left}{right}");
+                            out.scanned += pasted.len();
+                            if out.scanned > MAX_PASTED {
+                                return Err(Unwritten::TooLong);
+                            }
+                            if !one_token(&pasted) {
+                                return Err(Unwritten::Unpasted(pasted));
+                            }
+                            joined.push((pasted, leading, None));
+                        }
+                        (left, right) => joined.extend(left.into_iter().chain(right)),
+                    }
+                    joined.extend(tokens);
+                }
+                for (at, (token, leading, copied)) in joined.iter().enumerate() {
+                    before(&mut out, if at == 0 { spaced } else { *leading }, false);
+                    out.pieces.push(Piece {
+                        offset: out.text.len() as u32,
+                        from: copied.map_or(in_body(operator.0, operator.1), |copied| copied.span),
+                    });
+                    if copied.is_some_and(is_painted) {
+                        out.painted.push(out.text.len() as u32);
+                    }
+                    out.text.push_str(token);
+                }
+            }
         }
         copied = end;
     }
-    run(&mut text, &mut pieces, copied, body.len() as u32);
+    run(&mut out, copied, body.len() as u32);
     // An empty replacement list, or one of an empty argument alone, is
     // still copied from somewhere.
-    if pieces.first().is_none_or(|piece| piece.offset != 0) {
-        pieces.insert(
+    if out.pieces.first().is_none_or(|piece| piece.offset != 0) {
+        out.pieces.insert(
             0,
             Piece {
                 offset: 0,
-                from: Span::new(spelled.file(), spelled.start(), spelled.start()),
+                from: in_body(0, 0),
             },
         );
     }
-    (text, pieces, painted)
+    Ok(out)
+}
+
+/// `tokens`, an argument as written, each with whether C has white space
+/// before it, as the string literal `#` makes of it (C17 6.10.3.2 p2): each
+/// token's spelling, one space where white space was and none at either
+/// end, a `\` before each `"` and `\` of a string literal or a character
+/// constant, quoted.
+fn stringized(tokens: &[(Token, bool)], sources: &SourceMap) -> String {
+    let mut text = String::from("\"");
+    for (at, &(token, leading)) in tokens.iter().enumerate() {
+        if at > 0 && leading {
+            text.push(' ');
+        }
+        let spelled = sources.snippet(token.span);
+        if matches!(token.kind, TokenKind::String | TokenKind::Character) {
+            for c in spelled.chars() {
+                if c == '"' || c == '\\' {
+                    text.push('\\');
+                }
+                text.push(c);
+            }
+        } else {
+            text.push_str(spelled);
+        }
+    }
+    text.push('"');
+    text
+}
+
+/// Whether `text`, two tokens written touching, is one preprocessing token
+/// this reads, as a `##` has to make (C17 6.10.3.3 p3). A run of characters
+/// no token begins is not: the scan takes it as one, where C makes each
+/// character a token of its own. The scan ends every text with its end of
+/// file, and touching tokens leave no white space for it to pass over.
+fn one_token(text: &str) -> bool {
+    let mut scratch = SourceMap::new();
+    let file = scratch.add_virtual("pasted", text);
+    let tokens = lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new());
+    matches!(tokens.as_slice(), [token, _] if token.kind != TokenKind::Unknown)
 }
 
 /// `tokens`, an argument, replaced as if they were the rest of a file (C17
 /// 6.10.3.1 p1): every macro in them expanded and every expansion read
-/// through, and what would have been handed on given back.
+/// through, and what would have been handed on given back, each token with
+/// whether C has white space before it. `leading` is the first's.
 ///
 /// The frame stack is this argument's own, so a name ending it is no call
 /// whatever follows the argument, as C reads it in isolation; the macros
 /// open around the call stay open, and the bounds count on.
 fn replaced(
     tokens: Vec<Token>,
+    leading: bool,
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
-) -> Vec<Token> {
+) -> Vec<(Token, bool)> {
     reading.arguments += 1;
     let mut frames = vec![Frame {
         tokens,
@@ -1376,6 +1724,7 @@ fn replaced(
         extent: None,
         conditionals: Vec::new(),
         skipped_depth: 0,
+        leading,
     }];
     let mut handed = Vec::new();
     while let Some(frame) = frames.last_mut() {
@@ -1391,20 +1740,45 @@ fn replaced(
             }
             continue;
         };
+        let spaced = frames
+            .last()
+            .is_some_and(|frame| spaced(frame, frame.cursor - 1, reading));
         match token.kind {
             TokenKind::Eof => {}
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
                 match replacement(&mut frames, token, sources, reading, diagnostics) {
                     Replaced::Frame(frame) => frames.push(frame),
-                    Replaced::Kept => handed.push(token),
+                    Replaced::Kept => handed.push((token, spaced)),
                     Replaced::Dropped => {}
                 }
             }
-            _ => handed.push(token),
+            _ => handed.push((token, spaced)),
         }
     }
     reading.arguments -= 1;
     handed
+}
+
+/// Whether C has white space before the token at `index` of `frame`, which
+/// `#` reads (C17 6.10.3.2 p2): the first has what the frame's use has; any
+/// other has it where it does not touch the token before it, unless the
+/// space between was written only to keep the two apart. The scan passes a
+/// comment over, so one between two tokens leaves them apart, as C makes a
+/// comment white space.
+fn spaced(frame: &Frame, index: usize, reading: &Reading) -> bool {
+    match index
+        .checked_sub(1)
+        .and_then(|before| frame.tokens.get(before))
+    {
+        None => frame.leading,
+        Some(before) => {
+            let token = frame.tokens[index];
+            before.span.end() != token.span.start()
+                && !reading
+                    .unspaced
+                    .contains(&(token.span.file(), token.span.start()))
+        }
+    }
 }
 
 /// Record `#define name body`, or refuse it.
@@ -1435,27 +1809,18 @@ fn define(
         directive.start() + name_at + name.len() as u32,
     );
 
+    // Scanned as an expansion is, so a list that begins with `#` holds the
+    // operator rather than a directive. See `lex_replacement`.
     let mut scratch = SourceMap::new();
     let scanned = scratch.add_virtual("replacement list", sources.snippet(spelled));
-    let scan = lex(scanned, scratch.file(scanned), &mut DiagnosticSink::new());
-    let operator = scan.iter().any(|token| {
-        matches!(
-            token.kind,
-            TokenKind::Punct(Punct::Hash | Punct::HashHash) | TokenKind::Directive
-        )
-    });
-    if operator {
-        diagnostics.report(
-            refused(
-                text,
-                directive,
-                UNSUPPORTED_DIRECTIVE,
-                "`#` and `##` in a `#define` are not read yet",
-            )
-            .with_note("only a replacement list without them is read yet"),
-        );
-        return;
-    }
+    let scan = lex_replacement(scanned, scratch.file(scanned), &mut DiagnosticSink::new());
+    let edits = match edits(&scan, &scratch, parameters.as_deref()) {
+        Ok(edits) => edits,
+        Err(message) => {
+            diagnostics.report(refused(text, directive, MALFORMED_MACRO, message));
+            return;
+        }
+    };
     let mut tokens = Vec::new();
     let mut end = 0;
     for token in scan.iter().filter(|token| !token.is_eof()) {
@@ -1465,24 +1830,7 @@ fn define(
         ));
         end = token.span.end();
     }
-    // Where the list names a parameter, by the scan's offsets, which count
-    // from the list's start.
     let parameters = parameters.map(|names| Parameters {
-        uses: scan
-            .iter()
-            .filter(|token| {
-                matches!(
-                    token.kind,
-                    TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_)
-                )
-            })
-            .filter_map(|token| {
-                let index = names
-                    .iter()
-                    .position(|name| *name == scratch.snippet(token.span))?;
-                Some((token.span.start(), token.span.end(), index))
-            })
-            .collect(),
         names: names.into_iter().map(str::to_owned).collect(),
     });
 
@@ -1514,8 +1862,140 @@ fn define(
             tokens,
             origin,
             parameters,
+            edits,
         },
     );
+}
+
+/// What a use of the replacement list `scan` writes as something other than
+/// its own text, by the scan's offsets, which count from the list's start;
+/// or why the list is not one C allows. `parameters` is a function-like
+/// macro's, and an object-like macro's `#` is a token like any other.
+///
+/// C17 6.10.3.2 p1 asks each `#` of a function-like macro to be followed by
+/// a parameter, and 6.10.3.3 p1 a `##` to stand between two operands.
+fn edits(
+    scan: &[Token],
+    scratch: &SourceMap,
+    parameters: Option<&[&str]>,
+) -> Result<Vec<Edit>, &'static str> {
+    let tokens: Vec<Token> = scan
+        .iter()
+        .copied()
+        .filter(|token| !token.is_eof())
+        .collect();
+    let parameter = |token: Token| {
+        let named = matches!(
+            token.kind,
+            TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_)
+        );
+        parameters.filter(|_| named).and_then(|names| {
+            names
+                .iter()
+                .position(|name| *name == scratch.snippet(token.span))
+        })
+    };
+    // Whether the token at `at` has white space before it in the list.
+    let spaced = |at: usize| {
+        at.checked_sub(1)
+            .is_some_and(|before| tokens[before].span.end() != tokens[at].span.start())
+    };
+    let mut edits = Vec::new();
+    // The run being read: each operand with its start, its end, its first
+    // token's end, and whether white space is before it; and the run's
+    // first `##`.
+    let mut run: Vec<(Operand, u32, u32, u32, bool)> = Vec::new();
+    let mut first_join: Option<(u32, u32)> = None;
+    let flush = |run: &mut Vec<(Operand, u32, u32, u32, bool)>,
+                 first_join: &mut Option<(u32, u32)>,
+                 edits: &mut Vec<Edit>| {
+        match (run.as_slice(), first_join.take()) {
+            ([] | [(Operand::Token(..), ..)], _) => {}
+            ([(Operand::Parameter(index), start, end, _, spaced)], _) => {
+                edits.push(Edit::Parameter {
+                    start: *start,
+                    end: *end,
+                    index: *index,
+                    spaced: *spaced,
+                });
+            }
+            ([(Operand::Stringized(index), start, end, head, spaced)], _) => {
+                edits.push(Edit::Stringized {
+                    start: *start,
+                    end: *end,
+                    index: *index,
+                    // The `#`: one byte, or two spelled `%:` (C17 6.4.6 p3).
+                    operator: (*start, *head),
+                    spaced: *spaced,
+                });
+            }
+            ([(_, start, _, _, spaced), .., (_, _, end, _, _)], Some(operator)) => {
+                edits.push(Edit::Pasted {
+                    start: *start,
+                    end: *end,
+                    operands: run
+                        .iter()
+                        .map(|(operand, _, _, _, spaced)| (operand.clone(), *spaced))
+                        .collect(),
+                    operator,
+                    spaced: *spaced,
+                });
+            }
+            ([_, _, ..], None) => {
+                unreachable!("a run of two operands was joined by a `##`")
+            }
+        }
+        run.clear();
+    };
+    let mut joining = false;
+    let mut at = 0;
+    while let Some(&token) = tokens.get(at) {
+        if token.kind == TokenKind::Punct(Punct::HashHash) {
+            if run.is_empty() {
+                return Err("`##` has nothing before it in the replacement list");
+            }
+            if joining {
+                return Err("`##` has nothing between it and the `##` before it");
+            }
+            first_join.get_or_insert((token.span.start(), token.span.end()));
+            joining = true;
+            at += 1;
+            continue;
+        }
+        let (operand, end, taken) =
+            if parameters.is_some() && token.kind == TokenKind::Punct(Punct::Hash) {
+                let named = tokens.get(at + 1).copied().and_then(|next| {
+                    parameter(next).map(|index| (Operand::Stringized(index), next.span.end()))
+                });
+                let Some((operand, end)) = named else {
+                    return Err("`#` is followed by no parameter");
+                };
+                (operand, end, 2)
+            } else {
+                let operand = parameter(token).map_or(
+                    Operand::Token(token.span.start(), token.span.end()),
+                    Operand::Parameter,
+                );
+                (operand, token.span.end(), 1)
+            };
+        if !joining {
+            flush(&mut run, &mut first_join, &mut edits);
+        }
+        run.push((
+            operand,
+            token.span.start(),
+            end,
+            token.span.end(),
+            spaced(at),
+        ));
+        joining = false;
+        at += taken;
+    }
+    if joining {
+        return Err("`##` has nothing after it in the replacement list");
+    }
+    flush(&mut run, &mut first_join, &mut edits);
+    Ok(edits)
 }
 
 /// The report for a `#define` or an `#undef`, `what` at `at`, of `name`, one C17
@@ -2389,6 +2869,9 @@ struct Frame {
     /// Conditionals opened inside a skipped group, which are counted and not
     /// read (C17 6.10.1 p6).
     skipped_depth: usize,
+    /// Whether C has white space before the frame's first token: an
+    /// expansion's has what its use has. See [`spaced`].
+    leading: bool,
 }
 
 impl Frame {
@@ -3120,7 +3603,7 @@ mod tests {
             "#include \"a.h\" // \\\nint x;\n",
             "#include \"a.h\"\n",
             "#define F(...) x\n",
-            "#define G a ## b\n",
+            "#define G ## b\n",
             "#define H \\\nint x;\n",
         ] {
             let mut sources = SourceMap::new();
@@ -3213,6 +3696,44 @@ mod tests {
             "{:?}",
             diagnostics.diagnostics().first()
         );
+    }
+
+    /// What `#` and `##` make is placed at its operator in the `#define`:
+    /// the `%:` of a stringizing, and the first `##` of a chain. See
+    /// ADR-0128.
+    ///
+    /// Mutations: take every `#` as one byte; place a chain at its last
+    /// `##`; or place a stringizing at its whole operand. One assertion
+    /// fails.
+    #[test]
+    fn what_a_hash_or_a_join_makes_is_placed_at_its_operator() {
+        let text = "#define S(x) %:x\n#define T(a, b, c) a ## b ## c\nconst char *s = S(q);\nint T(v, w, z);\n";
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let preprocessed = preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+        assert!(!diagnostics.has_errors(), "{:?}", diagnostics.diagnostics());
+
+        let written = |spelled: &str| {
+            let token = preprocessed
+                .tokens()
+                .iter()
+                .find(|token| sources.snippet(token.span) == spelled)
+                .unwrap_or_else(|| panic!("no `{spelled}` was handed on"));
+            sources.written(token.span)
+        };
+        let string = written("\"q\"");
+        assert_eq!(sources.snippet(string), "%:");
+        let first_join = text.find("##").expect("the chain has a `##`") as u32;
+        assert_eq!(written("vwz"), Span::new(file, first_join, first_join + 2));
     }
 
     /// A file of function-like calls, one a line, past the bound for one use,

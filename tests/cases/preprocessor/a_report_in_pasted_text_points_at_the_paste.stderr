@@ -1,0 +1,18 @@
+error[SC0401]: this frees `q`, which was freed already
+   ╭─[ a_report_in_pasted_text_points_at_the_paste.c:2:23 ]
+   │
+ 2 │ #define CALL(f, p) (f ## ree(p))
+   │                       ─┬  
+   │                        ╰── freed again here
+   │                        │  
+   │                        ╰── freed here
+   │ 
+ 5 │     CALL(f, q);
+   │     ─────┬────  
+   │          ╰────── `CALL` expanded here
+ 6 │     CALL(f, q);
+   │     ─────┬────  
+   │          ╰────── `CALL` expanded here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

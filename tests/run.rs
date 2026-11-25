@@ -228,11 +228,39 @@ programs! {
     /// tokens kept apart, `DECL(int d = 3;)`; one set off from the body after
     /// it, `SUB(5 -)`; a macro named by a keyword inside an argument,
     /// `id(register)` with `#define register id(4)`, which must be
-    /// replaced there, before `id` is open, or its own `id` is kept. Mutations: look the mark up at offset 0, or scan the
+    /// replaced there, before `id` is open, or its own `id` is kept. A name
+    /// kept inside its own expansion stays kept when a join copies it,
+    /// `id2(x)` being `x + 10`. Mutation: leave its mark behind in a join;
+    /// it is `x+1 + 10`. Mutations: look the mark up at offset 0, or scan the
     /// frames below outermost first, or replace an unused argument, or join
     /// an argument's tokens, or set nothing off after an argument, or offer
     /// no keyword for replacement inside an argument; each fails one.
     a_function_like_macro_is_replaced_and_rescanned,
+    /// `#` and `##` make what C17 6.10.3.2 and 6.10.3.3 say: an argument
+    /// spelled as written with one space where it was apart, a string or
+    /// character constant in it escaped, an empty one as `""`; joins of two
+    /// tokens, with an empty argument as a placemarker, chained, beside a
+    /// `#`, and in an object-like macro; and the operand of `#` not
+    /// replaced, `str(N)`, where `xstr(4 + N)` is (#1216). Mutations: put
+    /// back the refusal of `#` and `##`, and this does not build; replace an
+    /// operand of `#`, and `str(N)` is `"3"`; drop the escaping, and the
+    /// `"x\n"` line does not build; join with a space between, and
+    /// `C(x, y)` is two names; replace an argument only stringized, and
+    /// `S(ONE(1, 2))` is refused for its count; scan a list that begins
+    /// with `#` as a file, and `S`'s `#x` is a directive; ignore an
+    /// object-like macro's joins, and `AB` hands `##` to the parser. Also:
+    /// white space as C has it, not as the expansion's text spaces tokens,
+    /// `XS(VERSION)` being `"1.2"` and C17 6.10.3.5 EXAMPLE 4's
+    /// `xstr(INCFILE(2).h)` being `"vers2.h"`; an operand of `##` not
+    /// replaced, `C(N, 1)`; operands of several tokens, `C(1 + 1, 0 + 2)`;
+    /// two empty ones, `C(,)`; and a join set off from the `-` before it,
+    /// `M(-, -)` being `v - --w`. Mutations: read every space of the text
+    /// as white space, and `XS(VERSION)` is `"1 . 2"`; replace an operand of
+    /// `##`, and `C(N, 1)` is `31`; drop an operand's tokens after the
+    /// first, or write them touching, and `C(unsigned u, v = 3;)` declares one name;
+    /// leave a piece where a join made nothing, and `CX(,)` panics; write a
+    /// join touching the list, and `M` is `v---w`.
+    stringizing_and_pasting_make_what_c_says,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those
