@@ -1,4 +1,5 @@
 #define DEF defined(X)
+#define ONE(a) a
 #if
 #endif
 #if 1.5
@@ -26,5 +27,11 @@
 #if 1 2
 #endif
 #if 'ab'
+#endif
+#if ONE(1, 2)
+#endif
+#if 1 << 63
+#endif
+#if -(-9223372036854775807 - 1)
 #endif
 int main(void) { return 0; }

@@ -53,6 +53,11 @@ int main(void) {
 #else
     fails |= 2048;
 #endif
+    /* `?:` converts both arms to one type (C17 6.5.15 p5). */
+#if (1 ? -1 : 0u) > 0
+#else
+    fails |= 8192;
+#endif
 #if 0
 #if 1 / 0
 #endif

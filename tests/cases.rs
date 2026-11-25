@@ -10459,9 +10459,12 @@ cases! {
         // comma, a division by zero, a signed overflow, a shift past 63, a
         // constant past `uintmax_t`, `defined` made by a macro or naming
         // nothing, a `(` never closed, a line going on after its expression,
-        // and a character constant of two characters, each refused (C17
-        // 6.10.1, 6.6). Mutations: drop any one check in `condition.rs`; its
-        // report goes.
+        // a character constant of two characters, a call written wrong, which
+        // is its own refusal and no more, and a left shift and a negation
+        // past `intmax_t`, each refused (C17 6.10.1, 6.6). Mutations: drop
+        // any one check in `condition.rs`, or go on evaluating after a
+        // refusal in the line's replacement; its report goes or another
+        // comes.
         an_if_that_is_not_an_integer_constant_expression_is_refused: ["--emit", "ast"],
         // A character constant is valued as the target's `char` holds it:
         // `'\377'` is -1 where `char` is signed and 255 where it is not
