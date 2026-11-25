@@ -46,3 +46,19 @@ error[SC0104]: `#pragma GCC visibility` is not read
    │ ╰── written here
 ───╯
   = note: ignoring it would change what the program is
+error[SC0104]: `#pragma clang attribute` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:7:1 ]
+   │
+ 7 │ #pragma clang attribute push(__attribute__((cold)), apply_to = function)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma clang section` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:8:1 ]
+   │
+ 8 │ #pragma clang section bss="b"
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is

@@ -4,5 +4,7 @@
 #pragma clang assume_nonnull begin
 _Pragma("GCC poison gets")
 #pragma GCC visibility push(hidden)
+#pragma clang attribute push(__attribute__((cold)), apply_to = function)
+#pragma clang section bss="b"
 
 int main(void) { return 0; }

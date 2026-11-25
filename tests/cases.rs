@@ -10654,7 +10654,8 @@ cases! {
         // marked; the warning goes.
         a_pragma_once_in_the_input_is_warned_about_and_ignored: ["--emit", "ast"],
         // ADR-0129's refused class, by the directive and by `_Pragma`, and
-        // `GCC visibility` (ADR-0132). Mutations: read `pack` or
+        // `GCC visibility` (ADR-0132), `clang attribute` and `clang section`
+        // (ADR-0133). Mutations: read `pack` or
         // `GCC visibility` as ignored; its report goes.
         a_pragma_that_changes_the_program_is_refused: ["--emit", "ast"],
         // `GCC error` and `GCC warning` report their string as `#error` and
@@ -10689,6 +10690,11 @@ cases! {
         // stack. Mutation: drop the bound from `operator`; the stack
         // overflows.
         a_pragma_operator_nested_too_deep_is_refused: ["--emit", "ast"],
+        // A `_Pragma` in a call's argument acts where the argument is used,
+        // as `clang` acts on it: not at all in one the body drops, and twice
+        // in one it uses twice. Mutation: act on it while the argument is
+        // replaced; `dropped` is reported and `twice` once.
+        a_pragma_operator_in_an_argument_acts_where_the_argument_is_used: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.

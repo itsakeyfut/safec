@@ -1,0 +1,18 @@
+warning[SC0122]: twice
+   ╭─[ a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:6:15 ]
+   │
+ 6 │ TWICE(_Pragma("GCC warning \"twice\""))
+   │ ───────────────────┬─────┬─────────────  
+   │                    ╰───────────────────── `TWICE` expanded here
+   │                          │               
+   │                          ╰─────────────── written here
+───╯
+warning[SC0122]: twice
+   ╭─[ a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:6:15 ]
+   │
+ 6 │ TWICE(_Pragma("GCC warning \"twice\""))
+   │ ───────────────────┬─────┬─────────────  
+   │                    ╰───────────────────── `TWICE` expanded here
+   │                          │               
+   │                          ╰─────────────── written here
+───╯

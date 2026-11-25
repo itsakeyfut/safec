@@ -154,9 +154,11 @@ fn classify(rest: &str) -> Class {
         // `GCC visibility` hides what it covers from the dynamic linker, so
         // ignoring it exports symbols `clang` would not: linking changed, as
         // `pack` changes layout. ADR-0132 moves it here from the ignored.
-        ("GCC", "poison" | "visibility") | ("clang", "assume_nonnull") | ("options", "align") => {
-            Class::Refused(format!("{first} {second}"))
-        }
+        // `clang attribute` and `clang section` give what they cover an
+        // attribute or a section, the same change. See ADR-0133.
+        ("GCC", "poison" | "visibility")
+        | ("clang", "assume_nonnull" | "attribute" | "section")
+        | ("options", "align") => Class::Refused(format!("{first} {second}")),
         (
             "pack" | "align" | "ms_struct" | "push_macro" | "pop_macro" | "redefine_extname"
             | "weak" | "comment" | "section" | "code_seg" | "data_seg" | "bss_seg" | "const_seg"
@@ -461,6 +463,11 @@ mod tests {
             ("init_seg(lib)", "init_seg"),
             ("GCC poison x", "GCC poison"),
             ("GCC visibility push(hidden)", "GCC visibility"),
+            (
+                "clang attribute push(__attribute__((cold)), apply_to = function)",
+                "clang attribute",
+            ),
+            ("clang section bss=\"b\"", "clang section"),
             ("clang assume_nonnull begin", "clang assume_nonnull"),
         ] {
             assert_eq!(

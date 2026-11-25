@@ -242,6 +242,12 @@ struct Reading {
     /// What the last `#line` in each file said, which `__LINE__` and
     /// `__FILE__` read and nothing else does.
     renumbered: HashMap<FileId, Renumbered>,
+    /// How many calls' arguments are being replaced, one inside another,
+    /// before they are substituted: while any is, a `_Pragma` is handed on
+    /// as it is, to act where the argument is used, as `clang` acts on it.
+    /// Acted on there, one in an argument the body drops took effect, and
+    /// one the body uses twice took effect once. Found by review.
+    in_arguments: usize,
 }
 
 /// What a `#line` makes of the lines after it, in the file it is in.
@@ -595,6 +601,7 @@ pub fn prelude(
         substituted_in_all: 0,
         once: HashSet::new(),
         renumbered: HashMap::new(),
+        in_arguments: 0,
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -1226,8 +1233,13 @@ fn replacement(
         );
         return Replaced::Dropped;
     }
-    // An operator, not a macro: what its string spells is a `#pragma`.
+    // An operator, not a macro: what its string spells is a `#pragma`. In
+    // a call's argument it is left for where the argument is used; see
+    // `Reading::in_arguments`.
     if name == "_Pragma" {
+        if reading.in_arguments > 0 {
+            return Replaced::Kept;
+        }
         directive::operator(frames, token, sources, reading, diagnostics);
         return Replaced::Dropped;
     }
@@ -1975,6 +1987,7 @@ fn call(
     // `K(H(1, 2))` asks nothing of `H`. Replacing every one refused that.
     // Found by review.
     let substituted_at = |index: usize| edits.iter().any(|edit| edit.replaces(index));
+    reading.in_arguments += 1;
     let replaced_arguments: Vec<Vec<(Token, bool)>> = arguments
         .iter()
         .enumerate()
@@ -1988,6 +2001,7 @@ fn call(
             }
         })
         .collect();
+    reading.in_arguments -= 1;
     let Some(spelled) = reading.macros.get(&name).map(|defined| defined.spelled) else {
         unreachable!(
             "`{name}` was a macro when its call began and nothing in an argument can undefine it"
