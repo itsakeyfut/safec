@@ -1,0 +1,4 @@
+Function a_pragma_ignoring_which_changes_nothing_is_ignored_silently.c:9:1 "main" "int (void)"
+  Compound a_pragma_ignoring_which_changes_nothing_is_ignored_silently.c:9:16
+    Return a_pragma_ignoring_which_changes_nothing_is_ignored_silently.c:9:18
+      Number a_pragma_ignoring_which_changes_nothing_is_ignored_silently.c:9:25 "0"

@@ -324,6 +324,15 @@ programs! {
     /// take the line of a call's name, or of an argument's call, rather than
     /// of its `)` or where the argument was written; each fails a bit.
     the_place_and_time_of_a_use_are_what_clang_writes,
+    /// The pragmas ADR-0129 ignores, by the directive, by `_Pragma` and by
+    /// `_Pragma` a macro writes, change nothing; `#warning` does not stop
+    /// the build, nor `#error` in a group that is skipped; and `#line`,
+    /// macro-replaced, renumbers `__LINE__` and names `__FILE__`, a later
+    /// one without a name keeping it, and a name's `\` read as one
+    /// (#1220). Mutations: refuse an ignored pragma, or report `#warning`
+    /// as an error, and this does not build; leave `#line` unread, or
+    /// count from its own line, and a bit fails.
+    pragmas_and_line_are_read_as_c_says,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

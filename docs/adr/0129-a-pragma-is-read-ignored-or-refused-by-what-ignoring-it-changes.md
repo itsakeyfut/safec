@@ -71,11 +71,15 @@ and nothing else of that record.
 
 ### Confirmation
 
-Owed by #1220, which names one case per class: `#pragma once` read twice
-compiles once; a `STDC` pragma compiles with no warning; `#pragma pack(4)`
-is `SC0104`; an unknown pragma is `SC0118` and compiles. Mutations: read
-`pack` as ignored, and its case builds; drop the warning, and the unknown
-case's `.stderr` loses it.
+Each class is a corpus case in `tests/cases/preprocessor`, and
+`a_pragma_is_classified_as_adr_0129_lists_it` in
+`crates/safec-c/src/preprocessor/directive.rs` holds every name above in
+its class. Leaving `#pragma once` unread defines the header's function
+twice in `a_header_marked_once_is_read_once`; reading `pack` as ignored
+drops its report from `a_pragma_that_changes_the_program_is_refused`;
+warning about an ignored pragma gives
+`a_pragma_ignoring_which_changes_nothing_is_ignored_silently` a `.stderr`;
+dropping the warning empties `an_unknown_pragma_is_warned_about_and_ignored`'s.
 
 ### Consequences
 

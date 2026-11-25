@@ -1,0 +1,4 @@
+Function a_warning_directive_is_reported_and_the_run_goes_on.c:4:1 "main" "int (void)"
+  Compound a_warning_directive_is_reported_and_the_run_goes_on.c:4:16
+    Return a_warning_directive_is_reported_and_the_run_goes_on.c:4:18
+      Number a_warning_directive_is_reported_and_the_run_goes_on.c:4:25 "0"

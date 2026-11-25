@@ -21,6 +21,7 @@
 //! parsed, for the reason that record gives.
 
 mod condition;
+mod directive;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -210,6 +211,21 @@ struct Reading {
     /// [`MAX_SUBSTITUTED_IN_ALL`] does.
     substituted: usize,
     substituted_in_all: usize,
+    /// Every file `#pragma once` was read in, by its canonical path, which
+    /// an `#include` of it then reads nothing of. See ADR-0129.
+    once: HashSet<PathBuf>,
+    /// What the last `#line` in each file said, which `__LINE__` and
+    /// `__FILE__` read and nothing else does.
+    renumbered: HashMap<FileId, Renumbered>,
+}
+
+/// What a `#line` makes of the lines after it, in the file it is in.
+#[derive(Clone, Debug, Default)]
+struct Renumbered {
+    /// What is added to a line's place in the file to make its number.
+    by: i64,
+    /// The name it gave the file, if one did.
+    name: Option<String>,
 }
 
 /// An object-like macro.
@@ -552,6 +568,8 @@ pub fn prelude(
         arguments: 0,
         substituted: 0,
         substituted_in_all: 0,
+        once: HashSet::new(),
+        renumbered: HashMap::new(),
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -914,6 +932,9 @@ fn read_includes(
                 if skipping {
                     continue;
                 }
+                if directive::read(&text, token.span, sources, reading, diagnostics) {
+                    continue;
+                }
                 match include_form(&text) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
@@ -1094,8 +1115,9 @@ fn read_includes(
                             // reader does not have and one that stopped being
                             // the whole answer.
                             .with_note(
-                                "`#include \"...\"`, `#define` and `#undef`, `#ifdef`, \
-                                 `#ifndef`, `#else` and `#endif` are read",
+                                "`#include \"...\"`, `#define` and `#undef`, the conditional \
+                                 directives, `#pragma`, `#line`, `#error` and `#warning` are \
+                                 read",
                             )
                             .with_note("the line is one token and is not compiled"),
                         ),
@@ -1176,6 +1198,11 @@ fn replacement(
             .with_code(MALFORMED_MACRO)
             .with_label(Label::primary(token.span, "written here")),
         );
+        return Replaced::Dropped;
+    }
+    // An operator, not a macro: what its string spells is a `#pragma`.
+    if name == "_Pragma" {
+        directive::operator(frames, token, sources, reading, diagnostics);
         return Replaced::Dropped;
     }
     let Some(defined) = reading.macros.get(name) else {
@@ -1318,13 +1345,20 @@ fn dynamic(
 ) -> Option<Frame> {
     let name = sources.snippet(token.span).to_owned();
     let text = match name.as_str() {
+        // Renumbered by the last `#line` in the file of the use, if any.
         "__LINE__" => {
             let at = used_at(token.span, sources);
-            (sources.file(at.file()).line_index(at.end()) + 1).to_string()
+            let place = sources.file(at.file()).line_index(at.end()) as i64 + 1;
+            let by = reading.renumbered.get(&at.file()).map_or(0, |line| line.by);
+            (place + by).to_string()
         }
         "__FILE__" => {
             let at = used_at(token.span, sources);
-            quoted(&presumed(at.file(), sources))
+            let named = reading
+                .renumbered
+                .get(&at.file())
+                .and_then(|line| line.name.clone());
+            quoted(&named.unwrap_or_else(|| presumed(at.file(), sources)))
         }
         _ => {
             // An invalid one was refused for the build, in `prelude`.
@@ -3774,6 +3808,11 @@ fn include(
     }
 
     let real = canonical(&path);
+    // Read as if it were empty, before it is asked whether it is open: a
+    // file that includes itself after `#pragma once` reads nothing again.
+    if reading.once.contains(&real) {
+        return None;
+    }
     if let Some(&(_, open)) = reading.open.iter().find(|(being, _)| *being == real) {
         // Of the `#include`, not of the file it is in: the file being read may
         // be another one, which includes this one through others.

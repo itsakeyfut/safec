@@ -1,18 +1,16 @@
-error[SC0104]: preprocessor directives are not supported yet
+error[SC0104]: `#pragma pack` is not read
    ╭─[ a_directive_spelled_with_a_digraph_is_a_directive.c:1:1 ]
    │
  1 │ %:pragma pack(4)
    │ ─┬  
-   │  ╰── directive begins here
+   │  ╰── written here
 ───╯
-  = note: `#include "..."`, `#define` and `#undef`, `#ifdef`, `#ifndef`, `#else` and `#endif` are read
-  = note: the line is one token and is not compiled
-error[SC0104]: preprocessor directives are not supported yet
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma pack` is not read
    ╭─[ a_directive_spelled_with_a_digraph_is_a_directive.c:2:1 ]
    │
  2 │ #pragma pack(4)
    │ ┬  
-   │ ╰── directive begins here
+   │ ╰── written here
 ───╯
-  = note: `#include "..."`, `#define` and `#undef`, `#ifdef`, `#ifndef`, `#else` and `#endif` are read
-  = note: the line is one token and is not compiled
+  = note: ignoring it would change what the program is
