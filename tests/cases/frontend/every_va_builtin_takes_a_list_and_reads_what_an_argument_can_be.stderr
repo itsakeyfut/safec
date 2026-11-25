@@ -1,0 +1,88 @@
+error[SC0306]: `__builtin_va_end` cannot take `int`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:11:22 ]
+    │
+ 11 │     __builtin_va_end(x);
+    │                      ┬  
+    │                      ╰── this is `int`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0306]: `__builtin_va_arg` cannot take `int`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:12:22 ]
+    │
+ 12 │     __builtin_va_arg(x, int);
+    │                      ┬  
+    │                      ╰── this is `int`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0306]: `__builtin_va_copy` cannot take `int`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:13:26 ]
+    │
+ 13 │     __builtin_va_copy(a, x);
+    │                          ┬  
+    │                          ╰── this is `int`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0306]: `__builtin_va_copy` cannot take `int`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:14:23 ]
+    │
+ 14 │     __builtin_va_copy(x, a);
+    │                       ┬  
+    │                       ╰── this is `int`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0306]: `__builtin_va_end` cannot take `__builtin_va_list`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:15:22 ]
+    │
+ 15 │     __builtin_va_end(make());
+    │                      ───┬──  
+    │                         ╰──── this is `__builtin_va_list`
+────╯
+  = note: C17 7.16.1 p1 asks a `va_list` object of each of these
+error[SC0306]: `__builtin_va_arg` cannot read a `struct S`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:23:5 ]
+    │
+ 23 │     __builtin_va_arg(a, struct S);
+    │     ──────────────┬──────────────  
+    │                   ╰──────────────── a struct passed past the parameters is not read yet
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined
+error[SC0306]: `__builtin_va_arg` cannot read a `__builtin_va_list`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:24:5 ]
+    │
+ 24 │     __builtin_va_arg(a, __builtin_va_list);
+    │     ───────────────────┬──────────────────  
+    │                        ╰──────────────────── a list is passed as no argument here
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined
+error[SC0306]: `__builtin_va_arg` cannot read a `void`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:25:5 ]
+    │
+ 25 │     __builtin_va_arg(a, void);
+    │     ────────────┬────────────  
+    │                 ╰────────────── it is no complete object type an argument can have
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined
+error[SC0306]: `__builtin_va_arg` cannot read a `int[2]`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:26:5 ]
+    │
+ 26 │     __builtin_va_arg(a, int[2]);
+    │     ─────────────┬─────────────  
+    │                  ╰─────────────── it is no complete object type an argument can have
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined
+error[SC0306]: `__builtin_va_arg` cannot read a `short`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:27:5 ]
+    │
+ 27 │     __builtin_va_arg(a, short);
+    │     ─────────────┬────────────  
+    │                  ╰────────────── the default argument promotions make it an `int`
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined
+error[SC0306]: `__builtin_va_arg` cannot read a `unsigned char`
+    ╭─[ every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:28:5 ]
+    │
+ 28 │     __builtin_va_arg(a, unsigned char);
+    │     ─────────────────┬────────────────  
+    │                      ╰────────────────── the default argument promotions make it an `int`
+────╯
+  = note: C17 7.16.1.1 p2 makes reading an argument as a type it was not passed as undefined

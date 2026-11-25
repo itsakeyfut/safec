@@ -278,7 +278,8 @@ fn verdict(
         | Kind::ComparedApart
         | Kind::SubtractedApart
         | Kind::FunctionConverted
-        | Kind::CalledUnprototyped => true,
+        | Kind::CalledUnprototyped
+        | Kind::VariadicFunction => true,
         // Never asked: it is built by `memory::read_only`, about no free.
         Kind::WritesReadOnly => true,
         // Never asked: it is built by `memory::assigned` from where a local

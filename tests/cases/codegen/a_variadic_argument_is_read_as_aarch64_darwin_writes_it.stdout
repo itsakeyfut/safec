@@ -1,0 +1,96 @@
+target triple = "aarch64-apple-darwin"
+@global = global [1 x i64] zeroinitializer
+
+define i64 @read(i32 %arg0, ...) {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca i32
+  %_2 = alloca [1 x i64]
+  %_3 = alloca [1 x i64]
+  %_4 = alloca ptr
+  %_5 = alloca i32
+  %_6 = alloca i32
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca i64
+  %_10 = alloca i64
+  %_11 = alloca ptr
+  %_12 = alloca ptr
+  %_13 = alloca ptr
+  %_14 = alloca ptr
+  %_15 = alloca i64
+  %_16 = alloca i32
+  %_17 = alloca i64
+  %_18 = alloca i64
+  %_19 = alloca i64
+  store i32 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_4
+  %t0 = load ptr, ptr %_4
+  call void @llvm.va_start.p0(ptr %t0)
+  br label %bb1
+
+bb1:
+  %t1 = va_arg ptr %_2, i32
+  store i32 %t1, ptr %_6
+  %t2 = load i32, ptr %_6
+  store i32 %t2, ptr %_5
+  store ptr %_3, ptr %_7
+  store ptr %_2, ptr %_8
+  %t3 = load ptr, ptr %_7
+  %t4 = load ptr, ptr %_8
+  call void @llvm.va_copy.p0.p0(ptr %t3, ptr %t4)
+  br label %bb2
+
+bb2:
+  %t5 = va_arg ptr %_3, i64
+  store i64 %t5, ptr %_10
+  %t6 = load i64, ptr %_10
+  store i64 %t6, ptr %_9
+  %t7 = va_arg ptr %_3, ptr
+  store ptr %t7, ptr %_12
+  %t8 = load ptr, ptr %_12
+  store ptr %t8, ptr %_11
+  store ptr %_3, ptr %_13
+  %t9 = load ptr, ptr %_13
+  call void @llvm.va_end.p0(ptr %t9)
+  br label %bb3
+
+bb3:
+  store ptr %_2, ptr %_14
+  %t10 = load ptr, ptr %_14
+  call void @llvm.va_end.p0(ptr %t10)
+  br label %bb4
+
+bb4:
+  %t11 = load i32, ptr %_5
+  %t12 = sext i32 %t11 to i64
+  %t13 = load i64, ptr %_9
+  %t14 = add nsw i64 %t12, %t13
+  store i64 %t14, ptr %_15
+  %t15 = load ptr, ptr %_11
+  %t16 = icmp ne ptr %t15, null
+  %t17 = zext i1 %t16 to i32
+  store i32 %t17, ptr %_16
+  %t18 = load i64, ptr %_15
+  %t19 = load i32, ptr %_16
+  %t20 = sext i32 %t19 to i64
+  %t21 = add nsw i64 %t18, %t20
+  store i64 %t21, ptr %_17
+  %t22 = load i64, ptr %_17
+  %t23 = add i64 %t22, 8
+  store i64 %t23, ptr %_18
+  %t24 = load i64, ptr %_18
+  %t25 = add i64 %t24, 16
+  store i64 %t25, ptr %_19
+  %t26 = load i64, ptr %_19
+  store i64 %t26, ptr %_0
+  %t27 = load i64, ptr %_0
+  ret i64 %t27
+}
+
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_end.p0(ptr)
+declare void @llvm.va_copy.p0.p0(ptr, ptr)

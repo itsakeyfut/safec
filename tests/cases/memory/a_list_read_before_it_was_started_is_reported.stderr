@@ -1,0 +1,60 @@
+error[SC0411]: `a` is read before anything was assigned to it
+   ╭─[ a_list_read_before_it_was_started_is_reported.c:3:13 ]
+   │
+ 3 │     int x = __builtin_va_arg(a, int);
+   │             ────────────┬───────────  
+   │                         ╰───────────── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `a` is read before anything was assigned to it
+   ╭─[ a_list_read_before_it_was_started_is_reported.c:9:5 ]
+   │
+ 9 │     __builtin_va_end(a);
+   │     ─────────┬─────────  
+   │              ╰─────────── read here
+───╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `a` is read before anything was assigned to it
+    ╭─[ a_list_read_before_it_was_started_is_reported.c:16:5 ]
+    │
+ 16 │     __builtin_va_copy(b, a);
+    │     ───────────┬───────────  
+    │                ╰───────────── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = help: assign it where it is declared, `= 0` if nothing else
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_list_read_before_it_was_started_is_reported.c:26:13 ]
+    │
+ 24 │     if (n)
+    │         ┬  
+    │         ╰── when this is false
+    │ 
+ 26 │     int x = __builtin_va_arg(a, int);
+    │             ────────────┬───────────  
+    │                         ╰───────────── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else
+error[SC0411]: `a` may be read before anything was assigned to it
+    ╭─[ a_list_read_before_it_was_started_is_reported.c:27:5 ]
+    │
+ 24 │     if (n)
+    │         ┬  
+    │         ╰── when this is false
+    │ 
+ 27 │     __builtin_va_end(a);
+    │     ─────────┬─────────  
+    │              ╰─────────── read here
+────╯
+  = note: C17 6.3.2.1 p2: reading a local whose address is never taken before it is assigned is undefined, whatever the value is read for
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: assign it on every path, `= 0` where it is declared if nothing else

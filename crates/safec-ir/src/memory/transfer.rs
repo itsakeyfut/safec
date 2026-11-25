@@ -246,6 +246,16 @@ impl Allocations<'_> {
     /// `a_call_through_a_function_pointer_is_read_as_a_call_this_check_cannot_read`'s
     /// `freed_through_a_pointer` goes silent.
     pub(super) fn callee(&self, called: &Called) -> Callee {
+        // **An operation on a list reads only the lists it is handed**,
+        // which hold no pointer this check follows: it frees, keeps and
+        // writes nothing else. Read as code this check cannot read, every
+        // pointer parameter of a variadic definition was doubted after its
+        // `__builtin_va_start` (#1214). Mutation: answer `Callee::Opaque`;
+        // `a_pointer_parameter_is_not_doubted_after_va_start` reports
+        // `SC0402`. See ADR-0126.
+        if let Called::Intrinsic(_) = called {
+            return Callee::Reads;
+        }
         let Some(id) = called.direct() else {
             return Callee::Opaque;
         };
@@ -379,11 +389,13 @@ impl Allocations<'_> {
             // contents are gone. **A function's address names
             // `Why::Function` besides**, so a read through it as data,
             // stored and read back, is doubted. See ADR-0125.
+            // The lowering writes what `va_arg` reads into a temporary of
+            // its own and copies that out, so no store is one.
+            Rvalue::VaArg(_) => unreachable!("a `VaArg` is written into a local"),
             Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
             | Rvalue::Address(_)
             | Rvalue::Static(_)
-            | Rvalue::Reinterpret(_)
-            | Rvalue::VaArg(_) => {
+            | Rvalue::Reinterpret(_) => {
                 let mut held = Held::from_marks(
                     value.referents(),
                     Marks {
@@ -416,11 +428,6 @@ impl Allocations<'_> {
                 );
                 if let Rvalue::Use(Operand::Function(_)) = written_value {
                     held.name_unknown(Why::Function);
-                }
-                // **And what `va_arg` read names `Why::Variadic`**, stored
-                // straight into memory as into a local. See ADR-0126.
-                if let Rvalue::VaArg(_) = written_value {
-                    held.name_unknown(Why::Variadic);
                 }
                 held
             }

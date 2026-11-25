@@ -1,0 +1,157 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_parameter_is_not_doubted_after_va_start.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter
+Function a_pointer_parameter_is_not_doubted_after_va_start.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_parameter_is_not_doubted_after_va_start.c:8:5 "first"
+  Local "_0" "int" return
+  Local "_1" "char *" parameter "fmt"
+  Local "_2" "int"
+  Local "_3" "unsigned long long[1]" "a"
+  Local "_4" "unsigned long long (*)[1]"
+  Local "_5" "int" "x"
+  Local "_6" "int"
+  Local "_7" "unsigned long long (*)[1]"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:9:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_parameter_is_not_doubted_after_va_start.c:9:9 written "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:9:9 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:10:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:9:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:12:5 generated
+      Destination "_4"
+      Address
+        Place "_3"
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:12:5 written "VaStart" "bb4"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:12:5 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:13:13 written
+      Destination "_6"
+      VaArg
+        Place "_3"
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:13:9 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:13:13 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:14:5 generated
+      Destination "_7"
+      Address
+        Place "_3"
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:14:5 written "VaEnd" "bb5"
+      Copy "_7"
+  Block "bb5"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:14:5 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:15:12 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_1"
+          Deref
+        Copy "_5"
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:15:12 generated
+    Return
+Function a_pointer_parameter_is_not_doubted_after_va_start.c:18:5 "a_list_in_a_heap_block"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "n"
+  Local "_2" "struct #0 *" "h"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "unsigned long long (*)[1]"
+  Local "_7" "unsigned long long (*)[1]"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_parameter_is_not_doubted_after_va_start.c:19:19 generated
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:19:19 written "malloc" "bb1"
+      Destination "_3"
+      Constant 16
+  Block "bb1"
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:19:15 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:19:19 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:20:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_parameter_is_not_doubted_after_va_start.c:20:9 written "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:20:9 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:21:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:21:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:20:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:22:5 written
+      Destination "_5"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:22:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_1"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:22:5 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:23:24 written
+      Destination "_6"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:23:5 written "VaStart" "bb5"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:23:5 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:24:22 written
+      Destination "_7"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:24:5 written "VaEnd" "bb6"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:24:5 generated
+    ArgumentsEvaluated a_pointer_parameter_is_not_doubted_after_va_start.c:25:5 generated
+    Call a_pointer_parameter_is_not_doubted_after_va_start.c:25:5 written "free" "bb7"
+      Copy "_2"
+  Block "bb7"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:25:5 generated
+    Operation a_pointer_parameter_is_not_doubted_after_va_start.c:26:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_parameter_is_not_doubted_after_va_start.c:26:12 generated
+    Return

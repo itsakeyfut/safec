@@ -705,6 +705,11 @@ pub enum Kind {
     /// it reaches is undefined to get wrong (C17 6.5.2.2 p6) and no type
     /// says. Always `Unknown`, at the call (#1212). See ADR-0125.
     CalledUnprototyped,
+    /// A pointer to a function read past a variadic function's parameters
+    /// with `va_arg`: nothing says the caller passed a function of that type,
+    /// and a call through one of another type is undefined (C17 6.3.2.3 p8).
+    /// Always `Unknown`, where it is read (#1214). See ADR-0126.
+    VariadicFunction,
     /// A write that may land in storage the program may not modify: a static
     /// defined `const`, a `const` local or a string literal (C17 6.7.3 p6,
     /// 6.4.5 p7), by a store through a pointer or a call handed one for a
@@ -1641,6 +1646,35 @@ fn findings_within(
                         made: None,
                         unproven: None,
                     });
+                }
+                // **A function pointer `va_arg` read is called as the type it
+                // was read as**, whatever the caller passed, which no type
+                // here says: a call through one of another type is undefined
+                // (C17 6.3.2.3 p8), as after a conversion. Doubted where it
+                // is read, since a call through a pointer asks nothing of
+                // what the pointer names (#1214). Mutation: skip this;
+                // `a_function_pointer_va_arg_reads_is_doubted` goes silent.
+                if let Element::Assign(operation) = element {
+                    if let Rvalue::VaArg(_) = operation.value {
+                        let reads_a_function = unit
+                            .place_ty(function, &operation.place)
+                            .is_some_and(|ty| match unit.ty(ty) {
+                                Ty::Pointer(pointee) => matches!(unit.ty(pointee), Ty::Function(_)),
+                                _ => false,
+                            });
+                        if reads_a_function {
+                            findings.push(Finding {
+                                function: func,
+                                kind: Kind::VariadicFunction,
+                                conclusion: Conclusion::Unknown,
+                                at: operation.origin.span(),
+                                local: None,
+                                freed: None,
+                                made: None,
+                                unproven: None,
+                            });
+                        }
+                    }
                 }
                 if let Element::Assign(operation) = element {
                     if let Rvalue::Reinterpret(_) = operation.value {

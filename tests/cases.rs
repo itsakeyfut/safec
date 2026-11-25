@@ -144,8 +144,40 @@ cases! {
         // in `parts.rs`, believed until a call this check cannot read, and
         // `before_the_end`, read before `__builtin_va_end`, does; answer it
         // `NonNull` in the nullability check, and `null_tested_nowhere`
-        // loses its `SC0403`.
+        // loses its `SC0403`. Read through a pointer, a list in a freed
+        // block, a null pointer and an unassigned one are each reported,
+        // and a pointer read and stored through another pointer is still
+        // doubted. Mutations: read no place of a `VaArg` in `reads.rs`'s
+        // dereference or value walks, in `liveness.rs`, or in
+        // `assigned.rs`; carry `Why::Variadic` through no address in
+        // `known.rs`; each loses one of `after_free`, `through_null`,
+        // `uninitialised_pointer` and `via_address`'s reports.
         a_pointer_va_arg_reads_is_doubted_wherever_it_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A list is assigned by `__builtin_va_start` or `__builtin_va_copy`
+        // into it, and read by `__builtin_va_arg`, `__builtin_va_end` and
+        // `__builtin_va_copy` out of it (C17 7.16.1 p3; #1214): each read
+        // before any start is `SC0411`, on one arm a doubt, and `started`
+        // is silent. Mutations: answer nothing in `Lists::written`, and
+        // `started` reports; read a list only through a projection in
+        // `element_reads`, and `before_start` goes silent; leave list
+        // writes out of `assigns`, and `started` is doubted at its edge.
+        a_list_read_before_it_was_started_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function pointer `__builtin_va_arg` reads is `SC0421` where it
+        // is read, since nothing says the caller passed a function of that
+        // type (#1214). Mutation: skip it in `memory.rs`; this goes silent.
+        a_function_pointer_va_arg_reads_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An operation on a list touches only the list, so a pointer
+        // parameter is not doubted after it, and a list in a heap block is
+        // handed as the block's own address (#1214). Mutations: answer
+        // `Callee::Opaque` for an intrinsic in `Allocations::callee`, and
+        // `first` reports `SC0402`; hand `&*p` rather than `p` in the
+        // lowering, and the block's `free` is doubted.
+        a_pointer_parameter_is_not_doubted_after_va_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `__builtin_va_start` and `__builtin_va_end` have no value, so each
+        // stands where a `void` call may: cast to `void`, in a comma, on
+        // both arms of `?:` (#1214). Mutation: answer `true` for one in
+        // `Lowering::pushes`; this panics.
+        a_va_start_or_va_end_is_a_void_expression_anywhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
@@ -9995,6 +10027,16 @@ cases! {
         // undefined, and `SC0306` (#1214). Mutation: drop the promotion test
         // in `Checker::va_arg`; this builds.
         a_va_arg_of_a_char_is_refused: ["--emit", "ast"],
+        // Each builtin takes a `__builtin_va_list` lvalue, not an `int` nor a
+        // call's result, and `__builtin_va_arg` reads no struct, list,
+        // `void`, array, or type the promotions change, `short` and
+        // `unsigned char` too (C17 7.16.1; #1214); a struct pointer is read,
+        // its struct bound to its tag. Mutations: accept any operand of one
+        // builtin in `Checker::va_list_operand`, drop its lvalue test, type
+        // only the first operand in `subexpressions`, drop one type reason
+        // in `Checker::va_arg`, or walk no `__builtin_va_arg` type in sema
+        // (which panics); this fails.
+        every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be: ["--emit", "ast"],
         // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
         // of the function's type, and one on what a pointer points to is.
         // Mutation: have `compatible` not ask `Ast::is_const`; the second pair
@@ -10492,6 +10534,27 @@ cases! {
         // so the backend refuses it there (ADR-0126). Mutation: write it
         // there too; this builds.
         a_variadic_argument_is_not_read_on_aarch64_linux_yet: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
+        // A list crosses no call yet (#1214): where it is an array, `clang`
+        // passes the caller's by address. Mutation: lower one as any
+        // parameter; this builds, the list passed by value.
+        a_list_is_no_parameter_and_no_result_yet: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // On System V `x86_64`, LLVM's `va_arg` through any list but a plain
+        // local crashes at `-O0`, so it is refused there (#1214, ADR-0127).
+        // Mutation: write it there; this builds.
+        a_variadic_argument_is_read_only_out_of_a_local_list_on_x86_64_linux: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // Each target reads an argument as `clang` writes it, and sizes a
+        // list and a struct holding one as `clang` does (#1214, ADR-0127):
+        // LLVM's `va_arg` on System V `x86_64` and `aarch64-apple-darwin`,
+        // the list's pointer walked four bytes a slot on `i686`, and an
+        // 8-byte value aligned to eight first on `wasm32`. A copy of a list
+        // is read on from where the first had got to. Mutations: walk the
+        // pointer on `x86_64` too, or not on `i686`; align nothing on
+        // `wasm32`; read every `va_arg` as `i8`; size a list as 24 bytes
+        // everywhere, or align it to 8; each changes one of these.
+        a_variadic_argument_is_read_as_x86_64_linux_writes_it: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
+        a_variadic_argument_is_read_as_aarch64_darwin_writes_it: ["--emit", "llvm-ir", "--target", "aarch64-apple-darwin"],
+        a_variadic_argument_is_read_as_i686_writes_it: ["--emit", "llvm-ir", "--target", "i686-unknown-linux-gnu"],
+        a_variadic_argument_is_read_as_wasm32_writes_it: ["--emit", "llvm-ir", "--target", "wasm32-unknown-unknown"],
         // A struct does not cross a call to a variadic function yet (#1325):
         // as a fixed parameter or a result, the backend refuses it. Mutation:
         // drop that refusal; the struct is passed as a pointer to its copy.

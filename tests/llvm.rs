@@ -55,6 +55,22 @@ const PROGRAMS: &[(&str, &str)] = &[
         "armv7-unknown-linux-gnueabihf",
     ),
     (
+        "a_variadic_argument_is_read_as_x86_64_linux_writes_it",
+        "x86_64-unknown-linux-gnu",
+    ),
+    (
+        "a_variadic_argument_is_read_as_aarch64_darwin_writes_it",
+        "aarch64-apple-darwin",
+    ),
+    (
+        "a_variadic_argument_is_read_as_i686_writes_it",
+        "i686-unknown-linux-gnu",
+    ),
+    (
+        "a_variadic_argument_is_read_as_wasm32_writes_it",
+        "wasm32-unknown-unknown",
+    ),
+    (
         "llvm_ir_of_conversions_and_a_constant_condition",
         "x86_64-pc-windows-msvc",
     ),

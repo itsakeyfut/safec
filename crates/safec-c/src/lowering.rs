@@ -1594,6 +1594,26 @@ impl Lowering<'_> {
         parameters: &Parameters,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<(TyId, Vec<Parameter>)> {
+        // **No list crosses a call** (#1214): C adjusts a parameter of an
+        // array type to a pointer (6.7.6.3 p7), so where `__builtin_va_list`
+        // is an array `clang` passes the caller's list by address and the
+        // callee reads it on, while the IR's array would be copied. Passed
+        // so, a `vprintf`-style function read a copy and its caller's list
+        // never moved. Refused rather than laid out per target, as passing
+        // or returning one is refused at the call. Mutation: lower it as
+        // any type; `a_list_is_no_parameter_and_no_result_yet` builds.
+        let crosses_a_list = matches!(self.ast.ty(returns), Type::VaList)
+            || matches!(parameters, Parameters::Prototype(parameters)
+                if parameters.iter().any(|parameter| matches!(self.ast.ty(parameter.ty), Type::VaList)));
+        if crosses_a_list {
+            diagnostics.report(
+                Diagnostic::error("cannot compile a `__builtin_va_list` passed to or returned from a function yet")
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(name, "declared here"))
+                    .with_note("pass a pointer to the list instead"),
+            );
+            return None;
+        }
         let mut returns = self.ty(name, returns, diagnostics)?;
         let mut lowered = Vec::new();
         // **A struct returned by value goes where the caller says**, through
@@ -3976,6 +3996,10 @@ impl Lowering<'_> {
                 Expr::Call { .. } | Expr::Conditional { .. } | Expr::Cast { .. } => {
                     return !self.is_void(id);
                 }
+                // **No value, as a call to a function returning `void` has
+                // none** (#1214). Mutation: answer `true`;
+                // `a_va_start_or_va_end_is_a_void_expression_anywhere` panics.
+                Expr::VaOp { .. } => return false,
                 Expr::Comma { rhs, .. } => id = *rhs,
                 _ => return true,
             }
@@ -4706,18 +4730,15 @@ impl Lowering<'_> {
                     VaOp::Copy => 2,
                 };
                 let lists = places.split_off(places.len() - count);
-                let mut arguments = Vec::with_capacity(count);
-                for list in lists {
-                    let ty = self.unit.place_ty(&builder.function, &list)?;
-                    let pointer = self.unit.push_type(Ty::Pointer(ty));
-                    let address = builder.function.push_local(pointer);
-                    builder.push(Operation {
-                        place: Place::local(address),
-                        value: Rvalue::Address(list),
-                        origin: Origin::Generated(span),
-                    });
-                    arguments.push(Operand::Copy(Place::local(address)));
-                }
+                // `&*p` being `p` (C17 6.5.3.2 p3), so a list reached
+                // through a pointer is handed that pointer, as a struct's
+                // address is. Handed `&*p`, the memory check read a list in
+                // a heap block as an address it could not place, and doubted
+                // the block's `free`.
+                let arguments: Vec<Operand> = lists
+                    .into_iter()
+                    .map(|list| self.struct_address_of(builder, list, span))
+                    .collect();
                 let intrinsic = match op {
                     VaOp::Start => Intrinsic::VaStart,
                     VaOp::End => Intrinsic::VaEnd,

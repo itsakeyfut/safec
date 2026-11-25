@@ -1,0 +1,85 @@
+Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:1:1 "struct S"
+  Field every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:2:5 "a" "int"
+Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:5:1 "make" "__builtin_va_list (void)"
+Function every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:7:1 "not_lists" "int (int, ...)"
+  Parameter every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:7:15 "n" "int"
+  Compound every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:7:27
+    Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:8:5 "x" "int"
+      Number every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:8:13 "0"
+    Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:9:5 "a" "__builtin_va_list"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:10:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:10:5 "__builtin_va_start"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:10:24 "a"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:10:27 "n"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:11:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:11:5 "__builtin_va_end"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:11:22 "x"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:12:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:12:5 "int"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:12:22 "x"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:13:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:13:5 "__builtin_va_copy"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:13:23 "a"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:13:26 "x"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:14:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:14:5 "__builtin_va_copy"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:14:23 "x"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:14:26 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:15:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:15:5 "__builtin_va_end"
+        Call every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:15:22
+          Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:15:22 "make"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:16:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:16:5 "__builtin_va_end"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:16:22 "a"
+    Return every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:17:5
+      Number every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:17:12 "0"
+Function every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:20:1 "not_argument_types" "int (int, ...)"
+  Parameter every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:20:24 "n" "int"
+  Compound every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:20:36
+    Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:21:5 "a" "__builtin_va_list"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:22:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:22:5 "__builtin_va_start"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:22:24 "a"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:22:27 "n"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:23:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:23:5 "struct S"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:23:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:24:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:24:5 "__builtin_va_list"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:24:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:25:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:25:5 "void"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:25:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:26:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:26:5 "int[2]"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:26:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:27:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:27:5 "short"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:27:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:28:5
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:28:5 "unsigned char"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:28:22 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:29:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:29:5 "__builtin_va_end"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:29:22 "a"
+    Return every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:30:5
+      Number every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:30:12 "0"
+Function every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:33:1 "a_struct_pointer" "int (int, ...)"
+  Parameter every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:33:22 "n" "int"
+  Compound every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:33:34
+    Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:34:5 "a" "__builtin_va_list"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:35:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:35:5 "__builtin_va_start"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:35:24 "a"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:35:27 "n"
+    Declaration every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:36:5 "p" "struct S *"
+      VaArg every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:36:19 "struct S *"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:36:36 "a"
+    Expression every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:37:5
+      VaOp every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:37:5 "__builtin_va_end"
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:37:22 "a"
+    Return every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:38:5
+      Binary every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:38:12 "!="
+        Identifier every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:38:12 "p"
+        Number every_va_builtin_takes_a_list_and_reads_what_an_argument_can_be.c:38:17 "0"

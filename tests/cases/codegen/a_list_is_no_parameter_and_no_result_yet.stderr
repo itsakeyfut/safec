@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile a `__builtin_va_list` passed to or returned from a function yet
+   ╭─[ a_list_is_no_parameter_and_no_result_yet.c:1:5 ]
+   │
+ 1 │ int from_a_list(__builtin_va_list ap) {
+   │     ─────┬─────  
+   │          ╰─────── declared here
+───╯
+  = note: pass a pointer to the list instead

@@ -1,0 +1,10 @@
+error[SC0421]: this reads a pointer to a function past the parameters, which nothing says the caller passed
+   ╭─[ a_function_pointer_va_arg_reads_is_doubted.c:4:22 ]
+   │
+ 4 │     int (*f)(void) = __builtin_va_arg(a, int (*)(void));
+   │                      ─────────────────┬────────────────  
+   │                                       ╰────────────────── a call through it to a function of a different type is undefined, and this check cannot see the caller
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: pass the function through a parameter of its own type

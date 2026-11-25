@@ -1,0 +1,105 @@
+target triple = "i686-unknown-linux-gnu"
+@global = global [1 x i32] zeroinitializer
+
+define i64 @read(i32 %arg0, ...) {
+entry:
+  %_0 = alloca i64
+  %_1 = alloca i32
+  %_2 = alloca [1 x i32]
+  %_3 = alloca [1 x i32]
+  %_4 = alloca ptr
+  %_5 = alloca i32
+  %_6 = alloca i32
+  %_7 = alloca ptr
+  %_8 = alloca ptr
+  %_9 = alloca i64
+  %_10 = alloca i64
+  %_11 = alloca ptr
+  %_12 = alloca ptr
+  %_13 = alloca ptr
+  %_14 = alloca ptr
+  %_15 = alloca i64
+  %_16 = alloca i32
+  %_17 = alloca i64
+  %_18 = alloca i64
+  %_19 = alloca i64
+  store i32 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_4
+  %t0 = load ptr, ptr %_4
+  call void @llvm.va_start.p0(ptr %t0)
+  br label %bb1
+
+bb1:
+  %t1 = load ptr, ptr %_2
+  %t2 = load i32, ptr %t1
+  %t3 = getelementptr i8, ptr %t1, i32 4
+  store ptr %t3, ptr %_2
+  store i32 %t2, ptr %_6
+  %t4 = load i32, ptr %_6
+  store i32 %t4, ptr %_5
+  store ptr %_3, ptr %_7
+  store ptr %_2, ptr %_8
+  %t5 = load ptr, ptr %_7
+  %t6 = load ptr, ptr %_8
+  call void @llvm.va_copy.p0.p0(ptr %t5, ptr %t6)
+  br label %bb2
+
+bb2:
+  %t7 = load ptr, ptr %_3
+  %t8 = load i64, ptr %t7
+  %t9 = getelementptr i8, ptr %t7, i32 8
+  store ptr %t9, ptr %_3
+  store i64 %t8, ptr %_10
+  %t10 = load i64, ptr %_10
+  store i64 %t10, ptr %_9
+  %t11 = load ptr, ptr %_3
+  %t12 = load ptr, ptr %t11
+  %t13 = getelementptr i8, ptr %t11, i32 4
+  store ptr %t13, ptr %_3
+  store ptr %t12, ptr %_12
+  %t14 = load ptr, ptr %_12
+  store ptr %t14, ptr %_11
+  store ptr %_3, ptr %_13
+  %t15 = load ptr, ptr %_13
+  call void @llvm.va_end.p0(ptr %t15)
+  br label %bb3
+
+bb3:
+  store ptr %_2, ptr %_14
+  %t16 = load ptr, ptr %_14
+  call void @llvm.va_end.p0(ptr %t16)
+  br label %bb4
+
+bb4:
+  %t17 = load i32, ptr %_5
+  %t18 = sext i32 %t17 to i64
+  %t19 = load i64, ptr %_9
+  %t20 = add nsw i64 %t18, %t19
+  store i64 %t20, ptr %_15
+  %t21 = load ptr, ptr %_11
+  %t22 = icmp ne ptr %t21, null
+  %t23 = zext i1 %t22 to i32
+  store i32 %t23, ptr %_16
+  %t24 = load i64, ptr %_15
+  %t25 = load i32, ptr %_16
+  %t26 = sext i32 %t25 to i64
+  %t27 = add nsw i64 %t24, %t26
+  store i64 %t27, ptr %_17
+  %t28 = load i64, ptr %_17
+  %t29 = add nsw i64 %t28, 4
+  store i64 %t29, ptr %_18
+  %t30 = load i64, ptr %_18
+  %t31 = add nsw i64 %t30, 8
+  store i64 %t31, ptr %_19
+  %t32 = load i64, ptr %_19
+  store i64 %t32, ptr %_0
+  %t33 = load i64, ptr %_0
+  ret i64 %t33
+}
+
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_end.p0(ptr)
+declare void @llvm.va_copy.p0.p0(ptr, ptr)

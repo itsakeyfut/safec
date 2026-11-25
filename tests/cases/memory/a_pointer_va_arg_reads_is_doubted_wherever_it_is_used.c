@@ -1,3 +1,6 @@
+void *malloc(unsigned long long);
+void free(void *);
+
 int dereferenced(int n, ...) {
     __builtin_va_list a;
     __builtin_va_start(a, n);
@@ -30,4 +33,33 @@ int before_the_end(int n, ...) {
         v = *p;
     __builtin_va_end(a);
     return v;
+}
+
+int after_free(int n, ...) {
+    __builtin_va_list *pa = malloc(sizeof(__builtin_va_list));
+    if (!pa)
+        return 0;
+    __builtin_va_start(*pa, n);
+    free(pa);
+    return __builtin_va_arg(*pa, int);
+}
+
+int through_null(int n, ...) {
+    __builtin_va_list *pa = 0;
+    return __builtin_va_arg(*pa, int);
+}
+
+int uninitialised_pointer(int n, ...) {
+    __builtin_va_list *pa;
+    return __builtin_va_arg(*pa, int);
+}
+
+int via_address(int n, ...) {
+    __builtin_va_list a;
+    __builtin_va_start(a, n);
+    int *p = 0;
+    int **pp = &p;
+    *pp = __builtin_va_arg(a, int *);
+    __builtin_va_end(a);
+    return *p;
 }

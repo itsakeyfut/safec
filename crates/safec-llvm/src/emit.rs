@@ -1652,7 +1652,7 @@ impl Emitter<'_> {
         let mut lists = Vec::with_capacity(arguments.len());
         for argument in arguments {
             let Operand::Copy(place) = argument else {
-                return self.refuse("an operation on a list handed no list's address");
+                unreachable!("the lowering hands an operation on a list the list's address")
             };
             let (value, _) = self.read(function, place, out)?;
             lists.push(format!("ptr {value}"));
@@ -1704,10 +1704,10 @@ impl Emitter<'_> {
                 "a variadic argument read on `aarch64-unknown-linux-gnu`, where LLVM's `va_arg` does not read the AAPCS64 register save area",
             );
         }
-        if self.unit.integer(to).is_none() && !self.unit.ty(to).is_pointer() {
-            let wanted = self.spell(to);
-            return self.refuse(format!("a variadic argument read as a `{wanted}`"));
-        }
+        assert!(
+            self.unit.integer(to).is_some() || self.unit.ty(to).is_pointer(),
+            "the type check reads an argument as an integer or a pointer alone",
+        );
         let address = self.address(function, list, out)?;
         let wanted = self.spell(to);
         let target = self.unit.target();
@@ -1716,6 +1716,22 @@ impl Emitter<'_> {
             || triple.starts_with("i686-")
             || triple.starts_with("armv7-")
             || triple.starts_with("wasm32-");
+        // **On System V `x86_64`, only out of a list that is a plain local**:
+        // LLVM's `va_arg` read through any other address, a pointer to a
+        // list, a member or a static, reloads the list's address at `-O0`
+        // from a stack slot it never wrote, and the program crashed where
+        // `clang`'s own expansion runs. Refused there until that expansion
+        // is written here. See ADR-0127. Mutation: write it there too;
+        // `a_variadic_argument_is_read_only_out_of_a_local_list_on_x86_64_linux`
+        // builds.
+        if triple.starts_with("x86_64-")
+            && !triple.contains("-windows-")
+            && !list.steps().is_empty()
+        {
+            return self.refuse(
+                "a variadic argument read out of a list that is not the function's own local, on System V `x86_64`",
+            );
+        }
         if !walks_a_pointer {
             let value = self.temp();
             writeln!(out, "  {value} = va_arg ptr {address}, {wanted}")
