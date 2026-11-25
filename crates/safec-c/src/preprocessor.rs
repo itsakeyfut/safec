@@ -7,8 +7,8 @@
 //! `#ifdef`, `#ifndef`, `#else` and `#endif`, which choose the groups that
 //! are compiled (6.10.1). Every other directive is refused as `SC0104`,
 //! `#include <file>` among them, which needs a search path and a system
-//! header this compiler cannot read yet anyway, and so are `#if` and
-//! `#elif`. `#` and `##` in a replacement list make a string literal and
+//! header this compiler cannot read yet anyway. `#if` and `#elif` are read
+//! too, their expressions evaluated in `condition`. `#` and `##` in a replacement list make a string literal and
 //! join two tokens (6.10.3.2, 6.10.3.3), and a macro whose parameters end in
 //! `...` takes the arguments past them as `__VA_ARGS__` (6.10.3 p12), with
 //! GNU's `, ## __VA_ARGS__` and C23's `__VA_OPT__`.
@@ -19,6 +19,8 @@
 //! ADR-0054, and ADR-0128 for a function-like macro's call, whose arguments
 //! are written into the one file its expansion is. The translation unit is preprocessed whole before it is
 //! parsed, for the reason that record gives.
+
+mod condition;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -65,6 +67,12 @@ const PREDEFINED_AGAIN: Code = Code::new("SC0117");
 /// `##` with nothing on one side; a `##` that makes no one token. One code,
 /// because the fix is the same: the macro or its call, written again.
 const MALFORMED_MACRO: Code = Code::new("SC0119");
+
+/// An `#if` or an `#elif` whose expression is not one C17 6.10.1 allows:
+/// none, a token no integer constant expression holds, a constant too large,
+/// or, where evaluated, a division by zero, a signed overflow or a shift too
+/// far (6.6 p3, p4).
+const MALFORMED_CONDITION: Code = Code::new("SC0120");
 
 /// What a variadic macro's arguments past its named parameters are named in
 /// its replacement list (C17 6.10.3 p12), and the name of its last parameter
@@ -834,7 +842,15 @@ fn read_includes(
                     // caret on a directive that was right. Found by review.
                     if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
                     {
-                        conditional(form, &text, token.span, frame, reading, diagnostics, true);
+                        conditional(
+                            form,
+                            &text,
+                            token.span,
+                            frame,
+                            (sources, reading),
+                            diagnostics,
+                            true,
+                        );
                     }
                     continue;
                 };
@@ -862,7 +878,15 @@ fn read_includes(
                 }
                 if let Some(form) = form {
                     if let Some(frame) = frames.last_mut() {
-                        conditional(form, &text, token.span, frame, reading, diagnostics, false);
+                        conditional(
+                            form,
+                            &text,
+                            token.span,
+                            frame,
+                            (sources, reading),
+                            diagnostics,
+                            false,
+                        );
                     }
                     continue;
                 }
@@ -2967,16 +2991,20 @@ fn spliced(text: &str) -> bool {
 /// A conditional directive, read as far as this reads one.
 #[derive(Debug, PartialEq, Eq)]
 enum ConditionalForm<'a> {
-    /// `#if`, refused: its expression is not read yet.
-    If,
+    /// `#if`, with where its expression is in the line.
+    If {
+        expression: (u32, u32),
+    },
     /// `#ifdef name` or, `negated`, `#ifndef name`.
     Ifdef {
         negated: bool,
         name: Named<'a>,
         extra: Option<(u32, u32)>,
     },
-    /// `#elif`, refused for the reason `#if` is.
-    Elif,
+    /// `#elif`, with where its expression is in the line.
+    Elif {
+        expression: (u32, u32),
+    },
     Else {
         extra: Option<(u32, u32)>,
     },
@@ -3029,8 +3057,14 @@ fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
         return None;
     }
     let negated = match word {
-        "if" => return Some(ConditionalForm::If),
-        "elif" => return Some(ConditionalForm::Elif),
+        "if" | "elif" => {
+            let expression = ((text.len() - rest.len()) as u32, text.len() as u32);
+            return Some(if word == "if" {
+                ConditionalForm::If { expression }
+            } else {
+                ConditionalForm::Elif { expression }
+            });
+        }
         "else" => return Some(ConditionalForm::Else { extra: extra(rest) }),
         "endif" => return Some(ConditionalForm::Endif { extra: extra(rest) }),
         "ifdef" => false,
@@ -3071,11 +3105,14 @@ fn conditional(
     text: &str,
     directive: Span,
     frame: &mut Frame,
-    reading: &Reading,
+    (sources, reading): (&mut SourceMap, &mut Reading),
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
 ) {
-    let opens = matches!(form, ConditionalForm::If | ConditionalForm::Ifdef { .. });
+    let opens = matches!(
+        form,
+        ConditionalForm::If { .. } | ConditionalForm::Ifdef { .. }
+    );
     // Inside a conditional opened in a skipped group, only the level counts.
     if frame.skipped_depth > 0 || (opens && frame.skipping()) {
         if opens {
@@ -3089,7 +3126,7 @@ fn conditional(
                 text,
                 directive,
                 frame,
-                reading,
+                (sources, reading),
                 diagnostics,
                 already_refused,
             );
@@ -3101,10 +3138,60 @@ fn conditional(
         text,
         directive,
         frame,
-        reading,
+        (sources, reading),
         diagnostics,
         already_refused,
     );
+}
+
+/// Whether `name` being defined is the compiler's to say rather than
+/// the target's or the source's: a name C reserves for the implementation
+/// (C17 7.1.3 p1) that no target here predefines, such as `__GNUC__`, or
+/// that one compiler for this target predefines and another does not, such
+/// as `__x86_64__` for MSVC. Answered as undefined, the group a compiler
+/// builds was skipped, and a double free under it analysed away. Found by
+/// review. A name the source defines first is answered, and an include
+/// guard so named is not: where a compiler predefines its name, every macro
+/// the header defines is missing from that build, and a later `#ifdef` of
+/// one chose a group it does not. Found by review. `unix`, which a GNU mode
+/// defines and `-std=c17` does not, is unsettled the same way, reserved or
+/// not. See ADR-0055. A name `-D` or `-U` named is answered instead: the
+/// command line says which build this is. See ADR-0059.
+///
+/// What `#ifdef`, `#ifndef`, `defined` and a name left in an `#if` all ask.
+fn undecidable(name: &str, reading: &Reading) -> bool {
+    !reading.macros.contains_key(name)
+        && !reading.settled.contains(name)
+        && (unsettled(reading.target).contains(&name) || (reserved(name) && !known(name)))
+}
+
+/// The refusal of `what`, a conditional directive at `directive` whose line
+/// is `text`, for asking about `name`, which [`undecidable`] answers for.
+fn undecidable_report(text: &str, directive: Span, what: &str, name: &str) -> Diagnostic {
+    refused(
+        text,
+        directive,
+        UNSUPPORTED_DIRECTIVE,
+        &format!("this `{what}` asks about a name the implementation may define"),
+    )
+    .with_note(if reserved(name) {
+        format!(
+            "`{name}` is reserved for the implementation (C17 7.1.3), and whether it is \
+             defined depends on the compiler, so none of this conditional's groups is compiled"
+        )
+    } else {
+        format!(
+            "`{name}` is defined in some modes a compiler builds for this target and not in \
+             others, so none of this conditional's groups is compiled"
+        )
+    })
+    // Both ways out, and the reader to choose between them: either is a
+    // claim about the build that nothing here can check, so this does not
+    // lean toward one. See ADR-0059. A remedy rather than a note, as
+    // `docs/diagnostics.md` says of a way out.
+    .with_remedy(Remedy::new(format!(
+        "say whether the build defines it: `-D {name}` if it does, `-U {name}` if it does not"
+    )))
 }
 
 /// Whether C reserves `name` for the implementation in every use: one that
@@ -3125,7 +3212,7 @@ fn act(
     text: &str,
     directive: Span,
     frame: &mut Frame,
-    reading: &Reading,
+    (sources, reading): (&mut SourceMap, &mut Reading),
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
 ) {
@@ -3160,11 +3247,11 @@ fn act(
     };
     if already_refused {
         match form {
-            ConditionalForm::If => open(frame, "#if", None),
+            ConditionalForm::If { .. } => open(frame, "#if", None),
             ConditionalForm::Ifdef { negated, .. } => {
                 open(frame, if negated { "#ifndef" } else { "#ifdef" }, None)
             }
-            ConditionalForm::Elif | ConditionalForm::Else { .. } => {
+            ConditionalForm::Elif { .. } | ConditionalForm::Else { .. } => {
                 if let Some(conditional) = frame.conditionals.last_mut() {
                     conditional.settled = true;
                     conditional.taking = false;
@@ -3183,20 +3270,17 @@ fn act(
         );
     };
     match form {
-        ConditionalForm::If => {
-            diagnostics.report(
-                refused(
-                    text,
-                    directive,
-                    UNSUPPORTED_DIRECTIVE,
-                    "`#if` is not read yet",
-                )
-                .with_note(
-                    "only `#ifdef` and `#ifndef` are read yet, and none of this conditional's \
-                     groups is compiled",
-                ),
-            );
-            open(frame, "#if", None);
+        // A spliced line is refused by the frame loop, and its expression,
+        // which C would read on into the next line, is not evaluated.
+        ConditionalForm::If { expression } => {
+            let taking = (!spliced)
+                .then(|| {
+                    let tokens = condition::line(text, directive, expression);
+                    let line = (text, directive, "#if");
+                    condition::evaluate(tokens, line, sources, reading, diagnostics)
+                })
+                .flatten();
+            open(frame, "#if", taking);
         }
         ConditionalForm::Ifdef {
             negated,
@@ -3221,44 +3305,8 @@ fn act(
                 // not, is unsettled the same way, reserved or not. See
                 // ADR-0055. A name `-D` or `-U` named is answered instead: the
                 // command line says which build this is. See ADR-0059.
-                Named::Read(name)
-                    if !reading.macros.contains_key(name)
-                        && !reading.settled.contains(name)
-                        && (unsettled(reading.target).contains(&name)
-                            || (reserved(name) && !known(name))) =>
-                {
-                    diagnostics.report(
-                        refused(
-                            text,
-                            directive,
-                            UNSUPPORTED_DIRECTIVE,
-                            &format!(
-                                "this `{what}` asks about a name the implementation may define"
-                            ),
-                        )
-                        .with_note(if reserved(name) {
-                            format!(
-                                "`{name}` is reserved for the implementation (C17 7.1.3), and \
-                                 whether it is defined depends on the compiler, so none of this \
-                                 conditional's groups is compiled"
-                            )
-                        } else {
-                            format!(
-                                "`{name}` is defined in some modes a compiler builds for this \
-                                 target and not in others, so none of this conditional's groups \
-                                 is compiled"
-                            )
-                        })
-                        // Both ways out, and the reader to choose between them:
-                        // either is a claim about the build that nothing here can
-                        // check, so this does not lean toward one. See ADR-0059.
-                        // A remedy rather than a note, as `docs/diagnostics.md`
-                        // says of a way out.
-                        .with_remedy(Remedy::new(format!(
-                            "say whether the build defines it: `-D {name}` if it does, \
-                             `-U {name}` if it does not"
-                        ))),
-                    );
+                Named::Read(name) if undecidable(name, reading) => {
+                    diagnostics.report(undecidable_report(text, directive, what, name));
                     open(frame, what, None);
                 }
                 Named::Read(name) => {
@@ -3301,7 +3349,7 @@ fn act(
                 }
             }
         }
-        ConditionalForm::Elif => {
+        ConditionalForm::Elif { expression } => {
             let Some(conditional) = frame.conditionals.last_mut() else {
                 unmatched(diagnostics, "this `#elif` belongs to no conditional");
                 return;
@@ -3316,22 +3364,25 @@ fn act(
                     )
                     .with_label(Label::secondary(otherwise, "`#else` here")),
                 );
-            } else {
-                diagnostics.report(
-                    refused(
-                        text,
-                        directive,
-                        UNSUPPORTED_DIRECTIVE,
-                        "`#elif` is not read yet",
-                    )
-                    .with_note(
-                        "only `#ifdef` and `#ifndef` are read yet, and none of this \
-                             conditional's groups from here is compiled",
-                    ),
-                );
+                conditional.settled = true;
+                conditional.taking = false;
+                return;
             }
-            conditional.settled = true;
-            conditional.taking = false;
+            // Evaluated only where no group of its conditional was taken or
+            // refused (C17 6.10.1 p6): after a taken group it can hold
+            // anything, `1/0` among it.
+            if conditional.settled || spliced {
+                conditional.settled = true;
+                conditional.taking = false;
+                return;
+            }
+            let tokens = condition::line(text, directive, expression);
+            let line = (text, directive, "#elif");
+            let taking = condition::evaluate(tokens, line, sources, reading, diagnostics);
+            if let Some(conditional) = frame.conditionals.last_mut() {
+                conditional.settled = taking.is_none_or(|taking| taking);
+                conditional.taking = taking.unwrap_or(false);
+            }
         }
         ConditionalForm::Else { extra } => {
             let Some(conditional) = frame.conditionals.last_mut() else {
@@ -4370,8 +4421,12 @@ mod tests {
     #[test]
     fn a_conditional_directive_is_read_by_its_name() {
         use ConditionalForm::*;
-        assert_eq!(conditional_form("#if 1"), Some(If));
-        assert_eq!(conditional_form("%:elif X"), Some(Elif));
+        // The expression is the rest of the line after the name.
+        assert_eq!(conditional_form("#if 1"), Some(If { expression: (3, 5) }));
+        assert_eq!(
+            conditional_form("%:elif X"),
+            Some(Elif { expression: (6, 8) })
+        );
         assert_eq!(conditional_form("#  else"), Some(Else { extra: None }));
         assert_eq!(conditional_form("#endif     "), Some(Endif { extra: None }));
         assert_eq!(
@@ -4440,15 +4495,18 @@ mod tests {
     ///
     /// Asked of the tokens rather than of a run, because any error before the
     /// parser stops the input there, so a run cannot show which group was
-    /// handed over. Mutation: compile the group after a refused `#if`. `a`
-    /// is handed over. Mutation: take a second `#else` as the first is
-    /// taken. `e` is. Mutation: take the group of an `#ifdef` whose name is
-    /// not read. `g` is.
+    /// handed over. A refused `#if` is one whose expression divides by zero,
+    /// or that asks about a name the implementation may define. Mutation:
+    /// compile the group after a refused `#if`. `a`, or `i`, is handed over.
+    /// Mutation: take a second `#else` as the first is taken. `e` is.
+    /// Mutation: take the group of an `#ifdef` whose name is not read. `g`
+    /// is.
     #[test]
     fn no_group_of_a_refused_or_doubled_conditional_is_handed_over() {
-        let text = "#if 1\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
+        let text = "#if 1 / 0\nint a;\n#elif 2\nint b;\n#else\nint c;\n#endif\n\
                     #ifdef U\n#else\nint d;\n#else\nint e;\n#endif\nint f;\n\
-                    #ifdef A$B\nint g;\n#endif\n";
+                    #ifdef A$B\nint g;\n#endif\n\
+                    #if __GNUC__\nint h;\n#else\nint i;\n#endif\n";
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();

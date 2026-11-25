@@ -1,0 +1,4 @@
+Function an_if_of_a_name_the_command_line_settles_is_read.c:5:1 "main" "int (void)"
+  Compound an_if_of_a_name_the_command_line_settles_is_read.c:5:16
+    Return an_if_of_a_name_the_command_line_settles_is_read.c:5:18
+      Number an_if_of_a_name_the_command_line_settles_is_read.c:5:25 "0"

@@ -1,4 +1,4 @@
-#if 1
+#if 1 / 0
 int main(void) { return 1; }
 #elif 2
 int main(void) { return 2; }

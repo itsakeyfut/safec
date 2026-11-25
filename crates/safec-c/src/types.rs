@@ -5963,7 +5963,7 @@ const FLOATING: Reported = Reported {
 
 /// What reading the text of a numeric constant comes to, C17 6.4.4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Reading {
+pub(crate) enum Reading {
     /// An integer constant: its value, and what 6.4.4.1 p5's list for it is
     /// chosen by, whether it is decimal, whether its suffix has a `u`, and
     /// how many `l`s.
@@ -6006,7 +6006,7 @@ const NOT_A_DIGIT: &str = "this is not a digit of the constant's base, and not a
 /// That is said out loud rather than assumed, because the `char::is_*`
 /// family next to it
 /// answers for Unicode where C means ASCII.
-fn read_number(text: &str) -> Reading {
+pub(crate) fn read_number(text: &str) -> Reading {
     // 6.4.4.2 p1 gives a floating constant a `.`, or an exponent: `e`/`E` for
     // a decimal and `p`/`P` for a hexadecimal. The base has to be known before
     // the marker can be looked for, because `e` is a hexadecimal digit and

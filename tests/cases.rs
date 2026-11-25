@@ -10446,6 +10446,29 @@ cases! {
         // does not reserve, `_lower`. Mutation: answer a reserved name no
         // target predefines as undefined. It exits 0, the free analysed away.
         an_ifdef_of_a_name_the_implementation_may_define_is_refused: ["--emit", "safety-ir", "--target", "x86_64-unknown-linux-gnu"],
+        // `#if` asks the same question `#ifdef` does wherever it names a name
+        // the implementation may define: in `defined`, left as a value, in an
+        // `#elif` (ADR-0055). Mutations: answer `defined` of one, or one left
+        // in the line, as any other name; a report goes.
+        an_if_of_a_name_the_implementation_may_define_is_refused: ["--emit", "ast"],
+        // `-U __GNUC__` settles it, and the `#if` is read, as `#ifdef` is
+        // (ADR-0059). Mutation: refuse a settled name in `#if`; this is
+        // refused.
+        an_if_of_a_name_the_command_line_settles_is_read: ["--emit", "ast", "-U__GNUC__"],
+        // No expression, a floating or string constant, an assignment, a
+        // comma, a division by zero, a signed overflow, a shift past 63, a
+        // constant past `uintmax_t`, `defined` made by a macro or naming
+        // nothing, a `(` never closed, a line going on after its expression,
+        // and a character constant of two characters, each refused (C17
+        // 6.10.1, 6.6). Mutations: drop any one check in `condition.rs`; its
+        // report goes.
+        an_if_that_is_not_an_integer_constant_expression_is_refused: ["--emit", "ast"],
+        // A character constant is valued as the target's `char` holds it:
+        // `'\377'` is -1 where `char` is signed and 255 where it is not
+        // (C17 6.10.1 p4 and 6.4.4.4 p10). Mutation: value it as unsigned
+        // everywhere, or signed; one of the pair declares the other name.
+        a_character_in_an_if_is_valued_as_a_signed_char: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        a_character_in_an_if_is_valued_as_an_unsigned_char: ["--emit", "ast", "--target", "armv7-unknown-linux-gnueabihf"],
         // `#define X \` in a skipped group joins `#else` to itself, so C
         // skips `p = malloc(4);` and builds a double free. Mutation: ask of a
         // splice only in a conditional the frame acts on. It exits 0.
@@ -10574,11 +10597,12 @@ cases! {
         // a comment after one is no token. Mutation: make the warning an
         // error. It exits 1.
         tokens_after_endif_are_a_warning: ["--emit", "ast"],
-        // A refused `#if`'s `#endif` is matched. Mutation: open no level at
-        // `#if`. The `#endif` closes no conditional. That none of its groups
-        // is handed over is asked of the tokens, in
+        // A refused `#if`'s `#endif` is matched: `1 / 0` is refused, and the
+        // level it opens still ends there. Mutation: open no level at a
+        // refused `#if`. The `#endif` closes no conditional. That none of
+        // its groups is handed over is asked of the tokens, in
         // `no_group_of_a_refused_or_doubled_conditional_is_handed_over`.
-        if_and_elif_are_not_read_yet: ["--emit", "ast"],
+        a_refused_if_s_endif_is_matched: ["--emit", "ast"],
         // C joins the empty line below to the `#ifndef`'s.
         // Mutation: read a conditional whatever its line ends in. It exits 0.
         a_conditional_ending_in_a_splice_is_refused: ["--emit", "ast"],
