@@ -30,3 +30,27 @@ error[SC0104]: this parameter list is not read
    │ ╰── directive begins here
 ───╯
   = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:5:1 ]
+   │
+ 5 │ #define EMPTY(a,) 0
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:6:1 ]
+   │
+ 6 │ #define DOLLAR(a$) 0
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
+error[SC0104]: this parameter list is not read
+   ╭─[ a_parameter_list_written_wrong_is_refused.c:7:1 ]
+   │
+ 7 │ #define UNCLOSED(a
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`

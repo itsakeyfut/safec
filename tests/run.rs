@@ -221,7 +221,17 @@ programs! {
     /// from the body, and `NEG(-1)` is `--1`; write an argument in without
     /// replacing it first, and `WRAP(WRAP(3))` meets `WRAP` open; give an
     /// empty body no piece, and it panics; find only identifiers among the
-    /// uses of a parameter, and `K`'s `int` is not replaced.
+    /// uses of a parameter, and `K`'s `int` is not replaced. Also: a name
+    /// kept inside its own expansion at an offset other than 0, `id(z)`; a
+    /// name ending two expansions with `(` past the outer one only, `H (0)`;
+    /// an argument the body never uses, `UNUSED(FIRST(1))`; an argument's
+    /// tokens kept apart, `DECL(int d = 3;)`; one set off from the body after
+    /// it, `SUB(5 -)`; a macro named by a keyword inside an argument,
+    /// `id(register)` with `#define register id(4)`, which must be
+    /// replaced there, before `id` is open, or its own `id` is kept. Mutations: look the mark up at offset 0, or scan the
+    /// frames below outermost first, or replace an unused argument, or join
+    /// an argument's tokens, or set nothing off after an argument, or offer
+    /// no keyword for replacement inside an argument; each fails one.
     a_function_like_macro_is_replaced_and_rescanned,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
