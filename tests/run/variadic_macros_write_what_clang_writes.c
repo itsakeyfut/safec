@@ -16,6 +16,8 @@
 #define VC(...) __VA_OPT__(f(0 , ## __VA_ARGS__))
 #define PI(x, ...) __VA_OPT__(x ## 2)
 #define HI(...) __VA_OPT__(#__VA_ARGS__)
+#define TJ(...) a ## __VA_ARGS__
+#define VC2(...) __VA_OPT__(f(0 , ## __VA_ARGS__ ## 1))
 #define EV(...) int __VA_OPT__() ev = 1;
 
 int streq(const char *a, const char *b) {
@@ -52,6 +54,9 @@ int main(void) {
     if (!streq(XS(VC(1)), "f(0 ,1)")) fails |= 1L << 20;
     if (!streq(XS(PI(a, 1)), "a2")) fails |= 1L << 21;
     if (!streq(XS(HI(p  q)), "\"p q\"")) fails |= 1L << 22;
+    if (!streq(XS(TJ(b)), "ab")) fails |= 1L << 23;
+    if (!streq(XS(TJ()), "a")) fails |= 1L << 24;
+    if (!streq(XS(VC2(2)), "f(0 ,21)")) fails |= 1L << 25;
     if (ev != 1) fails |= 1L << 30;
     return fails != 0;
 }

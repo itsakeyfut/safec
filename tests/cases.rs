@@ -10208,6 +10208,10 @@ cases! {
         // refused rather than read in the square of their length. Mutation:
         // drop the bound; this is read.
         a_long_chain_of_joins_is_refused: ["--emit", "ast"],
+        // Two `__VA_OPT__`s each joining just under `MAX_PASTED` pass it
+        // together and are refused. Mutation: count each `__VA_OPT__`'s
+        // joins apart; this is read.
+        joins_split_over_va_opts_count_toward_one_bound: ["--emit", "ast"],
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],
