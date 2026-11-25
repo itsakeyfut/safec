@@ -382,7 +382,8 @@ impl Allocations<'_> {
             Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
             | Rvalue::Address(_)
             | Rvalue::Static(_)
-            | Rvalue::Reinterpret(_) => {
+            | Rvalue::Reinterpret(_)
+            | Rvalue::VaArg(_) => {
                 let mut held = Held::from_marks(
                     value.referents(),
                     Marks {
@@ -415,6 +416,11 @@ impl Allocations<'_> {
                 );
                 if let Rvalue::Use(Operand::Function(_)) = written_value {
                     held.name_unknown(Why::Function);
+                }
+                // **And what `va_arg` read names `Why::Variadic`**, stored
+                // straight into memory as into a local. See ADR-0126.
+                if let Rvalue::VaArg(_) = written_value {
+                    held.name_unknown(Why::Variadic);
                 }
                 held
             }
@@ -1850,6 +1856,8 @@ impl Allocations<'_> {
                 .unit
                 .functions()
                 .any(|id| self.unit.function(id).hatch()),
+            // An operation on a list runs no function.
+            Called::Intrinsic(_) => false,
         }
     }
 
@@ -1893,6 +1901,8 @@ impl Allocations<'_> {
                     | Ty::Struct(_) => Vec::new(),
                 }
             }
+            // A list's address, read as its own type.
+            Called::Intrinsic(_) => Vec::new(),
         }
     }
 
@@ -3723,7 +3733,8 @@ impl Allocations<'_> {
                         | Rvalue::Static(_)
                         | Rvalue::Unary { .. }
                         | Rvalue::Binary { .. }
-                        | Rvalue::Reinterpret(_) => None,
+                        | Rvalue::Reinterpret(_)
+                        | Rvalue::VaArg(_) => None,
                     };
                     // **And below it, what the stored pointer believes of
                     // its own memory, whatever it is**: a parameter or a
@@ -4008,7 +4019,8 @@ impl Allocations<'_> {
                     // or a write through it as data is doubted as through a
                     // lost value is. See ADR-0125.
                     Rvalue::Use(Operand::Constant(_) | Operand::Function(_))
-                    | Rvalue::Reinterpret(_) => {
+                    | Rvalue::Reinterpret(_)
+                    | Rvalue::VaArg(_) => {
                         let mut held = Held::from_marks(
                             value.referents(),
                             Marks {
@@ -4041,6 +4053,15 @@ impl Allocations<'_> {
                         );
                         if let Rvalue::Use(Operand::Function(_)) = &operation.value {
                             held.name_unknown(Why::Function);
+                        }
+                        // **A pointer `va_arg` read names `Why::Variadic`**:
+                        // nothing here says what the caller passed, so a use
+                        // of it is doubted. See ADR-0126. Mutation: name
+                        // nothing; `dereferenced` in
+                        // `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used`
+                        // goes silent.
+                        if let Rvalue::VaArg(_) = &operation.value {
+                            held.name_unknown(Why::Variadic);
                         }
                         value.replace(at, held);
                     }

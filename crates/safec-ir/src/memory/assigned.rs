@@ -245,7 +245,8 @@ impl Watch {
                         lost.extend(escapes(lhs));
                         lost.extend(escapes(rhs));
                     }
-                    Rvalue::Address(_) | Rvalue::Static(_) => {}
+                    // A list holds nothing this check watches.
+                    Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::VaArg(_) => {}
                 }
             }
             match &block.terminator {
@@ -438,6 +439,8 @@ pub(super) fn element_reads(element: &Element) -> Vec<(LocalId, Span)> {
                 }
                 // The address of a static object reads no local.
                 Rvalue::Static(_) => {}
+                // The list is read where it is.
+                Rvalue::VaArg(place) => place_reads(place, at, &mut reads),
                 // An address reads a local only where it goes through it,
                 // `&*p`: `&a[0]`, which converts an array (#621), reads
                 // nothing, and `&p` reads nothing either.

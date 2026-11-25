@@ -47,6 +47,14 @@ const PROGRAMS: &[(&str, &str)] = &[
         "x86_64-unknown-linux-gnu",
     ),
     (
+        "a_variadic_argument_is_read_as_each_target_writes_it",
+        "x86_64-pc-windows-msvc",
+    ),
+    (
+        "a_variadic_long_long_is_aligned_to_eight_on_armv7",
+        "armv7-unknown-linux-gnueabihf",
+    ),
+    (
         "llvm_ir_of_conversions_and_a_constant_condition",
         "x86_64-pc-windows-msvc",
     ),

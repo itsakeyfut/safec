@@ -617,6 +617,12 @@ fn rvalue(frames: &Stack, value: &Rvalue, ty: Option<Integer>) -> Result<Value, 
                 "a conversion between a pointer and an integer, whose result is the implementation's",
             ));
         }
+        // A frame here holds its parameters and nothing past them.
+        Rvalue::VaArg(_) => {
+            return Err(Trap::new(
+                "an argument past a variadic function's parameters",
+            ));
+        }
         // C17 6.5.3.3 p5 makes `!E` mean `(0 == E)`, which is defined for a
         // pointer and needs no width: a place is an object, so `!p` is zero.
         Rvalue::Unary {

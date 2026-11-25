@@ -196,6 +196,13 @@ pub enum Type {
         /// at least one parameter (6.7.6.3's `parameter-type-list`).
         variadic: bool,
     },
+    /// `__builtin_va_list`, the type a variadic function's arguments are read
+    /// through (C17 7.16 p3). A type of its own rather than the array or
+    /// pointer one target lays it out as, so that only `__builtin_va_start`
+    /// and the builtins beside it take one, and nothing reads it as the
+    /// pointer it is on some targets. Laid out by the target in the IR
+    /// (#1214). See ADR-0126.
+    VaList,
     /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
     /// `struct { ... }`.
     ///
@@ -708,11 +715,66 @@ pub enum Expr {
         /// Both sides and the comma.
         span: Span,
     },
+    /// `__builtin_va_start(list, last)`, `__builtin_va_end(list)` or
+    /// `__builtin_va_copy(dest, src)`: what `<stdarg.h>`'s `va_start`,
+    /// `va_end` and `va_copy` are (C17 7.16.1; #1214). See ADR-0126.
+    VaOp {
+        /// Which of the three.
+        op: VaOp,
+        /// Its operands, as written: the list first.
+        operands: Vec<ExprId>,
+        /// The builtin's name through the closing parenthesis.
+        span: Span,
+    },
+    /// `__builtin_va_arg(list, type)`, the next argument past a variadic
+    /// function's parameters, read as `type`: what `<stdarg.h>`'s `va_arg`
+    /// is (C17 7.16.1.1; #1214). See ADR-0126.
+    VaArg {
+        /// The list it is read out of.
+        list: ExprId,
+        /// The type it is read as.
+        ty: TypeId,
+        /// The builtin's name through the closing parenthesis.
+        span: Span,
+    },
     /// An expression the parser could not read.
     Error {
         /// What it gave up on.
         span: Span,
     },
+}
+
+/// Which of the builtins that start, end or copy a list of variadic
+/// arguments an [`Expr::VaOp`] is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VaOp {
+    /// `__builtin_va_start(list, last)`: `list` reads from the first argument
+    /// past `last`, the function's last parameter (C17 7.16.1.4).
+    Start,
+    /// `__builtin_va_end(list)`: `list` is read no more (C17 7.16.1.3).
+    End,
+    /// `__builtin_va_copy(dest, src)`: `dest` reads on from where `src` has
+    /// got to (C17 7.16.1.2).
+    Copy,
+}
+
+impl VaOp {
+    /// The builtin's name, as written.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Start => "__builtin_va_start",
+            Self::End => "__builtin_va_end",
+            Self::Copy => "__builtin_va_copy",
+        }
+    }
+
+    /// How many operands it takes.
+    pub fn arity(self) -> usize {
+        match self {
+            Self::End => 1,
+            Self::Start | Self::Copy => 2,
+        }
+    }
 }
 
 /// The first clause of a `for`. C17 6.8.5 p1.
@@ -1041,6 +1103,8 @@ impl Expr {
             Self::SizeofExpr { .. } => "SizeofExpr",
             Self::Cast { .. } => "Cast",
             Self::Comma { .. } => "Comma",
+            Self::VaOp { .. } => "VaOp",
+            Self::VaArg { .. } => "VaArg",
             Self::Error { .. } => "Error",
         }
     }
@@ -1065,6 +1129,8 @@ impl Expr {
             | Self::SizeofExpr { span, .. }
             | Self::Cast { span, .. }
             | Self::Comma { span, .. }
+            | Self::VaOp { span, .. }
+            | Self::VaArg { span, .. }
             | Self::Error { span, .. } => *span,
         }
     }
@@ -1121,7 +1187,9 @@ impl Expr {
             Self::Unary { operand, .. }
             | Self::Member { base: operand, .. }
             | Self::SizeofExpr { operand, .. }
-            | Self::Cast { operand, .. } => out.push(*operand),
+            | Self::Cast { operand, .. }
+            | Self::VaArg { list: operand, .. } => out.push(*operand),
+            Self::VaOp { operands, .. } => out.extend(operands.iter().copied()),
             Self::Binary { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
             Self::Assign { place, value, .. } => out.extend([*place, *value]),
             Self::Comma { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
@@ -1525,7 +1593,7 @@ impl Ast {
                     sign: right_sign,
                 },
             ) => left_rank == right_rank && left_sign == right_sign,
-            (Type::Void, Type::Void) => true,
+            (Type::Void, Type::Void) | (Type::VaList, Type::VaList) => true,
             (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right, same_tag),
             (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
                 self.compatible(*left, *right, same_tag)
@@ -1561,6 +1629,7 @@ impl Ast {
                 _,
             )
             | (Type::Void, _)
+            | (Type::VaList, _)
             | (Type::Pointer(_), _)
             | (Type::Array { .. }, _)
             | (Type::Function { .. }, _) => false,
@@ -1627,7 +1696,7 @@ impl Ast {
                     sign: right_sign,
                 },
             ) => left_rank == right_rank && left_sign == right_sign,
-            (Type::Void, Type::Void) => true,
+            (Type::Void, Type::Void) | (Type::VaList, Type::VaList) => true,
             // 6.7.3 p9 leaves a qualified function type undefined, so no
             // valid program asks this, and the answer is the one this gave
             // before its arms were written out.
@@ -1638,6 +1707,7 @@ impl Ast {
                 | Type::Struct { .. }
                 | Type::Integer { .. }
                 | Type::Void
+                | Type::VaList
                 | Type::Function { .. },
                 _,
             ) => false,
@@ -1719,6 +1789,7 @@ impl Ast {
                 sign: _,
             } => false,
             Type::Void
+            | Type::VaList
             | Type::Pointer(_)
             | Type::Array { .. }
             | Type::Function { .. }
@@ -1762,6 +1833,7 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
                 format!("{constant}{}", safec_ir::ir::integer_name(*rank, *sign))
             }
             Type::Void => format!("{constant}void"),
+            Type::VaList => format!("{constant}__builtin_va_list"),
             // The tag as written, and `(anonymous)` for none. A base of more
             // than one word, so it is spelled here and returned with the same
             // spacing as the others below.
@@ -1857,6 +1929,7 @@ fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
             sign: _,
         }
         | Type::Void
+        | Type::VaList
         | Type::Pointer(_)
         | Type::Struct { .. } => false,
     }

@@ -733,6 +733,36 @@ pub enum Called {
     /// type is the pointer's pointee, a [`Ty::Function`]. Read by the memory
     /// check as a call to code it cannot read.
     Through(Operand),
+    /// One of the operations on a list of variadic arguments, which no
+    /// function is: what `__builtin_va_start`, `__builtin_va_end` and
+    /// `__builtin_va_copy` are (#1214). Its arguments are the lists'
+    /// addresses. Read by the memory check as a call to code it cannot read
+    /// handed them. See ADR-0126.
+    Intrinsic(Intrinsic),
+}
+
+/// Which operation on a list of variadic arguments a
+/// [`Called::Intrinsic`] is, each taking the lists' addresses (C17 7.16.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Intrinsic {
+    /// Start the list its one argument points at, at the first argument past
+    /// the function's parameters.
+    VaStart,
+    /// End the list its one argument points at.
+    VaEnd,
+    /// Copy the list its second argument points at into the first.
+    VaCopy,
+}
+
+impl Intrinsic {
+    /// What it is called, for `--emit safety-ir`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::VaStart => "VaStart",
+            Self::VaEnd => "VaEnd",
+            Self::VaCopy => "VaCopy",
+        }
+    }
 }
 
 impl Called {
@@ -742,7 +772,7 @@ impl Called {
     pub fn direct(&self) -> Option<FuncId> {
         match self {
             Called::Direct(id) => Some(*id),
-            Called::Through(_) => None,
+            Called::Through(_) | Called::Intrinsic(_) => None,
         }
     }
 
@@ -751,7 +781,7 @@ impl Called {
     /// it as a dereference would.
     pub fn operand(&self) -> Option<&Operand> {
         match self {
-            Called::Direct(_) => None,
+            Called::Direct(_) | Called::Intrinsic(_) => None,
             Called::Through(operand) => Some(operand),
         }
     }
@@ -962,6 +992,12 @@ pub enum Rvalue {
     /// nothing an analysis can follow from the operand, so the memory check
     /// reports every one as unproven where it is written. See ADR-0117.
     Reinterpret(Operand),
+    /// The next argument past a variadic function's parameters, read out of
+    /// the list at this place as the type the operation is written into, and
+    /// the list moved past it: what `__builtin_va_arg` is (C17 7.16.1.1;
+    /// #1214). A pointer read so names nothing the memory check follows. See
+    /// ADR-0126.
+    VaArg(Place),
 }
 
 impl Rvalue {
@@ -974,6 +1010,7 @@ impl Rvalue {
             Self::Address(_) => "Address",
             Self::Static(_) => "Static",
             Self::Reinterpret(_) => "Reinterpret",
+            Self::VaArg(_) => "VaArg",
         }
     }
 }

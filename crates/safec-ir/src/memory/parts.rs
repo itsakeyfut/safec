@@ -1870,6 +1870,13 @@ impl Held {
                 Why::StaleRead => unrecorded.lost = true,
                 Why::LostRead => unrecorded.lost_read = true,
                 Why::UnreplacedRead => unrecorded.unreplaced_read = true,
+                // **A lost value too**: nothing here says what the caller
+                // passed, so nothing this check names is what it points at,
+                // and a use of it is doubted. See ADR-0126. Mutation: answer
+                // it as `from_caller`; `dereferenced` in
+                // `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used`
+                // goes silent.
+                Why::Variadic => unrecorded.lost = true,
                 // **A lost value to every question asked of it**: no address
                 // this check follows, so nothing it names is what it points
                 // at. What sets it apart is only that a block carries it to a

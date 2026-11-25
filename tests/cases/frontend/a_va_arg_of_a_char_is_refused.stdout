@@ -1,0 +1,16 @@
+Function a_va_arg_of_a_char_is_refused.c:1:1 "a_char" "int (int, ...)"
+  Parameter a_va_arg_of_a_char_is_refused.c:1:12 "n" "int"
+  Compound a_va_arg_of_a_char_is_refused.c:1:24
+    Declaration a_va_arg_of_a_char_is_refused.c:2:5 "a" "__builtin_va_list"
+    Expression a_va_arg_of_a_char_is_refused.c:3:5
+      VaOp a_va_arg_of_a_char_is_refused.c:3:5 "__builtin_va_start"
+        Identifier a_va_arg_of_a_char_is_refused.c:3:24 "a"
+        Identifier a_va_arg_of_a_char_is_refused.c:3:27 "n"
+    Declaration a_va_arg_of_a_char_is_refused.c:4:5 "c" "char"
+      VaArg a_va_arg_of_a_char_is_refused.c:4:14 "char"
+        Identifier a_va_arg_of_a_char_is_refused.c:4:31 "a"
+    Expression a_va_arg_of_a_char_is_refused.c:5:5
+      VaOp a_va_arg_of_a_char_is_refused.c:5:5 "__builtin_va_end"
+        Identifier a_va_arg_of_a_char_is_refused.c:5:22 "a"
+    Return a_va_arg_of_a_char_is_refused.c:6:5
+      Identifier a_va_arg_of_a_char_is_refused.c:6:12 "c"

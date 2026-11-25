@@ -169,8 +169,11 @@ pub(crate) fn operated_on_in_element<'e>(
                 Rvalue::Unary { op: _, operand } | Rvalue::Reinterpret(operand) => {
                     named(operand).into_iter().collect()
                 }
-                // A copy carries the value on; an address reads none.
-                Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Static(_) => Vec::new(),
+                // A copy carries the value on; an address reads none; and a
+                // list is no pointer this check follows.
+                Rvalue::Use(_) | Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::VaArg(_) => {
+                    Vec::new()
+                }
             };
             Some((operation.origin.span(), places))
         }
@@ -250,6 +253,9 @@ fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
         // meant to take. Reporting it would be a use of a freed value in a
         // program that never touched one.
         Rvalue::Address(_) | Rvalue::Static(_) => Vec::new(),
+        // The list is read and written where it is, through whatever the
+        // place goes through.
+        Rvalue::VaArg(place) => projected(place),
     }
 }
 
@@ -303,6 +309,8 @@ pub(crate) fn read_out_of_memory_in_element(element: &Element) -> Option<(Span, 
                 // copy of `p` and `&**p` a copy of `*p`, an operand this
                 // reads.
                 Rvalue::Address(_) | Rvalue::Static(_) => {}
+                // The list is read where it is, as a value is.
+                Rvalue::VaArg(place) => places.extend(read_as_value(place)),
             }
             Some((operation.origin.span(), places))
         }

@@ -264,6 +264,14 @@ enum Why {
     /// the empty set, which is what a null pointer holds and which a reader
     /// may take as reaching nothing. See ADR-0125.
     Function,
+    /// A pointer `va_arg` read past a variadic function's parameters
+    /// (#1214). Nothing in this function says what the caller passed there,
+    /// and reading it as a type it was not passed as is undefined (C17
+    /// 7.16.1.1 p2), so nothing this check names is what it points at, and
+    /// a use of it is doubted as a lost value's is. Not
+    /// [`Why::FromCaller`], which is believed where it is dereferenced. See
+    /// ADR-0126.
+    Variadic,
 }
 }
 

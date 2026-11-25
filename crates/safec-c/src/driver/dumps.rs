@@ -276,7 +276,8 @@ fn dump_fields(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &m
                     rank: Rank::Char | Rank::Short | Rank::Int | Rank::Long | Rank::LongLong,
                     sign: _,
                 }
-                | Type::Void => {
+                | Type::Void
+                | Type::VaList => {
                     return;
                 }
             }
@@ -584,9 +585,13 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
                 write!(out, " {:?}", ",").expect("writing to a string cannot fail");
             }
             // The type as this compiler spells it, as a declaration's is.
-            Expr::SizeofType { ty, .. } | Expr::Cast { ty, .. } => {
+            Expr::SizeofType { ty, .. } | Expr::Cast { ty, .. } | Expr::VaArg { ty, .. } => {
                 write!(out, " {:?}", spell_type(sources, ast, *ty))
                     .expect("writing to a string cannot fail");
+            }
+            // Which builtin, since the three share a node.
+            Expr::VaOp { op, .. } => {
+                write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
             }
             Expr::Conditional { .. }
             | Expr::Call { .. }

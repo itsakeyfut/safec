@@ -1,0 +1,84 @@
+target triple = "armv7-unknown-linux-gnueabihf"
+
+define i32 @first(i32 %arg0, ...) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca [1 x i32]
+  %_3 = alloca ptr
+  %_4 = alloca i32
+  %_5 = alloca i32
+  %_6 = alloca i64
+  %_7 = alloca i64
+  %_8 = alloca ptr
+  %_9 = alloca ptr
+  %_10 = alloca ptr
+  %_11 = alloca i32
+  %_12 = alloca i32
+  %_13 = alloca i32
+  %_14 = alloca i32
+  store i32 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store ptr %_2, ptr %_3
+  %t0 = load ptr, ptr %_3
+  call void @llvm.va_start.p0(ptr %t0)
+  br label %bb1
+
+bb1:
+  %t1 = load ptr, ptr %_2
+  %t2 = load i32, ptr %t1
+  %t3 = getelementptr i8, ptr %t1, i32 4
+  store ptr %t3, ptr %_2
+  store i32 %t2, ptr %_5
+  %t4 = load i32, ptr %_5
+  store i32 %t4, ptr %_4
+  %t5 = load ptr, ptr %_2
+  %t6 = ptrtoint ptr %t5 to i32
+  %t7 = add i32 %t6, 7
+  %t8 = and i32 %t7, -8
+  %t9 = inttoptr i32 %t8 to ptr
+  %t10 = load i64, ptr %t9
+  %t11 = getelementptr i8, ptr %t9, i32 8
+  store ptr %t11, ptr %_2
+  store i64 %t10, ptr %_7
+  %t12 = load i64, ptr %_7
+  store i64 %t12, ptr %_6
+  %t13 = load ptr, ptr %_2
+  %t14 = load ptr, ptr %t13
+  %t15 = getelementptr i8, ptr %t13, i32 4
+  store ptr %t15, ptr %_2
+  store ptr %t14, ptr %_9
+  %t16 = load ptr, ptr %_9
+  store ptr %t16, ptr %_8
+  store ptr %_2, ptr %_10
+  %t17 = load ptr, ptr %_10
+  call void @llvm.va_end.p0(ptr %t17)
+  br label %bb2
+
+bb2:
+  %t18 = load i64, ptr %_6
+  %t19 = trunc i64 %t18 to i32
+  store i32 %t19, ptr %_11
+  %t20 = load i32, ptr %_4
+  %t21 = load i32, ptr %_11
+  %t22 = add nsw i32 %t20, %t21
+  store i32 %t22, ptr %_12
+  %t23 = load ptr, ptr %_8
+  %t24 = icmp ne ptr %t23, null
+  %t25 = zext i1 %t24 to i32
+  store i32 %t25, ptr %_13
+  %t26 = load i32, ptr %_12
+  %t27 = load i32, ptr %_13
+  %t28 = add nsw i32 %t26, %t27
+  store i32 %t28, ptr %_14
+  %t29 = load i32, ptr %_14
+  store i32 %t29, ptr %_0
+  %t30 = load i32, ptr %_0
+  ret i32 %t30
+}
+
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_end.p0(ptr)
+declare void @llvm.va_copy.p0.p0(ptr, ptr)

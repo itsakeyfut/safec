@@ -694,7 +694,8 @@ pub(crate) fn tested_against_null(
                 Rvalue::Use(_)
                 | Rvalue::Address(_)
                 | Rvalue::Static(_)
-                | Rvalue::Reinterpret(_) => None,
+                | Rvalue::Reinterpret(_)
+                | Rvalue::VaArg(_) => None,
             })
             // **The refusal, and the only one this walk makes about a local it
             // can name.** The comparison read this local above; everything
@@ -829,6 +830,7 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
             | Rvalue::Address(_)
             | Rvalue::Static(_)
             | Rvalue::Reinterpret(_)
+            | Rvalue::VaArg(_)
             | Rvalue::Unary { op: _, operand: _ }
             | Rvalue::Binary {
                 op: _,
@@ -966,6 +968,12 @@ impl Nullability<'_> {
             // A pointer made from an integer, which this does not follow:
             // C17 6.3.2.3 p5 leaves what it points at to the implementation.
             Rvalue::Reinterpret(_) => Nullness::Unknown,
+            // **An argument the caller passed, which may be null** as any
+            // pointer of unknown origin may. See ADR-0126. Mutation: answer
+            // `NonNull`; `null_tested_nowhere` in
+            // `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used` loses
+            // its `SC0403`.
+            Rvalue::VaArg(_) => Nullness::Unknown,
             Rvalue::Use(Operand::Copy(place)) => {
                 if match place.shape() {
                     Shape::Local => true,
@@ -1513,7 +1521,7 @@ fn function_addresses(block: &Block) -> Vec<(FuncId, Span)> {
                 add(lhs, at);
                 add(rhs, at);
             }
-            Rvalue::Address(_) | Rvalue::Static(_) => {}
+            Rvalue::Address(_) | Rvalue::Static(_) | Rvalue::VaArg(_) => {}
         }
     }
     match &block.terminator {
@@ -1918,7 +1926,8 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                             | Rvalue::Binary { .. }
                             | Rvalue::Address(_)
                             | Rvalue::Static(_)
-                            | Rvalue::Reinterpret(_) => None,
+                            | Rvalue::Reinterpret(_)
+                            | Rvalue::VaArg(_) => None,
                         };
                         returned_at = Some((operation.origin.span(), local));
                     }

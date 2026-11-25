@@ -128,12 +128,22 @@ cases! {
         // the call was handed. `null_to_the_nonnull_parameter` is `SC0405`
         // at the parameter's argument alone, and the readers that walk the
         // parameters beside the arguments stop at the last parameter
-        // without a panic. `defined` is refused: defining one is #1214's.
+        // without a panic. `defined`, which reads none of its arguments,
+        // builds since #1214.
         // Mutation: drop the arguments past the parameters from the call in
         // the lowering; `handed_after_free` goes silent. Walk `_Nonnull`
         // parameters by argument position in `nullability::report_arguments`;
         // `null_to_the_nonnull_parameter` panics.
         a_variadic_call_is_read_as_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer `__builtin_va_arg` reads names `Why::Variadic` (#1214,
+        // ADR-0126): `dereferenced` is doubted even after its null test,
+        // since nothing here says what the caller passed, and
+        // `null_tested_nowhere` is `SC0403` beside it. An integer read so is
+        // asked nothing. Mutations: name nothing for it in `transfer.rs`, or
+        // read `Why::Variadic` as `from_caller` in `parts.rs`, and
+        // `dereferenced` goes silent; answer it `NonNull` in the nullability
+        // check, and `null_tested_nowhere` loses its `SC0403`.
+        a_pointer_va_arg_reads_is_doubted_wherever_it_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct local the program never took the address of, read whole
         // while nothing was written into it, is C17 6.3.2.1 p2's undefined
         // read, as a pointer local's is (#1302): `copied`, `assigned_whole`,
@@ -9971,6 +9981,18 @@ cases! {
         // the fixed arguments in `Checker::call` when more follow, and
         // `fixed_argument_mismatched` builds.
         a_variadic_prototype_is_held_to_its_parameters_and_its_declarations: ["--emit", "ast"],
+        // C17 7.16.1.4 p4: `__builtin_va_start` names the last parameter of
+        // the variadic function it is in, and its list is a
+        // `__builtin_va_list` object (#1214): `fixed`, which is no variadic
+        // function, and `not_the_last` are `SC0306`, and so is `not_a_list`;
+        // and a list is not copied by `=`, which only `__builtin_va_copy`
+        // does. Mutation: accept any name for the last parameter in
+        // `Checker::va_op`; `not_the_last` builds.
+        a_va_start_names_the_last_parameter_of_its_variadic_function: ["--emit", "ast"],
+        // C17 7.16.1.1 p2: a `char` arrives promoted, so reading one is
+        // undefined, and `SC0306` (#1214). Mutation: drop the promotion test
+        // in `Checker::va_arg`; this builds.
+        a_va_arg_of_a_char_is_refused: ["--emit", "ast"],
         // C17 6.7.3 p11 and 6.7.6.3 p15: a parameter's own `const` is not part
         // of the function's type, and one on what a pointer points to is.
         // Mutation: have `compatible` not ask `Ast::is_const`; the second pair
@@ -10454,6 +10476,20 @@ cases! {
         // `i32`. `--allow-unknown`, since a literal passed past the
         // parameters is doubted (#1326).
         a_variadic_call_passes_a_char_as_an_int: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu", "--allow-unknown"],
+        // A variadic definition starts, reads and ends its list as `clang`
+        // writes it on Windows (#1214, ADR-0127): `...` on the `define`, the
+        // three intrinsics declared, and each argument read by walking the
+        // list's pointer an 8-byte slot at a time, an `int` too. Mutation:
+        // write LLVM's `va_arg` there; the walk goes.
+        a_variadic_argument_is_read_as_each_target_writes_it: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // On `armv7` a `long long` past the parameters is aligned to eight
+        // before it is read, as `clang` does. Mutation: align nothing; the
+        // `and` goes.
+        a_variadic_long_long_is_aligned_to_eight_on_armv7: ["--emit", "llvm-ir", "--target", "armv7-unknown-linux-gnueabihf"],
+        // LLVM's `va_arg` reads the wrong place on `aarch64-unknown-linux-gnu`,
+        // so the backend refuses it there (ADR-0126). Mutation: write it
+        // there too; this builds.
+        a_variadic_argument_is_not_read_on_aarch64_linux_yet: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         // A struct does not cross a call to a variadic function yet (#1325):
         // as a fixed parameter or a result, the backend refuses it. Mutation:
         // drop that refusal; the struct is passed as a pointer to its copy.

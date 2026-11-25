@@ -406,6 +406,27 @@ impl Target {
         (self.triple.starts_with("x86_64-") || self.triple.starts_with("wasm32-")).then_some(16)
     }
 
+    /// The size and alignment in bytes of `__builtin_va_list` here, the
+    /// object `va_start` fills and `va_arg` reads the next argument out of
+    /// (C17 7.16 p3; #1214).
+    ///
+    /// Measured with `clang 22.1.8 --target=<triple>` reading
+    /// `sizeof(__builtin_va_list)` and `_Alignof` of it: a structure of 24
+    /// bytes on the System V `x86_64` targets, Linux and Darwin alike, and of
+    /// 32 on `aarch64-unknown-linux-gnu`, both aligned to eight; a pointer
+    /// everywhere else, `aarch64-apple-darwin` and Windows among them. See
+    /// ADR-0126.
+    pub fn va_list(self) -> (u64, u64) {
+        let pointer = u64::from(self.pointer_bits / self.character.bits());
+        if self.triple == "aarch64-unknown-linux-gnu" {
+            (32, 8)
+        } else if self.triple.starts_with("x86_64-") && !self.triple.contains("-windows-") {
+            (24, 8)
+        } else {
+            (pointer, pointer)
+        }
+    }
+
     /// How many bits a pointer takes here: what an object holding one is
     /// worth when the memory check asks whether an access fits it. See
     /// ADR-0060.
@@ -885,6 +906,33 @@ mod tests {
         for &(triple, expected) in measured {
             let target = Target::from_triple(triple).expect("a known triple");
             assert_eq!(target.program_name(), expected, "{triple}");
+        }
+    }
+
+    /// `__builtin_va_list`'s size and alignment, as `clang 22.1.8` gives
+    /// them on each machine, written out rather than read from the table.
+    ///
+    /// Mutation: answer a pointer's everywhere; three rows fail.
+    #[test]
+    fn every_machine_says_how_wide_a_va_list_is() {
+        let measured: &[(&str, (u64, u64))] = &[
+            ("aarch64-apple-darwin", (8, 8)),
+            ("aarch64-unknown-linux-gnu", (32, 8)),
+            ("armv7-unknown-linux-gnueabihf", (4, 4)),
+            ("i686-unknown-linux-gnu", (4, 4)),
+            ("wasm32-unknown-unknown", (4, 4)),
+            ("x86_64-apple-darwin", (24, 8)),
+            ("x86_64-pc-windows-msvc", (8, 8)),
+            ("x86_64-unknown-linux-gnu", (24, 8)),
+        ];
+        assert_eq!(
+            measured.len(),
+            Target::ALL.len(),
+            "a machine nobody measured"
+        );
+        for &(triple, expected) in measured {
+            let target = Target::from_triple(triple).expect("a known triple");
+            assert_eq!(target.va_list(), expected, "{triple}");
         }
     }
 }
