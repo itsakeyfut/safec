@@ -10591,6 +10591,11 @@ cases! {
         // predefines, `__func__`, is code's own (ADR-0055). Mutation: hand an
         // unsettled name on; `__STDC_VERSION__` is `SC0301`, undeclared.
         a_name_the_implementation_may_define_used_in_code_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // `-U` settles such a name for code as for `#ifdef` (ADR-0059), and
+        // so does an `#undef` in the source, after which no build defines
+        // it. Mutations: refuse a settled name in code, or leave an
+        // `#undef`ed one unsettled; one of the two is refused.
+        a_name_the_build_settles_is_read_in_code: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-U__x86_64__"],
         // C17 6.10.8 p2, for the names it lists. Mutation: let a `#define`
         // or `#undef` of a predefined name through. Nothing is reported.
         a_predefined_macro_defined_again_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],

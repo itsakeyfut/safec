@@ -183,8 +183,9 @@ struct Reading {
     /// distinct macros cost the square of its depth. Found by review.
     open_macros: HashMap<String, usize>,
     open_expansions: usize,
-    /// Every name `-D` or `-U` named, which `#ifdef` and `#ifndef` answer
-    /// whether or not the compiler might predefine it. See ADR-0059.
+    /// Every name `-D` or `-U` named, or the source has undefined, which
+    /// `#ifdef` and `#ifndef` answer whether or not the compiler might
+    /// predefine it. See ADR-0059.
     settled: HashSet<String>,
     /// Where, in each file, a name sits that was not replaced because its
     /// macro was being replaced, by its file and its start. It is never
@@ -600,6 +601,16 @@ pub fn prelude(
         );
     }
     command_line(macros, sources, &mut reading, diagnostics);
+    // Refused once for the build, used or not, as `clang` refuses it.
+    if let Err(value) = &reading.started {
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`SOURCE_DATE_EPOCH` is `{value}`, which is not a number of seconds from 0 to \
+                 {LAST_SECOND}"
+            ))
+            .with_note("`__DATE__` and `__TIME__` are written from it"),
+        );
+    }
     Prelude { reading }
 }
 
@@ -995,8 +1006,14 @@ fn read_includes(
                                     earlier,
                                 ));
                             }
+                            // Undefined, the name is undefined to every
+                            // compiler from here, whatever it predefines, so
+                            // `#ifdef` and code answer it. Left unsettled,
+                            // `#undef unix` then `int unix;` was refused.
+                            // Found by review. See ADR-0055.
                             _ => {
                                 reading.macros.remove(name);
+                                reading.settled.insert(name.to_owned());
                             }
                         },
                         MacroForm::Unread { directive } => diagnostics.report(
@@ -1168,10 +1185,7 @@ fn replacement(
         // value to the other. Only the unsettled names: a reserved name no
         // target predefines, `__func__` or a builtin's, is code's own.
         // See ADR-0055.
-        if token.kind == TokenKind::Identifier
-            && !reading.settled.contains(name)
-            && unsettled(reading.target).contains(&name)
-        {
+        if !reading.settled.contains(name) && unsettled(reading.target).contains(&name) {
             diagnostics.report(
                 Diagnostic::error(format!("`{name}` is a name the implementation may define"))
                     .with_code(UNSUPPORTED_DIRECTIVE)
@@ -1310,21 +1324,12 @@ fn dynamic(
         }
         "__FILE__" => {
             let at = used_at(token.span, sources);
-            let named = sources.file(at.file()).name().to_string();
-            format!("\"{}\"", named.replace('\\', "\\\\").replace('"', "\\\""))
+            quoted(&presumed(at.file(), sources))
         }
         _ => {
-            let seconds = match &reading.started {
-                Ok(seconds) => *seconds,
-                Err(value) => {
-                    diagnostics.report(
-                        Diagnostic::error("`SOURCE_DATE_EPOCH` is not a number of seconds")
-                            .with_code(UNSUPPORTED_DIRECTIVE)
-                            .with_label(Label::primary(token.span, "used here"))
-                            .with_note(format!("it is `{value}`, and `{name}` is written from it")),
-                    );
-                    return None;
-                }
+            // An invalid one was refused for the build, in `prelude`.
+            let Ok(seconds) = reading.started else {
+                return None;
             };
             let (date, time) = civil(seconds);
             if name == "__DATE__" { date } else { time }
@@ -1361,15 +1366,58 @@ fn used_at(mut span: Span, sources: &SourceMap) -> Span {
     span
 }
 
+/// `name` as a string literal: a `\\` before each `\\` and `"` in it.
+fn quoted(name: &str) -> String {
+    format!("\"{}\"", name.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+/// The name `__FILE__` gives `file`, as `clang 22.1.8 -E` writes it: an
+/// input as it was named, and an included file as the directory of its
+/// includer's name, `.` where that has none, joined to the name the
+/// `#include` wrote by the host's separator: `.\sub/h.h` on Windows for
+/// `#include "sub/h.h"` in `inc.c`. A diagnostic names it otherwise, the
+/// same on every host. See ADR-0131.
+fn presumed(file: FileId, sources: &SourceMap) -> String {
+    match sources.file(file).name() {
+        FileName::Inclusion { at, .. } => {
+            let includer = presumed(at.file(), sources);
+            let directive = sources.snippet(*at);
+            let written = directive
+                .split('"')
+                .nth(1)
+                .expect("an inclusion is read from a quoted `#include`");
+            let separators: &[char] = if cfg!(windows) { &['/', '\\'] } else { &['/'] };
+            let directory = includer
+                .rfind(separators)
+                .map_or(".", |end| &includer[..end]);
+            let separator = if cfg!(windows) { '\\' } else { '/' };
+            format!("{directory}{separator}{written}")
+        }
+        name => name.to_string(),
+    }
+}
+
 /// When the translation started, for [`Reading::started`].
 fn started() -> Result<u64, String> {
     started_from(std::env::var("SOURCE_DATE_EPOCH").ok())
 }
 
-/// [`started`], given what `SOURCE_DATE_EPOCH` is set to, if it is.
+/// The last second whose `__DATE__` has a four-digit year, 9999-12-31
+/// 23:59:59, past which `"Mmm dd yyyy"` (C17 6.10.8.1) has no spelling; the
+/// bound `clang` puts on `SOURCE_DATE_EPOCH` too.
+const LAST_SECOND: u64 = 253_402_300_799;
+
+/// [`started`], given what `SOURCE_DATE_EPOCH` is set to, if it is: decimal
+/// digits alone, no sign and no white space, up to [`LAST_SECOND`], as
+/// `clang` reads it. Read more loosely, `" 42"` and a year past 9999 were
+/// dates `clang` refuses. Found by review.
 fn started_from(epoch: Option<String>) -> Result<u64, String> {
     match epoch {
-        Some(value) => value.trim().parse::<u64>().map_err(|_| value),
+        Some(value) => Some(&value)
+            .filter(|value| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()))
+            .and_then(|value| value.parse::<u64>().ok())
+            .filter(|seconds| *seconds <= LAST_SECOND)
+            .ok_or(value),
         None => Ok(std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |elapsed| elapsed.as_secs())),
@@ -4471,18 +4519,102 @@ mod tests {
         );
     }
 
-    /// `SOURCE_DATE_EPOCH` is read as seconds, and a value that is not is
-    /// kept to be refused at a use rather than read as now.
+    /// Every month is spelled as C17 6.10.8.1 spells it: the first day of
+    /// each in 2001, a year with no leap day.
     ///
-    /// Mutation: read the clock where it does not parse. The second
-    /// assertion fails.
+    /// Mutation: misspell any month in `civil`'s table. Its assertion fails.
+    #[test]
+    fn every_month_of_a_date_is_spelled_as_c_spells_it() {
+        const FIRST_OF_2001: u64 = 978_307_200;
+        let months = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        let lengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let mut day = 0;
+        for (month, length) in months.iter().zip(lengths) {
+            let (date, _) = civil(FIRST_OF_2001 + day * 86_400);
+            assert_eq!(date, format!("\"{month}  1 2001\""));
+            day += length;
+        }
+    }
+
+    /// `SOURCE_DATE_EPOCH` is decimal digits alone up to the last second of
+    /// 9999, as `clang` reads it, and anything else is kept to be refused
+    /// rather than read as now.
+    ///
+    /// Mutations: trim it, let a sign through, or drop the bound; one of the
+    /// refused values is read.
     #[test]
     fn source_date_epoch_is_read_as_seconds_or_refused() {
-        assert_eq!(started_from(Some(" 42 ".to_owned())), Ok(42));
-        assert_eq!(
-            started_from(Some("tomorrow".to_owned())),
-            Err("tomorrow".to_owned())
+        assert_eq!(started_from(Some("42".to_owned())), Ok(42));
+        assert_eq!(started_from(Some(LAST_SECOND.to_string())), Ok(LAST_SECOND));
+        for refused in [" 42", "+5", "", "tomorrow", "253402300800"] {
+            assert_eq!(
+                started_from(Some(refused.to_owned())),
+                Err(refused.to_owned()),
+                "{refused:?}"
+            );
+        }
+    }
+
+    /// A name `__FILE__` writes is a string literal of it, a `\\` and a `"`
+    /// in it escaped.
+    ///
+    /// Mutation: escape either one no more. Its assertion fails.
+    #[test]
+    fn a_file_name_is_quoted_as_a_string_literal() {
+        assert_eq!(quoted("a\\b\"c.h"), "\"a\\\\b\\\"c.h\"");
+    }
+
+    /// `__FILE__` in an included file is its includer's directory joined to
+    /// the name its `#include` wrote, by the host's separator, as `clang`
+    /// writes it; and in a header the header includes, that one's directory
+    /// again. See ADR-0130.
+    ///
+    /// Mutations: write the name as the `#include` wrote it, or join with
+    /// `/` on Windows; an assertion fails on that host.
+    #[test]
+    fn a_file_macro_in_a_header_names_it_as_clang_does() {
+        let directory = std::env::temp_dir().join(format!("safec_presumed_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(directory.join("sub")).unwrap();
+        fs::write(directory.join("main.c"), "#include \"sub/h.h\"\n").unwrap();
+        fs::write(
+            directory.join("sub").join("h.h"),
+            "#include \"g.h\"\nconst char *h = __FILE__;\n",
+        )
+        .unwrap();
+        fs::write(
+            directory.join("sub").join("g.h"),
+            "const char *g = __FILE__;\n",
+        )
+        .unwrap();
+
+        let mut sources = SourceMap::new();
+        let file = sources.load(directory.join("main.c")).unwrap();
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let handed = preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
         );
+        let _ = fs::remove_dir_all(&directory);
+        let strings: Vec<&str> = handed
+            .tokens()
+            .iter()
+            .filter(|token| token.kind == TokenKind::String)
+            .map(|token| sources.snippet(token.span))
+            .collect();
+
+        let separator = if cfg!(windows) { "\\" } else { "/" };
+        let root = directory.display().to_string();
+        let header = format!("{root}{separator}sub/h.h");
+        let nested = format!("{root}{separator}sub{separator}g.h");
+        assert_eq!(strings, [quoted(&nested), quoted(&header)]);
     }
 
     /// A file of function-like calls, one a line, past the bound for one use,

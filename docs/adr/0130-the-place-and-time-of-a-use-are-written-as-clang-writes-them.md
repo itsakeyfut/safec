@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its sentence that an included file's `__FILE__` is its path as the `#include` named it superseded by ADR-0131)"
 date: 2026-11-25
 decision-makers: itsakeyfut
 ---
