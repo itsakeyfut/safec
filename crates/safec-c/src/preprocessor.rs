@@ -4797,6 +4797,27 @@ mod tests {
         assert_eq!(codes, ["SC0113"]);
     }
 
+    /// An expansion's text counts toward the bound for the input with its
+    /// fixed cost, up to the bound itself: one whose text and cost reach it
+    /// exactly is read, and the next is refused, once.
+    ///
+    /// Mutations: count the fixed cost alone, or refuse at the bound rather
+    /// than past it; the first assertion or the second fails.
+    #[test]
+    fn an_expansion_s_text_counts_toward_the_bound_for_the_input() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "x");
+        let mut diagnostics = DiagnosticSink::new();
+        let target = Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple");
+        let mut reading = prelude(target, &[], &mut sources, &mut diagnostics).reading;
+        let token = Token::new(TokenKind::Identifier, Span::new(file, 0, 1));
+
+        let whole = MAX_HELD_IN_ALL - INSTANCE_COST;
+        assert!(admitted(token, "X", whole, &mut reading, &mut diagnostics));
+        assert!(!admitted(token, "X", 0, &mut reading, &mut diagnostics));
+        assert_eq!(diagnostics.diagnostics().len(), 1);
+    }
+
     /// A file of ordinary function-like code, one call a line, two
     /// expansions each, is read well past the count of expansions the
     /// bound for the input used to be, which refused it at line 65,540.
