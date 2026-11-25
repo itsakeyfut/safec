@@ -10302,8 +10302,27 @@ cases! {
         // at the call's name rather than lifting it; the note's caret leaves
         // `OPEN 2)` or `G(1)`.
         a_report_in_a_call_read_past_an_expansion_points_at_its_use: ["--emit", "ast"],
+        // A name read as an argument out of its own macro's expansion, which
+        // the call then reads past and closes, is still not replaced again
+        // (C17 6.10.3.4 p2): `M(h)` is `M(k) + 1` and `OPEN 2)` is
+        // `OPEN + 2`, as `clang -E` writes them, `OPEN` then undeclared.
+        // Mutation: mark nothing while collecting; `M(h)` becomes a comma
+        // expression and `OPEN 2)` a call with no `)`.
+        a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again: ["--emit", "ast"],
+        // An argument begun in an expansion and ended past it would hold
+        // tokens of two files, which an argument read on its own cannot
+        // place: `XSTR` wrote `"ab"` for `a b`, a call in it panicked on a
+        // span ending before it began, and a report's caret ran over
+        // innocent lines. Each is refused. Found by review. Mutation: let
+        // the argument run on; the first is `"ab"` and the second panics.
+        a_call_whose_argument_runs_past_an_expansion_is_refused: ["--emit", "ast"],
+        // The wrong number of arguments for a call read past `G`'s
+        // expansion is reported at the call's whole use, from `G` to its
+        // `)`. Mutation: start the label at the call's name; it is a span
+        // across two files, and panics.
+        a_call_given_the_wrong_number_of_arguments_past_an_expansion_is_reported_at_its_use: ["--emit", "ast"],
         // Arguments that run past the end of an included file into its
-        // includer are refused, as GCC refuses them (Q1). Mutation: read past
+        // includer are refused (Q1). Mutation: read past
         // an inclusion as past an expansion; the call is read.
         a_call_whose_arguments_run_past_an_included_file_are_refused: ["--emit", "ast"],
         // A parameter named twice (C17 6.10.3 p6), one led by a digit, one

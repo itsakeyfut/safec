@@ -1195,10 +1195,11 @@ fn read_includes(
 /// only identifiers (C17 6.4 p1), so `#define int long` and `#define
 /// _Nonnull` are macros. A name is kept where an expansion of it is open,
 /// which is the rule that a macro is not replaced inside its own replacement
-/// (6.10.3.4 p2): a rescan reads only its replacement, since a call whose
-/// `(` lies past it is refused, so the open expansions are exactly the
-/// replacements in progress. Such a name is marked, and kept wherever it is
-/// copied to after, as that rule says. See [`Reading::painted`].
+/// (6.10.3.4 p2): the open expansions are the replacements in progress.
+/// Such a name is marked, and kept wherever it is copied to after, as that
+/// rule says. See [`Reading::painted`]. A call that reads past the end of an
+/// expansion closes it before its arguments are replaced, so `call` marks
+/// what it collects while that expansion is still open.
 ///
 /// Mutation: drop the open-expansion check. `#define X X + 1` expands for
 /// ever, and the bound refuses it.
@@ -1648,9 +1649,12 @@ fn closed(instance: &Instance, reading: &mut Reading) {
 /// its `)`. It is read only past an expansion that handed the parser
 /// nothing, or the call's use would overlap what it handed over; with
 /// `#define G2 2 + F`, `G2(1)` is refused, as it was before any of this was
-/// read. Not past a file: a name ending an included file is no call, as
-/// `clang` reads it, and arguments that run past one are refused, as GCC
-/// refuses them. See #618's second design, Q1 and Q4.
+/// read. Nor where an argument is left half collected: its tokens would be
+/// from two files, which an argument read on its own cannot place, so
+/// `OPEN b)` with `#define OPEN XSTR(a` is refused, where `OPEN 2)` with
+/// `#define OPEN h(1,` is read. Found by review. Not past a file: a name
+/// ending an included file is no call, as `clang` reads it, and arguments
+/// that run past one are refused. See #618's second design, Q1 and Q4.
 fn call(
     frames: &mut Vec<Frame>,
     (token, leading): (Token, bool),
@@ -1724,6 +1728,24 @@ fn call(
             }
             let spaced = spaced(top, at, reading);
             at += 1;
+            // A name whose expansion is open is marked now, while it is:
+            // reading on past the end of that expansion closes it before
+            // the arguments are replaced, and unmarked, `M` in
+            // `#define M(z) z(M,` was replaced again, which C17 6.10.3.4 p2
+            // forbids, and a program `clang` reads otherwise compiled with
+            // nothing said. Found by review.
+            if matches!(
+                argument.kind,
+                TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_)
+            ) && reading
+                .open_macros
+                .get(sources.snippet(argument.span))
+                .is_some_and(|open| *open > 0)
+            {
+                reading
+                    .painted
+                    .insert((argument.span.file(), argument.span.start()));
+            }
             match argument.kind {
                 TokenKind::Punct(Punct::LeftParen) => depth += 1,
                 TokenKind::Punct(Punct::RightParen) if depth == 0 => {
@@ -1755,6 +1777,23 @@ fn call(
             matches!(top.instance, Some(Instance::Expansion { .. })) && top.extent.is_none();
         if close.is_some() || !passes {
             break;
+        }
+        if arguments
+            .last()
+            .is_some_and(|argument| !argument.is_empty())
+        {
+            diagnostics.report(
+                Diagnostic::error(
+                    "a call whose argument runs past the end of an expansion is not read yet",
+                )
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(
+                    "an argument is read where it begins and ends in the same expansion or \
+                     file, as one that begins after the expansion ends is",
+                ),
+            );
+            return Replaced::Dropped;
         }
         start = pop_ended(frames, reading);
         at = frames.last().map_or(0, |frame| frame.cursor);
@@ -1856,7 +1895,7 @@ fn call(
             ))
             .with_code(MALFORMED_MACRO)
             .with_label(Label::primary(
-                Span::new(token.span.file(), token.span.start(), close.span.end()),
+                Span::new(close.span.file(), start.start(), close.span.end()),
                 "called here",
             )),
         );
