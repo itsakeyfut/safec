@@ -76,15 +76,21 @@ list byte for byte, and nothing else of that record.
 
 ### Confirmation
 
-Owed by #1215 and #1216, which name the cases:
-
-* re-expanding a name not replaced: `id(x)` with `#define x x+1` runs to
-  the value `x+1` gives;
-* a call cutting a function-like expansion is refused, and one holding it
-  whole is checked as written out;
-* `SourceMap::written` mapping an argument's offset to the body's: a
-  diagnostic in an argument points at the argument;
-* `G(1)` above is refused.
+* Dropping the mark on a name kept inside its own expansion:
+  `a_function_like_macro_is_replaced_and_rescanned` in `tests/run` runs
+  `id(x)` with `#define x x+1` to `x+1+1`.
+* Answering the use's span for a cut in `SourceMap::join`:
+  `a_function_like_call_that_cuts_its_expansion_is_refused` is checked
+  rather than refused; `a_function_like_call_held_whole_is_checked_as_written`
+  reports what the program written out reports.
+* Placing every offset through an expansion's first piece in
+  `SourceMap::written`: `a_diagnostic_in_an_argument_points_at_the_argument`
+  moves its caret into the body, and
+  `a_span_in_a_call_s_expansion_is_written_where_each_piece_was` in
+  `crates/safec-ir/src/source.rs` fails.
+* Reading a name that ends an expansion as no call where `(` follows it:
+  `a_call_whose_name_came_out_of_an_expansion_is_refused` is `SC0301`.
+* The text `#` and `##` make is owed by #1216.
 
 ### Consequences
 

@@ -10228,8 +10228,8 @@ cases! {
         a_function_like_call_written_wrong_is_refused: ["--emit", "ast"],
         // `#define G F` used as `G(1)`: the call's `(` is past the expansion
         // its name came from, so it has no one use (ADR-0128) and is refused
-        // until #1336. Mutation: answer `Kept` where the frame ends; `G(1)`
-        // is read as a name and an `int` called, as `SC0303`.
+        // until #1336. Mutation: answer `Kept` where the frame ends; `F` is
+        // handed on as a name, and is `SC0301`, undeclared.
         a_call_whose_name_came_out_of_an_expansion_is_refused: ["--emit", "ast"],
         // A parameter named twice (C17 6.10.3 p6), one that is not a name, a
         // list never closed, and `__VA_ARGS__` as a parameter, each refused.
