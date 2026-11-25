@@ -10709,6 +10709,13 @@ cases! {
         // read every escape as `_Pragma` does; that line's report goes.
         // Read on past the refused call; a second report joins it.
         a_line_directive_written_wrong_is_refused: ["--emit", "ast"],
+        // Each line marker `clang` refuses: a flag `2` with no level a `1`
+        // opened, a flag out of range, flags not rising, a name that is no
+        // string literal, `1` and `2` both, a flag that is no number, and a
+        // flag a macro makes `40`, since a marker is macro-replaced as `clang`
+        // replaces it. Mutations: drop the level count, the range, the
+        // order, or the test for `1` and `2` both; that line's report goes.
+        a_line_marker_written_wrong_is_refused: ["--emit", "ast"],
         // A `#line` in a header renumbers that header, and its includer
         // goes on counting its own lines under its own name. Mutation: look
         // up what `#line` said by any file but the use's; `after` is `502`.

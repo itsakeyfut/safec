@@ -1,4 +1,5 @@
-//! `#pragma` and `_Pragma`, `#line`, `#error` and `#warning`: the directives
+//! `#pragma` and `_Pragma`, `#line` and GNU's line markers, `#error` and
+//! `#warning`: the directives
 //! that choose no group and define no macro (C17 6.10.4 to 6.10.6 and
 //! 6.10.9, and C23's `#warning`). Each is read only in a group that is
 //! compiled; in a skipped one a directive is read only as far as its name.
@@ -32,9 +33,16 @@ pub(super) fn read(
     let Some((word, rest)) = name(text) else {
         return false;
     };
-    if !matches!(word, "pragma" | "line" | "error" | "warning") {
+    // GNU's `# 40 "gen.c"`, which `cc -E` writes and `clang` reads.
+    let marker = !word.is_empty() && word.bytes().all(|byte| byte.is_ascii_digit());
+    if !marker && !matches!(word, "pragma" | "line" | "error" | "warning") {
         return false;
     }
+    let what = if marker {
+        "line marker".to_owned()
+    } else {
+        format!("`#{word}`")
+    };
     // A splice joins the line below to this one before any directive is
     // read (C17 5.1.1.2 p1, phase 2), and the lexer read that line on its
     // own, as code: `#pragma GCC diagnostic \` would leave `push` behind.
@@ -44,15 +52,25 @@ pub(super) fn read(
                 text,
                 directive,
                 UNSUPPORTED_SPLICE,
-                &format!("a line splice or a trigraph in a `#{word}` is not read yet"),
+                &format!("a line splice or a trigraph in a {what} is not read yet"),
             )
             .with_note("C can join the line below to this one, and it would be read on its own"),
         );
         return true;
     }
     match word {
+        // The line is the marker's first operand, so it is read from it.
+        _ if marker => line(
+            Form::Marker,
+            (text, directive),
+            (text.len() - rest.len() - word.len()) as u32,
+            sources,
+            reading,
+            diagnostics,
+        ),
         "pragma" => pragma(rest, hash(text, directive), sources, reading, diagnostics),
         "line" => line(
+            Form::Line,
             (text, directive),
             (text.len() - rest.len()) as u32,
             sources,
@@ -330,31 +348,59 @@ fn destringized(literal: &str, escapes: Escapes) -> Option<String> {
 /// The greatest line `#line` may name (C17 6.10.4 p3).
 const LAST_LINE: u64 = 2_147_483_647;
 
-/// `#line N` or `#line N "name"`, the line `text` of the directive at
-/// `directive`, its operands from `after`, macro-replaced first (C17
-/// 6.10.4 p5): the line after it is line `N` to `__LINE__`, and the file
-/// is `name` to `__FILE__`, and to nothing else. A diagnostic points at the
-/// line where it is in the file, the text a reader can open.
+/// Which directive renumbers the lines after it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Form {
+    /// `#line N "name"` (C17 6.10.4).
+    Line,
+    /// GNU's `# N "name" flags`, measured against `clang 22.1.8`: line `0`
+    /// is read, since GCC writes `# 0 "x.c"` at the head of a `.i` and
+    /// `clang` reads it; and after the name, flags `1` to `4`, rising, `1`
+    /// opening a level and `2` closing one, `3` and `4` read and ignored,
+    /// since what they change here is no more than which warnings a header
+    /// gets. See #618's second design, Q3.
+    Marker,
+}
+
+/// `#line N` or `#line N "name"`, or a line marker, as `form` says: the
+/// line `text` of the directive at `directive`, its operands from `after`,
+/// macro-replaced first (C17 6.10.4 p5; `clang` replaces a marker's too):
+/// the line after it is line `N` to `__LINE__`, and the file is `name` to
+/// `__FILE__`, and to nothing else. A diagnostic points at the line where
+/// it is in the file, the text a reader can open.
 fn line(
+    form: Form,
     (text, directive): (&str, Span),
     after: u32,
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
+    let (what, lowest) = match form {
+        Form::Line => ("this `#line`", 1),
+        Form::Marker => ("this line marker", 0),
+    };
     let refuse = |diagnostics: &mut DiagnosticSink, why: String| {
+        let read_as = match form {
+            Form::Line => format!(
+                "`#line` is read as a line from 1 to {LAST_LINE} in decimal digits, and a \
+                 string literal with no prefix after it if it names the file"
+            ),
+            Form::Marker => format!(
+                "a line marker is read as a line from 0 to {LAST_LINE} in decimal digits, a \
+                 string literal with no prefix if it names the file, and after that flags `1` \
+                 to `4`, rising, `1` and `2` not both"
+            ),
+        };
         diagnostics.report(
             refused(
                 text,
                 directive,
                 UNSUPPORTED_DIRECTIVE,
-                "this `#line` is not read",
+                &format!("{what} is not read"),
             )
             .with_note(why)
-            .with_note(format!(
-                "`#line` is read as a line from 1 to {LAST_LINE} in decimal digits, and a \
-                 string literal with no prefix after it if it names the file"
-            )),
+            .with_note(read_as),
         );
     };
 
@@ -367,9 +413,12 @@ fn line(
         return;
     }
 
-    let (number, name) = match tokens.as_slice() {
-        [(number, _)] => (*number, None),
-        [(number, _), (name, _)] => (*number, Some(*name)),
+    let (number, name, flags) = match tokens.as_slice() {
+        [(number, _)] => (*number, None, &[][..]),
+        [(number, _), (name, _)] => (*number, Some(*name), &[][..]),
+        [(number, _), (name, _), flags @ ..] if form == Form::Marker => {
+            (*number, Some(*name), flags)
+        }
         [] => return refuse(diagnostics, "it names no line".to_owned()),
         _ => return refuse(diagnostics, "it goes on past a line and a name".to_owned()),
     };
@@ -380,7 +429,7 @@ fn line(
     let line = digits
         .parse::<u64>()
         .ok()
-        .filter(|line| (1..=LAST_LINE).contains(line));
+        .filter(|line| (lowest..=LAST_LINE).contains(line));
     let Some(line) = line else {
         return refuse(diagnostics, format!("`{digits}` is not such a line"));
     };
@@ -400,6 +449,29 @@ fn line(
             Some(read)
         }
     };
+    let mut read = Vec::with_capacity(flags.len());
+    for (flag, _) in flags {
+        let written = sources.snippet(flag.span);
+        match written.parse::<u8>() {
+            Ok(flag @ 1..=4) if read.last().is_none_or(|last| *last < flag) => read.push(flag),
+            _ => return refuse(diagnostics, format!("`{written}` is not a flag here")),
+        }
+    }
+    if read.contains(&1) && read.contains(&2) {
+        return refuse(diagnostics, "it both opens and closes a level".to_owned());
+    }
+    if read.contains(&2) {
+        let Some(open) = reading.marker_levels.checked_sub(1) else {
+            return refuse(
+                diagnostics,
+                "its flag `2` closes a level no flag `1` opened".to_owned(),
+            );
+        };
+        reading.marker_levels = open;
+    }
+    if read.contains(&1) {
+        reading.marker_levels += 1;
+    }
 
     // Counted from the line after the directive's, which is line `line`.
     let physical = sources.file(directive.file()).line_index(directive.start()) as i64 + 2;

@@ -248,6 +248,10 @@ struct Reading {
     /// Acted on there, one in an argument the body drops took effect, and
     /// one the body uses twice took effect once. Found by review.
     in_arguments: usize,
+    /// How many levels line markers' flag `1` has opened and `2` not yet
+    /// closed, which a `2` with none open is refused for, as `clang`
+    /// refuses it.
+    marker_levels: usize,
 }
 
 /// What a `#line` makes of the lines after it, in the file it is in.
@@ -602,6 +606,7 @@ pub fn prelude(
         once: HashSet::new(),
         renumbered: HashMap::new(),
         in_arguments: 0,
+        marker_levels: 0,
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -1148,8 +1153,8 @@ fn read_includes(
                             // the whole answer.
                             .with_note(
                                 "`#include \"...\"`, `#define` and `#undef`, the conditional \
-                                 directives, `#pragma`, `#line`, `#error` and `#warning` are \
-                                 read",
+                                 directives, `#pragma`, `#line` and line markers, `#error` and \
+                                 `#warning` are read",
                             )
                             .with_note("the line is one token and is not compiled"),
                         ),

@@ -342,6 +342,12 @@ programs! {
     /// or stop collecting where the arguments' frame ends, and this does
     /// not build.
     a_call_read_past_an_expansion_is_what_clang_writes,
+    /// GNU line markers, macro-replaced, renumber `__LINE__` and name
+    /// `__FILE__` as `#line` does, from line `0`, with flags `1` to `4` read
+    /// and ignored and a marker with no name keeping the last (#1346).
+    /// Mutations: refuse line `0`, refuse flags, or leave a marker unread;
+    /// this does not build or a bit fails.
+    line_markers_are_read_as_clang_reads_them,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those
