@@ -212,11 +212,16 @@ programs! {
     /// Function-like macros called and rescanned as C17 6.10.3 says: an
     /// argument over two lines, a call inside an argument, a parenthesised
     /// comma, a call of no arguments, an argument set off from the body's
-    /// `-`, a name with no `(` left alone, and `id(x)` with `#define x x+1`
-    /// read as `x+1` (#1215). Mutations: put back the refusal of a
+    /// `-`, a name with no `(` left alone, `id(x)` with `#define x x+1`
+    /// read as `x+1`, a call inside its own argument, an empty body, and a
+    /// keyword for a parameter (#1215). Mutations: put back the refusal of a
     /// function-like `#define`, and this does not build; drop the mark on a
-    /// name kept inside its own expansion, and `id(x)` is `x+1+1`; set no
-    /// argument off from the body, and `NEG(-1)` is `--1`.
+    /// name kept inside its own expansion, or leave it behind when the name
+    /// is copied into a call, and `id(x)` is `x+1+1`; set no argument off
+    /// from the body, and `NEG(-1)` is `--1`; write an argument in without
+    /// replacing it first, and `WRAP(WRAP(3))` meets `WRAP` open; give an
+    /// empty body no piece, and it panics; find only identifiers among the
+    /// uses of a parameter, and `K`'s `int` is not replaced.
     a_function_like_macro_is_replaced_and_rescanned,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its

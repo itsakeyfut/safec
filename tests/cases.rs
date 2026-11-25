@@ -10220,7 +10220,8 @@ cases! {
         // written, through the piece of the expansion it was copied from,
         // and noted at the call (ADR-0128). Mutation: place every offset of
         // an expansion through its first piece in `SourceMap::written`; the
-        // caret moves into `CALL`'s body.
+        // caret moves into `CALL`'s body. Make each of an argument's tokens a
+        // piece of its own; the caret covers `free` alone.
         a_diagnostic_in_an_argument_points_at_the_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Too few arguments, too many, a directive among them, and none
         // closed (C17 6.10.3 p4, p11), each refused. Mutation: drop the

@@ -5,6 +5,10 @@ int x = 1;
 #define FIRST(a, b) a
 #define NONE() 7
 #define NEG(v) -v
+#define WRAP(x) INNER(x)
+#define INNER(x) x
+#define DROP(x)
+#define K(int) (int + 1)
 
 int main(void) {
     int fails = 0;
@@ -20,5 +24,8 @@ int main(void) {
     if (id(x) != 2) fails |= 128;
     int SQ = 1;
     if (SQ != 1) fails |= 256;
+    if (WRAP(WRAP(3)) != 3) fails |= 512;
+    DROP(fails |= 1024;)
+    if (K(2) != 3) fails |= 2048;
     return fails;
 }
