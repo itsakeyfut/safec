@@ -10163,11 +10163,12 @@ cases! {
         // Mutation: read `...` as a parameter. The report goes.
         a_variadic_macro_is_not_read_yet: ["--emit", "ast"],
         // `#` with no parameter after it in a function-like macro, `##`
-        // first or last, and a join that makes `+-`, each refused as
+        // first or last, and a join that makes `+-` or `@@`, each refused as
         // `SC0119` (C17 6.10.3.2 p1, 6.10.3.3 p1, p3); in an object-like
         // macro `#` is a token like any other. Mutations: drop the test that
         // a `#` is followed by a parameter, or that a `##` has something on
-        // each side, or that a join is one token; a report goes.
+        // each side, or that a join is one token, or that it is not a run of
+        // characters no token begins; a report goes or changes.
         a_hash_or_paste_written_wrong_is_refused: ["--emit", "ast"],
         // `f ## ree(p)` makes `free`, and the double free is reported there,
         // the text a join made copied from its `##` in the `#define`

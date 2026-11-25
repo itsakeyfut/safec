@@ -242,7 +242,10 @@ programs! {
     /// back the refusal of `#` and `##`, and this does not build; replace an
     /// operand of `#`, and `str(N)` is `"3"`; drop the escaping, and the
     /// `"x\n"` line does not build; join with a space between, and
-    /// `C(x, y)` is two names.
+    /// `C(x, y)` is two names; replace an argument only stringized, and
+    /// `S(ONE(1, 2))` is refused for its count; scan a list that begins
+    /// with `#` as a file, and `S`'s `#x` is a directive; ignore an
+    /// object-like macro's joins, and `AB` hands `##` to the parser.
     stringizing_and_pasting_make_what_c_says,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its

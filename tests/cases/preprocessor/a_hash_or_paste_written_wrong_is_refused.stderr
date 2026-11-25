@@ -34,3 +34,11 @@ error[SC0119]: `##` makes `+-`, which is not one token
    │         ╰── expanded here
 ───╯
   = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined
+error[SC0119]: `##` makes `@@`, which is not one token
+   ╭─[ a_hash_or_paste_written_wrong_is_refused.c:8:9 ]
+   │
+ 8 │ int w = P(@, @);
+   │         ┬  
+   │         ╰── expanded here
+───╯
+  = note: C17 6.10.3.3 p3 leaves a join that makes no one token undefined

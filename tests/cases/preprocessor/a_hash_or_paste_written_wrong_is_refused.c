@@ -5,4 +5,5 @@
 #define P(a, b) a ## b
 #define HASH_OBJ # a
 int v = P(+, -);
+int w = P(@, @);
 int main(void) { return 0; }

@@ -6,6 +6,7 @@
 #define AB a ## b
 #define HASH_PASTE(a, b) #a ## b
 #define THREE(a, b, c) a ## b ## c
+#define ONE(a) a
 
 int streq(const char *a, const char *b) {
     while (*a && *a == *b) {
@@ -32,5 +33,6 @@ int main(void) {
     if (AB != 7) fails |= 2048;
     if (!streq(HASH_PASTE(q, ), "q")) fails |= 4096;
     if (THREE(x, y, z) != 8) fails |= 8192;
+    if (!streq(S(ONE(1, 2)), "ONE(1, 2)")) fails |= 16384;
     return fails != 0;
 }
