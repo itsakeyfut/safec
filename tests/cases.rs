@@ -149,9 +149,8 @@ cases! {
         // and a pointer read and stored through another pointer is still
         // doubted. Mutations: read no place of a `VaArg` in `reads.rs`'s
         // dereference or value walks, in `liveness.rs`, or in
-        // `assigned.rs`; carry `Why::Variadic` through no address in
-        // `known.rs`; each loses one of `after_free`, `through_null`,
-        // `uninitialised_pointer` and `via_address`'s reports.
+        // `assigned.rs`; each loses one of `after_free`, `through_null` and
+        // `uninitialised_pointer`'s reports.
         a_pointer_va_arg_reads_is_doubted_wherever_it_is_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A list is assigned by `__builtin_va_start` or `__builtin_va_copy`
         // into it, and read by `__builtin_va_arg`, `__builtin_va_end` and

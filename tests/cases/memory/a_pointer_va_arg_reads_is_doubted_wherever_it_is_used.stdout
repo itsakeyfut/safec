@@ -312,41 +312,36 @@ Function a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:57:5 "via_addre
   Local "_0" "int" return
   Local "_1" "int" parameter "n"
   Local "_2" "unsigned long long[1]" "a"
-  Local "_3" "unsigned long long (*)[1]"
-  Local "_4" "int *" "p"
-  Local "_5" "int **" "pp"
-  Local "_6" "int **"
+  Local "_3" "int *" "p"
+  Local "_4" "int **" "pp"
+  Local "_5" "int **"
+  Local "_6" "unsigned long long (*)[1]"
   Local "_7" "int *"
   Local "_8" "unsigned long long (*)[1]"
   Block "bb0" entry
-    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:59:5 generated
-      Destination "_3"
+    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:60:16 written
+      Destination "_5"
       Address
-        Place "_2"
-    Call a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:59:5 written "VaStart" "bb1"
-      Copy "_3"
-  Block "bb1"
-    Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:59:5 generated
-    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:60:10 written
+        Place "_3"
+    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:60:11 written
       Destination "_4"
       Use
-        Constant 0
-    Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:60:14 generated
-    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:16 written
+        Copy "_5"
+    Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:60:16 generated
+    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:5 generated
       Destination "_6"
       Address
-        Place "_4"
-    Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:11 written
-      Destination "_5"
-      Use
-        Copy "_6"
-    Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:16 generated
+        Place "_2"
+    Call a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:5 written "VaStart" "bb1"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:61:5 generated
     Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:62:11 written
       Destination "_7"
       VaArg
         Place "_2"
     Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:62:5 written
-      Destination "_5"
+      Destination "_4"
         Deref
       Use
         Copy "_7"
@@ -362,7 +357,7 @@ Function a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:57:5 "via_addre
     Operation a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:64:5 written
       Destination "_0"
       Use
-        Copy "_4"
+        Copy "_3"
           Deref
     Sequenced a_pointer_va_arg_reads_is_doubted_wherever_it_is_used.c:64:12 generated
     Return

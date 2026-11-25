@@ -56,9 +56,9 @@ int uninitialised_pointer(int n, ...) {
 
 int via_address(int n, ...) {
     __builtin_va_list a;
-    __builtin_va_start(a, n);
-    int *p = 0;
+    int *p;
     int **pp = &p;
+    __builtin_va_start(a, n);
     *pp = __builtin_va_arg(a, int *);
     __builtin_va_end(a);
     return *p;
