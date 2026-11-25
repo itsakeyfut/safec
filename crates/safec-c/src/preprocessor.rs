@@ -4816,8 +4816,8 @@ mod tests {
     /// one that takes what is held to the bound exactly is read, and the
     /// next is refused, once.
     ///
-    /// Mutations: count the fixed cost alone, weigh a byte as one, or refuse
-    /// at the bound rather than past it; an assertion fails.
+    /// Mutations: count the fixed cost alone, or refuse at the bound rather
+    /// than past it; an assertion fails.
     #[test]
     fn an_expansion_s_text_counts_toward_the_bound_for_the_input() {
         let mut sources = SourceMap::new();
@@ -4835,18 +4835,19 @@ mod tests {
     }
 
     /// Each kind of expansion counts its own text toward the bound for the
-    /// input: an object-like list as written, one whose `##` joins were
-    /// made, and a call's. Each list is a mebibyte of white space, sixteen
-    /// uses past the bound by their text and nowhere near it by their fixed
-    /// cost, and quick to scan.
+    /// input, a byte at what a dense list was measured to cost: an
+    /// object-like list as written, one whose `##` joins were made, and a
+    /// call's. Each list is a mebibyte of white space, quick to scan, and
+    /// sixteen uses of it pass the bound, 256 MiB over 17 MiB a use, by their
+    /// text and nowhere near it by their fixed cost.
     ///
     /// Mutations: pass no length from `expansion`'s plain list, from its
-    /// list with `##`, or from `call`; that input reads every use and
-    /// reports nothing.
+    /// list with `##`, or from `call`, or weigh a byte as one; that input,
+    /// or every one, reads every use and reports nothing.
     #[test]
     fn every_kind_of_expansion_counts_its_text_toward_the_bound_for_the_input() {
         let spaces = " ".repeat(1 << 20);
-        let uses = MAX_HELD_IN_ALL / (BYTE_COST << 20) + 2;
+        let uses = 16;
         for (definition, used) in [
             (format!("#define A a{spaces}a\n"), "A"),
             (format!("#define A a ## b{spaces}a\n"), "A"),
