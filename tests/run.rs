@@ -257,9 +257,9 @@ programs! {
     /// `M(-, -)` being `v - --w`. Mutations: read every space of the text
     /// as white space, and `XS(VERSION)` is `"1 . 2"`; replace an operand of
     /// `##`, and `C(N, 1)` is `31`; drop an operand's tokens after the
-    /// first, or write them touching; leave a piece where a join made
-    /// nothing, and it panics; write a join touching the list, and `M` is
-    /// `v---w`.
+    /// first, or write them touching, and `C(unsigned u, v = 3;)` declares one name;
+    /// leave a piece where a join made nothing, and `CX(,)` panics; write a
+    /// join touching the list, and `M` is `v---w`.
     stringizing_and_pasting_make_what_c_says,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its

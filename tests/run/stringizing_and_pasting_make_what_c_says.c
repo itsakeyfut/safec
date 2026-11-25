@@ -14,6 +14,7 @@
 #define INCFILE(n) vers ## n
 #define ID(x) x
 #define M(a, b) v-a##b w
+#define CX(a, b) a ## b 1
 
 int streq(const char *a, const char *b) {
     while (*a && *a == *b) {
@@ -52,5 +53,8 @@ int main(void) {
     if (C(1 + 1, 0 + 2) != 13) fails |= 1 << 22;
     if ((1 C(,)) != 1) fails |= 1 << 23;
     if (M(-, -) != 3) fails |= 1 << 24;
+    C(unsigned u, v = 3;)
+    if (uv != 3) fails |= 1 << 25;
+    if (CX(,) != 1) fails |= 1 << 26;
     return fails != 0;
 }
