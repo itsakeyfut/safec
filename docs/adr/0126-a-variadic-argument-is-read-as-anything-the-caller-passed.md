@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "accepted (its driver that LLVM's `va_arg` is right off `aarch64-unknown-linux-gnu` superseded by ADR-0127)"
 date: 2026-11-24
 decision-makers: itsakeyfut
 ---
@@ -59,12 +59,17 @@ names as the builtins.
 
 ### Confirmation
 
-To be written as #1214 lands, naming a corpus case for each:
+Each mutation names the case in `tests/cases` that fails under it:
 
-* `Why::Variadic` read as `FromCaller`, a dereference of a pointer read with
-  `va_arg` goes silent;
-* the target refusal skipped, the backend case for
-  `aarch64-unknown-linux-gnu` builds.
+* `Why::Variadic` read as `from_caller` in `parts.rs`, or a pointer
+  `va_arg` read named nothing in `transfer.rs`:
+  `a_pointer_va_arg_reads_is_doubted_wherever_it_is_used`'s `dereferenced`
+  goes silent;
+* the target refusal skipped:
+  `a_variadic_argument_is_not_read_on_aarch64_linux_yet` builds.
+
+`Rvalue::VaArg`, `Called::Intrinsic` and `Why::Variadic` are each
+`error[E0004]` at every reader.
 
 ### Consequences
 
