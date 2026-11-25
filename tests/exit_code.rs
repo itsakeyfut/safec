@@ -47,6 +47,30 @@ fn a_compilation_that_failed_exits_one() {
     assert!(report.contains("cannot read"), "{report}");
 }
 
+/// A `SOURCE_DATE_EPOCH` that is not a number of seconds fails the build,
+/// used or not, as `clang` fails it (ADR-0130).
+///
+/// Mutation: report it nowhere. This exits zero.
+#[test]
+fn an_invalid_source_date_epoch_fails_the_build() {
+    let directory = std::env::temp_dir().join(format!("safec_epoch_{}", std::process::id()));
+    std::fs::create_dir_all(&directory).expect("the temporary directory is writable");
+    let path = directory.join("plain.c");
+    std::fs::write(&path, "int x;\n").expect("the temporary directory is writable");
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .env("SOURCE_DATE_EPOCH", "tomorrow")
+        .args(["--color", "never", "--emit", "ast", "-o"])
+        .arg(directory.join("plain.ast"))
+        .arg(&path)
+        .output()
+        .expect("the compiler binary was built for this test");
+    let _ = std::fs::remove_dir_all(&directory);
+
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    let report = String::from_utf8(output.stderr).expect("the report is text");
+    assert!(report.contains("SOURCE_DATE_EPOCH"), "{report}");
+}
+
 /// The other half: a compilation that worked exits zero and says nothing.
 ///
 /// Until `--emit executable` linked something there was no run that compiled
