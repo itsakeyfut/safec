@@ -315,8 +315,10 @@ programs! {
     an_if_chooses_by_its_constant_expression,
     /// `__DATE__` and `__TIME__` under `SOURCE_DATE_EPOCH=0`, `__LINE__`
     /// written in an argument, in a list called over three lines, in an
-    /// object-like list, in an argument's macro, and through a macro whose
-    /// list calls another, and `__FILE__` (#1219, ADR-0130). Mutations: put
+    /// object-like list, in an argument's macro, through a macro whose list
+    /// calls another, and copied by `##` from an argument of a call over
+    /// three lines, which is the line of its `)`, and `__FILE__` (#1219,
+    /// ADR-0130). Mutations: put
     /// back the refusal of a dynamic macro, and this does not build; take the
     /// clock where `SOURCE_DATE_EPOCH` is set, and `__DATE__` is not 1970;
     /// take the line of a call's name, or of an argument's call, rather than

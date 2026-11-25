@@ -1349,23 +1349,14 @@ fn dynamic(
 }
 
 /// Where `span`, a token's, is used, as `__LINE__` and `__FILE__` say it
-/// (measured with `clang 22.1.8 -E`): a token of a replacement list where
-/// the outermost use of its macro ends, the `)` of a call over two lines;
-/// one copied from an argument where the argument was written.
+/// (measured with `clang 22.1.8 -E`): a token of an expansion where the
+/// outermost use of its macro ends, the `)` of a call over two lines, even
+/// one a `##` copied from an argument. One written in an argument is
+/// replaced where it was written, before any expansion holds it, and so is
+/// its own place.
 fn used_at(mut span: Span, sources: &SourceMap) -> Span {
-    while let FileName::Expansion { pieces, at } = sources.file(span.file()).name() {
-        let index = pieces.partition_point(|piece| piece.offset <= span.start()) - 1;
-        let from = pieces[index].from;
-        // Copied from an argument: written inside the call's parentheses.
-        let argument = from.file() == at.file()
-            && at.start() <= from.start()
-            && from.end() <= at.end()
-            && from != *at;
-        span = if argument {
-            from
-        } else {
-            Span::new(at.file(), at.end(), at.end())
-        };
+    while let FileName::Expansion { at, .. } = sources.file(span.file()).name() {
+        span = Span::new(at.file(), at.end(), at.end());
     }
     span
 }

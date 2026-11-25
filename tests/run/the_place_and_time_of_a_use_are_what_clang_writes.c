@@ -4,6 +4,7 @@
 #define G(x) (x * 0 + __LINE__)
 #define L __LINE__
 #define H G(1)
+#define P(a, b) a ## b
 
 int streq(const char *a, const char *b) {
     while (*a && *a == *b) {
@@ -29,15 +30,18 @@ int main(void) {
     if (!streq(__TIME__, "00:00:00")) fails |= 2;
     if (F(
 __LINE__
-) != 31) fails |= 4;
+) != 32) fails |= 4;
     if (G(
 1
-) != 35) fails |= 8;
-    if (L != 36) fails |= 16;
+) != 36) fails |= 8;
+    if (L != 37) fails |= 16;
     if (F(L
-) != 37) fails |= 32;
-    if (H != 39) fails |= 64;
-    if (__LINE__ != 40) fails |= 128;
+) != 38) fails |= 32;
+    if (H != 40) fails |= 64;
+    if (__LINE__ != 41) fails |= 128;
     if (!ends_with(__FILE__, "program.c")) fails |= 256;
+    if (P(,
+__LINE__
+) != 45) fails |= 512;
     return fails;
 }
