@@ -1195,15 +1195,16 @@ fn read_includes(
 /// only identifiers (C17 6.4 p1), so `#define int long` and `#define
 /// _Nonnull` are macros. A name is kept where an expansion of it is open,
 /// which is the rule that a macro is not replaced inside its own replacement
-/// (6.10.3.4 p2): a rescan reads only its replacement, since a call whose
-/// `(` lies past it is refused, so the open expansions are exactly the
-/// replacements in progress. Such a name is marked, and kept wherever it is
-/// copied to after, as that rule says. See [`Reading::painted`].
+/// (6.10.3.4 p2): the open expansions are the replacements in progress.
+/// Such a name is marked, and kept wherever it is copied to after, as that
+/// rule says. See [`Reading::painted`]. A call that reads past the end of an
+/// expansion closes it before its arguments are replaced, so `call` marks
+/// what it collects while that expansion is still open.
 ///
 /// Mutation: drop the open-expansion check. `#define X X + 1` expands for
 /// ever, and the bound refuses it.
 fn replacement(
-    frames: &mut [Frame],
+    frames: &mut Vec<Frame>,
     token: Token,
     sources: &mut SourceMap,
     reading: &mut Reading,
@@ -1605,6 +1606,19 @@ fn instance(
     }
 }
 
+/// Pop the innermost of `frames`, an expansion with no token left that
+/// handed the parser nothing, as its ending would, and give back where it
+/// was used, which is what a call read past it lifts its use to. Having
+/// handed nothing, it has no extent to record or to hand below.
+fn pop_ended(frames: &mut Vec<Frame>, reading: &mut Reading) -> Span {
+    let frame = frames.pop().expect("a frame to read past");
+    let instance = frame
+        .instance
+        .expect("only an expansion is read past, and an expansion has an instance");
+    closed(&instance, reading);
+    instance.used()
+}
+
 /// Close what `instance` opened, now that its frame has ended.
 fn closed(instance: &Instance, reading: &mut Reading) {
     match instance {
@@ -1627,8 +1641,22 @@ fn closed(instance: &Instance, reading: &mut Reading) {
 ///
 /// `Kept` where no `(` follows the name, since a name with none is not a
 /// call (6.10.3 p10).
+///
+/// C reads on past the end of an expansion for the `(` (6.10.3.4 p1), and
+/// for the `)`: with `#define G F`, `G(1)` calls `F`, and with
+/// `#define OPEN h(1,`, `OPEN 2)` calls `h`. Each expansion read past is
+/// closed, and the call is used from where the outermost of them was used to
+/// its `)`. It is read only past an expansion that handed the parser
+/// nothing, or the call's use would overlap what it handed over; with
+/// `#define G2 2 + F`, `G2(1)` is refused, as it was before any of this was
+/// read. Nor where an argument is left half collected: its tokens would be
+/// from two files, which an argument read on its own cannot place, so
+/// `OPEN b)` with `#define OPEN XSTR(a` is refused, where `OPEN 2)` with
+/// `#define OPEN h(1,` is read. Found by review. Not past a file: a name
+/// ending an included file is no call, as `clang` reads it, and arguments
+/// that run past one are refused. See #618's second design, Q1 and Q4.
 fn call(
-    frames: &mut [Frame],
+    frames: &mut Vec<Frame>,
     (token, leading): (Token, bool),
     (parameters, edits): (Parameters, Vec<Edit>),
     sources: &mut SourceMap,
@@ -1636,9 +1664,6 @@ fn call(
     diagnostics: &mut DiagnosticSink,
 ) -> Replaced {
     let name = sources.snippet(token.span).to_owned();
-    let Some((top, below)) = frames.split_last_mut() else {
-        return Replaced::Kept;
-    };
     let next = |frame: &Frame| {
         frame
             .tokens
@@ -1647,79 +1672,139 @@ fn call(
             .filter(|next| !next.is_eof())
     };
     let opens = |token: Token| token.kind == TokenKind::Punct(Punct::LeftParen);
-    match next(top) {
-        Some(after) if opens(after) => {}
-        Some(_) => return Replaced::Kept,
-        None => {
-            // The name ends the file it is read from, and C reads on into
-            // what that file was used in for its `(`. A call so spread over
-            // two files has no one span for its use (ADR-0128), so it is
-            // refused; read as no call it would compile something else.
-            let after = below.iter().rev().find_map(next);
-            if after.is_some_and(opens) {
-                diagnostics.report(
-                    Diagnostic::error(
-                        "a call whose name ends an expansion or a file is not read yet",
-                    )
-                    .with_code(UNSUPPORTED_DIRECTIVE)
-                    .with_label(Label::primary(token.span, "its name is here"))
-                    .with_note(format!(
-                        "the `(` after `{name}` is outside what its name was read from"
-                    )),
+    let refused = |diagnostics: &mut DiagnosticSink, message: &str, note: String| {
+        diagnostics.report(
+            Diagnostic::error(message)
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(token.span, "its name is here"))
+                .with_note(note),
+        );
+        Replaced::Dropped
+    };
+
+    // The `(`: in the frame the name was read from, or in the nearest below
+    // it with a token left, every frame between having none.
+    let Some(holding) = frames.iter().rposition(|frame| next(frame).is_some()) else {
+        return Replaced::Kept;
+    };
+    if !next(&frames[holding]).is_some_and(opens) {
+        return Replaced::Kept;
+    }
+    for frame in &frames[holding + 1..] {
+        match &frame.instance {
+            Some(Instance::Expansion { .. }) if frame.extent.is_none() => {}
+            Some(Instance::Expansion { .. }) => {
+                return refused(
+                    diagnostics,
+                    "a call whose name ends an expansion that handed code over before it is \
+                     not read yet",
+                    format!("the `(` after `{name}` is outside what its name was read from"),
                 );
-                return Replaced::Dropped;
             }
-            return Replaced::Kept;
+            // A file, or an argument, which is replaced on its own.
+            _ => return Replaced::Kept,
         }
+    }
+    // Where the call's use starts, in the frame being read: the name, or
+    // where an expansion it ended was used.
+    let mut start = token.span;
+    while frames.len() > holding + 1 {
+        start = pop_ended(frames, reading);
     }
 
     // Collected to the `)` that closes the call, split at each comma outside
-    // any parentheses (6.10.3 p11).
+    // any parentheses (6.10.3 p11), reading on past an expansion that runs
+    // out first, as for the `(`.
     // Each token with whether C has white space before it, which `#` reads.
     let mut arguments: Vec<Vec<(Token, bool)>> = vec![Vec::new()];
     let mut depth = 0_usize;
     let mut close = None;
     let mut directive = None;
-    let mut at = top.cursor + 1;
-    while let Some(&argument) = top.tokens.get(at) {
-        if argument.is_eof() {
-            break;
-        }
-        let spaced = spaced(top, at, reading);
-        at += 1;
-        match argument.kind {
-            TokenKind::Punct(Punct::LeftParen) => depth += 1,
-            TokenKind::Punct(Punct::RightParen) if depth == 0 => {
-                close = Some(argument);
+    let mut at = frames.last().map_or(0, |frame| frame.cursor) + 1;
+    while let Some(top) = frames.last_mut() {
+        while let Some(&argument) = top.tokens.get(at) {
+            if argument.is_eof() {
                 break;
             }
-            TokenKind::Punct(Punct::RightParen) => depth -= 1,
-            // A variadic macro's arguments past its named parameters are
-            // one, the commas between them in it (C17 6.10.3.1 p2).
-            TokenKind::Punct(Punct::Comma)
-                if depth == 0
-                    && !(parameters.variadic() && arguments.len() == parameters.names.len()) =>
+            let spaced = spaced(top, at, reading);
+            at += 1;
+            // A name whose expansion is open is marked now, while it is:
+            // reading on past the end of that expansion closes it before
+            // the arguments are replaced, and unmarked, `M` in
+            // `#define M(z) z(M,` was replaced again, which C17 6.10.3.4 p2
+            // forbids, and a program `clang` reads otherwise compiled with
+            // nothing said. Found by review.
+            if matches!(
+                argument.kind,
+                TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_)
+            ) && reading
+                .open_macros
+                .get(sources.snippet(argument.span))
+                .is_some_and(|open| *open > 0)
             {
-                arguments.push(Vec::new());
-                continue;
+                reading
+                    .painted
+                    .insert((argument.span.file(), argument.span.start()));
             }
-            TokenKind::Directive => {
-                directive.get_or_insert(argument);
+            match argument.kind {
+                TokenKind::Punct(Punct::LeftParen) => depth += 1,
+                TokenKind::Punct(Punct::RightParen) if depth == 0 => {
+                    close = Some(argument);
+                    break;
+                }
+                TokenKind::Punct(Punct::RightParen) => depth -= 1,
+                // A variadic macro's arguments past its named parameters
+                // are one, the commas between them in it (C17 6.10.3.1 p2).
+                TokenKind::Punct(Punct::Comma)
+                    if depth == 0
+                        && !(parameters.variadic()
+                            && arguments.len() == parameters.names.len()) =>
+                {
+                    arguments.push(Vec::new());
+                    continue;
+                }
+                TokenKind::Directive => {
+                    directive.get_or_insert(argument);
+                }
+                _ => {}
             }
-            _ => {}
+            if let Some(last) = arguments.last_mut() {
+                last.push((argument, spaced));
+            }
         }
-        if let Some(last) = arguments.last_mut() {
-            last.push((argument, spaced));
+        top.cursor = at;
+        let passes =
+            matches!(top.instance, Some(Instance::Expansion { .. })) && top.extent.is_none();
+        if close.is_some() || !passes {
+            break;
         }
+        if arguments
+            .last()
+            .is_some_and(|argument| !argument.is_empty())
+        {
+            diagnostics.report(
+                Diagnostic::error(
+                    "a call whose argument runs past the end of an expansion is not read yet",
+                )
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(
+                    "an argument is read where it begins and ends in the same expansion or \
+                     file, as one that begins after the expansion ends is",
+                ),
+            );
+            return Replaced::Dropped;
+        }
+        start = pop_ended(frames, reading);
+        at = frames.last().map_or(0, |frame| frame.cursor);
     }
-    top.cursor = at;
 
     let Some(close) = close else {
-        // Ending an expansion or an included file, C reads on past it for
-        // the `)` (C17 6.10.3.4 p1), and the call then has no one span for
-        // its use, as one whose `(` lies past it has none. Only the input
-        // ending is a call that is never closed.
-        let report = if top.instance.is_some() {
+        // Ending an included file, or an expansion that handed code over
+        // before the call, C reads on past it for the `)` (C17 6.10.3.4 p1)
+        // and this does not; see above. Only the input ending, or the
+        // argument being replaced, is a call that is never closed.
+        let report = if frames.last().is_some_and(|top| top.instance.is_some()) {
             Diagnostic::error(
                 "a call whose arguments run past an expansion or a file is not read yet",
             )
@@ -1810,7 +1895,7 @@ fn call(
             ))
             .with_code(MALFORMED_MACRO)
             .with_label(Label::primary(
-                Span::new(token.span.file(), token.span.start(), close.span.end()),
+                Span::new(close.span.file(), start.start(), close.span.end()),
                 "called here",
             )),
         );
@@ -1876,7 +1961,7 @@ fn call(
     {
         return Replaced::Dropped;
     }
-    let at = Span::new(token.span.file(), token.span.start(), close.span.end());
+    let at = Span::new(close.span.file(), start.start(), close.span.end());
     let file = sources.substitute(written.text, written.pieces, at);
     reading
         .painted
@@ -2380,6 +2465,7 @@ fn replaced(
             if let Some(Frame {
                 instance: Some(instance),
                 leading,
+                extent,
                 ..
             }) = frames.pop()
             {
@@ -2387,29 +2473,40 @@ fn replaced(
                 if begun.pop() == Some(handed.len()) {
                     carried |= leading;
                 }
+                // Each frame's extent kept as `read_includes` keeps it, so
+                // a call here asks as it does there whether an expansion it
+                // reads past handed anything over.
+                if extent.is_some() {
+                    emitted(&mut frames, instance.used());
+                }
             }
             continue;
         };
         let spaced = frames
             .last()
             .is_some_and(|frame| spaced(frame, frame.cursor - 1, reading));
-        let mut hand = |token: Token, spaced: bool| {
+        let mut hand = |frames: &mut Vec<Frame>, token: Token, spaced: bool| {
             handed.push((token, spaced || carried));
             carried = false;
+            emitted(frames, token.span);
         };
         match token.kind {
             TokenKind::Eof => {}
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
-                match replacement(&mut frames, token, sources, reading, diagnostics) {
+                let replaced = replacement(&mut frames, token, sources, reading, diagnostics);
+                // A call closes each expansion it reads past, which handed
+                // nothing over, so what each began with goes with it.
+                begun.truncate(frames.len() - 1);
+                match replaced {
                     Replaced::Frame(frame) => {
                         begun.push(handed.len());
                         frames.push(frame);
                     }
-                    Replaced::Kept => hand(token, spaced),
+                    Replaced::Kept => hand(&mut frames, token, spaced),
                     Replaced::Dropped => {}
                 }
             }
-            _ => hand(token, spaced),
+            _ => hand(&mut frames, token, spaced),
         }
     }
     reading.arguments -= 1;
@@ -4650,6 +4747,49 @@ mod tests {
     #[test]
     fn a_file_name_is_quoted_as_a_string_literal() {
         assert_eq!(quoted("a\\b\"c.h"), "\"a\\\\b\\\"c.h\"");
+    }
+
+    /// A function-like name that ends an included file is no call, though
+    /// its includer goes on with `(`: it is handed on as a name, as `clang`
+    /// hands it on, and nothing is reported. Only past an expansion does a
+    /// call read on for its `(`; see `call`.
+    ///
+    /// Mutation: read past an inclusion as past an expansion; `F` is called
+    /// and the name is gone.
+    #[test]
+    fn a_name_ending_an_included_file_is_no_call() {
+        let directory = std::env::temp_dir().join(format!("safec_no_call_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(
+            directory.join("main.c"),
+            "#define F(x) x\n#include \"h.h\"\n(1)\n",
+        )
+        .unwrap();
+        fs::write(directory.join("h.h"), "F\n").unwrap();
+
+        let mut sources = SourceMap::new();
+        let file = sources.load(directory.join("main.c")).unwrap();
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
+        let handed = preprocess(
+            file,
+            &tokens,
+            Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
+            &[],
+            &mut sources,
+            &mut diagnostics,
+        );
+        let _ = fs::remove_dir_all(&directory);
+        let spelled: Vec<&str> = handed
+            .tokens()
+            .iter()
+            .filter(|token| !token.is_eof())
+            .map(|token| sources.snippet(token.span))
+            .collect();
+
+        assert!(diagnostics.diagnostics().is_empty());
+        assert_eq!(spelled, ["F", "(", "1", ")"]);
     }
 
     /// `__FILE__` in an included file is its includer's directory joined to

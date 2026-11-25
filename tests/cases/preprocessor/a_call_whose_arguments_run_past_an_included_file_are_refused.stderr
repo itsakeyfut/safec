@@ -1,0 +1,8 @@
+error[SC0104]: a call whose arguments run past an expansion or a file is not read yet
+   ╭─[ a_call_whose_arguments_run_past_an_included_file_are_refused.h:2:9 ]
+   │
+ 2 │ int b = F(1,
+   │         ┬  
+   │         ╰── called here
+───╯
+  = note: the `)` of `F` is outside what its name was read from

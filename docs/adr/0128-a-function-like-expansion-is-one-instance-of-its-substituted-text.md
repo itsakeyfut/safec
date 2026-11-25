@@ -89,7 +89,7 @@ list byte for byte, and nothing else of that record.
   `a_span_in_a_call_s_expansion_is_written_where_each_piece_was` in
   `crates/safec-ir/src/source.rs` fails.
 * Reading a name that ends an expansion as no call where `(` follows it:
-  `a_call_whose_name_came_out_of_an_expansion_is_refused` is `SC0301`.
+  `a_call_whose_name_comes_out_of_an_alias_is_read` is `SC0301`.
 * Copying the text `#` and `##` make from the whole run they stand for
   rather than from the operator:
   `a_report_in_pasted_text_points_at_the_paste` widens its caret.

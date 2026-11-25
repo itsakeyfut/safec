@@ -333,6 +333,14 @@ programs! {
     /// as an error, and this does not build; leave `#line` unread, or
     /// count from its own line, and a bit fails.
     pragmas_and_line_are_read_as_c_says,
+    /// A call whose `(` lies past the expansion its name came out of,
+    /// through one alias and two, inside an argument and as one, past an
+    /// expansion that handed nothing over; and one whose `)` lies past the
+    /// expansion its arguments began in, C17 6.10.3.5 EXAMPLE 3's `h 5)`
+    /// shape (#1336). Mutations: answer `Kept` where the name's frame ends,
+    /// or stop collecting where the arguments' frame ends, and this does
+    /// not build.
+    a_call_read_past_an_expansion_is_what_clang_writes,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

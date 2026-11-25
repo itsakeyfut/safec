@@ -1,0 +1,8 @@
+Function a_call_whose_name_comes_out_of_an_alias_is_read.c:4:1 "main" "int (void)"
+  Compound a_call_whose_name_comes_out_of_an_alias_is_read.c:4:16
+    Return a_call_whose_name_comes_out_of_an_alias_is_read.c:4:18
+      Binary a_call_whose_name_comes_out_of_an_alias_is_read.c:4:25 "-"
+        Binary a_call_whose_name_comes_out_of_an_alias_is_read.c:1:15 "+"
+          Number a_call_whose_name_comes_out_of_an_alias_is_read.c:4:27 "1"
+          Number a_call_whose_name_comes_out_of_an_alias_is_read.c:1:21 "1"
+        Number a_call_whose_name_comes_out_of_an_alias_is_read.c:4:32 "2"

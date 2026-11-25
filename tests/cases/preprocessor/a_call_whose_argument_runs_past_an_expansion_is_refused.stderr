@@ -1,0 +1,39 @@
+error[SC0104]: a call whose argument runs past the end of an expansion is not read yet
+   ╭─[ a_call_whose_argument_runs_past_an_expansion_is_refused.c:3:14 ]
+   │
+ 3 │ #define OPEN XSTR(a
+   │              ──┬─  
+   │                ╰─── called here
+ 4 │ #define USE OPEN  b)
+   │             ──┬─  
+   │               ╰─── `OPEN` expanded here
+ 5 │ const char *s = USE;
+   │                 ─┬─  
+   │                  ╰─── `USE` expanded here
+───╯
+  = note: an argument is read where it begins and ends in the same expansion or file, as one that begins after the expansion ends is
+error[SC0104]: a call whose argument runs past the end of an expansion is not read yet
+    ╭─[ a_call_whose_argument_runs_past_an_expansion_is_refused.c:8:15 ]
+    │
+  8 │ #define OPEN2 ID(1 + F
+    │               ─┬  
+    │                ╰── called here
+  9 │ #define USE2 OPEN2 (1))
+    │              ──┬──  
+    │                ╰──── `OPEN2` expanded here
+ 10 │ int t = USE2;
+    │         ──┬─  
+    │           ╰─── `USE2` expanded here
+────╯
+  = note: an argument is read where it begins and ends in the same expansion or file, as one that begins after the expansion ends is
+error[SC0104]: a call whose argument runs past the end of an expansion is not read yet
+    ╭─[ a_call_whose_argument_runs_past_an_expansion_is_refused.c:13:15 ]
+    │
+ 13 │ #define OPEN3 ID(F2
+    │               ─┬  
+    │                ╰── called here
+ 14 │ int u = OPEN3 (1));
+    │         ──┬──  
+    │           ╰──── `OPEN3` expanded here
+────╯
+  = note: an argument is read where it begins and ends in the same expansion or file, as one that begins after the expansion ends is

@@ -1,0 +1,10 @@
+error[SC0119]: `F` takes 1 argument, and is given 2
+   ╭─[ a_call_given_the_wrong_number_of_arguments_past_an_expansion_is_reported_at_its_use.c:4:13 ]
+   │
+ 4 │ #define USE G(1, 2)
+   │             ───┬───  
+   │                ╰───── called here
+ 5 │ int main(void) { return USE; }
+   │                         ─┬─  
+   │                          ╰─── `USE` expanded here
+───╯

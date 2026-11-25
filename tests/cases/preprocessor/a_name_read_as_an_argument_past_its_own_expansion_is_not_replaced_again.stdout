@@ -1,0 +1,18 @@
+Declaration a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:4:1 "M" "int (*)(int)"
+Declaration a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:5:1 "k" "int"
+  Number a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:5:9 "0"
+Function a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:1 "main" "int (void)"
+  Compound a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:16
+    Return a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:18
+      Cast a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:25 "int"
+        SizeofExpr a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:30
+          Binary a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:1:16 "+"
+            Call a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:1:16
+              Identifier a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:1:16 "M"
+              Identifier a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:2:19 "k"
+            Number a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:6:45 "1"
+Declaration a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:9:1 "w" "int"
+  SizeofExpr a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:9:9
+    Binary a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:8:16 "+"
+      Identifier a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:8:16 "OPEN"
+      Number a_name_read_as_an_argument_past_its_own_expansion_is_not_replaced_again.c:9:21 "2"
