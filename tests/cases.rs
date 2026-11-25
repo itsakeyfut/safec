@@ -10597,8 +10597,10 @@ cases! {
         // `#undef`ed one unsettled; one of the two is refused.
         a_name_the_build_settles_is_read_in_code: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-U__x86_64__"],
         // A header with `#pragma once` included twice is read once
-        // (ADR-0129). Mutation: leave `#pragma once` unread; `once` is
-        // defined twice in the `.stdout`.
+        // (ADR-0129), and includes itself after it as `clang` lets it, the
+        // mark asked before whether it is open. Mutations: leave
+        // `#pragma once` unread; `once` is defined twice. Ask the mark after;
+        // the header's own `#include` is `SC0110`.
         a_header_marked_once_is_read_once: ["--emit", "ast"],
         // The same, the pragma spelled by a `_Pragma` a macro writes, which
         // marks the file the macro is used in (C17 6.10.9). Mutation: mark
@@ -10630,13 +10632,18 @@ cases! {
         // exits 1 and its `.stdout` goes.
         a_warning_directive_is_reported_and_the_run_goes_on: ["--emit", "ast"],
         // Each `#line` C17 6.10.4 does not define, and a name `clang` would
-        // read another way, `\t` a tab. Mutation: drop the bound, the
-        // digits test or the escape test; that line's report goes.
+        // read another way, `\t` a tab. Mutation: drop the bound, or read
+        // every escape as `_Pragma` does; that line's report goes.
         a_line_directive_written_wrong_is_refused: ["--emit", "ast"],
-        // `#line` renumbers `__LINE__` and `__FILE__` alone; a report points
-        // at the line in the file a reader can open. Mutation: renumber the
-        // map's lines; the caret is reported at `elsewhere.c:103`.
+        // `#line` renumbers `__LINE__` and `__FILE__` alone, and a report
+        // points at the line in the file a reader can open: this pins it,
+        // `:8:5`, against a change that makes diagnostics read what `#line`
+        // said, which would name `elsewhere.c:103`.
         a_diagnostic_after_a_line_directive_points_at_the_physical_line: ["--emit", "safety-ir", "--safety", "memory", "--target", "x86_64-pc-windows-msvc"],
+        // The line below a splice is joined to it before any directive is
+        // read, and the lexer read it on its own. Mutation: drop the
+        // refusal; `push` is handed to the parser as code.
+        a_pragma_whose_line_ends_in_a_splice_is_refused: ["--emit", "ast"],
         // C17 6.10.8 p2, for the names it lists. Mutation: let a `#define`
         // or `#undef` of a predefined name through. Nothing is reported.
         a_predefined_macro_defined_again_is_refused: ["--emit", "ast", "--target", "x86_64-unknown-linux-gnu"],
