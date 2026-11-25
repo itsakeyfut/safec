@@ -5,6 +5,12 @@ _Pragma("GCC diagnostic ignored \"-Wunused\"")
 _Pragma(L"GCC diagnostic ignored \"-Wunused-variable\"")
 #define DO_PRAGMA(x) _Pragma(#x)
 DO_PRAGMA(GCC diagnostic pop)
+/* An operand a macro writes, and a `_Pragma` an alias names. */
+#define STR_OF(x) #x
+#define DO_PRAGMA_OF(x) _Pragma(STR_OF(x))
+DO_PRAGMA_OF(GCC diagnostic push)
+#define PRAGMA_ALIAS _Pragma
+PRAGMA_ALIAS("GCC diagnostic pop")
 
 /* Reported, and the run goes on. */
 #warning this program still builds

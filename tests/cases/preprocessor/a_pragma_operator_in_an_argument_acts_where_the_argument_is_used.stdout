@@ -1,0 +1,4 @@
+Function a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:8:1 "main" "int (void)"
+  Compound a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:8:16
+    Return a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:8:18
+      Number a_pragma_operator_in_an_argument_acts_where_the_argument_is_used.c:8:25 "0"

@@ -242,6 +242,12 @@ struct Reading {
     /// What the last `#line` in each file said, which `__LINE__` and
     /// `__FILE__` read and nothing else does.
     renumbered: HashMap<FileId, Renumbered>,
+    /// How many calls' arguments are being replaced, one inside another,
+    /// before they are substituted: while any is, a `_Pragma` is handed on
+    /// as it is, to act where the argument is used, as `clang` acts on it.
+    /// Acted on there, one in an argument the body drops took effect, and
+    /// one the body uses twice took effect once. Found by review.
+    in_arguments: usize,
 }
 
 /// What a `#line` makes of the lines after it, in the file it is in.
@@ -595,6 +601,7 @@ pub fn prelude(
         substituted_in_all: 0,
         once: HashSet::new(),
         renumbered: HashMap::new(),
+        in_arguments: 0,
     };
     // Ordinary `#define` lines in a file of their own, so an expansion of one
     // is placed like any other (ADR-0054) and a label in it names
@@ -1226,8 +1233,13 @@ fn replacement(
         );
         return Replaced::Dropped;
     }
-    // An operator, not a macro: what its string spells is a `#pragma`.
+    // An operator, not a macro: what its string spells is a `#pragma`. In
+    // a call's argument it is left for where the argument is used; see
+    // `Reading::in_arguments`.
     if name == "_Pragma" {
+        if reading.in_arguments > 0 {
+            return Replaced::Kept;
+        }
         directive::operator(frames, token, sources, reading, diagnostics);
         return Replaced::Dropped;
     }
@@ -1634,35 +1646,55 @@ fn closed(instance: &Instance, reading: &mut Reading) {
     }
 }
 
-/// A call of the function-like macro `token` names, whose expansion is not
-/// open: its arguments read out of the innermost frame, each replaced on its
-/// own (C17 6.10.3.1 p1), and written into its replacement list as one
-/// expansion, used at the whole call. See ADR-0128.
-///
-/// `Kept` where no `(` follows the name, since a name with none is not a
-/// call (6.10.3 p10).
-///
-/// C reads on past the end of an expansion for the `(` (6.10.3.4 p1), and
-/// for the `)`: with `#define G F`, `G(1)` calls `F`, and with
-/// `#define OPEN h(1,`, `OPEN 2)` calls `h`. Each expansion read past is
-/// closed, and the call is used from where the outermost of them was used to
-/// its `)`. It is read only past an expansion that handed the parser
-/// nothing, or the call's use would overlap what it handed over; with
-/// `#define G2 2 + F`, `G2(1)` is refused, as it was before any of this was
-/// read. Nor where an argument is left half collected: its tokens would be
-/// from two files, which an argument read on its own cannot place, so
-/// `OPEN b)` with `#define OPEN XSTR(a` is refused, where `OPEN 2)` with
-/// `#define OPEN h(1,` is read. Found by review. Not past a file: a name
-/// ending an included file is no call, as `clang` reads it, and arguments
-/// that run past one are refused. See #618's second design, Q1 and Q4.
-fn call(
+/// Whether the arguments of a call at `token` would be read deeper than
+/// [`MAX_ARGUMENT_DEPTH`] calls' arguments, reported where they would.
+fn too_deep(token: Token, reading: &Reading, diagnostics: &mut DiagnosticSink) -> bool {
+    let deep = reading.arguments >= MAX_ARGUMENT_DEPTH;
+    if deep {
+        diagnostics.report(
+            Diagnostic::error("this call is nested too deep in other calls' arguments")
+                .with_code(TOO_MANY_EXPANSIONS)
+                .with_label(Label::primary(token.span, "called here"))
+                .with_note(format!(
+                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
+                )),
+        );
+    }
+    deep
+}
+
+/// Why [`collected`] read no call.
+#[derive(Clone, Copy, Debug)]
+enum Uncollected {
+    /// No `(` follows the name, so it is no call.
+    NoCall,
+    /// It was refused, the report made.
+    Refused,
+}
+
+/// What [`collected`] read of a call: its arguments, each token with
+/// whether C has white space before it, which `#` reads; its `)`; and
+/// where its use starts, the name or where an expansion it read past was
+/// used.
+struct Collected {
+    arguments: Vec<Vec<(Token, bool)>>,
+    close: Token,
+    start: Span,
+}
+
+/// The `(`, the arguments and the `)` after `token`, a name the innermost of
+/// `frames` was reading, read as [`call`] reads a call's, or why there is
+/// none. A comma outside any parentheses starts a new argument where
+/// `splits`, given how many there are so far, says so. Shared with
+/// `_Pragma`, whose operand is one argument (#1345).
+fn collected(
     frames: &mut Vec<Frame>,
-    (token, leading): (Token, bool),
-    (parameters, edits): (Parameters, Vec<Edit>),
+    token: Token,
+    splits: &dyn Fn(usize) -> bool,
     sources: &mut SourceMap,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
-) -> Replaced {
+) -> Result<Collected, Uncollected> {
     let name = sources.snippet(token.span).to_owned();
     let next = |frame: &Frame| {
         frame
@@ -1679,30 +1711,30 @@ fn call(
                 .with_label(Label::primary(token.span, "its name is here"))
                 .with_note(note),
         );
-        Replaced::Dropped
+        Uncollected::Refused
     };
 
     // The `(`: in the frame the name was read from, or in the nearest below
     // it with a token left, every frame between having none.
     let Some(holding) = frames.iter().rposition(|frame| next(frame).is_some()) else {
-        return Replaced::Kept;
+        return Err(Uncollected::NoCall);
     };
     if !next(&frames[holding]).is_some_and(opens) {
-        return Replaced::Kept;
+        return Err(Uncollected::NoCall);
     }
     for frame in &frames[holding + 1..] {
         match &frame.instance {
             Some(Instance::Expansion { .. }) if frame.extent.is_none() => {}
             Some(Instance::Expansion { .. }) => {
-                return refused(
+                return Err(refused(
                     diagnostics,
                     "a call whose name ends an expansion that handed code over before it is \
                      not read yet",
                     format!("the `(` after `{name}` is outside what its name was read from"),
-                );
+                ));
             }
             // A file, or an argument, which is replaced on its own.
-            _ => return Replaced::Kept,
+            _ => return Err(Uncollected::NoCall),
         }
     }
     // Where the call's use starts, in the frame being read: the name, or
@@ -1753,13 +1785,7 @@ fn call(
                     break;
                 }
                 TokenKind::Punct(Punct::RightParen) => depth -= 1,
-                // A variadic macro's arguments past its named parameters
-                // are one, the commas between them in it (C17 6.10.3.1 p2).
-                TokenKind::Punct(Punct::Comma)
-                    if depth == 0
-                        && !(parameters.variadic()
-                            && arguments.len() == parameters.names.len()) =>
-                {
+                TokenKind::Punct(Punct::Comma) if depth == 0 && splits(arguments.len()) => {
                     arguments.push(Vec::new());
                     continue;
                 }
@@ -1793,7 +1819,7 @@ fn call(
                      file, as one that begins after the expansion ends is",
                 ),
             );
-            return Replaced::Dropped;
+            return Err(Uncollected::Refused);
         }
         start = pop_ended(frames, reading);
         at = frames.last().map_or(0, |frame| frame.cursor);
@@ -1820,7 +1846,7 @@ fn call(
                 .with_note("its arguments run on to the end of the file")
         };
         diagnostics.report(report);
-        return Replaced::Dropped;
+        return Err(Uncollected::Refused);
     };
     // C17 6.10.3 p11 leaves a directive there undefined. Read as a directive
     // it would be one the call's arguments also hold; read as tokens it would
@@ -1836,8 +1862,57 @@ fn call(
                 .with_label(Label::secondary(token.span, "called here"))
                 .with_note("C17 6.10.3 p11 leaves what it means undefined"),
         );
-        return Replaced::Dropped;
+        return Err(Uncollected::Refused);
     }
+    Ok(Collected {
+        arguments,
+        close,
+        start,
+    })
+}
+
+/// A call of the function-like macro `token` names, whose expansion is not
+/// open: its arguments read out of the innermost frame, each replaced on its
+/// own (C17 6.10.3.1 p1), and written into its replacement list as one
+/// expansion, used at the whole call. See ADR-0128.
+///
+/// `Kept` where no `(` follows the name, since a name with none is not a
+/// call (6.10.3 p10).
+///
+/// C reads on past the end of an expansion for the `(` (6.10.3.4 p1), and
+/// for the `)`: with `#define G F`, `G(1)` calls `F`, and with
+/// `#define OPEN h(1,`, `OPEN 2)` calls `h`. Each expansion read past is
+/// closed, and the call is used from where the outermost of them was used to
+/// its `)`. It is read only past an expansion that handed the parser
+/// nothing, or the call's use would overlap what it handed over; with
+/// `#define G2 2 + F`, `G2(1)` is refused, as it was before any of this was
+/// read. Nor where an argument is left half collected: its tokens would be
+/// from two files, which an argument read on its own cannot place, so
+/// `OPEN b)` with `#define OPEN XSTR(a` is refused, where `OPEN 2)` with
+/// `#define OPEN h(1,` is read. Found by review. Not past a file: a name
+/// ending an included file is no call, as `clang` reads it, and arguments
+/// that run past one are refused. See #618's second design, Q1 and Q4.
+fn call(
+    frames: &mut Vec<Frame>,
+    (token, leading): (Token, bool),
+    (parameters, edits): (Parameters, Vec<Edit>),
+    sources: &mut SourceMap,
+    reading: &mut Reading,
+    diagnostics: &mut DiagnosticSink,
+) -> Replaced {
+    let name = sources.snippet(token.span).to_owned();
+    // A variadic macro's arguments past its named parameters are one, the
+    // commas between them in it (C17 6.10.3.1 p2).
+    let splits = |count: usize| !(parameters.variadic() && count == parameters.names.len());
+    let Collected {
+        mut arguments,
+        close,
+        start,
+    } = match collected(frames, token, &splits, sources, reading, diagnostics) {
+        Ok(collected) => collected,
+        Err(Uncollected::NoCall) => return Replaced::Kept,
+        Err(Uncollected::Refused) => return Replaced::Dropped,
+    };
     // `F()` for a macro of no parameters is a call of none.
     if parameters.names.is_empty() && arguments.len() == 1 && arguments[0].is_empty() {
         arguments.clear();
@@ -1903,15 +1978,7 @@ fn call(
     }
 
     begin_use(reading);
-    if reading.arguments >= MAX_ARGUMENT_DEPTH {
-        diagnostics.report(
-            Diagnostic::error("this call is nested too deep in other calls' arguments")
-                .with_code(TOO_MANY_EXPANSIONS)
-                .with_label(Label::primary(token.span, "called here"))
-                .with_note(format!(
-                    "{MAX_ARGUMENT_DEPTH} calls' arguments are already being read around it"
-                )),
-        );
+    if too_deep(token, reading, diagnostics) {
         return Replaced::Dropped;
     }
     // Only an argument the body substitutes is replaced: C replaces one before
@@ -1920,6 +1987,7 @@ fn call(
     // `K(H(1, 2))` asks nothing of `H`. Replacing every one refused that.
     // Found by review.
     let substituted_at = |index: usize| edits.iter().any(|edit| edit.replaces(index));
+    reading.in_arguments += 1;
     let replaced_arguments: Vec<Vec<(Token, bool)>> = arguments
         .iter()
         .enumerate()
@@ -1933,6 +2001,7 @@ fn call(
             }
         })
         .collect();
+    reading.in_arguments -= 1;
     let Some(spelled) = reading.macros.get(&name).map(|defined| defined.spelled) else {
         unreachable!(
             "`{name}` was a macro when its call began and nothing in an argument can undefine it"
