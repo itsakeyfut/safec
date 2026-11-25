@@ -799,7 +799,9 @@ in and `__builtin_va_arg` to a type the promotions leave alone (C17
 7.16.1), and a list is copied only by `__builtin_va_copy`. The memory check
 doubts every use of a pointer `__builtin_va_arg` reads (ADR-0126). The
 backend reads an argument as `clang` does on each target (ADR-0127), and
-refuses one on `aarch64-unknown-linux-gnu`.
+refuses one on `aarch64-unknown-linux-gnu`, and on System V `x86_64` out of a
+list that is not the function's own local (#1333). A list is passed to and
+returned from no function yet.
 
 A pointer plus or minus an integer builds, as `getelementptr` over the
 element's type, so no width reaches `ir::Ty` (ADR-0013, #621); `p[0]` and

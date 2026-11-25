@@ -43,10 +43,19 @@ value where it points, and move it past as many pointer-wide slots as the
 value fills, an 8-byte value first aligned to 8 on `armv7` and `wasm32`,
 which is what `clang` writes there. The instruction stays on
 `aarch64-apple-darwin`, where `clang` writes it too, and on the System V
-`x86_64` targets, where LLVM lowers it to the register save area; whether
-that lowering reads what `clang`'s does is measured on CI's Linux and
-macOS runners, which run `tests/run`. `aarch64-unknown-linux-gnu` stays
-refused, as ADR-0126 decided.
+`x86_64` targets, where LLVM lowers it to the register save area, **but
+only out of a list that is the function's own plain local**: read through a
+pointer to a list, a member or a static, that lowering reloads the list's
+address at `-O0` from a stack slot it never wrote, and the program crashed
+(measured under WSL, exit 139, where `clang`'s expansion ran). That read is
+refused with `SC0801` until the expansion is written (#1333).
+`aarch64-unknown-linux-gnu` stays refused, as ADR-0126 decided.
+
+**What the memory check reads of a list** is whether it was started: a
+read before `__builtin_va_start` is `SC0411`, as any read of what nothing
+wrote. Whether it was ended, and how many arguments the caller passed, are
+not read (#1334): the second needs the caller, which ADR-0126 says this
+check does not read.
 
 Writing every target out was rejected for this issue: the register save
 areas are the larger part of the work, and the one target where the
@@ -64,6 +73,12 @@ This replaces ADR-0126's driver that LLVM's `va_arg` is right off
   in `tests/cases` loses its walk.
 * Aligning nothing on `armv7`:
   `a_variadic_long_long_is_aligned_to_eight_on_armv7` loses its `and`.
+* Writing LLVM's `va_arg` through a list that is not a plain local on
+  System V `x86_64`:
+  `a_variadic_argument_is_read_only_out_of_a_local_list_on_x86_64_linux`
+  builds.
+* Answering nothing for a list `__builtin_va_start` writes:
+  `a_list_read_before_it_was_started_is_reported`'s `started` reports.
 
 ### Consequences
 
@@ -75,4 +90,4 @@ This replaces ADR-0126's driver that LLVM's `va_arg` is right off
 
 ## More Information
 
-#617, #1214; ADR-0126.
+#617, #1214, #1333, #1334; ADR-0126.
