@@ -233,6 +233,17 @@ programs! {
     /// an argument's tokens, or set nothing off after an argument, or offer
     /// no keyword for replacement inside an argument; each fails one.
     a_function_like_macro_is_replaced_and_rescanned,
+    /// `#` and `##` make what C17 6.10.3.2 and 6.10.3.3 say: an argument
+    /// spelled as written with one space where it was apart, a string or
+    /// character constant in it escaped, an empty one as `""`; joins of two
+    /// tokens, with an empty argument as a placemarker, chained, beside a
+    /// `#`, and in an object-like macro; and the operand of `#` not
+    /// replaced, `str(N)`, where `xstr(4 + N)` is (#1216). Mutations: put
+    /// back the refusal of `#` and `##`, and this does not build; replace an
+    /// operand of `#`, and `str(N)` is `"3"`; drop the escaping, and the
+    /// `"x\n"` line does not build; join with a space between, and
+    /// `C(x, y)` is two names.
+    stringizing_and_pasting_make_what_c_says,
     /// A struct a function reaches only through pointers is laid out where
     /// a pointer to it is stepped or subtracted, so `end - first` counts its
     /// elements and `at + 1` steps over one, though nothing in those

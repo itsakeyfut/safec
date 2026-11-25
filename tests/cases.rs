@@ -10160,9 +10160,20 @@ cases! {
         // (C17 6.10.3.4 p2). Mutation: drop the open-expansion check in
         // `replacement`. It expands until the bound refuses it as `SC0113`.
         a_macro_that_names_itself_is_expanded_once: ["--emit", "ast"],
-        // Mutation: read `...` as a parameter, or let `##` and `#` through.
-        // A report goes.
-        a_variadic_macro_and_stringizing_are_not_read_yet: ["--emit", "ast"],
+        // Mutation: read `...` as a parameter. The report goes.
+        a_variadic_macro_is_not_read_yet: ["--emit", "ast"],
+        // `#` with no parameter after it in a function-like macro, `##`
+        // first or last, and a join that makes `+-`, each refused as
+        // `SC0119` (C17 6.10.3.2 p1, 6.10.3.3 p1, p3); in an object-like
+        // macro `#` is a token like any other. Mutations: drop the test that
+        // a `#` is followed by a parameter, or that a `##` has something on
+        // each side, or that a join is one token; a report goes.
+        a_hash_or_paste_written_wrong_is_refused: ["--emit", "ast"],
+        // `f ## ree(p)` makes `free`, and the double free is reported there,
+        // the text a join made copied from its `##` in the `#define`
+        // (ADR-0128). Mutation: copy it from the whole run the join stands
+        // for; the caret covers `f ## ree` rather than `##`.
+        a_report_in_pasted_text_points_at_the_paste: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: read a `#define` whatever its line ends in. The body's
         // second line is compiled as code.
         a_define_ending_in_a_splice_is_refused: ["--emit", "ast"],
