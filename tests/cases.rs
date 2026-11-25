@@ -10683,6 +10683,12 @@ cases! {
         // Mutation: leave the operand unreplaced; it is refused, and `once`
         // is defined twice.
         a_header_marked_once_by_a_pragma_operator_whose_operand_a_macro_writes_is_read_once: ["--emit", "ast"],
+        // An operand is replaced as an argument is, and can hold another
+        // `_Pragma`, so a thousand nested are refused at the bound on how
+        // deep arguments are read, once, rather than read on the native
+        // stack. Mutation: drop the bound from `operator`; the stack
+        // overflows.
+        a_pragma_operator_nested_too_deep_is_refused: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.
