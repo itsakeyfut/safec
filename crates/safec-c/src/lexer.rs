@@ -175,11 +175,22 @@ impl<'a> Lexer<'a> {
             // A directive is `#` as the first preprocessing *token* on a line,
             // so this asks what the scan is about to take rather than what the
             // next character is: `##` is one token and begins no directive,
-            // and `%:` is `#` (C17 6.4.6 p3) and begins one.
-            let kind = if self.directives
+            // and `%:` is `#` (C17 6.4.6 p3) and begins one. A line whose
+            // `#` stands behind characters no token can begin is one too,
+            // from its start, as `hash_after_stray` says why.
+            let hash = self.directives
                 && self.at_line_start
-                && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
-            {
+                && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash);
+            let prefix = if self.directives && self.at_line_start && !hash {
+                hash_after_stray(self.rest())
+            } else {
+                None
+            };
+            let kind = if hash || prefix.is_some() {
+                // Past the prefix first, since a comment in it may hold a
+                // newline, which would end the directive inside the comment
+                // and leave the rest of it to be read as code.
+                self.offset += prefix.unwrap_or(0);
                 self.scan_directive()
             } else {
                 self.scan(c, diagnostics)
@@ -723,6 +734,55 @@ fn is_identifier_continue(c: char) -> bool {
 pub(crate) fn is_identifier(text: &str) -> bool {
     let mut characters = text.chars();
     characters.next().is_some_and(is_identifier_start) && characters.all(is_identifier_continue)
+}
+
+/// How far into `text`, the rest of a line at its start, the `#` stands
+/// where characters no token can begin come first and then, past blanks
+/// and comments, a `#`; `None` for any other line.
+///
+/// Such a line is a directive to `clang` where those characters are a NUL,
+/// which it reads as white space as it does a comment, and scanned as the
+/// characters and then a `#` that is no line's first token, `#else` behind
+/// a NUL in a skipped group was passed over where `clang` takes the group.
+/// So the whole line is one directive token, which the preprocessor
+/// refuses, since its start is no spelling it can prove reads as `clang`
+/// reads it. See ADR-0134. Found by architecture review 13, and the comment
+/// by review.
+///
+/// White space outside ASCII alone before the `#` is no prefix: `clang`
+/// makes no directive of such a line and passes it over in a skipped
+/// group, as this does. Found by the corpus that compares directive lines
+/// with `clang`. A comment with a splice in it, or one that does not end,
+/// stops the walk where it begins and the line is one directive token from
+/// there: C splices lines before it reads comments, so a splice can end the
+/// comment early, and a `#` after that is not looked for here.
+fn hash_after_stray(text: &str) -> Option<usize> {
+    if !text.starts_with(is_stray) {
+        return None;
+    }
+    let mut rest = text;
+    let mut stray = false;
+    loop {
+        let after = rest.trim_start_matches(is_stray);
+        stray |= rest[..rest.len() - after.len()]
+            .chars()
+            .any(|c| !c.is_whitespace());
+        let after = after.trim_start_matches([' ', '\t', '\u{b}', '\u{c}']);
+        if let Some(comment) = after.strip_prefix("/*") {
+            match comment.find("*/") {
+                Some(end) if !comment[..end].contains('\\') && !comment[..end].contains("??/") => {
+                    rest = &comment[end + "*/".len()..];
+                    continue;
+                }
+                _ => return stray.then_some(text.len() - after.len()),
+            }
+        }
+        if after.len() == rest.len() {
+            let hash = Punct::starting(after).is_some_and(|(punct, _)| punct == Punct::Hash);
+            return (stray && hash).then_some(text.len() - after.len());
+        }
+        rest = after;
+    }
 }
 
 /// Whether `c` belongs to a run of characters the scan can make nothing of.

@@ -197,7 +197,7 @@ const GROUPS: &[&str] = &["compiled", "skipped", "nested"];
 /// same groups. A refusal agrees with `clang`, as ADR-0134 allows, so this
 /// is what says how much is read rather than refused: a change that refuses
 /// more, or reads more, moves it, and is stated by updating it.
-const BUILT_BY_BOTH: usize = 1491;
+const BUILT_BY_BOTH: usize = 1067;
 
 /// The plain spellings safec refuses though `clang` builds them, each with
 /// the issue that reads it.
@@ -210,19 +210,6 @@ const PLAIN_REFUSED: &[([&str; 4], &str)] = &[
 ];
 
 const KNOWN: &[([&str; 4], &str)] = &[
-    // A NUL beside the `#` in a skipped group makes no directive here, and
-    // `clang` reads it as white space, so a group it takes is passed over.
-    // Row 6.
-    (["skipped", "before the #", "#elif", "NUL"], "#1377"),
-    (["skipped", "before the #", "#elifdef", "NUL"], "#1377"),
-    (["skipped", "before the #", "#else", "NUL"], "#1377"),
-    (["skipped", "before the #", "#endif", "NUL"], "#1377"),
-    (["skipped", "after the #", "#elif", "NUL"], "#1377"),
-    (["skipped", "after the #", "#elifdef", "NUL"], "#1377"),
-    (["skipped", "after the #", "#else", "NUL"], "#1377"),
-    (["skipped", "after the #", "#endif", "NUL"], "#1377"),
-    (["skipped", "before the #", "#elifndef", "NUL"], "#1377"),
-    (["skipped", "after the #", "#elifndef", "NUL"], "#1377"),
     // A Ctrl-Z ends the file for `clang` targeting MSVC, and this reads on.
     (
         ["compiled", "after the name", "#elif", "substitute"],
@@ -241,31 +228,6 @@ const KNOWN: &[([&str; 4], &str)] = &[
     (["compiled", "at the end", "#ifdef", "substitute"], "#1383"),
     (["compiled", "at the end", "#ifndef", "substitute"], "#1383"),
     (["compiled", "at the end", "#pragma", "substitute"], "#1383"),
-    (["skipped", "after the #", "#(null)", "substitute"], "#1383"),
-    (["skipped", "after the #", "#4", "substitute"], "#1383"),
-    (["skipped", "after the #", "#define", "substitute"], "#1383"),
-    (["skipped", "after the #", "#elif", "substitute"], "#1383"),
-    (
-        ["skipped", "after the #", "#elifdef", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the #", "#elifndef", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "after the #", "#else", "substitute"], "#1383"),
-    (["skipped", "after the #", "#endif", "substitute"], "#1383"),
-    (
-        ["skipped", "after the #", "#include", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "after the #", "#line", "substitute"], "#1383"),
-    (["skipped", "after the #", "#pragma", "substitute"], "#1383"),
-    (["skipped", "after the #", "#undef", "substitute"], "#1383"),
-    (
-        ["skipped", "after the name", "#(null)", "substitute"],
-        "#1383",
-    ),
     (["skipped", "after the name", "#4", "substitute"], "#1383"),
     (
         ["skipped", "after the name", "#define", "substitute"],
@@ -309,36 +271,6 @@ const KNOWN: &[([&str; 4], &str)] = &[
     (["skipped", "at the end", "#line", "substitute"], "#1383"),
     (["skipped", "at the end", "#pragma", "substitute"], "#1383"),
     (["skipped", "at the end", "#undef", "substitute"], "#1383"),
-    (
-        ["skipped", "before the #", "#(null)", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "before the #", "#4", "substitute"], "#1383"),
-    (
-        ["skipped", "before the #", "#define", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "before the #", "#elif", "substitute"], "#1383"),
-    (
-        ["skipped", "before the #", "#elifdef", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "before the #", "#elifndef", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "before the #", "#else", "substitute"], "#1383"),
-    (["skipped", "before the #", "#endif", "substitute"], "#1383"),
-    (
-        ["skipped", "before the #", "#include", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "before the #", "#line", "substitute"], "#1383"),
-    (
-        ["skipped", "before the #", "#pragma", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "before the #", "#undef", "substitute"], "#1383"),
 ];
 
 /// Whether `key`, a disagreement's `group / place / directive / character`,

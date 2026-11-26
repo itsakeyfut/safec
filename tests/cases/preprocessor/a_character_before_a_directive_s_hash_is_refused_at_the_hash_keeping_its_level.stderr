@@ -1,0 +1,32 @@
+error[SC0104]: a character before this directive's `#` is not read
+   ╭─[ a_character_before_a_directive_s_hash_is_refused_at_the_hash_keeping_its_level.c:2:2 ]
+   │
+ 2 │ ?#endif
+   │  ┬  
+   │  ╰── directive begins here
+───╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+   ╭─[ a_character_before_a_directive_s_hash_is_refused_at_the_hash_keeping_its_level.c:5:2 ]
+   │
+ 5 │ 😀#if 1
+   │   ┬  
+   │   ╰── directive begins here
+───╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+    ╭─[ a_character_before_a_directive_s_hash_is_refused_at_the_hash_keeping_its_level.c:10:2 ]
+    │
+ 10 │ ?#if 1
+    │  ┬  
+    │  ╰── directive begins here
+────╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+    ╭─[ a_character_before_a_directive_s_hash_is_refused_at_the_hash_keeping_its_level.c:16:2 ]
+    │
+ 16 │ @#x
+    │  ┬  
+    │  ╰── directive begins here
+────╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
