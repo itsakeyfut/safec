@@ -9937,11 +9937,13 @@ cases! {
         // as a NUL is wherever it stands (ADR-0135). Mutation: drop the NUL
         // from `unread`; the case exits 0 with nothing said.
         a_nul_in_the_splice_that_closes_a_block_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A NUL in a line comment and in a string, where `clang` reads it
-        // as nothing special, is refused too: once, at the first, as every
-        // place it stands is (ADR-0135). Mutation: drop the NUL from
-        // `unread`; the case exits 0 with nothing said.
-        a_nul_in_a_comment_or_a_string_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A NUL in a line comment, and one in a string, where `clang`
+        // reads it as nothing special, is refused too, as every place it
+        // stands is (ADR-0135). A file each, since only the first in a file
+        // is reported. Mutation: drop the NUL from `unread`; each exits 0
+        // with nothing said.
+        a_nul_in_a_line_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_nul_in_a_string_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A byte-order mark in mid-line is three bytes of nothing on a
         // terminal, so its marker was drawn under the `1;` after it. It is
         // drawn as U+FFFD with the marker under that. Mutation: drop
