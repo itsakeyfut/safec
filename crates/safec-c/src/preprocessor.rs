@@ -23,6 +23,7 @@
 mod condition;
 mod directive;
 mod held;
+mod line;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -37,6 +38,7 @@ use crate::lexer::{
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
 use held::{Addition, Sources, Unadded};
+use line::Line;
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -587,12 +589,13 @@ pub fn prelude(
     for line in text.split_inclusive('\n') {
         let directive = line.trim_end_matches('\n');
         let span = Span::new(built_in, at, at + directive.len() as u32);
+        let read = Line::read(directive).expect("a predefined line has no comment");
         let MacroForm::Define {
             name,
             name_at,
             body,
             parameters,
-        } = macro_form(directive)
+        } = macro_form(&read)
         else {
             panic!("a predefined line that is not a `#define`: {directive}");
         };
@@ -868,41 +871,44 @@ fn read_includes(
                 // comments are made spaces, which takes the splice with them
                 // and read `#include "a.h" // \` as an include. Found by
                 // review, after it had been blessed.
-                let blank =
-                    blanked(&raw).filter(|text| self::spliced(text) || !self::spliced(&raw));
-                let Some(text) = blank else {
-                    let text = raw;
-                    diagnostics.report(
-                        refused(
-                            &text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "a comment that goes on past a directive's line is not read yet",
-                        )
-                        .with_note(
-                            "C makes the comment one space, so the directive goes on after \
+                let line = match Line::read(&raw) {
+                    Ok(line) => line,
+                    Err(line) => {
+                        let text = line.text();
+                        diagnostics.report(
+                            refused(
+                                text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "a comment that goes on past a directive's line is not read yet",
+                            )
+                            .with_note(
+                                "C makes the comment one space, so the directive goes on after \
                              it ends, and the lines inside it are not code",
-                        ),
-                    );
-                    // A conditional refused here still opens or ends its
-                    // level, as `conditional` says a refused one does: left
-                    // out, its `#endif` was reported as closing nothing, a
-                    // caret on a directive that was right. Found by review.
-                    if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
-                    {
-                        conditional(
-                            form,
-                            &text,
-                            token.span,
-                            frame,
-                            (sources, reading),
-                            diagnostics,
-                            true,
+                            ),
                         );
+                        // A conditional refused here still opens or ends its
+                        // level, as `conditional` says a refused one does: left
+                        // out, its `#endif` was reported as closing nothing, a
+                        // caret on a directive that was right. Found by review.
+                        if let (Some(form), Some(frame)) =
+                            (conditional_form(&line), frames.last_mut())
+                        {
+                            conditional(
+                                form,
+                                text,
+                                token.span,
+                                frame,
+                                (sources, reading),
+                                diagnostics,
+                                true,
+                            );
+                        }
+                        continue;
                     }
-                    continue;
                 };
-                let form = conditional_form(&text);
+                let text = line.text();
+                let form = conditional_form(&line);
                 // A splice joins the line below to this one before any
                 // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
                 // read that line on its own, as a directive where it begins
@@ -910,7 +916,7 @@ fn read_includes(
                 // all, a skipped group's included: there `#define X \` above
                 // `#else` ended a group C does not end, and the code after it
                 // was compiled where C has none. Found by review.
-                if self::spliced(&text) && (skipping || form.is_some()) {
+                if self::spliced(text) && (skipping || form.is_some()) {
                     let message = if form.is_some() {
                         "a line splice or a trigraph in a conditional directive is not read yet"
                     } else {
@@ -918,7 +924,7 @@ fn read_includes(
                          read yet"
                     };
                     diagnostics.report(
-                        refused(&text, token.span, UNSUPPORTED_SPLICE, message).with_note(
+                        refused(text, token.span, UNSUPPORTED_SPLICE, message).with_note(
                             "C can join the line below to this one, and it would be read on \
                              its own instead",
                         ),
@@ -928,7 +934,7 @@ fn read_includes(
                     if let Some(frame) = frames.last_mut() {
                         conditional(
                             form,
-                            &text,
+                            text,
                             token.span,
                             frame,
                             (sources, reading),
@@ -943,10 +949,10 @@ fn read_includes(
                 // rest ignored (C17 6.10.1 p6): `#include <stdio.h>` or a
                 // function-like `#define` there is not reported.
                 if skipping {
-                    if directive::chooses_a_group(&text) {
+                    if directive::chooses_a_group(&line) {
                         diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "`#elifdef` and `#elifndef` are not read yet",
@@ -959,10 +965,10 @@ fn read_includes(
                     }
                     continue;
                 }
-                if directive::read(&text, token.span, sources, reading, diagnostics) {
+                if directive::read(&line, token.span, sources, reading, diagnostics) {
                     continue;
                 }
-                match include_form(&text) {
+                match include_form(&line) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
                             token.span.file(),
@@ -988,7 +994,7 @@ fn read_includes(
                     }
                     IncludeForm::Spliced => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_SPLICE,
                             "a line splice or a trigraph in an `#include` is not read yet",
@@ -1000,7 +1006,7 @@ fn read_includes(
                     ),
                     IncludeForm::Angled => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_DIRECTIVE,
                             "`#include <...>` is not read yet",
@@ -1009,7 +1015,7 @@ fn read_includes(
                     ),
                     IncludeForm::Unread => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_DIRECTIVE,
                             "this `#include` is not read yet",
@@ -1019,14 +1025,14 @@ fn read_includes(
                              after it on its line",
                         ),
                     ),
-                    IncludeForm::Other => match macro_form(&text) {
+                    IncludeForm::Other => match macro_form(&line) {
                         MacroForm::Define {
                             name,
                             name_at,
                             body,
                             parameters,
                         } => define(
-                            &text,
+                            text,
                             token.span,
                             name,
                             name_at,
@@ -1066,7 +1072,7 @@ fn read_includes(
                         },
                         MacroForm::Unread { directive } => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 &format!("this `{directive}` is not read yet"),
@@ -1081,7 +1087,7 @@ fn read_includes(
                         ),
                         MacroForm::Defined => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "`defined` is not read as a macro's name",
@@ -1093,7 +1099,7 @@ fn read_includes(
                         ),
                         MacroForm::Parameters => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "this parameter list is not read",
@@ -1106,7 +1112,7 @@ fn read_includes(
                         ),
                         MacroForm::Variadic => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "this variadic parameter list is not read",
@@ -1118,7 +1124,7 @@ fn read_includes(
                         ),
                         MacroForm::Spliced => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_SPLICE,
                                 "a line splice or a trigraph in a `#define` is not read yet",
@@ -1130,7 +1136,7 @@ fn read_includes(
                         ),
                         MacroForm::Other => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "preprocessor directives are not supported yet",
@@ -3240,7 +3246,8 @@ enum MacroForm<'a> {
 }
 
 /// Read a `#define` or an `#undef`.
-fn macro_form(text: &str) -> MacroForm<'_> {
+fn macro_form(line: &Line) -> MacroForm<'_> {
+    let text = line.text();
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
     let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
 
@@ -3339,49 +3346,6 @@ fn macro_form(text: &str) -> MacroForm<'_> {
     }
 }
 
-/// `text`, a directive's line, with each comment in it made spaces of the
-/// same length, or `None` where a block comment in it does not end on it.
-///
-/// C makes a comment one space before directives are read (C17 5.1.1.2 p1,
-/// phase 3), so a comment between `#` and `define`, or after a name, is
-/// whitespace like any other; the same length keeps every offset into the
-/// line where it was, so spans taken from the result are spans of the line.
-/// A string or character literal is passed over, since `/*` in one opens
-/// nothing. A comment that does not end on the line is refused rather than
-/// read: the lexer ends a directive at its newline, so the lines inside the
-/// comment would be compiled as code, and `#define X /*` above a null test
-/// left the test to be believed where C has none. Found by review.
-fn blanked(text: &str) -> Option<String> {
-    let mut bytes = text.as_bytes().to_vec();
-    let mut at = 0;
-    let mut quote = None;
-    while at < bytes.len() {
-        match (quote, bytes[at]) {
-            // An escape in a literal, whose next byte closes nothing.
-            (Some(_), b'\\') if at + 1 < bytes.len() => {
-                at += 2;
-                continue;
-            }
-            (Some(open), byte) if byte == open => quote = None,
-            (Some(_), _) => {}
-            (None, b'"' | b'\'') => quote = Some(bytes[at]),
-            (None, b'/') if bytes.get(at + 1) == Some(&b'/') => {
-                bytes[at..].fill(b' ');
-                break;
-            }
-            (None, b'/') if bytes.get(at + 1) == Some(&b'*') => {
-                let end = text[at + 2..].find("*/")? + at + 4;
-                bytes[at..end].fill(b' ');
-                at = end;
-                continue;
-            }
-            (None, _) => {}
-        }
-        at += 1;
-    }
-    Some(String::from_utf8(bytes).expect("only whole comments are made spaces"))
-}
-
 /// Whether a directive's line ends in a splice or holds a trigraph, either of
 /// which changes what the line is before a directive is found (C17 5.1.1.2
 /// p1, phases 1 and 2), and which the lexer does not perform in a directive.
@@ -3434,7 +3398,8 @@ enum Named<'a> {
 ///
 /// `extra` is where in `text` tokens follow what the directive takes, which
 /// C's grammar does not allow and which is warned about and ignored.
-fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
+fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
+    let text = line.text();
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
     let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
     // A name ends at a blank, the end, or a character that is not part of
@@ -4104,7 +4069,8 @@ enum IncludeForm<'a> {
 /// line of a file saved with CRLF ends in one, and a header that did not read
 /// on Windows would be a header that did not read for most of the people who
 /// write one.
-fn include_form(text: &str) -> IncludeForm<'_> {
+fn include_form(line: &Line) -> IncludeForm<'_> {
+    let text = line.text();
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
 
     let Some(rest) = text.strip_prefix('#').or_else(|| text.strip_prefix("%:")) else {
@@ -4216,6 +4182,11 @@ fn canonical(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
+    /// `text` as a directive's line, which must read.
+    fn read_line(text: &str) -> Line {
+        Line::read(text).expect("a line that reads")
+    }
+
     /// Every spelling C allows of the one form read.
     ///
     /// Mutation: take `\r` out of `blank`. The line a CRLF file ends with is
@@ -4232,10 +4203,11 @@ mod tests {
             ("#include \"a.h\" /* why */ ", "a.h"),
             ("#include \"dir/a b.h\"", "dir/a b.h"),
         ] {
-            let IncludeForm::Quoted { name: read, quote } = include_form(text) else {
+            let line = read_line(text);
+            let IncludeForm::Quoted { name: read, quote } = include_form(&line) else {
                 panic!(
                     "{text:?} is not read as an include: {:?}",
-                    include_form(text)
+                    include_form(&read_line(text))
                 );
             };
             assert_eq!(read, name, "{text:?}");
@@ -4261,14 +4233,20 @@ mod tests {
             ("#include \"a.h", IncludeForm::Unread),
             ("#include \"a.h\" x", IncludeForm::Unread),
             ("#include \"a.h\"\rint z;", IncludeForm::Unread),
-            ("#include \"a.h\" /* open", IncludeForm::Unread),
-            ("#include \"a.h\" // \\", IncludeForm::Spliced),
-            ("#include \"a.h\" // \\ \r", IncludeForm::Spliced),
-            ("#include \"a.h\" // ??/", IncludeForm::Spliced),
             ("#include \"a??=.h\"", IncludeForm::Spliced),
             ("#", IncludeForm::Other),
         ] {
-            assert_eq!(include_form(text), expected, "{text:?}");
+            assert_eq!(include_form(&read_line(text)), expected, "{text:?}");
+        }
+        // A comment that goes on past the line, or a splice in one, is
+        // turned away before any reader is handed the line.
+        for text in [
+            "#include \"a.h\" /* open",
+            "#include \"a.h\" // \\",
+            "#include \"a.h\" // \\ \r",
+            "#include \"a.h\" // ??/",
+        ] {
+            assert!(Line::read(text).is_err(), "{text:?}");
         }
     }
 
@@ -5131,21 +5109,30 @@ mod tests {
     fn a_conditional_directive_is_read_by_its_name() {
         use ConditionalForm::*;
         // The expression is the rest of the line after the name.
-        assert_eq!(conditional_form("#if 1"), Some(If { expression: (3, 5) }));
         assert_eq!(
-            conditional_form("%:elif X"),
+            conditional_form(&read_line("#if 1")),
+            Some(If { expression: (3, 5) })
+        );
+        assert_eq!(
+            conditional_form(&read_line("%:elif X")),
             Some(Elif { expression: (6, 8) })
         );
-        assert_eq!(conditional_form("#  else"), Some(Else { extra: None }));
-        assert_eq!(conditional_form("#endif     "), Some(Endif { extra: None }));
         assert_eq!(
-            conditional_form("#endif X  "),
+            conditional_form(&read_line("#  else")),
+            Some(Else { extra: None })
+        );
+        assert_eq!(
+            conditional_form(&read_line("#endif     ")),
+            Some(Endif { extra: None })
+        );
+        assert_eq!(
+            conditional_form(&read_line("#endif X  ")),
             Some(Endif {
                 extra: Some((7, 8))
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A"),
+            conditional_form(&read_line("#ifdef A")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Read("A"),
@@ -5153,7 +5140,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifndef A B"),
+            conditional_form(&read_line("#ifndef A B")),
             Some(Ifdef {
                 negated: true,
                 name: Named::Read("A"),
@@ -5161,7 +5148,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef"),
+            conditional_form(&read_line("#ifdef")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Missing,
@@ -5169,7 +5156,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef 1"),
+            conditional_form(&read_line("#ifdef 1")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Missing,
@@ -5177,7 +5164,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A$B"),
+            conditional_form(&read_line("#ifdef A$B")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Unread,
@@ -5185,17 +5172,17 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A\\u00e9"),
+            conditional_form(&read_line("#ifdef A\\u00e9")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Unread,
                 extra: Some((8, 14))
             })
         );
-        assert_eq!(conditional_form("#ifdefine X"), None);
-        assert_eq!(conditional_form("#if$"), None);
-        assert_eq!(conditional_form("#include \"a.h\""), None);
-        let blank = blanked("#endif /* U */").unwrap();
+        assert_eq!(conditional_form(&read_line("#ifdefine X")), None);
+        assert_eq!(conditional_form(&read_line("#if$")), None);
+        assert_eq!(conditional_form(&read_line("#include \"a.h\"")), None);
+        let blank = read_line("#endif /* U */");
         assert_eq!(conditional_form(&blank), Some(Endif { extra: None }));
     }
 

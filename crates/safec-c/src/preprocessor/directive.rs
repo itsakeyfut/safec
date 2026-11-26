@@ -5,9 +5,10 @@
 //! compiled; in a skipped one a directive is read only as far as its name.
 
 use super::held::Sources;
+use super::line::Line;
 use super::{
-    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, blanked, canonical, collected,
-    condition, hash, refused, replaced, spliced, too_deep, used_at,
+    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, canonical, collected, condition,
+    hash, refused, replaced, spliced, too_deep, used_at,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::lexer::UNSUPPORTED_SPLICE;
@@ -25,12 +26,13 @@ const WARNING_DIRECTIVE: Code = Code::new("SC0122");
 /// Read `text`, the line of the directive at `directive` with its comments
 /// made spaces, if it is one of this module's, and say whether it was.
 pub(super) fn read(
-    text: &str,
+    directive_line: &Line,
     directive: Span,
     sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
+    let text = directive_line.text();
     let Some((word, rest)) = name(text) else {
         return false;
     };
@@ -69,7 +71,13 @@ pub(super) fn read(
             reading,
             diagnostics,
         ),
-        "pragma" => pragma(rest, hash(text, directive), sources, reading, diagnostics),
+        "pragma" => pragma(
+            (directive_line, text.len() - rest.len()),
+            hash(text, directive),
+            sources,
+            reading,
+            diagnostics,
+        ),
         "line" => line(
             Form::Line,
             (text, directive),
@@ -110,8 +118,8 @@ pub(super) fn read(
 /// about: a skipped group holds other text C passes over (C17 6.10.1 p6),
 /// and real headers write some, FreeBSD's `sys/queue.h` a `#warn`, which
 /// refusing every unknown name refused. Found by review.
-pub(super) fn chooses_a_group(text: &str) -> bool {
-    matches!(name(text), Some(("elifdef" | "elifndef", _)))
+pub(super) fn chooses_a_group(line: &Line) -> bool {
+    matches!(name(line.text()), Some(("elifdef" | "elifndef", _)))
 }
 
 /// A directive's name and what follows it, of `text`, a line beginning
@@ -225,12 +233,13 @@ fn classify(rest: &str) -> Class {
 /// Act on the pragma `rest`, the text after `pragma`, written at `at`: a
 /// `#pragma`'s `#`, or a `_Pragma`'s string literal.
 fn pragma(
-    rest: &str,
+    (line, from): (&Line, usize),
     at: Span,
     sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
+    let rest = &line.text()[from..];
     match classify(rest) {
         // The file of its use: a `_Pragma` a macro writes marks the file
         // the macro is used in, as it would had it been written there. Only
@@ -345,9 +354,9 @@ pub(super) fn operator(
     // was ignored, where ADR-0129 refuses it, and `clang` read a program
     // with a heap overflow safec passed. Found by the hunt before #618
     // closed. A comment the text does not end is refused, as on a line.
-    let read = read.and_then(|(literal, text)| Some((literal, blanked(&text)?)));
+    let read = read.and_then(|(literal, text)| Some((literal, Line::operand(&text)?)));
     match read {
-        Some((literal, text)) => pragma(&text, literal.span, sources, reading, diagnostics),
+        Some((literal, line)) => pragma((&line, 0), literal.span, sources, reading, diagnostics),
         None => unread(diagnostics),
     }
 }
