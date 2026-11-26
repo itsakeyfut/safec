@@ -10751,6 +10751,23 @@ cases! {
         // ASCII as a token, in `Line::lexed`. A function's overflow is not
         // reported.
         a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // White space outside ASCII between `#` and a name makes no
+        // directive to `clang`, though after a name it is white space: in a
+        // skipped group such a line is passed over, not counted. Read as a
+        // space, `#` and a no-break space and `else` chose a group `clang`
+        // never chooses, and `#ifdef` and `#endif` spelled so paired the
+        // groups after them differently; each function's double free or use
+        // after free exited 0. Found by the hunt before #1359 closed.
+        // Mutation: read such white space as a space, in
+        // `Line::spaced_oddly`; nothing is reported.
+        white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And in a group that is compiled such a line is refused: `clang -E`
+        // refuses it as an invalid directive and `clang` reads it as one, so
+        // neither reading is taken. A conditional refused so still opens its
+        // level, so its `#endif` is not reported as closing nothing.
+        // Mutations: the same, and the line is read as a `#define`; or keep
+        // no level for the refused `#if`, and its `#endif` is reported.
+        white_space_outside_ascii_after_a_hash_is_refused_in_a_group_that_is_compiled: ["--emit", "ast"],
         // And a comment around each of those names is white space (C17
         // 5.1.1.2 p1, phase 3), so the same directives with one around every
         // name are read. Held twice over: the line's comments are made

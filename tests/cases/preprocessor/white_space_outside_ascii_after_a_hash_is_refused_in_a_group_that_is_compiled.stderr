@@ -1,0 +1,16 @@
+error[SC0104]: white space outside ASCII after `#` makes no directive
+   ╭─[ white_space_outside_ascii_after_a_hash_is_refused_in_a_group_that_is_compiled.c:1:1 ]
+   │
+ 1 │ # define X 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `clang -E` refuses such a line, and `clang` reads it as a directive; after a directive's name it is white space
+error[SC0104]: white space outside ASCII after `#` makes no directive
+   ╭─[ white_space_outside_ascii_after_a_hash_is_refused_in_a_group_that_is_compiled.c:2:1 ]
+   │
+ 2 │ # if 0
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `clang -E` refuses such a line, and `clang` reads it as a directive; after a directive's name it is white space

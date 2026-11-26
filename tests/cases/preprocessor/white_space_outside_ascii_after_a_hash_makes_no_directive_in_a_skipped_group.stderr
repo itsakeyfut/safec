@@ -1,0 +1,34 @@
+error[SC0401]: this frees `p`, which was freed already
+    ╭─[ white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:12:5 ]
+    │
+  5 │     int *p = malloc(sizeof *p);
+    │              ────────┬────────  
+    │                      ╰────────── allocated here
+    │ 
+  7 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 12 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:24:5 ]
+    │
+ 17 │     int *p = malloc(sizeof *p);
+    │              ────────┬────────  
+    │                      ╰────────── allocated here
+    │ 
+ 20 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 24 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
