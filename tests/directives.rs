@@ -4,11 +4,15 @@
 //! from `clang` were opened, and each was found by a review or a hunt, none
 //! by the corpus: each review answer added a case for its own spelling, and
 //! the next spelling was found by a person. So this generates the spellings.
-//! Each directive is written with each character that can stand beside its
-//! name: before its `#`, between the `#` and the name, and touching the
-//! name's end. Each line is placed in a group that is compiled and in one
-//! that is skipped, beside declarations that say which groups were taken,
-//! and `clang` is asked which it compiled. Asked as it compiles, not as
+//! Each of the directives in [`DIRECTIVES`] is written with one of the
+//! characters in [`CHARACTERS`] at one place: before its `#`, between the `#`
+//! and the name, touching the name's end, or at the end of the line, which
+//! for `#ifdef X` touches the name it asks about. Each line is placed in a
+//! group that is compiled and in one that is skipped, and its plain spelling
+//! also in a conditional nested in a skipped group, beside declarations that
+//! say which groups were taken, and `clang` is asked which it compiled. One
+//! character at one place per line: two together, a comment between, a
+//! splice and `%:` are not generated. Asked as it compiles, not as
 //! `clang -E` preprocesses: the two disagree on white space outside ASCII
 //! after a name, which `-E` refuses and a compile reads with a warning, and
 //! what a program is, is what is compiled.
@@ -16,9 +20,12 @@
 //! safec agrees where it takes the same groups, or where it refuses the
 //! program, which ADR-0134 allows. It disagrees where it builds a program
 //! `clang` takes other groups in (row 6), or builds one `clang` refuses.
-//! Today's disagreements are listed in [`KNOWN`], each with the issue that
-//! closes it, and an entry that now agrees fails too, so the list only
-//! shrinks.
+//! Today's disagreements are listed exactly in [`KNOWN`], each with the
+//! issue that closes it, and a row that no longer disagrees fails too, so
+//! the list only shrinks. Since a refusal agrees, two more things are held:
+//! every plain spelling `clang` builds is built, but for those
+//! [`PLAIN_REFUSED`] lists, and [`BUILT_BY_BOTH`] counts the programs both
+//! built alike, so refusing more is a change somebody states.
 //!
 //! `clang` is found as the LLVM tests find it: where there is none the suite
 //! is skipped, and `SAFEC_REQUIRE_LLVM`, which CI sets, makes that a failure.
@@ -80,6 +87,11 @@ const DIRECTIVES: &[Directive] = &[
     Directive {
         name: "elifdef",
         rest: " X",
+        shape: Shape::Chooses,
+    },
+    Directive {
+        name: "elifndef",
+        rest: " Z",
         shape: Shape::Chooses,
     },
     Directive {
@@ -157,16 +169,40 @@ const CHARACTERS: &[(&str, &str)] = &[
     ("form feed", "\u{c}"),
 ];
 
-/// Where the character stands on the line.
-const PLACES: &[&str] = &["before the #", "after the #", "after the name"];
+/// Where the character stands on the line: the last is after what follows
+/// the name, which for `#ifdef X` touches the name it asks about.
+const PLACES: &[&str] = &[
+    "before the #",
+    "after the #",
+    "after the name",
+    "at the end",
+];
 
-/// Which kind of group the line is in.
-const GROUPS: &[&str] = &["compiled", "skipped"];
+/// Which kind of group the line is in: one compiled, one skipped, and one
+/// nested in a conditional opened inside a skipped group, where only the
+/// depth counts.
+const GROUPS: &[&str] = &["compiled", "skipped", "nested"];
 
 /// Today's disagreements, each as `[group, place, directive, character]`,
 /// where `*` stands for any, with the issue that closes it. Deleting a row
 /// the code now agrees on is the change that closes it; a row that matches
 /// no disagreement fails.
+/// How many generated programs `clang` and safec both built, taking the
+/// same groups. A refusal agrees with `clang`, as ADR-0134 allows, so this
+/// is what says how much is read rather than refused: a change that refuses
+/// more, or reads more, moves it, and is stated by updating it.
+const BUILT_BY_BOTH: usize = 1451;
+
+/// The plain spellings safec refuses though `clang` builds them, each with
+/// the issue that reads it.
+const PLAIN_REFUSED: &[([&str; 4], &str)] = &[
+    // C23's `#elifdef` and `#elifndef` are not read yet.
+    (["*", "*", "#elifdef", "nothing"], "#1273"),
+    (["*", "*", "#elifndef", "nothing"], "#1273"),
+    // A null directive is refused in a group that is compiled.
+    (["compiled", "*", "#(null)", "nothing"], "#1384"),
+];
+
 const KNOWN: &[([&str; 4], &str)] = &[
     // A NUL beside the `#` in a skipped group makes no directive here, and
     // `clang` reads it as white space, so a group it takes is passed over.
@@ -179,8 +215,124 @@ const KNOWN: &[([&str; 4], &str)] = &[
     (["skipped", "after the #", "#elifdef", "NUL"], "#1377"),
     (["skipped", "after the #", "#else", "NUL"], "#1377"),
     (["skipped", "after the #", "#endif", "NUL"], "#1377"),
+    (["skipped", "before the #", "#elifndef", "NUL"], "#1377"),
+    (["skipped", "after the #", "#elifndef", "NUL"], "#1377"),
     // A Ctrl-Z ends the file for `clang` targeting MSVC, and this reads on.
-    (["*", "*", "*", "substitute"], "#1383"),
+    (
+        ["compiled", "after the name", "#elif", "substitute"],
+        "#1383",
+    ),
+    (
+        ["compiled", "after the name", "#else", "substitute"],
+        "#1383",
+    ),
+    (
+        ["compiled", "after the name", "#pragma", "substitute"],
+        "#1383",
+    ),
+    (["compiled", "at the end", "#define", "substitute"], "#1383"),
+    (["compiled", "at the end", "#elif", "substitute"], "#1383"),
+    (["compiled", "at the end", "#ifdef", "substitute"], "#1383"),
+    (["compiled", "at the end", "#ifndef", "substitute"], "#1383"),
+    (["compiled", "at the end", "#pragma", "substitute"], "#1383"),
+    (["skipped", "after the #", "#(null)", "substitute"], "#1383"),
+    (["skipped", "after the #", "#4", "substitute"], "#1383"),
+    (["skipped", "after the #", "#define", "substitute"], "#1383"),
+    (["skipped", "after the #", "#elif", "substitute"], "#1383"),
+    (
+        ["skipped", "after the #", "#elifdef", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the #", "#elifndef", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "after the #", "#else", "substitute"], "#1383"),
+    (["skipped", "after the #", "#endif", "substitute"], "#1383"),
+    (
+        ["skipped", "after the #", "#include", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "after the #", "#line", "substitute"], "#1383"),
+    (["skipped", "after the #", "#pragma", "substitute"], "#1383"),
+    (["skipped", "after the #", "#undef", "substitute"], "#1383"),
+    (
+        ["skipped", "after the name", "#(null)", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "after the name", "#4", "substitute"], "#1383"),
+    (
+        ["skipped", "after the name", "#define", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#else", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "after the name", "#if", "substitute"], "#1383"),
+    (
+        ["skipped", "after the name", "#ifdef", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#ifndef", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#include", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#line", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#pragma", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "after the name", "#undef", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "at the end", "#4", "substitute"], "#1383"),
+    (["skipped", "at the end", "#define", "substitute"], "#1383"),
+    (["skipped", "at the end", "#if", "substitute"], "#1383"),
+    (["skipped", "at the end", "#ifdef", "substitute"], "#1383"),
+    (["skipped", "at the end", "#ifndef", "substitute"], "#1383"),
+    (["skipped", "at the end", "#include", "substitute"], "#1383"),
+    (["skipped", "at the end", "#line", "substitute"], "#1383"),
+    (["skipped", "at the end", "#pragma", "substitute"], "#1383"),
+    (["skipped", "at the end", "#undef", "substitute"], "#1383"),
+    (
+        ["skipped", "before the #", "#(null)", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "before the #", "#4", "substitute"], "#1383"),
+    (
+        ["skipped", "before the #", "#define", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "before the #", "#elif", "substitute"], "#1383"),
+    (
+        ["skipped", "before the #", "#elifdef", "substitute"],
+        "#1383",
+    ),
+    (
+        ["skipped", "before the #", "#elifndef", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "before the #", "#else", "substitute"], "#1383"),
+    (["skipped", "before the #", "#endif", "substitute"], "#1383"),
+    (
+        ["skipped", "before the #", "#include", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "before the #", "#line", "substitute"], "#1383"),
+    (
+        ["skipped", "before the #", "#pragma", "substitute"],
+        "#1383",
+    ),
+    (["skipped", "before the #", "#undef", "substitute"], "#1383"),
 ];
 
 /// Whether `key`, a disagreement's `group / place / directive / character`,
@@ -196,13 +348,14 @@ fn listed(key: &str, known: &[&str; 4]) -> bool {
 
 /// The directive's line, with `character` at `place`.
 fn line(directive: &Directive, character: &str, place: &str) -> String {
-    let (before, between, after) = match place {
-        "before the #" => (character, "", ""),
-        "after the #" => ("", character, ""),
-        _ => ("", "", character),
+    let (before, between, after, end) = match place {
+        "before the #" => (character, "", "", ""),
+        "after the #" => ("", character, "", ""),
+        "after the name" => ("", "", character, ""),
+        _ => ("", "", "", character),
     };
     format!(
-        "{before}#{between}{}{after}{}",
+        "{before}#{between}{}{after}{}{end}",
         directive.name, directive.rest
     )
 }
@@ -210,6 +363,12 @@ fn line(directive: &Directive, character: &str, place: &str) -> String {
 /// A program holding `line` in a `group`, declaring `in_a`, `in_b`, `in_c`
 /// in the groups each reading of it would take.
 fn program(directive: &Directive, line: &str, group: &str) -> String {
+    if group == "nested" {
+        return format!(
+            "#define X 1\n#if 0\n#if 1\nint in_z;\n{line}\nint in_a;\n#endif\nint in_b;\n#endif\n\
+             int in_c;\nint main(void) {{ return 0; }}\n"
+        );
+    }
     let compiled = group == "compiled";
     let body = match (directive.shape, compiled) {
         (Shape::Opens, true) => format!("{line}\nint in_a;\n#endif\nint in_b;\n"),
@@ -232,7 +391,7 @@ fn program(directive: &Directive, line: &str, group: &str) -> String {
 
 /// The marker declarations named in `text`.
 fn markers(text: &str) -> BTreeSet<String> {
-    ["in_a", "in_b", "in_c"]
+    ["in_a", "in_b", "in_c", "in_z"]
         .into_iter()
         .filter(|marker| text.contains(marker))
         .map(str::to_owned)
@@ -315,15 +474,19 @@ impl Drop for Scratch {
     }
 }
 
-/// Every directive, with every character at every place, in either kind of
-/// group, is read as `clang` reads it, refused, or listed in [`KNOWN`].
+/// Each generated directive spelling is read as `clang` reads it, refused,
+/// or listed in [`KNOWN`]; each plain one `clang` builds is built; and the
+/// number both built alike is [`BUILT_BY_BOTH`].
 ///
 /// Mutations: take a stray character touching a name as going on with it
 /// (#1360's review), read white space outside ASCII after `#` as a space
 /// (#1370), or read a universal character name past U+10FFFF as ending the
-/// name (#1369's review); rows not in `KNOWN` disagree and this fails.
+/// name (#1369's review); rows not in `KNOWN` disagree. Refuse every line in
+/// a compiled group; `BUILT_BY_BOTH` and the plain spellings fail. Drop
+/// `#elifndef` from the names that choose a group; its rows disagree. Act on
+/// an `#else` nested in a skipped group; the nested rows disagree.
 #[test]
-fn every_directive_spelling_is_read_as_clang_reads_it_or_refused() {
+fn generated_directive_spellings_are_read_as_clang_reads_them_or_refused() {
     if !clang_or_skip() {
         return;
     }
@@ -337,7 +500,17 @@ fn every_directive_spelling_is_read_as_clang_reads_it_or_refused() {
     for group in GROUPS {
         for place in PLACES {
             for directive in DIRECTIVES {
+                // At the end of a directive with nothing after its name is
+                // touching the name, a place already generated.
+                if *place == "at the end" && directive.rest.is_empty() {
+                    continue;
+                }
                 for (label, character) in CHARACTERS {
+                    // A nested group asks how the depth is counted, which
+                    // the plain spelling asks.
+                    if *group == "nested" && *label != "nothing" {
+                        continue;
+                    }
                     let key = format!(
                         "{group} / {place} / #{} / {label}",
                         if directive.name.is_empty() {
@@ -354,6 +527,11 @@ fn every_directive_spelling_is_read_as_clang_reads_it_or_refused() {
     }
 
     let disagreements = Mutex::new(Vec::new());
+    // How many programs both built alike, and the plain spellings safec
+    // refused though `clang` built them: a refusal agrees, so without these
+    // a safec that refused everything would pass. Found by review.
+    let built_by_both = Mutex::new(0usize);
+    let plain_refused = Mutex::new(Vec::new());
     let next = Mutex::new(0usize);
     let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
     std::thread::scope(|scope| {
@@ -378,6 +556,18 @@ fn every_directive_spelling_is_read_as_clang_reads_it_or_refused() {
                         (Reading::Built(a), Reading::Built(b)) => a == b,
                         (Reading::Refused, Reading::Built(_)) => false,
                     };
+                    if let (Reading::Built(a), Reading::Built(b)) = (&theirs, &ours) {
+                        if a == b {
+                            *built_by_both.lock().unwrap() += 1;
+                        }
+                    }
+                    if key.ends_with(" / nothing")
+                        && matches!(theirs, Reading::Built(_))
+                        && ours == Reading::Refused
+                        && !PLAIN_REFUSED.iter().any(|(known, _)| listed(key, known))
+                    {
+                        plain_refused.lock().unwrap().push(key.clone());
+                    }
                     if !agrees {
                         disagreements
                             .lock()
@@ -389,6 +579,18 @@ fn every_directive_spelling_is_read_as_clang_reads_it_or_refused() {
         }
     });
 
+    let plain_refused = plain_refused.into_inner().unwrap();
+    assert!(
+        plain_refused.is_empty(),
+        "safec refuses plain spellings clang builds:\n{}",
+        plain_refused.join("\n")
+    );
+    let built_by_both = built_by_both.into_inner().unwrap();
+    assert_eq!(
+        built_by_both, BUILT_BY_BOTH,
+        "programs both compilers built alike moved from {BUILT_BY_BOTH} to {built_by_both}: \
+         a refusal added or lifted is a change to say, by updating `BUILT_BY_BOTH`"
+    );
     let mut disagreements: Vec<(String, String)> = disagreements.into_inner().unwrap();
     disagreements.sort();
     let unexpected: Vec<String> = disagreements
