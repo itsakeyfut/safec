@@ -22,6 +22,7 @@
 
 mod condition;
 mod directive;
+mod held;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -35,6 +36,7 @@ use crate::lexer::{
 };
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
+use held::{Addition, Handed, Sources, Unadded};
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -112,40 +114,6 @@ const MAX_INCLUSIONS: usize = 4096;
 /// counting them all refused it. Found by review.
 const MAX_EXPANSIONS: usize = 65536;
 
-/// How many bytes the expansions of one input may hold in all, each one
-/// counted as [`INSTANCE_COST`] and [`BYTE_COST`] for each byte of its text:
-/// an estimate of the memory it takes, from what was measured.
-///
-/// [`MAX_EXPANSIONS`] bounds one use's tree, and a file can hold many uses:
-/// with the count starting again at each, forty uses of a tree just under
-/// the bound held 818 MB, each expansion a file of its own, and printed
-/// nothing until it ended. Found by review. What that costs is memory, so
-/// memory is what is bounded: a count of expansions, which this replaces,
-/// refused a file of 66,000 lines of `s = F(s);` with `#define F(x) (G + x)`,
-/// two expansions a line, at line 65,540. That file is counted at about
-/// 51 MB, a fifth of this, and the forty uses past it are refused, once, at
-/// the eleventh. Found by review of #1215.
-const MAX_HELD_IN_ALL: usize = 256 << 20;
-
-/// What one expansion costs beside its text, in bytes.
-///
-/// Measured, not reckoned: with the count above lifted, a release build read
-/// `--emit tokens` of forty uses of `M15`, `#define M{n} (M{n-1} + M{n-1})`
-/// down to `#define M0 1`, 2,621,400 expansions of a few bytes each, at a
-/// peak working set of 818 MB, and ten such uses at 209 MB: about 320 bytes
-/// an expansion either way.
-const INSTANCE_COST: usize = 320;
-
-/// What one byte of an expansion's text costs, at most, in bytes.
-///
-/// A byte can be a token, and the tokens an expansion hands on are held
-/// until the input ends: a list of 65,536 commas used 255 times held 283 MB
-/// at its peak, 17 bytes for each byte of its text, where the same length of
-/// spaces held 21 MB. Counted as one byte, a list that dense passed the
-/// bound at seventeen times it, a gigabyte with nothing said. Found by
-/// review.
-const BYTE_COST: usize = 17;
-
 /// How deep one call's arguments may hold calls, one inside the next.
 ///
 /// Each level is read by a frame loop of its own, on the native stack, so
@@ -166,7 +134,7 @@ const MAX_ARGUMENT_DEPTH: usize = 200;
 const MAX_SUBSTITUTED: usize = 1 << 22;
 
 /// How many bytes the calls of one input may write in all, for the reason
-/// [`MAX_HELD_IN_ALL`] bounds an input as well as a use.
+/// [`held::MAX_HELD_IN_ALL`] bounds an input as well as a use.
 const MAX_SUBSTITUTED_IN_ALL: usize = 1 << 26;
 
 /// How many bytes the `##`s of one expansion may make for the scan to read.
@@ -200,9 +168,6 @@ struct Reading {
     /// the clock otherwise, read once per build; or the value of a
     /// `SOURCE_DATE_EPOCH` that is not a number of seconds. See ADR-0130.
     started: Result<u64, String>,
-    /// The bytes every expansion this input has made holds, as
-    /// [`MAX_HELD_IN_ALL`] counts them.
-    held_in_all: usize,
     /// How many expansions of each name are open, and of all names: what the
     /// rule that a macro is not expanded inside itself asks of, kept as a
     /// count rather than found by walking the frames, which made a chain of
@@ -570,6 +535,8 @@ impl Preprocessed {
 #[derive(Debug)]
 pub struct Prelude {
     reading: Reading,
+    /// What reading it held, which each input's charge starts from.
+    held: usize,
 }
 
 /// Read the macros `target` predefines, and then what `macros`, the command
@@ -588,13 +555,13 @@ pub fn prelude(
     sources: &mut SourceMap,
     diagnostics: &mut DiagnosticSink,
 ) -> Prelude {
+    let sources = &mut Sources::new(sources, 0);
     let mut reading = Reading {
         open: Vec::new(),
         inclusions: 0,
         macros: HashMap::new(),
         expansions: 0,
         target,
-        held_in_all: 0,
         open_macros: HashMap::new(),
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
@@ -613,7 +580,9 @@ pub fn prelude(
     // is placed like any other (ADR-0054) and a label in it names
     // `<built-in>`.
     let text = predefined(target);
-    let built_in = sources.add_virtual("built-in", text);
+    let built_in = sources
+        .add_virtual("built-in", text, diagnostics)
+        .expect("what the target predefines is far under the bound");
     let mut at = 0;
     for line in text.split_inclusive('\n') {
         let directive = line.trim_end_matches('\n');
@@ -667,7 +636,10 @@ pub fn prelude(
             .with_note("`__DATE__` and `__TIME__` are written from it"),
         );
     }
-    Prelude { reading }
+    Prelude {
+        reading,
+        held: sources.held(),
+    }
 }
 
 /// Splice every `#include "file"` in `tokens`, the scan of `file`, record
@@ -687,8 +659,10 @@ pub fn preprocess_with(
     if let Some(path) = path_of(sources.file(file).name()) {
         reading.open.push((canonical(path), file));
     }
-    let mut spliced = Vec::with_capacity(tokens.len());
-    read_includes(tokens, sources, &mut reading, diagnostics, &mut spliced);
+    let sources = &mut Sources::new(sources, prelude.held);
+    let mut handed = Handed::default();
+    read_includes(tokens, sources, &mut reading, diagnostics, &mut handed);
+    let mut spliced = handed.into_tokens();
     spliced.extend(tokens.iter().copied().filter(|token| token.is_eof()));
     Preprocessed(spliced)
 }
@@ -731,7 +705,7 @@ pub fn preprocess(
 ///   `cc` accepts that, and nothing here needs it yet.
 fn command_line(
     macros: &[CommandLineMacro],
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
@@ -776,7 +750,9 @@ fn command_line(
         text.push('\n');
     }
 
-    let file = sources.add_virtual("command line", &text);
+    let file = sources
+        .add_virtual("command line", &text, diagnostics)
+        .expect("what the command line defines is far under the bound");
     for (start, given, offset) in &not_read {
         let name = given.name();
         let named = Span::new(file, start + offset, start + offset + name.len() as u32);
@@ -820,7 +796,7 @@ fn command_line(
                 .any(|(start, _, _)| token.span.start() == *start)
         })
         .collect();
-    let mut handed_over = Vec::new();
+    let mut handed_over = Handed::default();
     read_includes(&scan, sources, reading, diagnostics, &mut handed_over);
     // Every line is a directive, so nothing reaches the parser from here.
     assert!(
@@ -842,10 +818,10 @@ fn command_line(
 /// [`MAX_DEPTH`], and a tree of them at [`MAX_INCLUSIONS`].
 fn read_includes(
     tokens: &[Token],
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
-    spliced: &mut Vec<Token>,
+    spliced: &mut Handed,
 ) {
     let mut frames = vec![Frame {
         tokens: tokens.to_vec(),
@@ -1189,7 +1165,9 @@ fn read_includes(
                     Replaced::Frame(frame) => frames.push(frame),
                     Replaced::Kept => {
                         emitted(&mut frames, token.span);
-                        spliced.push(token);
+                        if !spliced.push(token, sources, diagnostics) {
+                            return;
+                        }
                     }
                     Replaced::Dropped => {}
                 }
@@ -1206,11 +1184,15 @@ fn read_includes(
                     diagnostics.report(diagnostic);
                 }
                 emitted(&mut frames, token.span);
-                spliced.push(token);
+                if !spliced.push(token, sources, diagnostics) {
+                    return;
+                }
             }
             _ => {
                 emitted(&mut frames, token.span);
-                spliced.push(token);
+                if !spliced.push(token, sources, diagnostics) {
+                    return;
+                }
             }
         }
     }
@@ -1233,7 +1215,7 @@ fn read_includes(
 fn replacement(
     frames: &mut Vec<Frame>,
     token: Token,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Replaced {
@@ -1320,7 +1302,7 @@ fn replacement(
 /// not open, expands to, or `None` where it is refused and left as it is.
 fn expansion(
     (token, leading): (Token, bool),
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Frame> {
@@ -1344,11 +1326,17 @@ fn expansion(
             }
         };
         if !written_within_bounds(token, written.scanned, reading, diagnostics)
-            || !admitted(token, &name, written.text.len(), reading, diagnostics)
+            || !admitted(token, &name, reading, diagnostics)
         {
             return None;
         }
-        let file = sources.substitute(written.text, written.pieces, token.span);
+        let Ok(file) = sources.add(
+            Addition::Substitute(written.text, written.pieces),
+            token.span,
+            diagnostics,
+        ) else {
+            return None;
+        };
         reading
             .unspaced
             .extend(written.unspaced.into_iter().map(|offset| (file, offset)));
@@ -1360,10 +1348,12 @@ fn expansion(
             diagnostics,
         ));
     }
-    if !admitted(token, &name, spelled.len() as usize, reading, diagnostics) {
+    if !admitted(token, &name, reading, diagnostics) {
         return None;
     }
-    let file = sources.expand(spelled, token.span);
+    let Ok(file) = sources.add(Addition::Expand(spelled), token.span, diagnostics) else {
+        return None;
+    };
     Some(instance(
         file,
         (token.span, leading),
@@ -1397,7 +1387,7 @@ fn unwritten_report(token: Token, unwritten: Unwritten) -> Diagnostic {
 fn dynamic(
     token: Token,
     leading: bool,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Frame> {
@@ -1428,14 +1418,16 @@ fn dynamic(
         }
     };
     begin_use(reading);
-    if !admitted(token, &name, text.len(), reading, diagnostics) {
+    if !admitted(token, &name, reading, diagnostics) {
         return None;
     }
     let pieces = vec![Piece {
         offset: 0,
         from: token.span,
     }];
-    let file = sources.substitute(text, pieces, token.span);
+    let Ok(file) = sources.add(Addition::Substitute(text, pieces), token.span, diagnostics) else {
+        return None;
+    };
     Some(instance(
         file,
         (token.span, leading),
@@ -1567,37 +1559,15 @@ fn begin_use(reading: &mut Reading) {
     }
 }
 
-/// Count an expansion of `name`, used at `token`, whose text is `length`
-/// bytes, and open it; or refuse it where it would pass a bound, said once.
+/// Count an expansion of `name`, used at `token`, and open it; or refuse
+/// it where it would pass [`MAX_EXPANSIONS`], said once. What it holds is
+/// charged where its file is added, by [`Sources::add`].
 fn admitted(
     token: Token,
     name: &str,
-    length: usize,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
-    let held = INSTANCE_COST + BYTE_COST * length;
-    if reading.held_in_all + held > MAX_HELD_IN_ALL {
-        // Once: past the bound, the count is left above it, which no
-        // admitted expansion can leave it.
-        if reading.held_in_all <= MAX_HELD_IN_ALL {
-            reading.held_in_all = MAX_HELD_IN_ALL + 1;
-            // What this one would take them to, not what they hold: one
-            // large list can pass the bound from well under it. Found by
-            // review.
-            diagnostics.report(
-                Diagnostic::error("this input's macro expansions would take too much memory")
-                    .with_code(TOO_MANY_EXPANSIONS)
-                    .with_label(Label::primary(token.span, "expanded here"))
-                    .with_note(format!(
-                        "this expansion would take what they hold past {} MiB, the most \
-                         one input's may",
-                        MAX_HELD_IN_ALL >> 20
-                    )),
-            );
-        }
-        return false;
-    }
     // Once, at the first past the bound, as `SC0112` is said.
     if reading.expansions >= MAX_EXPANSIONS {
         if reading.expansions == MAX_EXPANSIONS {
@@ -1615,7 +1585,6 @@ fn admitted(
         return false;
     }
     reading.expansions += 1;
-    reading.held_in_all += held;
     *reading.open_macros.entry(name.to_owned()).or_insert(0) += 1;
     reading.open_expansions += 1;
     true
@@ -1717,7 +1686,7 @@ fn collected(
     frames: &mut Vec<Frame>,
     token: Token,
     splits: &dyn Fn(usize) -> bool,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Result<Collected, Uncollected> {
@@ -1922,7 +1891,7 @@ fn call(
     frames: &mut Vec<Frame>,
     (token, leading): (Token, bool),
     (parameters, edits): (Parameters, Vec<Edit>),
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Replaced {
@@ -2052,12 +2021,18 @@ fn call(
         written.text.len() + written.scanned,
         reading,
         diagnostics,
-    ) || !admitted(token, &name, written.text.len(), reading, diagnostics)
+    ) || !admitted(token, &name, reading, diagnostics)
     {
         return Replaced::Dropped;
     }
     let at = Span::new(close.span.file(), start.start(), close.span.end());
-    let file = sources.substitute(written.text, written.pieces, at);
+    let Ok(file) = sources.add(
+        Addition::Substitute(written.text, written.pieces),
+        at,
+        diagnostics,
+    ) else {
+        return Replaced::Dropped;
+    };
     reading
         .painted
         .extend(written.painted.into_iter().map(|offset| (file, offset)));
@@ -2531,7 +2506,7 @@ fn one_token(text: &str) -> bool {
 fn replaced(
     tokens: Vec<Token>,
     leading: bool,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Vec<(Token, bool)> {
@@ -2646,7 +2621,7 @@ fn define(
     body: (u32, u32),
     parameters: Option<Vec<&str>>,
     origin: Origin,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
@@ -3568,7 +3543,7 @@ fn conditional(
     text: &str,
     directive: Span,
     frame: &mut Frame,
-    (sources, reading): (&mut SourceMap, &mut Reading),
+    (sources, reading): (&mut Sources<'_>, &mut Reading),
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
 ) {
@@ -3675,7 +3650,7 @@ fn act(
     text: &str,
     directive: Span,
     frame: &mut Frame,
-    (sources, reading): (&mut SourceMap, &mut Reading),
+    (sources, reading): (&mut Sources<'_>, &mut Reading),
     diagnostics: &mut DiagnosticSink,
     already_refused: bool,
 ) {
@@ -3993,7 +3968,7 @@ fn include(
     directive: Span,
     quoted: Span,
     name: &str,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<(FileId, Vec<Token>)> {
@@ -4086,10 +4061,13 @@ fn include(
     // for a console or a pipe: `#include "CON"` waited on the terminal until
     // it was killed. Found by review. A device that cannot even be asked, as
     // Windows answers for `CON`, is refused with what it said.
-    let not_a_file = match fs::metadata(&path) {
-        Ok(metadata) if metadata.is_file() || metadata.is_dir() => None,
-        Ok(_) => Some("this is not a regular file, and safec reads a source file".to_owned()),
-        Err(error) => Some(reason(&path, &error, Access::Read)),
+    let (length, not_a_file) = match fs::metadata(&path) {
+        Ok(metadata) if metadata.is_file() || metadata.is_dir() => (metadata.len(), None),
+        Ok(_) => (
+            0,
+            Some("this is not a regular file, and safec reads a source file".to_owned()),
+        ),
+        Err(error) => (0, Some(reason(&path, &error, Access::Read))),
     };
     if let Some(why) = not_a_file {
         diagnostics.report(unreadable(format!(
@@ -4099,9 +4077,12 @@ fn include(
         return None;
     }
 
-    let file = match sources.include(&path, directive) {
+    // Charged by its length before it is read, so a header too large to hold
+    // is never read at all.
+    let file = match sources.add(Addition::Include(&path, length), directive, diagnostics) {
         Ok(file) => file,
-        Err(error) => {
+        Err(Unadded::OverBound) => return None,
+        Err(Unadded::Io(error)) => {
             // The name as written, which is what the reader can find in the
             // directive above. Where it was looked for follows it.
             let why = if error.kind() == std::io::ErrorKind::InvalidData {
@@ -4472,6 +4453,44 @@ mod tests {
         files.push((format!("{levels}.h"), "int z;\n".to_owned()));
 
         assert_eq!(reported("wide", &files), ["SC0112"]);
+    }
+
+    /// Inclusions of a large header are refused once what their text holds
+    /// passes the bound, well before a gigabyte and before the count of
+    /// inclusions does: 4,000 of a 512 KB header, guarded, held 1.8 GB past
+    /// three minutes with nothing printed. Found by architecture review 12.
+    ///
+    /// Mutation: charge an inclusion nothing in `Sources::add`. Every one is
+    /// read and nothing is reported.
+    #[test]
+    fn inclusions_of_a_large_header_are_refused_once_past_the_bound_for_the_input() {
+        let header = format!(
+            "#ifndef G\n#define G\n#endif\n{}",
+            "/* x */\n".repeat(1 << 16)
+        );
+        let files = [
+            ("g.h".to_owned(), header),
+            ("main.c".to_owned(), "#include \"g.h\"\n".repeat(4000)),
+        ];
+
+        assert_eq!(reported("large", &files), ["SC0113"]);
+    }
+
+    /// The tokens an input hands on are charged as they are handed on, so a
+    /// dense header included many times is refused once they pass the
+    /// bound, where its text alone would not: 300 inclusions of 65,536
+    /// commas are 118 MB of text as it is charged, and 393 MB of tokens.
+    ///
+    /// Mutation: make `Handed::push` charge nothing. Every one is read and
+    /// nothing is reported.
+    #[test]
+    fn a_dense_header_included_many_times_is_refused_once_its_tokens_pass_the_bound() {
+        let files = [
+            ("c.h".to_owned(), ",".repeat(1 << 16)),
+            ("main.c".to_owned(), "#include \"c.h\"\n".repeat(300)),
+        ];
+
+        assert_eq!(reported("dense", &files), ["SC0113"]);
     }
 
     /// The refusal says what is counted, in words true of a header with an
@@ -5020,7 +5039,7 @@ mod tests {
         }
         // Each use is 65,535 expansions; enough uses that their fixed cost
         // alone passes the bound.
-        let uses = MAX_HELD_IN_ALL / (MAX_EXPANSIONS * INSTANCE_COST) + 2;
+        let uses = held::MAX_HELD_IN_ALL / (MAX_EXPANSIONS * held::INSTANCE_COST) + 2;
         for at in 0..uses {
             text.push_str(&format!("int v{at} = M15;\n"));
         }
@@ -5044,75 +5063,6 @@ mod tests {
             .map(|code| code.to_string())
             .collect();
         assert_eq!(codes, ["SC0113"]);
-    }
-
-    /// An expansion's text counts toward the bound for the input, each
-    /// byte as [`BYTE_COST`], with its fixed cost, up to the bound itself:
-    /// one that takes what is held to the bound exactly is read, and the
-    /// next is refused, once.
-    ///
-    /// Mutations: count the fixed cost alone, or refuse at the bound rather
-    /// than past it; an assertion fails.
-    #[test]
-    fn an_expansion_s_text_counts_toward_the_bound_for_the_input() {
-        let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "x");
-        let mut diagnostics = DiagnosticSink::new();
-        let target = Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple");
-        let mut reading = prelude(target, &[], &mut sources, &mut diagnostics).reading;
-        let token = Token::new(TokenKind::Identifier, Span::new(file, 0, 1));
-
-        reading.held_in_all = MAX_HELD_IN_ALL - INSTANCE_COST - 2 * BYTE_COST;
-        assert!(admitted(token, "X", 2, &mut reading, &mut diagnostics));
-        assert_eq!(reading.held_in_all, MAX_HELD_IN_ALL);
-        assert!(!admitted(token, "X", 0, &mut reading, &mut diagnostics));
-        assert_eq!(diagnostics.diagnostics().len(), 1);
-    }
-
-    /// Each kind of expansion counts its own text toward the bound for the
-    /// input, a byte at what a dense list was measured to cost: an
-    /// object-like list as written, one whose `##` joins were made, and a
-    /// call's. Each list is a mebibyte of white space, quick to scan, and
-    /// sixteen uses of it pass the bound, 256 MiB over 17 MiB a use, by their
-    /// text and nowhere near it by their fixed cost.
-    ///
-    /// Mutations: pass no length from `expansion`'s plain list, from its
-    /// list with `##`, or from `call`, or weigh a byte as one; that input,
-    /// or every one, reads every use and reports nothing.
-    #[test]
-    fn every_kind_of_expansion_counts_its_text_toward_the_bound_for_the_input() {
-        let spaces = " ".repeat(1 << 20);
-        let uses = 16;
-        for (definition, used) in [
-            (format!("#define A a{spaces}a\n"), "A"),
-            (format!("#define A a ## b{spaces}a\n"), "A"),
-            (format!("#define A(x) x{spaces}x\n"), "A(1)"),
-        ] {
-            let mut text = definition;
-            for at in 0..uses {
-                text.push_str(&format!("int v{at} = {used};\n"));
-            }
-            let mut sources = SourceMap::new();
-            let file = sources.add_virtual("t.c", text);
-            let mut diagnostics = DiagnosticSink::new();
-            let tokens = lex(file, &sources.file_owned(file), &mut diagnostics);
-            preprocess(
-                file,
-                &tokens,
-                Target::from_triple("x86_64-unknown-linux-gnu").expect("a known triple"),
-                &[],
-                &mut sources,
-                &mut diagnostics,
-            );
-
-            let codes: Vec<String> = diagnostics
-                .diagnostics()
-                .iter()
-                .filter_map(|diagnostic| diagnostic.code())
-                .map(|code| code.to_string())
-                .collect();
-            assert_eq!(codes, ["SC0113"], "{used} defined as a mebibyte");
-        }
     }
 
     /// A file of ordinary function-like code, one call a line, two

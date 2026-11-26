@@ -4,6 +4,7 @@
 //! 6.10.9, and C23's `#warning`). Each is read only in a group that is
 //! compiled; in a skipped one a directive is read only as far as its name.
 
+use super::held::Sources;
 use super::{
     Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, blanked, canonical, collected,
     condition, hash, refused, replaced, spliced, too_deep, used_at,
@@ -11,7 +12,7 @@ use super::{
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::lexer::UNSUPPORTED_SPLICE;
 use crate::token::{Token, TokenKind};
-use safec_ir::source::{FileName, SourceMap, Span};
+use safec_ir::source::{FileName, Span};
 
 /// A pragma this does not read, ignored as C17 6.10.6 p1 allows. See
 /// ADR-0129.
@@ -26,7 +27,7 @@ const WARNING_DIRECTIVE: Code = Code::new("SC0122");
 pub(super) fn read(
     text: &str,
     directive: Span,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
@@ -226,7 +227,7 @@ fn classify(rest: &str) -> Class {
 fn pragma(
     rest: &str,
     at: Span,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
@@ -293,7 +294,7 @@ fn pragma(
 pub(super) fn operator(
     frames: &mut Vec<Frame>,
     token: Token,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
@@ -471,7 +472,7 @@ fn line(
     form: Form,
     (text, directive): (&str, Span),
     after: u32,
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
