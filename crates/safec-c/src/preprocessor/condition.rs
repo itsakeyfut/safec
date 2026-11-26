@@ -7,6 +7,7 @@
 //! `clang 22.1.8 -dM -E`). A name the implementation may define is refused
 //! wherever it is asked about, as `#ifdef` refuses it (ADR-0055, ADR-0059).
 
+use super::held::Sources;
 use super::{
     MALFORMED_CONDITION, Reading, UNSUPPORTED_DIRECTIVE, begin_use, replaced, undecidable,
     undecidable_report,
@@ -23,7 +24,7 @@ use safec_ir::source::{SourceMap, Span};
 pub(super) fn evaluate(
     tokens: Vec<Token>,
     (text, directive, what): (&str, Span, &'static str),
-    sources: &mut SourceMap,
+    sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<bool> {
@@ -83,13 +84,24 @@ pub(super) fn evaluate(
         line.push(token);
         at += if opened { 4 } else { 2 };
     }
-    let answers = (!answered.is_empty()).then(|| {
+    let answers = if answered.is_empty() {
+        None
+    } else {
         let text: Vec<&str> = answered
             .iter()
             .map(|&(_, defined, _)| if defined { "1" } else { "0" })
             .collect();
-        sources.add_virtual("defined", text.join(" "))
-    });
+        match sources.add_virtual(
+            "defined",
+            &text.join(" "),
+            Some((directive, "evaluated here")),
+            diagnostics,
+        ) {
+            Ok(answers) => Some(answers),
+            // Reported, once, by the charge.
+            Err(_) => return None,
+        }
+    };
     if let Some(answers) = answers {
         for (index, &(at, _, _)) in answered.iter().enumerate() {
             let start = 2 * index as u32;
