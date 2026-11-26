@@ -259,6 +259,25 @@ mod tests {
         assert_eq!(line("#\u{a0}define X").directive(), Some(("define", 9)));
     }
 
+    /// A comment is made spaces outside a literal only: `/*` and `//` in a
+    /// string or a character constant, or after an escaped quote in one,
+    /// open nothing.
+    ///
+    /// Mutations: take only `"` as opening a literal, or read no escape in
+    /// one; an assertion fails.
+    #[test]
+    fn a_comment_is_made_spaces_only_outside_a_literal() {
+        assert_eq!(
+            line("#define C '\"' /* x */").text(),
+            "#define C '\"'        "
+        );
+        assert_eq!(line("#define C '/*' 1").text(), "#define C '/*' 1");
+        assert_eq!(
+            line("#define S \"a\\\"/*\" 1 // x").text(),
+            "#define S \"a\\\"/*\" 1     "
+        );
+    }
+
     /// A name is read where one stands, after white space, white space
     /// outside ASCII or a comment; a literal, a number or a character no
     /// token can begin there is none, and a `$` touching a name's end makes

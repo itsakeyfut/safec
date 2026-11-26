@@ -5106,6 +5106,72 @@ mod tests {
         assert!(diagnostics.diagnostics().is_empty());
     }
 
+    /// A `#define` and an `#undef` are read from the lexer's tokens: an
+    /// empty parameter list's body starts after its `)`, a list that is not
+    /// closed or ends at a comma is not read, a name that punctuation
+    /// touches is not an object-like macro's, and an `#undef` with more
+    /// after its name is not read.
+    ///
+    /// Mutations: end an empty list at its `)`'s start, accept a list that
+    /// runs out of tokens, drop the check that what touches the name is a
+    /// `(`, or read an `#undef` with more after it; an assertion fails.
+    #[test]
+    fn a_macro_s_name_and_parameters_are_read_from_the_lexer_s_tokens() {
+        let form = |text: &str| format!("{:?}", macro_form(&read_line(text)));
+        assert_eq!(
+            form("#define F() 1"),
+            format!(
+                "{:?}",
+                MacroForm::Define {
+                    name: "F",
+                    name_at: 8,
+                    body: (12, 13),
+                    parameters: Some(Vec::new()),
+                }
+            )
+        );
+        assert_eq!(
+            form("#define F(a, b) a"),
+            format!(
+                "{:?}",
+                MacroForm::Define {
+                    name: "F",
+                    name_at: 8,
+                    body: (16, 17),
+                    parameters: Some(vec!["a", "b"]),
+                }
+            )
+        );
+        assert_eq!(form("#define F("), format!("{:?}", MacroForm::Parameters));
+        assert_eq!(form("#define F(a,"), format!("{:?}", MacroForm::Parameters));
+        assert_eq!(form("#define F(a"), format!("{:?}", MacroForm::Parameters));
+        for touched in ["#define A+1", "#define A\"x\""] {
+            assert_eq!(
+                form(touched),
+                format!(
+                    "{:?}",
+                    MacroForm::Unread {
+                        directive: "#define"
+                    }
+                ),
+                "{touched}"
+            );
+        }
+        assert_eq!(
+            form("#undef A"),
+            format!("{:?}", MacroForm::Undef { name: "A" })
+        );
+        assert_eq!(
+            form("#undef A B"),
+            format!(
+                "{:?}",
+                MacroForm::Unread {
+                    directive: "#undef"
+                }
+            )
+        );
+    }
+
     /// Each conditional directive is read by its name, a name that only
     /// begins with one is not one, and what follows is where it is.
     ///
