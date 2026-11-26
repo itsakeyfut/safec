@@ -46,11 +46,14 @@ group and another in a compiled one.
 
 Chosen option: the first. A directive line is passed over in a skipped
 group, or acted on in a compiled one, only where everything from its
-start to the end of its name is one of these:
+start to the end of its name, read after its comments are made spaces, is
+one of these:
 
 - ASCII space, tab, vertical tab or form feed;
 - `#` or `%:`;
-- a name `Line::name_at` reads as `Read`.
+- after that, nothing (the null directive), a line marker's number, or a
+  name the lexer reads whole, which no character goes on from as `clang`
+  would read it going on.
 
 Any other line is refused with an error, in a skipped group as well. The
 same holds below the line, in the lexer:
@@ -69,7 +72,8 @@ on row 6.
 Nothing holds this yet, because the code that carries it lands with
 #1377, #1371 and #1372 under #1375. Each of those adds a corpus case that
 fails when its refusal is dropped. #1379 adds a differential corpus that
-compares every directive spelling with `clang -E` in both kinds of group.
+compares every directive spelling with `clang -E` in both kinds of group,
+the null directive and line markers among them.
 This record becomes `accepted` when those cases exist, and its
 Confirmation then names them.
 
