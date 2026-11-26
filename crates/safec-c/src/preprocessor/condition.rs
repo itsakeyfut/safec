@@ -8,16 +8,16 @@
 //! wherever it is asked about, as `#ifdef` refuses it (ADR-0055, ADR-0059).
 
 use super::held::Sources;
+use super::line::Line;
 use super::{
     MALFORMED_CONDITION, Reading, UNSUPPORTED_DIRECTIVE, begin_use, replaced, undecidable,
     undecidable_report,
 };
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Label};
-use crate::lexer::lex_replacement;
 use crate::token::{Punct, Token, TokenKind};
 use crate::types::{Reading as Number, read_number};
 use safec_ir::ir::{Rank, Sign};
-use safec_ir::source::{SourceMap, Span};
+use safec_ir::source::Span;
 
 /// What the line `tokens` of the directive at `directive` (`what`, `#if` or
 /// `#elif`) says, or `None` where it was refused, the report made.
@@ -273,19 +273,21 @@ fn is_name(token: Token) -> bool {
 
 /// The tokens of `text[start..end]`, a directive's line at `directive`
 /// with its comments made spaces, placed where they are in its file.
-pub(super) fn line(text: &str, directive: Span, (start, end): (u32, u32)) -> Vec<Token> {
-    let mut scratch = SourceMap::new();
-    let file = scratch.add_virtual("condition", &text[start as usize..end as usize]);
-    lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new())
-        .into_iter()
-        .filter(|token| !token.is_eof())
+pub(super) fn line(line: &Line, directive: Span, (start, end): (u32, u32)) -> Vec<Token> {
+    // Read from the line's own tokens rather than lexed again, so white
+    // space and names are what `Line` says they are: lexed again, a no-break
+    // space in `#if 1 == 1`, white space to `clang`, was a character no token
+    // can begin, and the `#if` was refused. Found by architecture review 13.
+    line.tokens_from(start as usize)
+        .iter()
+        .take_while(|token| token.end <= end as usize)
         .map(|token| {
             Token::new(
                 token.kind,
                 Span::new(
                     directive.file(),
-                    directive.start() + start + token.span.start(),
-                    directive.start() + start + token.span.end(),
+                    directive.start() + token.start as u32,
+                    directive.start() + token.end as u32,
                 ),
             )
         })

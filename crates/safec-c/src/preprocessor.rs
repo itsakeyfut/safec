@@ -887,7 +887,7 @@ fn read_includes(
                         if let Some(frame) = frames.last_mut() {
                             conditional(
                                 form,
-                                text,
+                                &line,
                                 token.span,
                                 frame,
                                 (sources, reading),
@@ -3283,7 +3283,7 @@ fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
 /// keeps its level, through [`keep_level`].
 fn conditional(
     form: ConditionalForm,
-    text: &str,
+    line: &Line,
     directive: Span,
     frame: &mut Frame,
     (sources, reading): (&mut Sources<'_>, &mut Reading),
@@ -3303,7 +3303,7 @@ fn conditional(
             // `#else`, `#elif` or `#endif` of the skipped conditional itself.
             act(
                 form,
-                text,
+                line,
                 directive,
                 frame,
                 (sources, reading),
@@ -3314,7 +3314,7 @@ fn conditional(
     }
     act(
         form,
-        text,
+        line,
         directive,
         frame,
         (sources, reading),
@@ -3423,12 +3423,13 @@ fn reserved(name: &str) -> bool {
 /// nested conditional: open a level, choose a group, or close one.
 fn act(
     form: ConditionalForm,
-    text: &str,
+    directive_line: &Line,
     directive: Span,
     frame: &mut Frame,
     (sources, reading): (&mut Sources<'_>, &mut Reading),
     diagnostics: &mut DiagnosticSink,
 ) {
+    let text = directive_line.text();
     let at = hash(text, directive);
     // A spliced line is refused by the frame loop, and acted on here as far
     // as the line goes.
@@ -3470,7 +3471,7 @@ fn act(
         ConditionalForm::If { expression } => {
             let taking = (!spliced)
                 .then(|| {
-                    let tokens = condition::line(text, directive, expression);
+                    let tokens = condition::line(directive_line, directive, expression);
                     let line = (text, directive, "#if");
                     condition::evaluate(tokens, line, sources, reading, diagnostics)
                 })
@@ -3571,7 +3572,7 @@ fn act(
                 conditional.taking = false;
                 return;
             }
-            let tokens = condition::line(text, directive, expression);
+            let tokens = condition::line(directive_line, directive, expression);
             let line = (text, directive, "#elif");
             let taking = condition::evaluate(tokens, line, sources, reading, diagnostics);
             if let Some(conditional) = frame.conditionals.last_mut() {
@@ -3896,7 +3897,12 @@ enum IncludeForm<'a> {
 /// write one.
 fn include_form(line: &Line) -> IncludeForm<'_> {
     let text = line.text();
-    let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
+    // White space as `Line` reads it, white space outside ASCII among it, as
+    // `clang` reads it: an `#include` and a no-break space before its name
+    // was refused. Found by architecture review 13. The name itself is read
+    // from the text up to the next `"`, as `clang` reads a header name, in
+    // which a `\` escapes nothing, rather than as a string token.
+    let blank = |c: char| matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}' | '\r') || line::spacing(c);
 
     // `#included` is a directive of another name, and is not refused as an
     // `#include` of a form not read.

@@ -10792,6 +10792,15 @@ cases! {
         // Mutations: the same, and the line is read as a `#define`; or keep
         // no level for the refused `#if`, and its `#endif` is reported.
         white_space_outside_ascii_after_a_hash_is_refused_in_a_group_that_is_compiled: ["--emit", "ast"],
+        // White space outside ASCII inside an `#if`'s or an `#elif`'s
+        // expression, or before an `#include`'s name, is white space, as
+        // `clang` reads it with `-Wunicode-whitespace`: the expression is
+        // read from the line's own tokens, and the include trims as the line
+        // does. Lexed again, the `#if` was refused as no constant expression
+        // and the `#include` as not read. Found by architecture review 13.
+        // Mutation: lex the expression again in `condition::line`; the
+        // `#if` lines are refused.
+        white_space_outside_ascii_in_a_condition_or_an_include_is_white_space: ["--emit", "ast"],
         // And a comment around each of those names is white space (C17
         // 5.1.1.2 p1, phase 3), so the same directives with one around every
         // name are read. Held twice over: the line's comments are made

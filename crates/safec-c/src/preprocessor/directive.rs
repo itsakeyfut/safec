@@ -65,7 +65,7 @@ pub(super) fn read(
         // The line is the marker's first operand, so it is read from it.
         _ if marker => line(
             Form::Marker,
-            (text, directive),
+            (directive_line, directive),
             (end - word.len()) as u32,
             sources,
             reading,
@@ -80,7 +80,7 @@ pub(super) fn read(
         ),
         "line" => line(
             Form::Line,
-            (text, directive),
+            (directive_line, directive),
             (text.len() - rest.len()) as u32,
             sources,
             reading,
@@ -466,12 +466,13 @@ enum Form {
 /// it is in the file, the text a reader can open.
 fn line(
     form: Form,
-    (text, directive): (&str, Span),
+    (directive_line, directive): (&Line, Span),
     after: u32,
     sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
+    let text = directive_line.text();
     let (what, lowest, highest) = match form {
         Form::Line => ("this `#line`", 1, LAST_LINE),
         Form::Marker => ("this line marker", 0, LAST_MARKED_LINE),
@@ -501,7 +502,7 @@ fn line(
     };
 
     // Replaced as `#if`'s line is, as a use of its own.
-    let tokens = condition::line(text, directive, (after, text.len() as u32));
+    let tokens = condition::line(directive_line, directive, (after, text.len() as u32));
     let errors = diagnostics.error_count();
     begin_use(reading);
     let tokens = replaced(tokens, false, sources, reading, diagnostics);
