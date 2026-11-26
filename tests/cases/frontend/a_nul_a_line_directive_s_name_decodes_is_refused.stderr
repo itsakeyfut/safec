@@ -1,0 +1,14 @@
+error[SC0103]: a NUL is not read
+   ╭─[ a_nul_a_line_directive_s_name_decodes_is_refused.c:2:23 ]
+   │
+ 2 │ #define SIZE sizeof(__FILE__)
+   │                     ──┬─┬───  
+   │                       ╰─────── this NUL
+   │                         │     
+   │                         ╰───── `__FILE__` expanded here
+   │ 
+ 5 │     char buf[SIZE];
+   │              ──┬─  
+   │                ╰─── `SIZE` expanded here
+───╯
+  = note: `clang` reads it as white space, and in a splice skips it in some places and not others

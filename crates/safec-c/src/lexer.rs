@@ -84,17 +84,7 @@ const SPACED_SPLICE: Code = Code::new("SC0108");
 /// this call instead, and `a_lexical_error_stops_that_input_and_no_other`
 /// names the `has_errors` version as the mutation it fails on.
 pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) -> Vec<Token> {
-    for (at, byte) in unread(source.contents()) {
-        diagnostics.report(
-            Diagnostic::error(byte.message())
-                .with_code(UNEXPECTED_CHARACTERS)
-                .with_label(Label::primary(
-                    Span::new(file, at as u32, at as u32 + 1),
-                    byte.label(),
-                ))
-                .with_note(byte.note()),
-        );
-    }
+    report_unread(file, source.contents(), diagnostics);
     Lexer {
         file,
         text: source.contents(),
@@ -184,6 +174,10 @@ pub(crate) fn lex_replacement(
     source: &SourceFile,
     diagnostics: &mut DiagnosticSink,
 ) -> Vec<Token> {
+    // Text made here can hold a byte no file did: `#line 1 "a\0b"` decodes
+    // its escape into a NUL in `__FILE__`, where `clang` ends the name, and
+    // `sizeof(__FILE__)` was 4 here and 2 to `clang`. Found by review.
+    report_unread(file, source.contents(), diagnostics);
     Lexer {
         file,
         text: source.contents(),
@@ -192,6 +186,24 @@ pub(crate) fn lex_replacement(
         directives: false,
     }
     .run(diagnostics)
+}
+
+/// Report the first of each [`Unread`] byte in `text`, the contents of
+/// `file`. Every text that becomes tokens is asked, a file by [`lex`] and an
+/// expansion by [`lex_replacement`], so no place one can stand is missed.
+/// See ADR-0135.
+fn report_unread(file: FileId, text: &str, diagnostics: &mut DiagnosticSink) {
+    for (at, byte) in unread(text) {
+        diagnostics.report(
+            Diagnostic::error(byte.message())
+                .with_code(UNEXPECTED_CHARACTERS)
+                .with_label(Label::primary(
+                    Span::new(file, at as u32, at as u32 + 1),
+                    byte.label(),
+                ))
+                .with_note(byte.note()),
+        );
+    }
 }
 
 /// `SC0103` for a [`TokenKind::Unknown`] token at `span`, whose text is

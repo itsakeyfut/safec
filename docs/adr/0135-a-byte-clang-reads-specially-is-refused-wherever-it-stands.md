@@ -84,8 +84,9 @@ become refusals, so `KNOWN` holds none of them.
 
 ### Refuse each byte wherever it stands, at the lexer
 
-* Good, because a missed place cannot exist: the check reads the whole file
-  before any token.
+* Good, because a missed place cannot exist: the check reads every text
+  before it becomes tokens, a file and an expansion alike, so a NUL an
+  escape in a `#line` name decodes is asked too.
 * Bad, because it refuses programs `clang` builds, all visibly.
 
 ### Read each byte as `clang` does, place by place
