@@ -57,6 +57,41 @@ pub(super) enum Name<'a> {
     /// directive, a group `clang` compiles was skipped with nothing said.
     /// Found by review.
     Glued,
+    /// A named character `\N{...}` touches its end. `clang` ends the name,
+    /// reads it on, or refuses it, by the character the name names, and
+    /// this has no table of the names, so the line is refused wherever it
+    /// is, a skipped group's included: read as going on, `\N{NO-BREAK SPACE}`
+    /// after `else` in a skipped group passed over a group `clang` takes.
+    /// Found by the hunt before #1359 closed.
+    Undecided,
+}
+
+/// Whether `c` is white space outside ASCII to `clang` 22.1.8: Unicode's
+/// White_Space, as [`char::is_whitespace`] reads it, and U+180E, which
+/// `clang` reads as white space (`-Wunicode-whitespace`) and Unicode no
+/// longer does. Read as no white space, U+180E after `else` in a skipped
+/// group passed over a group `clang` takes. Found by the hunt before #1359
+/// closed.
+pub(super) fn spacing(c: char) -> bool {
+    !c.is_ascii() && (c.is_whitespace() || c == '\u{180e}')
+}
+
+/// The character a universal character name at the start of `text` names:
+/// `\u` and four hex digits, or `\U` and eight. `None` where `text` does
+/// not begin with one whole, which `clang` reads as a `\` and what follows.
+fn universal(text: &str) -> Option<char> {
+    let digits = if text.starts_with("\\u") {
+        4
+    } else if text.starts_with("\\U") {
+        8
+    } else {
+        return None;
+    };
+    let hex = text.get(2..2 + digits)?;
+    if !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    char::from_u32(u32::from_str_radix(hex, 16).ok()?)
 }
 
 impl Line {
@@ -101,8 +136,7 @@ impl Line {
             // as characters no token can begin. Kept, `#pragma pack` and a
             // no-break space before its `(` was read as no `pack`.
             .filter(|token| {
-                token.kind != TokenKind::Unknown
-                    || !text[token.span.range()].chars().all(char::is_whitespace)
+                token.kind != TokenKind::Unknown || !text[token.span.range()].chars().all(spacing)
             })
             .map(|token| Lexed {
                 kind: token.kind,
@@ -145,12 +179,16 @@ impl Line {
         };
         match token.kind {
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
+                // What touches the name's end, as `clang` reads it: a
+                // universal character name goes on with it unless it names
+                // white space, and one not whole is a `\` that ends it.
                 let after = &self.text[token.end..];
                 let goes_on = after.starts_with('$')
-                    || after.starts_with("\\u")
-                    || after.starts_with("\\U")
-                    || after.starts_with(|c: char| !c.is_ascii() && !c.is_whitespace());
-                if goes_on {
+                    || universal(after).is_some_and(|c| !spacing(c))
+                    || after.starts_with(|c: char| !c.is_ascii() && !spacing(c));
+                if after.starts_with("\\N{") {
+                    Name::Undecided
+                } else if goes_on {
                     Name::Glued
                 } else {
                     Name::Read(self.spelled(token), token.end)
@@ -180,9 +218,20 @@ impl Line {
             _ => match self.name_at(hash.end) {
                 Name::Read(name, end) => Some((name, end)),
                 Name::Not => Some(("", hash.end)),
-                Name::Glued => None,
+                Name::Glued | Name::Undecided => None,
             },
         }
+    }
+
+    /// Whether the directive's own name is [`Name::Undecided`], which is
+    /// refused in every group, a skipped one included.
+    pub(super) fn undecided(&self) -> bool {
+        matches!(
+            (self.tokens.first(), self.tokens.get(1)),
+            (Some(hash), Some(_)) if hash.kind == TokenKind::Punct(Punct::Hash)
+                && !self.spaced_oddly()
+                && self.name_at(hash.end) == Name::Undecided
+        )
     }
 
     /// Whether white space outside ASCII stands between the `#` and the
@@ -200,9 +249,7 @@ impl Line {
             return false;
         };
         hash.kind == TokenKind::Punct(Punct::Hash)
-            && self.text[hash.end..next.start]
-                .chars()
-                .any(|c| !c.is_ascii() && c.is_whitespace())
+            && self.text[hash.end..next.start].chars().any(spacing)
     }
 }
 
@@ -330,5 +377,41 @@ mod tests {
         assert_eq!(read.name_at(31), Name::Glued);
         assert_eq!(read.name_at(34), Name::Read("e", 37));
         assert_eq!(read.name_at(read.text().len()), Name::Not);
+    }
+
+    /// What touches a name's end is read as `clang` 22.1.8 reads it, each
+    /// row measured with `clang -std=c17 -fsyntax-only` after `#else` in a
+    /// skipped group: a named character is undecided, a universal character
+    /// name goes on unless it names white space or is not whole, and a
+    /// character outside ASCII goes on unless it is white space to `clang`,
+    /// U+180E among it.
+    ///
+    /// Mutations: read `\N{` as going on, a universal character name for
+    /// white space as going on, one not whole as going on, or U+180E as no
+    /// white space; that row fails.
+    #[test]
+    fn what_touches_a_name_is_read_as_clang_reads_it() {
+        for (after, expected) in [
+            ("\\N{NO-BREAK SPACE}", Name::Undecided),
+            ("\\N{LATIN SMALL LETTER E WITH ACUTE}", Name::Undecided),
+            ("\\u00e", Name::Read("else", 5)),
+            ("\\u00a0", Name::Read("else", 5)),
+            ("\\U000000a0", Name::Read("else", 5)),
+            ("\\u00e9", Name::Glued),
+            ("\\U000000e9", Name::Glued),
+            ("\\U000000", Name::Read("else", 5)),
+            ("\\q", Name::Read("else", 5)),
+            ("$", Name::Glued),
+            ("@", Name::Read("else", 5)),
+            ("\u{e9}", Name::Glued),
+            ("\u{180e}", Name::Read("else", 5)),
+            ("\u{a0}", Name::Read("else", 5)),
+        ] {
+            let text = format!("#else{after}");
+            assert_eq!(line(&text).name_at(1), expected, "{text:?}");
+        }
+        assert!(line("#else\\N{NO-BREAK SPACE}").undecided());
+        assert!(!line("#else \\N{NO-BREAK SPACE}").undecided());
+        assert!(!line("#else\\u00e9").undecided());
     }
 }

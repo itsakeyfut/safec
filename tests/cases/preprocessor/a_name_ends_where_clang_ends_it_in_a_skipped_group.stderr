@@ -1,0 +1,67 @@
+warning[SC0116]: tokens after `#else` are ignored
+    ╭─[ a_name_ends_where_clang_ends_it_in_a_skipped_group.c:10:6 ]
+    │
+ 10 │ #else\u00e
+    │      ──┬──  
+    │        ╰──── ignored
+────╯
+  = note: a comment there says the same without a warning
+warning[SC0116]: tokens after `#else` are ignored
+    ╭─[ a_name_ends_where_clang_ends_it_in_a_skipped_group.c:22:6 ]
+    │
+ 22 │ #else\u00a0
+    │      ───┬──  
+    │         ╰──── ignored
+────╯
+  = note: a comment there says the same without a warning
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_name_ends_where_clang_ends_it_in_a_skipped_group.c:11:5 ]
+    │
+  5 │     int *p = malloc(sizeof *p);
+    │              ────────┬────────  
+    │                      ╰────────── allocated here
+    │ 
+  8 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 11 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_name_ends_where_clang_ends_it_in_a_skipped_group.c:23:5 ]
+    │
+ 17 │     int *p = malloc(sizeof *p);
+    │              ────────┬────────  
+    │                      ╰────────── allocated here
+    │ 
+ 20 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 23 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_name_ends_where_clang_ends_it_in_a_skipped_group.c:35:5 ]
+    │
+ 29 │     int *p = malloc(sizeof *p);
+    │              ────────┬────────  
+    │                      ╰────────── allocated here
+    │ 
+ 32 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 35 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

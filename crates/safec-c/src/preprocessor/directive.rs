@@ -159,10 +159,10 @@ fn names(line: &Line, from: usize) -> Option<(&str, &str, usize)> {
         Name::Read(first, end) => match line.name_at(end) {
             Name::Read(second, after) => Some((first, second, after)),
             Name::Not => Some((first, "", end)),
-            Name::Glued => None,
+            Name::Glued | Name::Undecided => None,
         },
         Name::Not => Some(("", "", from)),
-        Name::Glued => None,
+        Name::Glued | Name::Undecided => None,
     }
 }
 

@@ -908,6 +908,24 @@ fn read_includes(
                     }
                 };
                 let text = line.text();
+                // Refused in every group, a skipped one included, since what
+                // `clang` makes of it depends on the character it names.
+                if line.undecided() {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "this directive's name goes on in a character name, which is not \
+                             read yet",
+                        )
+                        .with_note(
+                            "`clang` ends the name, reads it on, or refuses it by the character \
+                             `\\N{...}` names",
+                        ),
+                    );
+                    continue;
+                }
                 let form = conditional_form(&line);
                 // A splice joins the line below to this one before any
                 // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
@@ -3491,7 +3509,7 @@ fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
     let name = match line.name_at(end) {
         Name::Read(name, _) => Named::Read(name),
         Name::Not => Named::Missing,
-        Name::Glued => Named::Unread,
+        Name::Glued | Name::Undecided => Named::Unread,
     };
     // Tokens go on after the name, or after the number that stands where
     // one should; what an unread name touches is among them.

@@ -1,0 +1,24 @@
+error[SC0104]: this `#ifdef` is not read yet
+    ╭─[ a_named_character_touching_a_directive_s_name_is_refused.c:10:1 ]
+    │
+ 10 │ #ifdef GUARD\N{LATIN SMALL LETTER E WITH ACUTE}
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: an `#ifdef` is read when its name is ASCII letters, digits and `_`, and none of this conditional's groups is compiled
+error[SC0104]: this directive's name goes on in a character name, which is not read yet
+    ╭─[ a_named_character_touching_a_directive_s_name_is_refused.c:23:1 ]
+    │
+ 23 │ #else\N{NO-BREAK SPACE}
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: `clang` ends the name, reads it on, or refuses it by the character `\N{...}` names
+error[SC0104]: this pragma's name goes on past what is read
+    ╭─[ a_named_character_touching_a_directive_s_name_is_refused.c:29:1 ]
+    │
+ 29 │ #pragma once\N{LATIN SMALL LETTER E WITH ACUTE}
+    │ ┬  
+    │ ╰── written here
+────╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
