@@ -9,12 +9,10 @@
 #error not compiled
 #warning not compiled
 #ident "x"
-#sccs "x"
-#assert machine(x86)
-#unassert machine
-#import "x.h"
-#include_next "x.h"
-#embed "x.bin"
+#warn Use QUEUE_MACRO_DEBUG_xxx instead
+# TODO: rewrite this
+#define__MIDL_user_allocate_free_DEFINED__
+#region Foo
 #endif
 
 int main(void) { return 0; }

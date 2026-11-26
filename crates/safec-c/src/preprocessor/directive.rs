@@ -101,38 +101,16 @@ pub(super) fn read(
     true
 }
 
-/// Whether `text`, a directive's line in a group that is skipped, is one
-/// known to choose no group, which such a group passes over: the null
-/// directive, a line marker, a directive this reads, or an extension known
-/// to choose none. The conditionals are read before this is asked. Any
-/// other may choose a group, as C23's `#elifdef` does: passed over, the
-/// group it chose was never taken, and a `free` in it that `clang`
-/// compiles was not checked. Found by architecture review 12.
-pub(super) fn chooses_no_group(text: &str) -> bool {
-    match name(text) {
-        Some((word, _)) => {
-            word.is_empty()
-                || word.bytes().all(|byte| byte.is_ascii_digit())
-                || matches!(
-                    word,
-                    "define"
-                        | "undef"
-                        | "include"
-                        | "pragma"
-                        | "line"
-                        | "error"
-                        | "warning"
-                        | "ident"
-                        | "sccs"
-                        | "assert"
-                        | "unassert"
-                        | "import"
-                        | "include_next"
-                        | "embed"
-                )
-        }
-        None => false,
-    }
+/// Whether `text`, a directive's line in a group that is skipped, chooses a
+/// group this does not read: C23's `#elifdef` and `#elifndef`, which
+/// `clang` acts on in C17 too. Passed over, the group one chose was never
+/// taken, and a `free` in it that `clang` compiles was not checked. Found by
+/// architecture review 12. Only the names that choose a group are asked
+/// about: a skipped group holds other text C passes over (C17 6.10.1 p6),
+/// and real headers write some, FreeBSD's `sys/queue.h` a `#warn`, which
+/// refusing every unknown name refused. Found by review.
+pub(super) fn chooses_a_group(text: &str) -> bool {
+    matches!(name(text), Some(("elifdef" | "elifndef", _)))
 }
 
 /// A directive's name and what follows it, of `text`, a line beginning
