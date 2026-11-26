@@ -91,7 +91,12 @@ pub(super) fn evaluate(
             .iter()
             .map(|&(_, defined, _)| if defined { "1" } else { "0" })
             .collect();
-        match sources.add_virtual("defined", &text.join(" "), diagnostics) {
+        match sources.add_virtual(
+            "defined",
+            &text.join(" "),
+            Some((directive, "evaluated here")),
+            diagnostics,
+        ) {
             Ok(answers) => Some(answers),
             // Reported, once, by the charge.
             Err(_) => return None,
