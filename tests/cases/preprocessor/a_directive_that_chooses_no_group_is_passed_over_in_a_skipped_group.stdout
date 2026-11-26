@@ -1,0 +1,4 @@
+Function a_directive_that_chooses_no_group_is_passed_over_in_a_skipped_group.c:18:1 "main" "int (void)"
+  Compound a_directive_that_chooses_no_group_is_passed_over_in_a_skipped_group.c:18:16
+    Return a_directive_that_chooses_no_group_is_passed_over_in_a_skipped_group.c:18:18
+      Number a_directive_that_chooses_no_group_is_passed_over_in_a_skipped_group.c:18:25 "0"

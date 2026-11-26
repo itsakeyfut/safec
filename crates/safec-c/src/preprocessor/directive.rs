@@ -101,6 +101,18 @@ pub(super) fn read(
     true
 }
 
+/// Whether `text`, a directive's line in a group that is skipped, chooses a
+/// group this does not read: C23's `#elifdef` and `#elifndef`, which
+/// `clang` acts on in C17 too. Passed over, the group one chose was never
+/// taken, and a `free` in it that `clang` compiles was not checked. Found by
+/// architecture review 12. Only the names that choose a group are asked
+/// about: a skipped group holds other text C passes over (C17 6.10.1 p6),
+/// and real headers write some, FreeBSD's `sys/queue.h` a `#warn`, which
+/// refusing every unknown name refused. Found by review.
+pub(super) fn chooses_a_group(text: &str) -> bool {
+    matches!(name(text), Some(("elifdef" | "elifndef", _)))
+}
+
 /// A directive's name and what follows it, of `text`, a line beginning
 /// with `#` or `%:`; `None` where the name goes on in a character an
 /// identifier may hold, as `conditional_form` ends one.
