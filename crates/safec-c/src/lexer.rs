@@ -84,6 +84,20 @@ const SPACED_SPLICE: Code = Code::new("SC0108");
 /// this call instead, and `a_lexical_error_stops_that_input_and_no_other`
 /// names the `has_errors` version as the mutation it fails on.
 pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) -> Vec<Token> {
+    if let Some(at) = lone_carriage_return(source.contents()) {
+        diagnostics.report(
+            Diagnostic::error("a carriage return with no line feed after it is not read")
+                .with_code(UNEXPECTED_CHARACTERS)
+                .with_label(Label::primary(
+                    Span::new(file, at as u32, at as u32 + 1),
+                    "this carriage return",
+                ))
+                .with_note(
+                    "`clang` reads it as the end of a line, and this compiler reads lines only \
+                     at a line feed",
+                ),
+        );
+    }
     Lexer {
         file,
         text: source.contents(),
@@ -92,6 +106,24 @@ pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) 
         directives: true,
     }
     .run(diagnostics)
+}
+
+/// The offset of the first carriage return in `text` that no line feed
+/// follows, or `None`.
+///
+/// `clang` ends a line at one, and this compiler opens a line only at a line
+/// feed, so text after it was a `//` comment's, or the directive line's
+/// before it, where `clang` compiled it as code: a second `free` behind one
+/// was not seen. Found by a hunt. Refused rather than read as a line end,
+/// since reading it as one moves every line number and caret after it. One
+/// report each time a file is read, at the first, wherever it stands, a
+/// skipped group and a comment included: what it does there is where a line
+/// ends, which decides what the rest of the file is. A header included twice
+/// is read twice and reported twice, as every lexical error is.
+fn lone_carriage_return(text: &str) -> Option<usize> {
+    text.match_indices('\r')
+        .map(|(at, _)| at)
+        .find(|&at| !text[at + 1..].starts_with('\n'))
 }
 
 /// Scan a macro's expansion, where no `#` begins a directive.
@@ -1127,15 +1159,26 @@ mod tests {
 
     /// The other side of the same line, so that the fix cannot be read as
     /// "reject anything unusual". These five are C's whitespace, and a vertical
-    /// tab is the one `is_ascii_whitespace` leaves out.
+    /// tab is the one `is_ascii_whitespace` leaves out. A carriage return
+    /// separates them too, and alone, with no line feed after it, is
+    /// refused once, since `clang` ends a line there and this does not.
+    ///
+    /// Mutation: skip `lone_carriage_return`; the `\r` row says nothing.
     #[test]
     fn the_whitespace_c_does_know_still_separates_tokens() {
         for c in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
             let scan = scan(&format!("int{c}x;\n"));
 
-            assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
+            let expected: &[&str] = if c == '\r' {
+                &["a carriage return with no line feed after it is not read"]
+            } else {
+                &[]
+            };
+            assert_eq!(scan.messages(), expected, "{:?}", c as u32);
             assert_eq!(scan.texts(), ["int", "x", ";"], "{:?}", c as u32);
         }
+        let scan = scan("int\r\nx;\r\n");
+        assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
     }
 
     /// An identifier split by something nobody can see. The scan has to say so,

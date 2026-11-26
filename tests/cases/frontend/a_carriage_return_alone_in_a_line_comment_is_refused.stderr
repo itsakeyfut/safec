@@ -1,0 +1,8 @@
+error[SC0103]: a carriage return with no line feed after it is not read
+   ╭─[ a_carriage_return_alone_in_a_line_comment_is_refused.c:8:12 ]
+   │
+ 8 │     // done?    free(p);
+   │            ┬  
+   │            ╰── this carriage return
+───╯
+  = note: `clang` reads it as the end of a line, and this compiler reads lines only at a line feed
