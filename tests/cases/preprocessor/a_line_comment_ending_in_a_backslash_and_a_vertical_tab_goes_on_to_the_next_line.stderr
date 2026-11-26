@@ -5,7 +5,7 @@ warning[SC0108]: a backslash and the newline it splices are separated by space
    │             ┬  
    │             ╰── this joins the next line to this one
 ───╯
-  = note: C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler
+  = note: C17 splices only a backslash right before the newline; clang splices this too, and so does this compiler
 error[SC0401]: this frees `p`, which was freed already
     ╭─[ a_line_comment_ending_in_a_backslash_and_a_vertical_tab_goes_on_to_the_next_line.c:10:5 ]
     │

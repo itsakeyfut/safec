@@ -59,9 +59,10 @@ pub(crate) const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 /// A `\` and the newline it splices with only [`SPLICE_BLANKS`] between
 /// them, a warning. C17 splices only a `\` right before the newline, and how
 /// physical lines map to source lines is phase 1's, an implementation's
-/// choice: clang and gcc splice this, with a warning, and so does this
-/// compiler, since reading the line below as code would analyse a program
-/// they do not build.
+/// choice: clang splices this, with a warning, and so does this compiler,
+/// since reading the line below as code would analyse a program clang does
+/// not build. Not said of gcc, which nobody here has run on a vertical tab
+/// or a form feed there.
 const SPACED_SPLICE: Code = Code::new("SC0108");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
@@ -574,8 +575,8 @@ impl<'a> Lexer<'a> {
     /// is performed, and say what makes it doubtful: a `??/` is a splice only
     /// where trigraphs are read, which clang's and gcc's default modes do not,
     /// so the comment it extends or closes depends on how the file is built,
-    /// and is refused (`UNSUPPORTED_SPLICE`); a `\` with spaces before the
-    /// newline is spliced as clang and gcc do, with a warning
+    /// and is refused (`UNSUPPORTED_SPLICE`); a `\` with [`SPLICE_BLANKS`]
+    /// before the newline is spliced as clang does, with a warning
     /// (`SPACED_SPLICE`).
     fn splice_in_comment(&mut self, splice: Splice, diagnostics: &mut DiagnosticSink) {
         let start = self.offset;
@@ -598,7 +599,7 @@ impl<'a> Lexer<'a> {
                     .with_code(SPACED_SPLICE)
                     .with_label(Label::primary(marker, "this joins the next line to this one"))
                     .with_note(
-                        "C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler",
+                        "C17 splices only a backslash right before the newline; clang splices this too, and so does this compiler",
                     ),
             );
         }
@@ -1065,8 +1066,8 @@ mod tests {
 
     /// A splice is a `\` or `??/` before a newline, `\n` or `\r\n`, its
     /// length covering both, with spaces, tabs, vertical tabs and form feeds
-    /// between taken and said
-    /// (C17 5.1.1.2 p1 phases 1 and 2, as clang and gcc map them); anything
+    /// between taken and said (C17 5.1.1.2 p1 phases 1 and 2, as clang maps
+    /// them); anything
     /// else between, or a `?` too few, makes none.
     ///
     /// Mutation: refuse spaces before the newline; the spaced rows are none.
