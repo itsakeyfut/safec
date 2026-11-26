@@ -145,6 +145,23 @@ impl Refusal {
         Refusal { reports, level }
     }
 
+    /// A refusal of `line`, refused for characters before its `#`, keeping
+    /// the level of the conditional it reads as with them made spaces, as
+    /// `clang` reads a NUL there. Kept as no level, a NUL before an `#endif`
+    /// in a correct file left its `#if` open, and every line after it that
+    /// was right was reported. Found by review. Where the character is one
+    /// `clang` reads as no directive, the level is one too many or too few;
+    /// the line is refused either way.
+    fn unprefixed(line: &Line, reports: Vec<Report>) -> Refusal {
+        let level = line.hash().and_then(|(start, _)| {
+            let plain = format!("{}{}", " ".repeat(start), &line.text()[start..]);
+            Line::read(&plain)
+                .ok()
+                .and_then(|plain| conditional_form(&plain).as_ref().map(Level::of))
+        });
+        Refusal { reports, level }
+    }
+
     /// What the refusal says.
     pub(super) fn reports(&self) -> &[Report] {
         &self.reports
@@ -201,12 +218,15 @@ pub(super) fn triage(line: &Line, ended: bool, skipping: bool) -> Disposition<'_
     // so the line is refused in every group before it can be read as a
     // conditional. See ADR-0134.
     if line.prefixed() {
-        return Disposition::Refused(Refusal::new(
+        return Disposition::Refused(Refusal::unprefixed(
             line,
             vec![Report::new(
                 UNSUPPORTED_DIRECTIVE,
                 "a character before this directive's `#` is not read",
-                &["`clang` reads a NUL there as white space, and the line as a directive"],
+                &[
+                    "`clang` reads a NUL there as white space and the line as a directive, \
+                     and other characters there as no directive",
+                ],
             )],
         ));
     }
@@ -426,7 +446,8 @@ mod tests {
     ///
     /// Mutations: pass a skipped group's line over before its splice is
     /// asked, send a pragma to the macro readers, or read an `#include` in a
-    /// skipped group; an assertion fails.
+    /// skipped group; an assertion fails. Or read the carriage return that
+    /// ends a CRLF line as a character after its `#`; the `#\r` rows fail.
     #[test]
     fn each_line_goes_where_its_kind_is_read() {
         for (text, compiled, skipped) in [
@@ -447,6 +468,10 @@ mod tests {
             ("#endif$", "refused", "refused"),
             ("#\u{a0}define X", "refused", "passed over"),
             ("#endif\\N{NO-BREAK SPACE}", "refused", "refused"),
+            ("\0#endif", "refused", "refused"),
+            ("#endif\r", "conditional", "conditional"),
+            ("#\r", "refused", "passed over"),
+            ("# \t\r", "refused", "passed over"),
         ] {
             assert_eq!(kind(text, false), compiled, "{text:?} compiled");
             assert_eq!(kind(text, true), skipped, "{text:?} skipped");
@@ -459,8 +484,12 @@ mod tests {
     /// the line reads as no conditional, as `clang` reads `#endif$` and
     /// `#endif\N{...}` naming a letter as unknown directives.
     ///
-    /// Mutations: give no level in `Refusal::new` or `Refusal::respaced`, or
-    /// read the level from the directive's word; an assertion fails.
+    /// And with characters before its `#` made spaces, as `clang` reads a
+    /// NUL there.
+    ///
+    /// Mutations: give no level in `Refusal::new`, `Refusal::respaced` or
+    /// `Refusal::unprefixed`, or read the level from the directive's word;
+    /// an assertion fails.
     #[test]
     fn a_refusal_keeps_the_level_its_line_reads_as() {
         let level = |text: &str| {
@@ -477,5 +506,8 @@ mod tests {
         assert_eq!(level("#endif$"), None);
         assert_eq!(level("#endif\\N{LATIN SMALL LETTER E WITH ACUTE}"), None);
         assert_eq!(level("#define X\\u{"), None);
+        assert_eq!(level("\0#endif"), Some(Level::Closes));
+        assert_eq!(level("\0/* x */ #if 1"), Some(Level::Opens("#if")));
+        assert_eq!(level("\u{1f600}#else"), Some(Level::Settles));
     }
 }

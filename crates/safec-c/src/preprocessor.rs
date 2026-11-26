@@ -3959,12 +3959,24 @@ fn refused(text: &str, directive: Span, code: Code, message: &str) -> Diagnostic
 
 /// The `#` that begins `directive`, whose text is `text`.
 fn hash(text: &str, directive: Span) -> Span {
-    // Two bytes where the `#` is written `%:`.
-    let hash = if text.starts_with("%:") { 2 } else { 1 };
+    // Two bytes where the `#` is written `%:`. A line the lexer made a
+    // directive for a `#` behind characters no token can begin has its `#`
+    // further in (ADR-0134), and the caret goes there: at the line's start
+    // it named the character, and split one written in more than a byte.
+    // Found by review.
+    let (start, end) = if text.starts_with('#') {
+        (0, 1)
+    } else if text.starts_with("%:") {
+        (0, 2)
+    } else {
+        let (Ok(line) | Err(line)) = Line::read(text);
+        line.hash()
+            .unwrap_or((0, text.chars().next().map_or(0, char::len_utf8)))
+    };
     Span::new(
         directive.file(),
-        directive.start(),
-        directive.start() + hash,
+        directive.start() + start as u32,
+        directive.start() + end as u32,
     )
 }
 

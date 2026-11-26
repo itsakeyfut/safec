@@ -10768,8 +10768,20 @@ cases! {
         // exited 0. Found by architecture review 13. Mutations: pass over a
         // line whose start is not proved, in `triage`; the first two
         // functions are silent. Or scan a NUL before a `#` as text, in the
-        // lexer; the third is.
+        // lexer; the third to sixth are. Or stop at the blanks or the
+        // comments between the NUL and the `#`, in `hash_after_stray`; the
+        // fourth, or the fifth and sixth, are. The comments were found by
+        // review.
         a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A line refused for a character before its `#` is refused at the
+        // `#`, keeping the level of the conditional it reads as with the
+        // character made a space, as `clang` reads a NUL there: one report
+        // per line, and the lines after it that are right are not reported.
+        // Found by review. Mutations: keep no level in
+        // `Refusal::unprefixed`; `#endif` closes no conditional, `#if` is
+        // not closed. Or put the caret at the line's start in `hash`; the
+        // carets move, and the emoji's is split and moved to fit.
+        a_character_before_a_directive_s_hash_is_refused_at_the_hash_keeping_its_level: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A name ends where `clang` 22.1.8 ends it: at a universal character
         // name not whole, at one naming white space, and at U+180E, which
         // `clang` reads as white space and Unicode no longer does. After

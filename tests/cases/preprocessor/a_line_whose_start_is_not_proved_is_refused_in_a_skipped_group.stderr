@@ -15,10 +15,34 @@ error[SC0104]: this line in a group that is skipped is not read
 ────╯
   = note: a character before its name may make it a directive `clang` acts on
 error[SC0104]: a character before this directive's `#` is not read
-    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:31:1 ]
+    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:31:2 ]
     │
  31 │ ?#else
-    │ ┬  
-    │ ╰── directive begins here
+    │  ┬  
+    │  ╰── directive begins here
 ────╯
-  = note: `clang` reads a NUL there as white space, and the line as a directive
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:42:4 ]
+    │
+ 42 │ ?   #else
+    │     ┬  
+    │     ╰── directive begins here
+────╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:53:6 ]
+    │
+ 53 │ ?/**/#else
+    │      ┬  
+    │      ╰── directive begins here
+────╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:65:3 ]
+    │
+ 65 │ */#else
+    │   ┬  
+    │   ╰── directive begins here
+────╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive

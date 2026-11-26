@@ -270,7 +270,10 @@ impl Line {
     /// Whether everything from the line's start to the end of its
     /// directive's name is a spelling proved to read as `clang` reads it:
     /// ASCII blanks, `#` or `%:`, ASCII blanks, and then nothing, a line
-    /// marker's number, or a name read whole. See ADR-0134.
+    /// marker's number, or a name read whole. See ADR-0134. The carriage
+    /// return a CRLF file ends the line with is the line's end, not a
+    /// character after the `#`: `#` alone in a skipped group of a Windows
+    /// SDK header was refused. Found by review.
     pub(super) fn proved_start(&self) -> bool {
         let blank = |text: &str| {
             text.bytes()
@@ -283,7 +286,11 @@ impl Line {
             return false;
         }
         let next = self.tokens.get(1);
-        if !blank(&self.text[hash.end..next.map_or(self.text.len(), |next| next.start)]) {
+        let end = self
+            .text
+            .strip_suffix('\r')
+            .map_or(self.text.len(), str::len);
+        if !blank(&self.text[hash.end..next.map_or(end, |next| next.start)]) {
             return false;
         }
         match next {
@@ -291,6 +298,16 @@ impl Line {
             Some(next) if next.kind == TokenKind::Number => true,
             Some(_) => matches!(self.name_at(hash.end), Name::Read(..)),
         }
+    }
+
+    /// Where the line's first `#` is, as a byte range of its text: at its
+    /// start, or past the characters that made the lexer read the line as a
+    /// directive, where [`Line::prefixed`] holds.
+    pub(super) fn hash(&self) -> Option<(usize, usize)> {
+        self.tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::Punct(Punct::Hash))
+            .map(|token| (token.start, token.end))
     }
 
     /// Whether anything but ASCII blanks stands before the line's `#`, as
