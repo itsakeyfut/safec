@@ -106,8 +106,9 @@ any token exists. A splice the lexer does not perform compiles a different
 program where it ends a line comment, `// a \` making the line below it part
 of the comment, and where it falls between the `*` and the `/` that close a
 block comment. So a comment performs a splice, since a comment's text means
-nothing after the lexer and needs no spelling kept, and so is a `\` with spaces
-or tabs before the newline, which C17 does not name but clang and gcc splice,
+nothing after the lexer and needs no spelling kept, and so is a `\` with spaces,
+tabs, vertical tabs or form feeds before the newline, which C17 does not name
+but clang splices,
 with the warning `SC0108`, because reading the line below as code would
 analyse a program they do not build. A `??/` that would decide where a comment
 ends is refused as `SC0107`: it is a splice only where trigraphs are read,

@@ -10773,6 +10773,20 @@ cases! {
         // fourth, or the fifth and sixth, are. The comments were found by
         // review.
         a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A backslash with a form feed or a vertical tab before its newline
+        // is a splice to `clang`, which warns of the space: the line below
+        // is `NOTE`'s body, or the skipped `#define`'s, and each function
+        // frees `p` twice. Read as no splice, each exited 0. A splice in a
+        // directive is not read yet, so each line is refused. Found by a
+        // hunt. Mutation: take only spaces and tabs in `SPLICE_BLANKS`; the
+        // case exits 0 with nothing said.
+        a_directive_ending_in_a_backslash_and_a_vertical_tab_or_form_feed_is_spliced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same in a line comment: `return 0;` is the comment's, and the
+        // second `free` is reached. In a file of its own, since the
+        // directives' refusals above stop the analysis that reports it.
+        // Found by a hunt. Mutation: take only spaces and tabs in
+        // `SPLICE_BLANKS`; the case exits 0 with nothing said.
+        a_line_comment_ending_in_a_backslash_and_a_vertical_tab_goes_on_to_the_next_line: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A line refused for a character before its `#` is refused at the
         // `#`, keeping the level of the conditional it reads as with the
         // character made a space, as `clang` reads a NUL there: one report

@@ -3171,7 +3171,12 @@ fn spliced(text: &str) -> bool {
         .as_bytes()
         .windows(3)
         .any(|three| three[..2] == *b"??" && b"=()/'<>!-".contains(&three[2]));
-    text.trim_end_matches([' ', '\t', '\r']).ends_with('\\') || trigraph
+    // The carriage return a CRLF line ends with is not among what a splice
+    // may skip; it is the newline's.
+    text.trim_end_matches('\r')
+        .trim_end_matches(crate::lexer::SPLICE_BLANKS)
+        .ends_with('\\')
+        || trigraph
 }
 
 /// A conditional directive, read as far as this reads one.
