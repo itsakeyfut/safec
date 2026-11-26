@@ -26,4 +26,28 @@ int skipped(void) {
     return 0;
 }
 
+int out_of_range(void) {
+    int *p = malloc(sizeof *p);
+    if (!p) return 1;
+    *p = 1;
+    free(p);
+#if 0
+#else\U00110000
+    return 0;
+#endif
+    return *p;
+}
+
+int delimited(void) {
+    int *p = malloc(sizeof *p);
+    if (!p) return 1;
+    *p = 1;
+    free(p);
+#ifdef GUARD\u{e9}
+    return 0;
+#else
+    return *p;
+#endif
+}
+
 #pragma once\N{LATIN SMALL LETTER E WITH ACUTE}

@@ -76,22 +76,54 @@ pub(super) fn spacing(c: char) -> bool {
     !c.is_ascii() && (c.is_whitespace() || c == '\u{180e}')
 }
 
-/// The character a universal character name at the start of `text` names:
-/// `\u` and four hex digits, or `\U` and eight. `None` where `text` does
-/// not begin with one whole, which `clang` reads as a `\` and what follows.
-fn universal(text: &str) -> Option<char> {
-    let digits = if text.starts_with("\\u") {
-        4
-    } else if text.starts_with("\\U") {
-        8
+/// What a universal character name at the start of `text` is, as `clang`
+/// 22.1.8 reads one after a name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Universal {
+    /// It names this character.
+    Names(char),
+    /// `clang` reads it on with the name in a group it skips and ends the
+    /// name in one it compiles: a value past U+10FFFF or a surrogate, or a
+    /// delimited `\u{...}` that is not one whole. So it is refused in every
+    /// group, as [`Name::Undecided`] is. Read as ending the name,
+    /// `#else\U00110000` in a skipped group took a group `clang` passes
+    /// over. Found by review.
+    Undecided,
+}
+
+/// The universal character name at the start of `text`: `\u` and four hex
+/// digits, `\U` and eight, or `\u{` hex digits `}`, which `clang` reads in
+/// C17 too, with no diagnostic unless `-pedantic`. `None` where `text`
+/// begins with none, or with `\u` or `\U` and too few digits, which `clang`
+/// reads as a `\` and what follows, ending the name.
+fn universal(text: &str) -> Option<Universal> {
+    let value = if let Some(rest) = text.strip_prefix("\\u{") {
+        let close = rest.find('}');
+        let hex = close.map(|close| &rest[..close]);
+        match hex {
+            Some(hex) if !hex.is_empty() && hex.bytes().all(|byte| byte.is_ascii_hexdigit()) => {
+                u32::from_str_radix(hex, 16).ok()
+            }
+            _ => return Some(Universal::Undecided),
+        }
     } else {
-        return None;
+        let digits = if text.starts_with("\\u") {
+            4
+        } else if text.starts_with("\\U") {
+            8
+        } else {
+            return None;
+        };
+        let hex = text.get(2..2 + digits)?;
+        if !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return None;
+        }
+        u32::from_str_radix(hex, 16).ok()
     };
-    let hex = text.get(2..2 + digits)?;
-    if !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return None;
-    }
-    char::from_u32(u32::from_str_radix(hex, 16).ok()?)
+    Some(match value.and_then(char::from_u32) {
+        Some(c) => Universal::Names(c),
+        None => Universal::Undecided,
+    })
 }
 
 impl Line {
@@ -183,10 +215,11 @@ impl Line {
                 // universal character name goes on with it unless it names
                 // white space, and one not whole is a `\` that ends it.
                 let after = &self.text[token.end..];
+                let universal = universal(after);
                 let goes_on = after.starts_with('$')
-                    || universal(after).is_some_and(|c| !spacing(c))
+                    || matches!(universal, Some(Universal::Names(c)) if !spacing(c))
                     || after.starts_with(|c: char| !c.is_ascii() && !spacing(c));
-                if after.starts_with("\\N{") {
+                if after.starts_with("\\N{") || universal == Some(Universal::Undecided) {
                     Name::Undecided
                 } else if goes_on {
                     Name::Glued
@@ -386,9 +419,15 @@ mod tests {
     /// character outside ASCII goes on unless it is white space to `clang`,
     /// U+180E among it.
     ///
+    /// A delimited `\u{...}` is read by its digits as the others are, and
+    /// one past U+10FFFF, a surrogate, or a delimited one not whole is
+    /// undecided, since `clang` reads it on in a skipped group and ends the
+    /// name in a compiled one.
+    ///
     /// Mutations: read `\N{` as going on, a universal character name for
-    /// white space as going on, one not whole as going on, or U+180E as no
-    /// white space; that row fails.
+    /// white space as going on, one not whole as going on, U+180E as no
+    /// white space, `\u{...}` as no universal character name, or one out of
+    /// range as ending the name; that row fails.
     #[test]
     fn what_touches_a_name_is_read_as_clang_reads_it() {
         for (after, expected) in [
@@ -400,6 +439,13 @@ mod tests {
             ("\\u00e9", Name::Glued),
             ("\\U000000e9", Name::Glued),
             ("\\U000000", Name::Read("else", 5)),
+            ("\\u{e9}", Name::Glued),
+            ("\\u{a0}", Name::Read("else", 5)),
+            ("\\u{}", Name::Undecided),
+            ("\\u{e9", Name::Undecided),
+            ("\\U00110000", Name::Undecided),
+            ("\\u{110000}", Name::Undecided),
+            ("\\ud800", Name::Undecided),
             ("\\q", Name::Read("else", 5)),
             ("$", Name::Glued),
             ("@", Name::Read("else", 5)),

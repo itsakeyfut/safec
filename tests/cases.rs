@@ -10777,8 +10777,13 @@ cases! {
         // this has no table of the names. Read as the shorter name before
         // it, `#ifdef GUARD\N{...}` asked about `GUARD` and a double free
         // `clang` compiles exited 0. Found by the hunt before #1359 closed.
-        // Mutation: read `\N{` as going on, in `Line::name_at`; the skipped
-        // `#else\N{NO-BREAK SPACE}` is passed over with nothing said.
+        // So is a universal character name past U+10FFFF, which `clang` reads
+        // on in a skipped group and ends the name at in a compiled one, and
+        // a delimited `\u{...}`, read by its digits, touching `#ifdef`'s
+        // name. Found by review. Mutations: read `\N{` as going on, in
+        // `Line::name_at`; the skipped `#else\N{NO-BREAK SPACE}` is passed
+        // over with nothing said. Or read a universal character name out of
+        // range as ending the name; the skipped `#else\U00110000` is taken.
         a_named_character_touching_a_directive_s_name_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And in a group that is compiled such a line is refused: `clang -E`
         // refuses it as an invalid directive and `clang` reads it as one, so

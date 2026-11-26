@@ -909,19 +909,19 @@ fn read_includes(
                 };
                 let text = line.text();
                 // Refused in every group, a skipped one included, since what
-                // `clang` makes of it depends on the character it names.
+                // `clang` makes of it depends on the character it names or
+                // on the group it is in. See `Name::Undecided`.
                 if line.undecided() {
                     diagnostics.report(
                         refused(
                             text,
                             token.span,
                             UNSUPPORTED_DIRECTIVE,
-                            "this directive's name goes on in a character name, which is not \
-                             read yet",
+                            "this directive's name goes on in an escape that is not read yet",
                         )
                         .with_note(
-                            "`clang` ends the name, reads it on, or refuses it by the character \
-                             `\\N{...}` names",
+                            "`clang` reads a `\\N{...}` by the character it names, and a \
+                             universal character name past U+10FFFF by the group it is in",
                         ),
                     );
                     continue;
@@ -1006,7 +1006,7 @@ fn read_includes(
                     let spaced: String = text
                         .chars()
                         .map(|c| {
-                            if !c.is_ascii() && c.is_whitespace() {
+                            if line::spacing(c) {
                                 " ".repeat(c.len_utf8())
                             } else {
                                 c.to_string()
