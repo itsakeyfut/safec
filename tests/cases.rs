@@ -10740,6 +10740,17 @@ cases! {
         // name such a character touches as the name before it, in
         // `Line::name_at`; the lines are read and fewer are refused.
         a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive: ["--emit", "ast"],
+        // Any other character touching a name ends it, as `clang` ends it:
+        // `#else@` is an `#else`, and so is `#else` with an ideographic
+        // space after it, which `clang` reads as white space. In a skipped
+        // group each chooses the group after it, which `clang` compiles, and
+        // its `b[1]` is past the block. Found by review, where `#else@` was
+        // read as no directive at all and this exited 0 with nothing said.
+        // Mutation: answer `Glued` for any character no token can begin
+        // touching a name, in `Line::name_at`; or keep white space outside
+        // ASCII as a token, in `Line::lexed`. A function's overflow is not
+        // reported.
+        a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And a comment around each of those names is white space (C17
         // 5.1.1.2 p1, phase 3), so the same directives with one around every
         // name are read. Held twice over: the line's comments are made

@@ -590,13 +590,27 @@ mod tests {
     /// a name the lexer cannot read whole.
     ///
     /// Mutations: move any name to another class, read a namespace's
-    /// pragma by its first name alone, read a name past a quote, or read a
-    /// name a `$`, a `\` or a letter outside ASCII touches as the shorter
-    /// name before it; its assertion fails.
+    /// pragma by its first name alone, read a name past a quote, read a
+    /// name a `$`, a universal character name or a letter outside ASCII
+    /// touches as the shorter name before it, or refuse one a lone `\` or
+    /// white space outside ASCII touches; its assertion fails.
     #[test]
     fn a_pragma_is_classified_as_adr_0129_lists_it() {
         assert_eq!(classify(" once"), Some(Class::Once));
         assert_eq!(classify(" once extra"), Some(Class::Once));
+        // `clang` ends a name at a `\` that begins no universal character
+        // name, at `@`, and at white space outside ASCII.
+        assert_eq!(classify(" once\\q"), Some(Class::Once));
+        assert_eq!(classify(" once@"), Some(Class::Once));
+        assert_eq!(
+            classify("pack\u{a0}(4)"),
+            Some(Class::Refused("pack".to_owned()))
+        );
+        assert_eq!(
+            classify("\u{a0}pack(4)"),
+            Some(Class::Refused("pack".to_owned()))
+        );
+        assert_eq!(classify("region \u{521d}"), Some(Class::Ignored));
         assert_eq!(
             classify("GCC error \"x\""),
             Some(Class::Message { error: true })
@@ -659,22 +673,14 @@ mod tests {
             "omp parallel",
             "\"once\"",
             "(once)",
+            "$x",
+            "foo @bar",
         ] {
             assert_eq!(classify(unknown), Some(Class::Unknown), "{unknown}");
         }
-        // `clang` reads each of these as a name of its own, and so as no
-        // pragma this classifies, or, a no-break space being white space to
-        // it, as `pack`.
-        for glued in [
-            "once$",
-            " once\\q",
-            " once\\u00e9",
-            "GCC poison$ x",
-            "pack\u{e9}(4)",
-            "pack\u{a0}(4)",
-            "\u{a0}pack(4)",
-            "$x",
-        ] {
+        // `clang` reads each of these as a longer name than this does, so
+        // none is read as the shorter one.
+        for glued in ["once$", " once\\u00e9", "GCC poison$ x", "pack\u{e9}(4)"] {
             assert_eq!(classify(glued), None, "{glued}");
         }
     }

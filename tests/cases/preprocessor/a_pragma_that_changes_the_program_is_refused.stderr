@@ -62,19 +62,19 @@ error[SC0104]: `#pragma clang section` is not read
    │ ╰── written here
 ───╯
   = note: ignoring it would change what the program is
-error[SC0104]: this pragma's name goes on past what is read
+error[SC0104]: `#pragma pack` is not read
    ╭─[ a_pragma_that_changes_the_program_is_refused.c:9:1 ]
    │
  9 │ #pragma pack (2)
    │ ┬  
    │ ╰── written here
 ───╯
-  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
-error[SC0104]: this directive's name goes on past what is read
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma pack` is not read
     ╭─[ a_pragma_that_changes_the_program_is_refused.c:10:1 ]
     │
  10 │ #pragma pack(1)
     │ ┬  
-    │ ╰── directive begins here
+    │ ╰── written here
 ────╯
-  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
+  = note: ignoring it would change what the program is

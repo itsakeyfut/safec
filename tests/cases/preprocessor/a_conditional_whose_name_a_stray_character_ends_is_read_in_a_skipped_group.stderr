@@ -1,0 +1,34 @@
+warning[SC0116]: tokens after `#else` are ignored
+   ╭─[ a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:8:6 ]
+   │
+ 8 │ #else@
+   │      ┬  
+   │      ╰── ignored
+───╯
+  = note: a comment there says the same without a warning
+error[SC0412]: this reaches 2 bytes into an object of 1 byte
+   ╭─[ a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:9:5 ]
+   │
+ 5 │     char *b = malloc(1);
+   │               ────┬────  
+   │                   ╰────── allocated here
+   │ 
+ 9 │     b[1] = 0;
+   │     ────┬───  
+   │         ╰───── wider than the object it reaches
+───╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it
+error[SC0412]: this reaches 2 bytes into an object of 1 byte
+    ╭─[ a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:20:5 ]
+    │
+ 16 │     char *b = malloc(1);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+ 20 │     b[1] = 0;
+    │     ────┬───  
+    │         ╰───── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

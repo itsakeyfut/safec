@@ -46,12 +46,16 @@ pub(super) enum Name<'a> {
     /// A name, and the offset just past it.
     Read(&'a str, usize),
     /// Nothing, or a token that is no name: a number, a literal, a
-    /// punctuator.
+    /// punctuator, or characters no token can begin, `@` among them, which
+    /// `clang` reads as no name either.
     Not,
-    /// A name the lexer could not read whole: a character no token can begin
-    /// stands where it is, or touches its end. `$`, a universal character
-    /// name and a letter outside ASCII go on with a name in `clang`, and this
-    /// reads none of them, so what is there is not read as a shorter name.
+    /// A name the lexer could not read whole: `$`, a universal character
+    /// name or a letter outside ASCII touches its end. Each goes on with the
+    /// name in `clang` and this reads none of them, so what is there is not
+    /// read as the shorter name before it. Any other character touching it
+    /// ends it, as `clang` ends it: `#else@` is an `#else`, and read as no
+    /// directive, a group `clang` compiles was skipped with nothing said.
+    /// Found by review.
     Glued,
 }
 
@@ -92,6 +96,14 @@ impl Line {
         let tokens = lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new())
             .into_iter()
             .filter(|token| !token.is_eof())
+            // White space outside ASCII is white space to `clang`, which
+            // warns of it (`-Wunicode-whitespace`), and the lexer leaves it
+            // as characters no token can begin. Kept, `#pragma pack` and a
+            // no-break space before its `(` was read as no `pack`.
+            .filter(|token| {
+                token.kind != TokenKind::Unknown
+                    || !text[token.span.range()].chars().all(char::is_whitespace)
+            })
             .map(|token| Lexed {
                 kind: token.kind,
                 start: token.span.start() as usize,
@@ -132,12 +144,13 @@ impl Line {
             return Name::Not;
         };
         match token.kind {
-            TokenKind::Unknown => Name::Glued,
             TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
-                let touched = rest
-                    .get(1)
-                    .is_some_and(|next| next.kind == TokenKind::Unknown && next.start == token.end);
-                if touched {
+                let after = &self.text[token.end..];
+                let goes_on = after.starts_with('$')
+                    || after.starts_with("\\u")
+                    || after.starts_with("\\U")
+                    || after.starts_with(|c: char| !c.is_ascii() && !c.is_whitespace());
+                if goes_on {
                     Name::Glued
                 } else {
                     Name::Read(self.spelled(token), token.end)
@@ -218,13 +231,14 @@ mod tests {
         Line::read(text).expect("a line that reads")
     }
 
-    /// A directive's name begins after any white space C allows there, and
-    /// is what the lexer reads: one it cannot read whole, which a `$`, a
-    /// `\` or a letter outside ASCII touches, is no name at all.
+    /// A directive's name begins after any white space, and is what the
+    /// lexer reads: one a `$`, a universal character name or a letter
+    /// outside ASCII touches is no name at all, and any other character
+    /// touching it ends it, as `clang` ends it.
     ///
-    /// Mutations: read a name touched by a character no token can begin
-    /// as the name before it, or read the token after `#` as a name
-    /// whatever it is; an assertion fails.
+    /// Mutations: read a name a `$` touches as the name before it, refuse
+    /// one that `@` or a lone `\` touches, or read the token after `#` as a
+    /// name whatever it is; an assertion fails.
     #[test]
     fn a_directive_s_name_is_what_the_lexer_reads_whole() {
         assert_eq!(line("#  pragma once").directive(), Some(("pragma", 9)));
@@ -238,15 +252,21 @@ mod tests {
         assert_eq!(line("#line$ 4").directive(), None);
         assert_eq!(line("#line\\u00e9 4").directive(), None);
         assert_eq!(line("#line\u{e9} 4").directive(), None);
-        assert_eq!(line("#$line").directive(), None);
+        assert_eq!(line("#$line").directive(), Some(("", 1)));
+        assert_eq!(line("#else@").directive(), Some(("else", 5)));
+        assert_eq!(line("#endif\\").directive(), Some(("endif", 6)));
+        assert_eq!(line("#else\u{3000}").directive(), Some(("else", 5)));
+        assert_eq!(line("#\u{a0}define X").directive(), Some(("define", 9)));
     }
 
-    /// A name is read where one stands, after white space or a comment; a
-    /// literal or a number there is none, and a character no token can begin
-    /// there, or touching the name's end, makes it one not read.
+    /// A name is read where one stands, after white space, white space
+    /// outside ASCII or a comment; a literal, a number or a character no
+    /// token can begin there is none, and a `$` touching a name's end makes
+    /// it one not read.
     ///
-    /// Mutations: answer `Read` for a keyword-free identifier only, or skip
-    /// the check of what touches its end; an assertion fails.
+    /// Mutations: answer `Read` for a keyword-free identifier only, skip the
+    /// check of what touches its end, or keep white space outside ASCII as
+    /// a token; an assertion fails.
     #[test]
     fn a_name_is_read_only_where_the_lexer_reads_one_whole() {
         let read = line("#define A /* x */ int(b) \"c\" 1 d$ \u{a0}e");
@@ -256,7 +276,7 @@ mod tests {
         assert_eq!(read.name_at(24), Name::Not);
         assert_eq!(read.name_at(29), Name::Not);
         assert_eq!(read.name_at(31), Name::Glued);
-        assert_eq!(read.name_at(34), Name::Glued);
+        assert_eq!(read.name_at(34), Name::Read("e", 37));
         assert_eq!(read.name_at(read.text().len()), Name::Not);
     }
 }

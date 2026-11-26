@@ -1,0 +1,121 @@
+Target "x86_64-pc-windows-msvc"
+Function a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter
+Function a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:4:5 "at"
+  Local "_0" "int" return
+  Local "_1" "char *" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:5:15 generated
+    Call a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:5:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 1
+  Block "bb1"
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:5:15 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:9 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:9:5 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:9:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:9:5 generated
+    ArgumentsEvaluated a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:11:5 generated
+    Call a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:11:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:11:5 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:12:12 generated
+    Return
+Function a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:15:5 "space"
+  Local "_0" "int" return
+  Local "_1" "char *" "b"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "char *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:16:15 generated
+    Call a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:16:15 written "malloc" "bb1"
+      Destination "_2"
+      Constant 1
+  Block "bb1"
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:16:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:16:15 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:9 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:17:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:20:5 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:20:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:20:5 generated
+    ArgumentsEvaluated a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:22:5 generated
+    Call a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:22:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:22:5 generated
+    Operation a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:23:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group.c:23:12 generated
+    Return
