@@ -7,5 +7,5 @@ _Pragma("/**/clang assume_nonnull begin")
 _Pragma("/**/weak f")
 _Pragma("/* x */ GCC diagnostic push // tail")
 _Pragma("/* unended")
-_Pragma("message(\"/* not a comment */\")")
+_Pragma("message(\"/* opens no comment\")")
 int main(void) { return 0; }

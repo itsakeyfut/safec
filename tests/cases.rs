@@ -10701,9 +10701,11 @@ cases! {
         // is refused, a comment around an ignored one leaves it ignored, a
         // comment the text does not end is refused, and `/*` in a string
         // in it opens nothing. Found by the hunt before #618 closed, where
-        // `/**/push_macro` let `clang`'s heap overflow pass. Mutation:
+        // `/**/push_macro` let `clang`'s heap overflow pass. Mutations:
         // classify the text with its comments; the refused six are
-        // `SC0118` warnings.
+        // `SC0118` warnings. Let a `"` open no literal in `blanked`; the
+        // `/*` in `message`'s string opens a comment never ended, and that
+        // line is refused.
         a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
