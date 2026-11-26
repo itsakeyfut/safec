@@ -5,9 +5,10 @@
 //! compiled; in a skipped one a directive is read only as far as its name.
 
 use super::held::Sources;
+use super::line::{Line, Name};
 use super::{
-    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, blanked, canonical, collected,
-    condition, hash, refused, replaced, spliced, too_deep, used_at,
+    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, canonical, collected, condition,
+    hash, refused, replaced, spliced, too_deep, used_at,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::lexer::UNSUPPORTED_SPLICE;
@@ -22,18 +23,24 @@ const ERROR_DIRECTIVE: Code = Code::new("SC0121");
 /// `#warning` in a group that is compiled (C23 6.10.7).
 const WARNING_DIRECTIVE: Code = Code::new("SC0122");
 
+/// Why a name [`Name::Glued`] is refused rather than read.
+pub(super) const GLUED_NOTE: &str = "a `$`, a universal character name or a letter outside ASCII \
+                                     goes on with a name, and this does not read such names yet";
+
 /// Read `text`, the line of the directive at `directive` with its comments
 /// made spaces, if it is one of this module's, and say whether it was.
 pub(super) fn read(
-    text: &str,
+    directive_line: &Line,
     directive: Span,
     sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
-    let Some((word, rest)) = name(text) else {
+    let text = directive_line.text();
+    let Some((word, end)) = directive_line.directive() else {
         return false;
     };
+    let rest = &text[end..];
     // GNU's `# 40 "gen.c"`, which `cc -E` writes and `clang` reads.
     let marker = !word.is_empty() && word.bytes().all(|byte| byte.is_ascii_digit());
     if !marker && !matches!(word, "pragma" | "line" | "error" | "warning") {
@@ -64,12 +71,18 @@ pub(super) fn read(
         _ if marker => line(
             Form::Marker,
             (text, directive),
-            (text.len() - rest.len() - word.len()) as u32,
+            (end - word.len()) as u32,
             sources,
             reading,
             diagnostics,
         ),
-        "pragma" => pragma(rest, hash(text, directive), sources, reading, diagnostics),
+        "pragma" => pragma(
+            (directive_line, end),
+            hash(text, directive),
+            sources,
+            reading,
+            diagnostics,
+        ),
         "line" => line(
             Form::Line,
             (text, directive),
@@ -110,21 +123,8 @@ pub(super) fn read(
 /// about: a skipped group holds other text C passes over (C17 6.10.1 p6),
 /// and real headers write some, FreeBSD's `sys/queue.h` a `#warn`, which
 /// refusing every unknown name refused. Found by review.
-pub(super) fn chooses_a_group(text: &str) -> bool {
-    matches!(name(text), Some(("elifdef" | "elifndef", _)))
-}
-
-/// A directive's name and what follows it, of `text`, a line beginning
-/// with `#` or `%:`; `None` where the name goes on in a character an
-/// identifier may hold, as `conditional_form` ends one.
-fn name(text: &str) -> Option<(&str, &str)> {
-    let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
-    let rest = text.strip_prefix('#').or_else(|| text.strip_prefix("%:"))?;
-    let rest = rest.trim_start_matches([' ', '\t', '\u{b}', '\u{c}', '\r']);
-    let length = rest.len() - rest.trim_start_matches(identifier).len();
-    let (word, rest) = rest.split_at(length);
-    let ends = !rest.starts_with(|c: char| identifier(c) || c == '$' || c == '\\' || !c.is_ascii());
-    ends.then_some((word, rest))
+pub(super) fn chooses_a_group(line: &Line) -> bool {
+    matches!(line.directive(), Some(("elifdef" | "elifndef", _)))
 }
 
 /// What a pragma comes to. See ADR-0129.
@@ -146,56 +146,33 @@ enum Class {
     Unknown,
 }
 
-/// The first two names of the pragma `rest`, the text after `pragma`, and
-/// what follows them. A name is read only where it begins, after white
-/// space: `#pragma "once"` has none, where reading past the quote made it
-/// `once` and a header `clang` reads twice was read once. Found by review.
-/// And a name ends only where no identifier goes on, as `name` ends a
-/// directive's: `once$` is a name of its own, which `clang` ignores as
-/// unknown, where reading it as `once` read a header once that `clang` reads
-/// twice. Found by architecture review 12.
-fn names(rest: &str) -> (&str, &str, &str) {
-    fn name(text: &str) -> (&str, &str) {
-        // White space outside ASCII, a no-break space among it, is white
-        // space to `clang` (with `-Wunicode-whitespace`), so it begins and
-        // ends a name as a space does. Read as part of a name, `pack` and a
-        // no-break space was unknown and ignored where `clang` packs the
-        // struct after it. Found by review.
-        let text = text.trim_start_matches(char::is_whitespace);
-        let length = text.len()
-            - text
-                .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '_')
-                .len();
-        let (word, after) = text.split_at(length);
-        // `$`, a universal character name or a letter outside ASCII goes on
-        // with the name, so what was read is not it. A `\` begins one only
-        // before `u` or `U`: `once\q` is `once` and a stray token to `clang`,
-        // and read as going on it was unknown, a header `clang` reads once
-        // read twice. Found by review.
-        let goes_on = after.starts_with('$')
-            || after.starts_with("\\u")
-            || after.starts_with("\\U")
-            || after.starts_with(|c: char| !c.is_ascii() && !c.is_whitespace());
-        if goes_on {
-            return ("", text);
-        }
-        (word, after)
+/// The first two names of the pragma in `line` from `from`, the text after
+/// `pragma`, and the offset just past them; `None` where either is
+/// [`Name::Glued`]. A name is read only where one is: `#pragma "once"` has
+/// none, where reading past the quote made it `once` and a header `clang`
+/// reads twice was read once. Found by review. And one the lexer cannot read
+/// whole is not read as a shorter one: `once$` is a name of its own to
+/// `clang`, which ignores it as unknown, and read as `once` it read a header
+/// once that `clang` reads twice. Found by architecture review 12.
+fn names(line: &Line, from: usize) -> Option<(&str, &str, usize)> {
+    match line.name_at(from) {
+        Name::Read(first, end) => match line.name_at(end) {
+            Name::Read(second, after) => Some((first, second, after)),
+            Name::Not => Some((first, "", end)),
+            Name::Glued => None,
+        },
+        Name::Not => Some(("", "", from)),
+        Name::Glued => None,
     }
-    let (first, rest) = name(rest);
-    let (second, rest) = if first.is_empty() {
-        ("", rest)
-    } else {
-        name(rest)
-    };
-    (first, second, rest)
 }
 
-/// The class of the pragma `rest`, the text after `pragma`: by its first
-/// name, and by the name after it where the first is `STDC`, `GCC` or
-/// `clang`, which are namespaces, or `options`.
-fn classify(rest: &str) -> Class {
-    let (first, second, _) = names(rest);
-    match (first, second) {
+/// The class of the pragma in `line` from `from`, the text after `pragma`:
+/// by its first name, and by the name after it where the first is `STDC`,
+/// `GCC` or `clang`, which are namespaces, or `options`. `None` where a name
+/// is [`Name::Glued`].
+fn classify(line: &Line, from: usize) -> Option<Class> {
+    let (first, second, _) = names(line, from)?;
+    Some(match (first, second) {
         ("once", _) => Class::Once,
         ("STDC", "FP_CONTRACT" | "FENV_ACCESS" | "CX_LIMITED_RANGE")
         | ("GCC" | "clang", "diagnostic")
@@ -219,19 +196,28 @@ fn classify(rest: &str) -> Class {
             _,
         ) => Class::Refused(first.to_owned()),
         _ => Class::Unknown,
-    }
+    })
 }
 
 /// Act on the pragma `rest`, the text after `pragma`, written at `at`: a
 /// `#pragma`'s `#`, or a `_Pragma`'s string literal.
 fn pragma(
-    rest: &str,
+    (line, from): (&Line, usize),
     at: Span,
     sources: &mut Sources<'_>,
     reading: &mut Reading,
     diagnostics: &mut DiagnosticSink,
 ) {
-    match classify(rest) {
+    let Some(class) = classify(line, from) else {
+        diagnostics.report(
+            Diagnostic::error("this pragma's name goes on past what is read")
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(at, "written here"))
+                .with_note(GLUED_NOTE),
+        );
+        return;
+    };
+    match class {
         // The file of its use: a `_Pragma` a macro writes marks the file
         // the macro is used in, as it would had it been written there. Only
         // an included file: `clang 22.1.8` reads the input again where it is
@@ -250,8 +236,8 @@ fn pragma(
         },
         Class::Ignored => {}
         Class::Message { error } => {
-            let (.., after) = names(rest);
-            let after = after.trim();
+            let (.., end) = names(line, from).expect("classified by its names");
+            let after = line.text()[end..].trim();
             let literal = after
                 .strip_prefix('(')
                 .and_then(|inner| inner.strip_suffix(')'))
@@ -345,9 +331,9 @@ pub(super) fn operator(
     // was ignored, where ADR-0129 refuses it, and `clang` read a program
     // with a heap overflow safec passed. Found by the hunt before #618
     // closed. A comment the text does not end is refused, as on a line.
-    let read = read.and_then(|(literal, text)| Some((literal, blanked(&text)?)));
+    let read = read.and_then(|(literal, text)| Some((literal, Line::operand(&text)?)));
     match read {
-        Some((literal, text)) => pragma(&text, literal.span, sources, reading, diagnostics),
+        Some((literal, line)) => pragma((&line, 0), literal.span, sources, reading, diagnostics),
         None => unread(diagnostics),
     }
 }
@@ -592,24 +578,46 @@ fn line(
 mod tests {
     use super::*;
 
+    /// The class of `text`, a pragma's text after `pragma`.
+    fn classify(text: &str) -> Option<Class> {
+        let line = Line::operand(text).expect("a pragma with no comment left open");
+        super::classify(&line, 0)
+    }
+
     /// Each class of ADR-0129 is answered for the pragmas it names, the
     /// namespaced ones by their second name, `GCC visibility` refused as
-    /// ADR-0132 has it, and a name read only where it begins.
+    /// ADR-0132 has it, a name read only where it begins, and no class for
+    /// a name the lexer cannot read whole.
     ///
     /// Mutations: move any name to another class, read a namespace's
-    /// pragma by its first name alone, read a name past a quote, or end a
-    /// name before a `$`, a universal character name or a letter outside
-    /// ASCII, or let a `\` alone go on with one; its assertion fails.
+    /// pragma by its first name alone, read a name past a quote, read a
+    /// name a `$`, a universal character name or a letter outside ASCII
+    /// touches as the shorter name before it, or refuse one a lone `\` or
+    /// white space outside ASCII touches; its assertion fails.
     #[test]
     fn a_pragma_is_classified_as_adr_0129_lists_it() {
-        assert_eq!(classify(" once"), Class::Once);
-        assert_eq!(classify(" once extra"), Class::Once);
-        assert_eq!(classify(" once\\q"), Class::Once);
-        assert_eq!(classify(" once\\u00e9"), Class::Unknown);
-        assert_eq!(classify("GCC error \"x\""), Class::Message { error: true });
+        assert_eq!(classify(" once"), Some(Class::Once));
+        assert_eq!(classify(" once extra"), Some(Class::Once));
+        // `clang` ends a name at a `\` that begins no universal character
+        // name, at `@`, and at white space outside ASCII.
+        assert_eq!(classify(" once\\q"), Some(Class::Once));
+        assert_eq!(classify(" once@"), Some(Class::Once));
+        assert_eq!(
+            classify("pack\u{a0}(4)"),
+            Some(Class::Refused("pack".to_owned()))
+        );
+        assert_eq!(
+            classify("\u{a0}pack(4)"),
+            Some(Class::Refused("pack".to_owned()))
+        );
+        assert_eq!(classify("region \u{521d}"), Some(Class::Ignored));
+        assert_eq!(
+            classify("GCC error \"x\""),
+            Some(Class::Message { error: true })
+        );
         assert_eq!(
             classify("GCC warning(\"x\")"),
-            Class::Message { error: false }
+            Some(Class::Message { error: false })
         );
         for ignored in [
             "STDC FP_CONTRACT ON",
@@ -623,7 +631,7 @@ mod tests {
             "region x",
             "endregion",
         ] {
-            assert_eq!(classify(ignored), Class::Ignored, "{ignored}");
+            assert_eq!(classify(ignored), Some(Class::Ignored), "{ignored}");
         }
         for (refused, what) in [
             ("pack(4)", "pack"),
@@ -652,7 +660,7 @@ mod tests {
         ] {
             assert_eq!(
                 classify(refused),
-                Class::Refused(what.to_owned()),
+                Some(Class::Refused(what.to_owned())),
                 "{refused}"
             );
         }
@@ -665,11 +673,15 @@ mod tests {
             "omp parallel",
             "\"once\"",
             "(once)",
-            "once$",
-            "GCC poison$ x",
-            "pack\u{e9}(4)",
+            "$x",
+            "foo @bar",
         ] {
-            assert_eq!(classify(unknown), Class::Unknown, "{unknown}");
+            assert_eq!(classify(unknown), Some(Class::Unknown), "{unknown}");
+        }
+        // `clang` reads each of these as a longer name than this does, so
+        // none is read as the shorter one.
+        for glued in ["once$", " once\\u00e9", "GCC poison$ x", "pack\u{e9}(4)"] {
+            assert_eq!(classify(glued), None, "{glued}");
         }
     }
 
@@ -716,23 +728,5 @@ mod tests {
         assert_eq!(destringized(r#""\q.c""#, line), None);
         assert_eq!(destringized("L\"once\"", pragma), None);
         assert_eq!(destringized("u8\"x.c\"", line), None);
-    }
-
-    /// A directive's name begins after any white space C allows there and
-    /// ends where no identifier goes on: `$`, a `\` that begins a universal
-    /// character name, or a letter outside ASCII would.
-    ///
-    /// Mutations: end it at the first character that is not a letter,
-    /// digit or `_`, or at any one of those three; or skip only spaces and
-    /// tabs after the `#`. An assertion fails.
-    #[test]
-    fn a_directive_name_is_the_whole_identifier() {
-        assert_eq!(name("#  pragma once"), Some(("pragma", " once")));
-        assert_eq!(name("#\u{b}\u{c}line 4"), Some(("line", " 4")));
-        assert_eq!(name("%:line 4"), Some(("line", " 4")));
-        assert_eq!(name("#pragmas"), Some(("pragmas", "")));
-        assert_eq!(name("#line$ 4"), None);
-        assert_eq!(name("#line\\u00e9 4"), None);
-        assert_eq!(name("#lineé 4"), None);
     }
 }

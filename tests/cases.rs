@@ -10723,14 +10723,42 @@ cases! {
         // `/*` in `message`'s string opens a comment never ended, and that
         // line is refused.
         a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma: ["--emit", "ast"],
-        // A pragma's name ends only where no identifier goes on, so
-        // `#pragma once$` is a name of its own, unknown, and the header is
-        // read twice as `clang` reads it: on the second reading `SIZE` is 1,
-        // and `b[1]` is past it. Found by architecture review 12, where
-        // `once$` was read as `once`, the header once, and this exited 0.
-        // Mutation: end the name at the `$`; the header is read once and
-        // nothing is reported.
-        a_pragma_whose_name_goes_on_past_once_is_not_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `#pragma once$` is not `#pragma once`: `clang` reads `once$` as a
+        // name of its own and the header twice, and on the second reading
+        // `SIZE` is 1 and `b[1]` past it. Read as `once`, the header was read
+        // once and this exited 0. Found by architecture review 12. The
+        // lexer does not read `once$` whole, so the pragma is refused rather
+        // than read as a shorter name. Mutation: read a name a `$` touches as
+        // the name before it, in `Line::name_at`; this exits 0 with nothing
+        // said.
+        a_pragma_whose_name_goes_on_past_once_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every directive that reads a name reads it as the lexer does, so
+        // one a `$` or a letter outside ASCII touches is refused rather than
+        // read as the shorter name before it: a `#define`'s and an
+        // `#undef`'s name, a parameter, an `#ifdef`'s and an `#ifndef`'s
+        // name, a pragma's names, and a directive's own. Mutation: read a
+        // name such a character touches as the name before it, in
+        // `Line::name_at`; the lines are read and fewer are refused.
+        a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive: ["--emit", "ast"],
+        // Any other character touching a name ends it, as `clang` ends it:
+        // `#else@` is an `#else`, and so is `#else` with an ideographic
+        // space after it, which `clang` reads as white space. In a skipped
+        // group each chooses the group after it, which `clang` compiles, and
+        // its `b[1]` is past the block. Found by review, where `#else@` was
+        // read as no directive at all and this exited 0 with nothing said.
+        // Mutation: answer `Glued` for any character no token can begin
+        // touching a name, in `Line::name_at`; or keep white space outside
+        // ASCII as a token, in `Line::lexed`. A function's overflow is not
+        // reported.
+        a_conditional_whose_name_a_stray_character_ends_is_read_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a comment around each of those names is white space (C17
+        // 5.1.1.2 p1, phase 3), so the same directives with one around every
+        // name are read. Held twice over: the line's comments are made
+        // spaces, and the lexer skips one too, so dropping either alone
+        // moves nothing. Mutation: lex the line as a file, with `lex` rather
+        // than `lex_replacement`, in `Line`; its `#` begins one token of the
+        // whole line, no name is found, and every line is refused.
+        a_name_with_a_comment_around_it_is_read_in_every_directive: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.

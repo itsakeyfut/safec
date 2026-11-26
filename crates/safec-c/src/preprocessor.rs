@@ -23,6 +23,7 @@
 mod condition;
 mod directive;
 mod held;
+mod line;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -37,6 +38,7 @@ use crate::lexer::{
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
 use held::{Addition, Sources, Unadded};
+use line::{Line, Name};
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -587,12 +589,13 @@ pub fn prelude(
     for line in text.split_inclusive('\n') {
         let directive = line.trim_end_matches('\n');
         let span = Span::new(built_in, at, at + directive.len() as u32);
+        let read = Line::read(directive).expect("a predefined line has no comment");
         let MacroForm::Define {
             name,
             name_at,
             body,
             parameters,
-        } = macro_form(directive)
+        } = macro_form(&read)
         else {
             panic!("a predefined line that is not a `#define`: {directive}");
         };
@@ -868,41 +871,44 @@ fn read_includes(
                 // comments are made spaces, which takes the splice with them
                 // and read `#include "a.h" // \` as an include. Found by
                 // review, after it had been blessed.
-                let blank =
-                    blanked(&raw).filter(|text| self::spliced(text) || !self::spliced(&raw));
-                let Some(text) = blank else {
-                    let text = raw;
-                    diagnostics.report(
-                        refused(
-                            &text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "a comment that goes on past a directive's line is not read yet",
-                        )
-                        .with_note(
-                            "C makes the comment one space, so the directive goes on after \
+                let line = match Line::read(&raw) {
+                    Ok(line) => line,
+                    Err(line) => {
+                        let text = line.text();
+                        diagnostics.report(
+                            refused(
+                                text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "a comment that goes on past a directive's line is not read yet",
+                            )
+                            .with_note(
+                                "C makes the comment one space, so the directive goes on after \
                              it ends, and the lines inside it are not code",
-                        ),
-                    );
-                    // A conditional refused here still opens or ends its
-                    // level, as `conditional` says a refused one does: left
-                    // out, its `#endif` was reported as closing nothing, a
-                    // caret on a directive that was right. Found by review.
-                    if let (Some(form), Some(frame)) = (conditional_form(&text), frames.last_mut())
-                    {
-                        conditional(
-                            form,
-                            &text,
-                            token.span,
-                            frame,
-                            (sources, reading),
-                            diagnostics,
-                            true,
+                            ),
                         );
+                        // A conditional refused here still opens or ends its
+                        // level, as `conditional` says a refused one does: left
+                        // out, its `#endif` was reported as closing nothing, a
+                        // caret on a directive that was right. Found by review.
+                        if let (Some(form), Some(frame)) =
+                            (conditional_form(&line), frames.last_mut())
+                        {
+                            conditional(
+                                form,
+                                text,
+                                token.span,
+                                frame,
+                                (sources, reading),
+                                diagnostics,
+                                true,
+                            );
+                        }
+                        continue;
                     }
-                    continue;
                 };
-                let form = conditional_form(&text);
+                let text = line.text();
+                let form = conditional_form(&line);
                 // A splice joins the line below to this one before any
                 // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
                 // read that line on its own, as a directive where it begins
@@ -910,7 +916,7 @@ fn read_includes(
                 // all, a skipped group's included: there `#define X \` above
                 // `#else` ended a group C does not end, and the code after it
                 // was compiled where C has none. Found by review.
-                if self::spliced(&text) && (skipping || form.is_some()) {
+                if self::spliced(text) && (skipping || form.is_some()) {
                     let message = if form.is_some() {
                         "a line splice or a trigraph in a conditional directive is not read yet"
                     } else {
@@ -918,7 +924,7 @@ fn read_includes(
                          read yet"
                     };
                     diagnostics.report(
-                        refused(&text, token.span, UNSUPPORTED_SPLICE, message).with_note(
+                        refused(text, token.span, UNSUPPORTED_SPLICE, message).with_note(
                             "C can join the line below to this one, and it would be read on \
                              its own instead",
                         ),
@@ -928,7 +934,7 @@ fn read_includes(
                     if let Some(frame) = frames.last_mut() {
                         conditional(
                             form,
-                            &text,
+                            text,
                             token.span,
                             frame,
                             (sources, reading),
@@ -943,10 +949,10 @@ fn read_includes(
                 // rest ignored (C17 6.10.1 p6): `#include <stdio.h>` or a
                 // function-like `#define` there is not reported.
                 if skipping {
-                    if directive::chooses_a_group(&text) {
+                    if directive::chooses_a_group(&line) {
                         diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "`#elifdef` and `#elifndef` are not read yet",
@@ -959,10 +965,24 @@ fn read_includes(
                     }
                     continue;
                 }
-                if directive::read(&text, token.span, sources, reading, diagnostics) {
+                // Not read as a shorter name: `#pragma once$` is not `#pragma
+                // once` to `clang`. Found by architecture review 12.
+                if line.directive().is_none() {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "this directive's name goes on past what is read",
+                        )
+                        .with_note(directive::GLUED_NOTE),
+                    );
                     continue;
                 }
-                match include_form(&text) {
+                if directive::read(&line, token.span, sources, reading, diagnostics) {
+                    continue;
+                }
+                match include_form(&line) {
                     IncludeForm::Quoted { name, quote } => {
                         let quoted = Span::new(
                             token.span.file(),
@@ -988,7 +1008,7 @@ fn read_includes(
                     }
                     IncludeForm::Spliced => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_SPLICE,
                             "a line splice or a trigraph in an `#include` is not read yet",
@@ -1000,7 +1020,7 @@ fn read_includes(
                     ),
                     IncludeForm::Angled => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_DIRECTIVE,
                             "`#include <...>` is not read yet",
@@ -1009,7 +1029,7 @@ fn read_includes(
                     ),
                     IncludeForm::Unread => diagnostics.report(
                         refused(
-                            &text,
+                            text,
                             token.span,
                             UNSUPPORTED_DIRECTIVE,
                             "this `#include` is not read yet",
@@ -1019,14 +1039,14 @@ fn read_includes(
                              after it on its line",
                         ),
                     ),
-                    IncludeForm::Other => match macro_form(&text) {
+                    IncludeForm::Other => match macro_form(&line) {
                         MacroForm::Define {
                             name,
                             name_at,
                             body,
                             parameters,
                         } => define(
-                            &text,
+                            text,
                             token.span,
                             name,
                             name_at,
@@ -1066,7 +1086,7 @@ fn read_includes(
                         },
                         MacroForm::Unread { directive } => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 &format!("this `{directive}` is not read yet"),
@@ -1081,7 +1101,7 @@ fn read_includes(
                         ),
                         MacroForm::Defined => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "`defined` is not read as a macro's name",
@@ -1093,7 +1113,7 @@ fn read_includes(
                         ),
                         MacroForm::Parameters => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "this parameter list is not read",
@@ -1106,7 +1126,7 @@ fn read_includes(
                         ),
                         MacroForm::Variadic => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "this variadic parameter list is not read",
@@ -1118,7 +1138,7 @@ fn read_includes(
                         ),
                         MacroForm::Spliced => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_SPLICE,
                                 "a line splice or a trigraph in a `#define` is not read yet",
@@ -1130,7 +1150,7 @@ fn read_includes(
                         ),
                         MacroForm::Other => diagnostics.report(
                             refused(
-                                &text,
+                                text,
                                 token.span,
                                 UNSUPPORTED_DIRECTIVE,
                                 "preprocessor directives are not supported yet",
@@ -3240,97 +3260,52 @@ enum MacroForm<'a> {
 }
 
 /// Read a `#define` or an `#undef`.
-fn macro_form(text: &str) -> MacroForm<'_> {
-    let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
-    let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
-
-    let Some(rest) = text.strip_prefix('#').or_else(|| text.strip_prefix("%:")) else {
-        return MacroForm::Other;
+fn macro_form(line: &Line) -> MacroForm<'_> {
+    let text = line.text();
+    let (define, end) = match line.directive() {
+        Some(("define", end)) => (true, end),
+        Some(("undef", end)) => (false, end),
+        _ => return MacroForm::Other,
     };
-    let rest = rest.trim_start_matches(blank);
-    let (define, rest) = if let Some(rest) = rest.strip_prefix("define") {
-        (true, rest)
-    } else if let Some(rest) = rest.strip_prefix("undef") {
-        (false, rest)
-    } else {
-        return MacroForm::Other;
+    let directive = if define { "#define" } else { "#undef" };
+    // A name the lexer reads whole, or none: `#undef A$B` read as `#undef A`
+    // undefined a macro nobody named. Found by review.
+    let Name::Read(name, name_end) = line.name_at(end) else {
+        return MacroForm::Unread { directive };
     };
-    // `#defined` is a directive of another name.
-    if rest.starts_with(identifier) {
-        return MacroForm::Other;
-    }
-    let rest = rest.trim_start_matches(blank);
-    let length = rest.len() - rest.trim_start_matches(identifier).len();
-    let name = &rest[..length];
-    if name.is_empty() || name.starts_with(|c: char| c.is_ascii_digit()) {
-        return MacroForm::Unread {
-            directive: if define { "#define" } else { "#undef" },
-        };
-    }
     if name == "defined" {
         return MacroForm::Defined;
     }
-    // What follows the name has to be where the name ends: a blank, the end,
-    // or, for `#define`, the `(` of a function-like macro. Anything else is
-    // a character this does not take for part of a name, `$` or a letter
-    // outside ASCII among them, and reading the name as ending before it read
-    // `#undef A$B` as `#undef A`, undefining a macro nobody named. Found by
-    // review. C17 6.10.3 p3 asks for whitespace between an object-like
-    // macro's name and its replacement list anyway.
-    let after = &rest[length..];
     if !define {
-        if after.trim_matches(blank).is_empty() {
+        if line.rest_at(name_end).is_none() {
             return MacroForm::Undef { name };
         }
-        return MacroForm::Unread {
-            directive: "#undef",
-        };
+        return MacroForm::Unread { directive };
     }
     if spliced(text) {
         return MacroForm::Spliced;
     }
-    let name_at = (text.len() - rest.len()) as u32;
-    // `(` straight after the name makes it function-like (C17 6.10.3 p3),
-    // and its list runs to the first `)`, since a parameter holds none.
-    let (parameters, after) = if let Some(list) = after.strip_prefix('(') {
-        let Some(close) = list.find(')') else {
-            return MacroForm::Parameters;
-        };
-        let mut names = Vec::new();
-        if !list[..close].trim_matches(blank).is_empty() {
-            let count = list[..close].split(',').count();
-            for (at, parameter) in list[..close].split(',').enumerate() {
-                let parameter = parameter.trim_matches(blank);
-                // `...` last names the rest `__VA_ARGS__` (C17 6.10.3 p12).
-                if parameter == "..." && at + 1 == count {
-                    names.push(VA_ARGS);
-                    continue;
-                }
-                if parameter.ends_with("...") {
-                    return MacroForm::Variadic;
-                }
-                if parameter.is_empty()
-                    || parameter.starts_with(|c: char| c.is_ascii_digit())
-                    || !parameter.chars().all(identifier)
-                    || parameter == "__VA_ARGS__"
-                    || names.contains(&parameter)
-                {
-                    return MacroForm::Parameters;
-                }
-                names.push(parameter);
+    let name_at = (name_end - name.len()) as u32;
+    // What follows the name has to be where the name ends: a blank, the
+    // end, or the `(` of a function-like macro straight after it (C17
+    // 6.10.3 p3), which asks for whitespace between an object-like macro's
+    // name and its replacement list anyway.
+    let rest = line.tokens_from(name_end);
+    let (parameters, after) = match rest.first() {
+        Some(open) if open.start == name_end => {
+            if open.kind != TokenKind::Punct(Punct::LeftParen) {
+                return MacroForm::Unread { directive };
+            }
+            match parameters(line, &rest[1..]) {
+                Ok((names, close)) => (Some(names), close),
+                Err(form) => return form,
             }
         }
-        (Some(names), &list[close + 1..])
-    } else if after.is_empty() || after.starts_with(blank) {
-        (None, after)
-    } else {
-        return MacroForm::Unread {
-            directive: "#define",
-        };
+        _ => (None, name_end),
     };
-    let body = after.trim_start_matches(blank);
-    let start = text.len() - body.len();
-    let end = start + body.trim_end_matches(blank).len();
+    let body = line.tokens_from(after);
+    let start = body.first().map_or(text.len(), |token| token.start);
+    let end = body.last().map_or(start, |token| token.end);
     MacroForm::Define {
         name,
         name_at,
@@ -3339,47 +3314,54 @@ fn macro_form(text: &str) -> MacroForm<'_> {
     }
 }
 
-/// `text`, a directive's line, with each comment in it made spaces of the
-/// same length, or `None` where a block comment in it does not end on it.
-///
-/// C makes a comment one space before directives are read (C17 5.1.1.2 p1,
-/// phase 3), so a comment between `#` and `define`, or after a name, is
-/// whitespace like any other; the same length keeps every offset into the
-/// line where it was, so spans taken from the result are spans of the line.
-/// A string or character literal is passed over, since `/*` in one opens
-/// nothing. A comment that does not end on the line is refused rather than
-/// read: the lexer ends a directive at its newline, so the lines inside the
-/// comment would be compiled as code, and `#define X /*` above a null test
-/// left the test to be believed where C has none. Found by review.
-fn blanked(text: &str) -> Option<String> {
-    let mut bytes = text.as_bytes().to_vec();
+/// A function-like macro's parameters, from `tokens`, what follows its `(`,
+/// and the offset just past the `)` that closes them; or what the
+/// definition is where they are not read. Each is a name the lexer reads
+/// whole, or `...` last, which names the rest `__VA_ARGS__` (C17 6.10.3
+/// p12).
+fn parameters<'a>(
+    line: &'a Line,
+    tokens: &[line::Lexed],
+) -> Result<(Vec<&'a str>, usize), MacroForm<'a>> {
+    let is = |token: Option<&line::Lexed>, punct: Punct| {
+        token.is_some_and(|token| token.kind == TokenKind::Punct(punct))
+    };
+    let mut names = Vec::new();
     let mut at = 0;
-    let mut quote = None;
-    while at < bytes.len() {
-        match (quote, bytes[at]) {
-            // An escape in a literal, whose next byte closes nothing.
-            (Some(_), b'\\') if at + 1 < bytes.len() => {
-                at += 2;
-                continue;
-            }
-            (Some(open), byte) if byte == open => quote = None,
-            (Some(_), _) => {}
-            (None, b'"' | b'\'') => quote = Some(bytes[at]),
-            (None, b'/') if bytes.get(at + 1) == Some(&b'/') => {
-                bytes[at..].fill(b' ');
-                break;
-            }
-            (None, b'/') if bytes.get(at + 1) == Some(&b'*') => {
-                let end = text[at + 2..].find("*/")? + at + 4;
-                bytes[at..end].fill(b' ');
-                at = end;
-                continue;
-            }
-            (None, _) => {}
-        }
-        at += 1;
+    if is(tokens.first(), Punct::RightParen) {
+        return Ok((names, tokens[0].end));
     }
-    Some(String::from_utf8(bytes).expect("only whole comments are made spaces"))
+    loop {
+        let Some(&token) = tokens.get(at) else {
+            return Err(MacroForm::Parameters);
+        };
+        if token.kind == TokenKind::Punct(Punct::Ellipsis) {
+            if !is(tokens.get(at + 1), Punct::RightParen) {
+                return Err(MacroForm::Variadic);
+            }
+            names.push(VA_ARGS);
+            return Ok((names, tokens[at + 1].end));
+        }
+        let Name::Read(name, _) = line.name_at(token.start) else {
+            return Err(MacroForm::Parameters);
+        };
+        // GNU's named variadic parameter, `args...`.
+        if is(tokens.get(at + 1), Punct::Ellipsis) {
+            return Err(MacroForm::Variadic);
+        }
+        // C17 6.10.3 p6 forbids one named twice.
+        if name == "__VA_ARGS__" || names.contains(&name) {
+            return Err(MacroForm::Parameters);
+        }
+        names.push(name);
+        match tokens.get(at + 1) {
+            Some(next) if next.kind == TokenKind::Punct(Punct::Comma) => at += 2,
+            Some(next) if next.kind == TokenKind::Punct(Punct::RightParen) => {
+                return Ok((names, next.end));
+            }
+            _ => return Err(MacroForm::Parameters),
+        }
+    }
 }
 
 /// Whether a directive's line ends in a splice or holds a trigraph, either of
@@ -3434,64 +3416,60 @@ enum Named<'a> {
 ///
 /// `extra` is where in `text` tokens follow what the directive takes, which
 /// C's grammar does not allow and which is warned about and ignored.
-fn conditional_form(text: &str) -> Option<ConditionalForm<'_>> {
-    let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
-    let identifier = |c: char| c.is_ascii_alphanumeric() || c == '_';
-    // A name ends at a blank, the end, or a character that is not part of
-    // any identifier, such as `(`; `$` or a letter outside ASCII would be,
-    // and so would a `\`, which begins a universal character name (C17
-    // 6.4.2.1). Ended there instead, `#ifndef A\u00e9` asked about `A`, and a
-    // double free under it was skipped. Found by review.
-    let ends = |rest: &str| {
-        !rest.starts_with(|c: char| identifier(c) || c == '$' || c == '\\' || !c.is_ascii())
-    };
-    // Where tokens go on after what the directive takes, if they do.
-    let extra = |rest: &str| {
-        let after = rest.trim_matches(blank);
-        (!after.is_empty()).then(|| {
-            let start = text.len() - rest.trim_start_matches(blank).len();
-            (start as u32, (start + after.len()) as u32)
-        })
-    };
-
-    let rest = text.strip_prefix('#').or_else(|| text.strip_prefix("%:"))?;
-    let rest = rest.trim_start_matches(blank);
-    let length = rest.len() - rest.trim_start_matches(identifier).len();
-    let (word, rest) = rest.split_at(length);
-    if !ends(rest) {
-        return None;
-    }
+fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
+    let text = line.text();
+    // A directive whose name the lexer cannot read whole is none of these:
+    // `#ifndef A\u00e9` asked about `A`, and a double free under it was
+    // skipped. Found by review.
+    let (word, end) = line.directive()?;
     let negated = match word {
         "if" | "elif" => {
-            let expression = ((text.len() - rest.len()) as u32, text.len() as u32);
+            let expression = (end as u32, text.len() as u32);
             return Some(if word == "if" {
                 ConditionalForm::If { expression }
             } else {
                 ConditionalForm::Elif { expression }
             });
         }
-        "else" => return Some(ConditionalForm::Else { extra: extra(rest) }),
-        "endif" => return Some(ConditionalForm::Endif { extra: extra(rest) }),
+        "else" => {
+            return Some(ConditionalForm::Else {
+                extra: line.rest_at(end),
+            });
+        }
+        "endif" => {
+            return Some(ConditionalForm::Endif {
+                extra: line.rest_at(end),
+            });
+        }
         "ifdef" => false,
         "ifndef" => true,
         _ => return None,
     };
-    let rest = rest.trim_start_matches(blank);
-    let length = rest.len() - rest.trim_start_matches(identifier).len();
-    let (name, after) = rest.split_at(length);
-    let name = if name.is_empty() && !ends(rest) {
-        Named::Unread
-    } else if name.is_empty() || name.starts_with(|c: char| c.is_ascii_digit()) {
-        Named::Missing
-    } else if !ends(after) {
-        Named::Unread
-    } else {
-        Named::Read(name)
+    let name = match line.name_at(end) {
+        Name::Read(name, _) => Named::Read(name),
+        Name::Not => Named::Missing,
+        Name::Glued => Named::Unread,
+    };
+    // Tokens go on after the name, or after the number that stands where
+    // one should; what an unread name touches is among them.
+    let after = match line.tokens_from(end).first() {
+        Some(token)
+            if matches!(
+                token.kind,
+                TokenKind::Identifier
+                    | TokenKind::Keyword(_)
+                    | TokenKind::Annotation(_)
+                    | TokenKind::Number
+            ) =>
+        {
+            token.end
+        }
+        _ => end,
     };
     Some(ConditionalForm::Ifdef {
         negated,
         name,
-        extra: extra(after),
+        extra: line.rest_at(after),
     })
 }
 
@@ -4104,21 +4082,16 @@ enum IncludeForm<'a> {
 /// line of a file saved with CRLF ends in one, and a header that did not read
 /// on Windows would be a header that did not read for most of the people who
 /// write one.
-fn include_form(text: &str) -> IncludeForm<'_> {
+fn include_form(line: &Line) -> IncludeForm<'_> {
+    let text = line.text();
     let blank = [' ', '\t', '\u{b}', '\u{c}', '\r'];
 
-    let Some(rest) = text.strip_prefix('#').or_else(|| text.strip_prefix("%:")) else {
-        return IncludeForm::Other;
-    };
-    let Some(rest) = rest.trim_start_matches(blank).strip_prefix("include") else {
-        return IncludeForm::Other;
-    };
     // `#included` is a directive of another name, and is not refused as an
     // `#include` of a form not read.
-    if rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
+    let Some(("include", end)) = line.directive() else {
         return IncludeForm::Other;
-    }
-    let rest = rest.trim_start_matches(blank);
+    };
+    let rest = text[end..].trim_start_matches(blank);
     if rest.starts_with('<') {
         return IncludeForm::Angled;
     }
@@ -4216,6 +4189,11 @@ fn canonical(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
+    /// `text` as a directive's line, which must read.
+    fn read_line(text: &str) -> Line {
+        Line::read(text).expect("a line that reads")
+    }
+
     /// Every spelling C allows of the one form read.
     ///
     /// Mutation: take `\r` out of `blank`. The line a CRLF file ends with is
@@ -4232,10 +4210,11 @@ mod tests {
             ("#include \"a.h\" /* why */ ", "a.h"),
             ("#include \"dir/a b.h\"", "dir/a b.h"),
         ] {
-            let IncludeForm::Quoted { name: read, quote } = include_form(text) else {
+            let line = read_line(text);
+            let IncludeForm::Quoted { name: read, quote } = include_form(&line) else {
                 panic!(
                     "{text:?} is not read as an include: {:?}",
-                    include_form(text)
+                    include_form(&read_line(text))
                 );
             };
             assert_eq!(read, name, "{text:?}");
@@ -4261,14 +4240,20 @@ mod tests {
             ("#include \"a.h", IncludeForm::Unread),
             ("#include \"a.h\" x", IncludeForm::Unread),
             ("#include \"a.h\"\rint z;", IncludeForm::Unread),
-            ("#include \"a.h\" /* open", IncludeForm::Unread),
-            ("#include \"a.h\" // \\", IncludeForm::Spliced),
-            ("#include \"a.h\" // \\ \r", IncludeForm::Spliced),
-            ("#include \"a.h\" // ??/", IncludeForm::Spliced),
             ("#include \"a??=.h\"", IncludeForm::Spliced),
             ("#", IncludeForm::Other),
         ] {
-            assert_eq!(include_form(text), expected, "{text:?}");
+            assert_eq!(include_form(&read_line(text)), expected, "{text:?}");
+        }
+        // A comment that goes on past the line, or a splice in one, is
+        // turned away before any reader is handed the line.
+        for text in [
+            "#include \"a.h\" /* open",
+            "#include \"a.h\" // \\",
+            "#include \"a.h\" // \\ \r",
+            "#include \"a.h\" // ??/",
+        ] {
+            assert!(Line::read(text).is_err(), "{text:?}");
         }
     }
 
@@ -5121,31 +5106,106 @@ mod tests {
         assert!(diagnostics.diagnostics().is_empty());
     }
 
+    /// A `#define` and an `#undef` are read from the lexer's tokens: an
+    /// empty parameter list's body starts after its `)`, a list that is not
+    /// closed or ends at a comma is not read, a name that punctuation
+    /// touches is not an object-like macro's, and an `#undef` with more
+    /// after its name is not read.
+    ///
+    /// Mutations: end an empty list at its `)`'s start, accept a list that
+    /// runs out of tokens, drop the check that what touches the name is a
+    /// `(`, or read an `#undef` with more after it; an assertion fails.
+    #[test]
+    fn a_macro_s_name_and_parameters_are_read_from_the_lexer_s_tokens() {
+        let form = |text: &str| format!("{:?}", macro_form(&read_line(text)));
+        assert_eq!(
+            form("#define F() 1"),
+            format!(
+                "{:?}",
+                MacroForm::Define {
+                    name: "F",
+                    name_at: 8,
+                    body: (12, 13),
+                    parameters: Some(Vec::new()),
+                }
+            )
+        );
+        assert_eq!(
+            form("#define F(a, b) a"),
+            format!(
+                "{:?}",
+                MacroForm::Define {
+                    name: "F",
+                    name_at: 8,
+                    body: (16, 17),
+                    parameters: Some(vec!["a", "b"]),
+                }
+            )
+        );
+        assert_eq!(form("#define F("), format!("{:?}", MacroForm::Parameters));
+        assert_eq!(form("#define F(a,"), format!("{:?}", MacroForm::Parameters));
+        assert_eq!(form("#define F(a"), format!("{:?}", MacroForm::Parameters));
+        for touched in ["#define A+1", "#define A\"x\""] {
+            assert_eq!(
+                form(touched),
+                format!(
+                    "{:?}",
+                    MacroForm::Unread {
+                        directive: "#define"
+                    }
+                ),
+                "{touched}"
+            );
+        }
+        assert_eq!(
+            form("#undef A"),
+            format!("{:?}", MacroForm::Undef { name: "A" })
+        );
+        assert_eq!(
+            form("#undef A B"),
+            format!(
+                "{:?}",
+                MacroForm::Unread {
+                    directive: "#undef"
+                }
+            )
+        );
+    }
+
     /// Each conditional directive is read by its name, a name that only
     /// begins with one is not one, and what follows is where it is.
     ///
-    /// Mutation: drop the check that the directive's name ends where a name
-    /// does. `#if$` is an `#if`. Mutation: start `extra` before the blanks
-    /// in front of it. Its offsets move.
+    /// Mutation: read a name a `$` touches as the name before it, in
+    /// `Line::name_at`. `#if$` is an `#if`. Mutation: start `extra` at the
+    /// name rather than after it. Its offsets move.
     #[test]
     fn a_conditional_directive_is_read_by_its_name() {
         use ConditionalForm::*;
         // The expression is the rest of the line after the name.
-        assert_eq!(conditional_form("#if 1"), Some(If { expression: (3, 5) }));
         assert_eq!(
-            conditional_form("%:elif X"),
+            conditional_form(&read_line("#if 1")),
+            Some(If { expression: (3, 5) })
+        );
+        assert_eq!(
+            conditional_form(&read_line("%:elif X")),
             Some(Elif { expression: (6, 8) })
         );
-        assert_eq!(conditional_form("#  else"), Some(Else { extra: None }));
-        assert_eq!(conditional_form("#endif     "), Some(Endif { extra: None }));
         assert_eq!(
-            conditional_form("#endif X  "),
+            conditional_form(&read_line("#  else")),
+            Some(Else { extra: None })
+        );
+        assert_eq!(
+            conditional_form(&read_line("#endif     ")),
+            Some(Endif { extra: None })
+        );
+        assert_eq!(
+            conditional_form(&read_line("#endif X  ")),
             Some(Endif {
                 extra: Some((7, 8))
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A"),
+            conditional_form(&read_line("#ifdef A")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Read("A"),
@@ -5153,7 +5213,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifndef A B"),
+            conditional_form(&read_line("#ifndef A B")),
             Some(Ifdef {
                 negated: true,
                 name: Named::Read("A"),
@@ -5161,7 +5221,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef"),
+            conditional_form(&read_line("#ifdef")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Missing,
@@ -5169,7 +5229,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef 1"),
+            conditional_form(&read_line("#ifdef 1")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Missing,
@@ -5177,7 +5237,7 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A$B"),
+            conditional_form(&read_line("#ifdef A$B")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Unread,
@@ -5185,17 +5245,17 @@ mod tests {
             })
         );
         assert_eq!(
-            conditional_form("#ifdef A\\u00e9"),
+            conditional_form(&read_line("#ifdef A\\u00e9")),
             Some(Ifdef {
                 negated: false,
                 name: Named::Unread,
                 extra: Some((8, 14))
             })
         );
-        assert_eq!(conditional_form("#ifdefine X"), None);
-        assert_eq!(conditional_form("#if$"), None);
-        assert_eq!(conditional_form("#include \"a.h\""), None);
-        let blank = blanked("#endif /* U */").unwrap();
+        assert_eq!(conditional_form(&read_line("#ifdefine X")), None);
+        assert_eq!(conditional_form(&read_line("#if$")), None);
+        assert_eq!(conditional_form(&read_line("#include \"a.h\"")), None);
+        let blank = read_line("#endif /* U */");
         assert_eq!(conditional_form(&blank), Some(Endif { extra: None }));
     }
 
