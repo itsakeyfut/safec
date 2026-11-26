@@ -116,9 +116,10 @@ pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) 
 /// before it, where `clang` compiled it as code: a second `free` behind one
 /// was not seen. Found by a hunt. Refused rather than read as a line end,
 /// since reading it as one moves every line number and caret after it. One
-/// report per file, at the first, wherever it stands, a skipped group and a
-/// comment included: what it does there is where a line ends, which decides
-/// what the rest of the file is.
+/// report each time a file is read, at the first, wherever it stands, a
+/// skipped group and a comment included: what it does there is where a line
+/// ends, which decides what the rest of the file is. A header included twice
+/// is read twice and reported twice, as every lexical error is.
 fn lone_carriage_return(text: &str) -> Option<usize> {
     text.match_indices('\r')
         .map(|(at, _)| at)
