@@ -1,0 +1,16 @@
+error[SC0104]: this pragma's name goes on past what is read
+   ╭─[ a_pragma_whose_name_goes_on_past_once_is_refused.h:1:1 ]
+   │
+ 1 │ #pragma once$
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
+error[SC0104]: this pragma's name goes on past what is read
+   ╭─[ a_pragma_whose_name_goes_on_past_once_is_refused.h:1:1 ]
+   │
+ 1 │ #pragma once$
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet

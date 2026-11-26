@@ -1,0 +1,10 @@
+Declaration a_name_with_a_comment_around_it_is_read_in_every_directive.c:6:1 "a" "int"
+  Number a_name_with_a_comment_around_it_is_read_in_every_directive.c:4:11 "2"
+Declaration a_name_with_a_comment_around_it_is_read_in_every_directive.c:9:1 "b" "int"
+  Number a_name_with_a_comment_around_it_is_read_in_every_directive.c:9:9 "1"
+Function a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:1 "main" "int (void)"
+  Compound a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:16
+    Return a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:18
+      Binary a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:25 "+"
+        Identifier a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:25 "a"
+        Identifier a_name_with_a_comment_around_it_is_read_in_every_directive.c:13:29 "b"

@@ -8,14 +8,51 @@
 //! private to this module and which only [`Line::read`] and
 //! [`Line::operand`] make, both with the comments made spaces: handing a
 //! reader the raw text instead fails `E0308`.
+//!
+//! And no reader decides where a name ends. Each asks [`Line::name_at`],
+//! which reads the tokens the lexer made of the line, as `#if`'s are read.
+//! Five readers wrote the rule out by hand before, and two of them were
+//! holes `clang` read otherwise: `#ifndef A\u00e9` asked about `A`, and
+//! `#pragma once$` was read as `once`. Found by review and by architecture
+//! review 12.
 
 use super::spliced;
+use crate::diagnostics::DiagnosticSink;
+use crate::lexer::lex_replacement;
+use crate::token::{Punct, TokenKind};
+use safec_ir::source::SourceMap;
 
 /// A directive's line, or `_Pragma`'s text, with each comment in it made
 /// spaces of the same length, so every offset into it is where it was.
 #[derive(Debug)]
 pub(super) struct Line {
     text: String,
+    /// What the lexer makes of the text, as a replacement list's, where no
+    /// `#` begins a directive, each with its offsets in the text.
+    tokens: Vec<Lexed>,
+}
+
+/// A token of a [`Line`], by its offsets in the line's text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Lexed {
+    pub(super) kind: TokenKind,
+    pub(super) start: usize,
+    pub(super) end: usize,
+}
+
+/// What stands where a name is read in a [`Line`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Name<'a> {
+    /// A name, and the offset just past it.
+    Read(&'a str, usize),
+    /// Nothing, or a token that is no name: a number, a literal, a
+    /// punctuator.
+    Not,
+    /// A name the lexer could not read whole: a character no token can begin
+    /// stands where it is, or touches its end. `$`, a universal character
+    /// name and a letter outside ASCII go on with a name in `clang`, and this
+    /// reads none of them, so what is there is not read as a shorter name.
+    Glued,
 }
 
 impl Line {
@@ -34,7 +71,7 @@ impl Line {
     /// read as an include. Found by review, after it had been blessed.
     pub(super) fn read(raw: &str) -> Result<Line, Line> {
         let (text, ended) = blanked(raw);
-        let line = Line { text };
+        let line = Line::lexed(text);
         if ended && (spliced(&line.text) || !spliced(raw)) {
             Ok(line)
         } else {
@@ -46,12 +83,88 @@ impl Line {
     /// `None` where a comment in it does not end in it.
     pub(super) fn operand(text: &str) -> Option<Line> {
         let (text, ended) = blanked(text);
-        ended.then_some(Line { text })
+        ended.then(|| Line::lexed(text))
+    }
+
+    fn lexed(text: String) -> Line {
+        let mut scratch = SourceMap::new();
+        let file = scratch.add_virtual("directive", text.as_str());
+        let tokens = lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new())
+            .into_iter()
+            .filter(|token| !token.is_eof())
+            .map(|token| Lexed {
+                kind: token.kind,
+                start: token.span.start() as usize,
+                end: token.span.end() as usize,
+            })
+            .collect();
+        Line { text, tokens }
     }
 
     /// The text, its comments made spaces.
     pub(super) fn text(&self) -> &str {
         &self.text
+    }
+
+    /// The tokens that start at `offset` or after it.
+    pub(super) fn tokens_from(&self, offset: usize) -> &[Lexed] {
+        let first = self.tokens.partition_point(|token| token.start < offset);
+        &self.tokens[first..]
+    }
+
+    /// The text of `token`.
+    pub(super) fn spelled(&self, token: Lexed) -> &str {
+        &self.text[token.start..token.end]
+    }
+
+    /// Where the tokens from `offset` on start and end, if any do.
+    pub(super) fn rest_at(&self, offset: usize) -> Option<(u32, u32)> {
+        let rest = self.tokens_from(offset);
+        Some((rest.first()?.start as u32, rest.last()?.end as u32))
+    }
+
+    /// The name that is the first token at `offset` or after it. A keyword
+    /// or an annotation is a name here, since preprocessing knows only
+    /// identifiers (C17 6.4 p1).
+    pub(super) fn name_at(&self, offset: usize) -> Name<'_> {
+        let rest = self.tokens_from(offset);
+        let Some(&token) = rest.first() else {
+            return Name::Not;
+        };
+        match token.kind {
+            TokenKind::Unknown => Name::Glued,
+            TokenKind::Identifier | TokenKind::Keyword(_) | TokenKind::Annotation(_) => {
+                let touched = rest
+                    .get(1)
+                    .is_some_and(|next| next.kind == TokenKind::Unknown && next.start == token.end);
+                if touched {
+                    Name::Glued
+                } else {
+                    Name::Read(self.spelled(token), token.end)
+                }
+            }
+            _ => Name::Not,
+        }
+    }
+
+    /// The directive's name and the offset just past it: `""` where none
+    /// follows the `#`, and a line marker's number as written; `None` where
+    /// the name is [`Name::Glued`].
+    pub(super) fn directive(&self) -> Option<(&str, usize)> {
+        let hash = match self.tokens.first() {
+            Some(&token) if token.kind == TokenKind::Punct(Punct::Hash) => token,
+            _ => return Some(("", 0)),
+        };
+        match self.tokens.get(1) {
+            Some(&number) if number.kind == TokenKind::Number => {
+                Some((self.spelled(number), number.end))
+            }
+            _ => match self.name_at(hash.end) {
+                Name::Read(name, end) => Some((name, end)),
+                Name::Not => Some(("", hash.end)),
+                Name::Glued => None,
+            },
+        }
     }
 }
 
@@ -95,4 +208,55 @@ fn blanked(text: &str) -> (String, bool) {
     }
     let text = String::from_utf8(bytes).expect("only whole comments are made spaces");
     (text, ended)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(text: &str) -> Line {
+        Line::read(text).expect("a line that reads")
+    }
+
+    /// A directive's name begins after any white space C allows there, and
+    /// is what the lexer reads: one it cannot read whole, which a `$`, a
+    /// `\` or a letter outside ASCII touches, is no name at all.
+    ///
+    /// Mutations: read a name touched by a character no token can begin
+    /// as the name before it, or read the token after `#` as a name
+    /// whatever it is; an assertion fails.
+    #[test]
+    fn a_directive_s_name_is_what_the_lexer_reads_whole() {
+        assert_eq!(line("#  pragma once").directive(), Some(("pragma", 9)));
+        assert_eq!(line("#\u{b}\u{c}line 4").directive(), Some(("line", 7)));
+        assert_eq!(line("%:line 4").directive(), Some(("line", 6)));
+        assert_eq!(line("#pragmas").directive(), Some(("pragmas", 8)));
+        assert_eq!(line("#if(1)").directive(), Some(("if", 3)));
+        assert_eq!(line("# 40 \"a.c\"").directive(), Some(("40", 4)));
+        assert_eq!(line("#").directive(), Some(("", 1)));
+        assert_eq!(line("# \"a\"").directive(), Some(("", 1)));
+        assert_eq!(line("#line$ 4").directive(), None);
+        assert_eq!(line("#line\\u00e9 4").directive(), None);
+        assert_eq!(line("#line\u{e9} 4").directive(), None);
+        assert_eq!(line("#$line").directive(), None);
+    }
+
+    /// A name is read where one stands, after white space or a comment; a
+    /// literal or a number there is none, and a character no token can begin
+    /// there, or touching the name's end, makes it one not read.
+    ///
+    /// Mutations: answer `Read` for a keyword-free identifier only, or skip
+    /// the check of what touches its end; an assertion fails.
+    #[test]
+    fn a_name_is_read_only_where_the_lexer_reads_one_whole() {
+        let read = line("#define A /* x */ int(b) \"c\" 1 d$ \u{a0}e");
+        assert_eq!(read.name_at(7), Name::Read("A", 9));
+        assert_eq!(read.name_at(9), Name::Read("int", 21));
+        assert_eq!(read.name_at(22), Name::Read("b", 23));
+        assert_eq!(read.name_at(24), Name::Not);
+        assert_eq!(read.name_at(29), Name::Not);
+        assert_eq!(read.name_at(31), Name::Glued);
+        assert_eq!(read.name_at(34), Name::Glued);
+        assert_eq!(read.name_at(read.text().len()), Name::Not);
+    }
 }

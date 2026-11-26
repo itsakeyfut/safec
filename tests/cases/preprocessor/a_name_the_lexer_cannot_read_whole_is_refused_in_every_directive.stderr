@@ -1,0 +1,72 @@
+error[SC0104]: this `#define` is not read yet
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:1:1 ]
+   │
+ 1 │ #define A$ 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a `#define` is read when its name is ASCII letters, digits and `_`, followed by a space, `(` or the end of the line
+error[SC0104]: this `#define` is not read yet
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:2:1 ]
+   │
+ 2 │ #define Bé 1
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a `#define` is read when its name is ASCII letters, digits and `_`, followed by a space, `(` or the end of the line
+error[SC0104]: this `#undef` is not read yet
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:3:1 ]
+   │
+ 3 │ #undef C$
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: an `#undef` is read when its name is ASCII letters, digits and `_`, with nothing after it
+error[SC0104]: this `#ifdef` is not read yet
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:4:1 ]
+   │
+ 4 │ #ifdef D$
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: an `#ifdef` is read when its name is ASCII letters, digits and `_`, and none of this conditional's groups is compiled
+error[SC0104]: this `#ifndef` is not read yet
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:6:1 ]
+   │
+ 6 │ #ifndef Eé
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: an `#ifndef` is read when its name is ASCII letters, digits and `_`, and none of this conditional's groups is compiled
+error[SC0104]: this pragma's name goes on past what is read
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:8:1 ]
+   │
+ 8 │ #pragma pack$(1)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
+error[SC0104]: this pragma's name goes on past what is read
+   ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:9:1 ]
+   │
+ 9 │ #pragma STDCé FP_CONTRACT ON
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
+error[SC0104]: this directive's name goes on past what is read
+    ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:10:1 ]
+    │
+ 10 │ #line$ 4
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: a `$`, a universal character name or a letter outside ASCII goes on with a name, and this does not read such names yet
+error[SC0104]: this parameter list is not read
+    ╭─[ a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive.c:11:1 ]
+    │
+ 11 │ #define F(a$) a
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: a function-like macro's parameters are read when each is a name of ASCII letters, digits and `_`, none named twice, between `(` and `)`
