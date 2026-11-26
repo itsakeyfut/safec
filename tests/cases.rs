@@ -10742,8 +10742,11 @@ cases! {
         a_name_the_lexer_cannot_read_whole_is_refused_in_every_directive: ["--emit", "ast"],
         // And a comment around each of those names is white space (C17
         // 5.1.1.2 p1, phase 3), so the same directives with one around every
-        // name are read. Mutation: read the names from the line with its
-        // comments in it; a name is not found and the line is refused.
+        // name are read. Held twice over: the line's comments are made
+        // spaces, and the lexer skips one too, so dropping either alone
+        // moves nothing. Mutation: lex the line as a file, with `lex` rather
+        // than `lex_replacement`, in `Line`; its `#` begins one token of the
+        // whole line, no name is found, and every line is refused.
         a_name_with_a_comment_around_it_is_read_in_every_directive: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
