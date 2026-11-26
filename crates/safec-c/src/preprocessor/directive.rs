@@ -37,15 +37,10 @@ pub(super) fn read(
     diagnostics: &mut DiagnosticSink,
 ) -> bool {
     let text = directive_line.text();
-    let Some((word, end)) = directive_line.directive() else {
+    let Some((word, end, marker)) = owned(directive_line) else {
         return false;
     };
     let rest = &text[end..];
-    // GNU's `# 40 "gen.c"`, which `cc -E` writes and `clang` reads.
-    let marker = !word.is_empty() && word.bytes().all(|byte| byte.is_ascii_digit());
-    if !marker && !matches!(word, "pragma" | "line" | "error" | "warning") {
-        return false;
-    }
     let what = if marker {
         "line marker".to_owned()
     } else {
@@ -113,6 +108,21 @@ pub(super) fn read(
         }
     }
     true
+}
+
+/// Whether `line` is one of this module's directives, which [`read`] reads.
+pub(super) fn owns(line: &Line) -> bool {
+    owned(line).is_some()
+}
+
+/// The directive's word, the offset past it, and whether it is a line
+/// marker's number, where `line` is one of this module's directives.
+fn owned(line: &Line) -> Option<(&str, usize, bool)> {
+    let (word, end) = line.directive()?;
+    // GNU's `# 40 "gen.c"`, which `cc -E` writes and `clang` reads.
+    let marker = !word.is_empty() && word.bytes().all(|byte| byte.is_ascii_digit());
+    (marker || matches!(word, "pragma" | "line" | "error" | "warning"))
+        .then_some((word, end, marker))
 }
 
 /// Whether `text`, a directive's line in a group that is skipped, chooses a

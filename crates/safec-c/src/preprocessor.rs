@@ -24,6 +24,7 @@ mod condition;
 mod directive;
 mod held;
 mod line;
+mod triage;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -32,15 +33,14 @@ use std::path::{Path, PathBuf};
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Remedy};
 use crate::driver::{Access, reason};
-use crate::lexer::{
-    UNSUPPORTED_SPLICE, is_identifier, lex, lex_replacement, unexpected_characters,
-};
+use crate::lexer::{is_identifier, lex, lex_replacement, unexpected_characters};
 use crate::options::CommandLineMacro;
 use crate::token::{Punct, Token, TokenKind};
 use held::{Addition, Sources, Unadded};
 use line::{Line, Name};
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
+use triage::{Disposition, triage};
 
 // `SC01xx` with the lexer's, because the topic is the same: what a line of the
 // source is before the grammar reads it. `SC0104` was the lexer's until the
@@ -864,157 +864,19 @@ fn read_includes(
             TokenKind::Directive => {
                 // Owned, because reading the file it names adds to the map.
                 let raw = sources.snippet(token.span).to_owned();
-                // A splice in a comment is a comment going on past the line:
-                // C splices lines before it reads comments (C17 5.1.1.2 p1,
-                // phases 2 and 3), so `// \` carries the comment, and not
-                // code, onto the line below. Asked of the line before its
-                // comments are made spaces, which takes the splice with them
-                // and read `#include "a.h" // \` as an include. Found by
-                // review, after it had been blessed.
-                let line = match Line::read(&raw) {
-                    Ok(line) => line,
-                    Err(line) => {
-                        let text = line.text();
-                        diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "a comment that goes on past a directive's line is not read yet",
-                            )
-                            .with_note(
-                                "C makes the comment one space, so the directive goes on after \
-                             it ends, and the lines inside it are not code",
-                            ),
-                        );
-                        // A conditional refused here still opens or ends its
-                        // level, as `conditional` says a refused one does: left
-                        // out, its `#endif` was reported as closing nothing, a
-                        // caret on a directive that was right. Found by review.
-                        if let (Some(form), Some(frame)) =
-                            (conditional_form(&line), frames.last_mut())
-                        {
-                            conditional(
-                                form,
-                                text,
-                                token.span,
-                                frame,
-                                (sources, reading),
-                                diagnostics,
-                                true,
-                            );
-                        }
-                        continue;
-                    }
+                let (line, ended) = match Line::read(&raw) {
+                    Ok(line) => (line, true),
+                    Err(line) => (line, false),
                 };
                 let text = line.text();
-                // Refused in every group, a skipped one included, since what
-                // `clang` makes of it depends on the character it names or
-                // on the group it is in. See `Name::Undecided`.
-                if line.undecided() {
-                    diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "this directive's name goes on in an escape that is not read yet",
-                        )
-                        .with_note(
-                            "`clang` reads a `\\N{...}` by the character it names, and a \
-                             universal character name past U+10FFFF by the group it is in",
-                        ),
-                    );
-                    continue;
-                }
-                let form = conditional_form(&line);
-                // A splice joins the line below to this one before any
-                // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
-                // read that line on its own, as a directive where it begins
-                // with `#`. So it is refused wherever a directive is read at
-                // all, a skipped group's included: there `#define X \` above
-                // `#else` ended a group C does not end, and the code after it
-                // was compiled where C has none. Found by review.
-                if self::spliced(text) && (skipping || form.is_some()) {
-                    let message = if form.is_some() {
-                        "a line splice or a trigraph in a conditional directive is not read yet"
-                    } else {
-                        "a line splice or a trigraph in a directive in a skipped group is not \
-                         read yet"
-                    };
-                    diagnostics.report(
-                        refused(text, token.span, UNSUPPORTED_SPLICE, message).with_note(
-                            "C can join the line below to this one, and it would be read on \
-                             its own instead",
-                        ),
-                    );
-                }
-                if let Some(form) = form {
-                    if let Some(frame) = frames.last_mut() {
-                        conditional(
-                            form,
-                            text,
-                            token.span,
-                            frame,
-                            (sources, reading),
-                            diagnostics,
-                            false,
-                        );
-                    }
-                    continue;
-                }
-                // A group that is skipped has its directives read only as far
-                // as their names, to count the conditionals in it, and the
-                // rest ignored (C17 6.10.1 p6): `#include <stdio.h>` or a
-                // function-like `#define` there is not reported.
-                if skipping {
-                    if directive::chooses_a_group(&line) {
-                        diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "`#elifdef` and `#elifndef` are not read yet",
-                            )
-                            .with_note(
-                                "C23 reads them as choosing a group, and passed over, the group \
-                                 one chose would not be compiled",
-                            ),
-                        );
-                    }
-                    continue;
-                }
-                // Not read as a shorter name: `#pragma once$` is not `#pragma
-                // once` to `clang`. Found by architecture review 12.
-                if line.spaced_oddly() {
-                    diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "white space outside ASCII after `#` makes no directive",
-                        )
-                        .with_note(
-                            "`clang -E` refuses such a line, and `clang` reads it as a \
-                             directive; after a directive's name it is white space",
-                        ),
-                    );
-                    // A conditional refused here still opens or ends its
-                    // level, as one refused for its comment does: left out,
-                    // its `#endif` was reported as closing nothing, a caret
-                    // on a directive that was right. Read with the white
-                    // space made spaces of the same length. Found by review.
-                    let spaced: String = text
-                        .chars()
-                        .map(|c| {
-                            if line::spacing(c) {
-                                " ".repeat(c.len_utf8())
-                            } else {
-                                c.to_string()
-                            }
-                        })
-                        .collect();
-                    if let (Ok(plain), Some(frame)) = (Line::read(&spaced), frames.last_mut()) {
-                        if let Some(form) = conditional_form(&plain) {
+                // What the line is is decided by `triage` from the line
+                // alone; what is done about it needs the frames.
+                match triage(&line, ended, skipping) {
+                    Disposition::Refused(refusal) => {
+                        for report in refusal.reports() {
+                            diagnostics.report(report.diagnostic(text, token.span));
+                        }
+                        if let (Some(form), Some(frame)) = (refusal.level(), frames.last_mut()) {
                             conditional(
                                 form,
                                 text,
@@ -1026,25 +888,27 @@ fn read_includes(
                             );
                         }
                     }
-                    continue;
-                }
-                if line.directive().is_none() {
-                    diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "this directive's name goes on past what is read",
-                        )
-                        .with_note(directive::GLUED_NOTE),
-                    );
-                    continue;
-                }
-                if directive::read(&line, token.span, sources, reading, diagnostics) {
-                    continue;
-                }
-                match include_form(&line) {
-                    IncludeForm::Quoted { name, quote } => {
+                    Disposition::Conditional { form, splice } => {
+                        if let Some(report) = splice {
+                            diagnostics.report(report.diagnostic(text, token.span));
+                        }
+                        if let Some(frame) = frames.last_mut() {
+                            conditional(
+                                form,
+                                text,
+                                token.span,
+                                frame,
+                                (sources, reading),
+                                diagnostics,
+                                false,
+                            );
+                        }
+                    }
+                    Disposition::PassedOver => {}
+                    Disposition::Directive => {
+                        directive::read(&line, token.span, sources, reading, diagnostics);
+                    }
+                    Disposition::Include { name, quote } => {
                         let quoted = Span::new(
                             token.span.file(),
                             token.span.start() + quote,
@@ -1067,58 +931,25 @@ fn read_includes(
                             });
                         }
                     }
-                    IncludeForm::Spliced => diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_SPLICE,
-                            "a line splice or a trigraph in an `#include` is not read yet",
-                        )
-                        .with_note(
-                            "C can join the line below to this one, and it would be \
-                             compiled as code instead",
-                        ),
+                    Disposition::Macro(MacroForm::Define {
+                        name,
+                        name_at,
+                        body,
+                        parameters,
+                    }) => define(
+                        text,
+                        token.span,
+                        name,
+                        name_at,
+                        body,
+                        parameters,
+                        Origin::Written,
+                        sources,
+                        reading,
+                        diagnostics,
                     ),
-                    IncludeForm::Angled => diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "`#include <...>` is not read yet",
-                        )
-                        .with_note("only `#include \"...\"` is read yet"),
-                    ),
-                    IncludeForm::Unread => diagnostics.report(
-                        refused(
-                            text,
-                            token.span,
-                            UNSUPPORTED_DIRECTIVE,
-                            "this `#include` is not read yet",
-                        )
-                        .with_note(
-                            "only `#include \"...\"` is read yet, with nothing but a comment \
-                             after it on its line",
-                        ),
-                    ),
-                    IncludeForm::Other => match macro_form(&line) {
-                        MacroForm::Define {
-                            name,
-                            name_at,
-                            body,
-                            parameters,
-                        } => define(
-                            text,
-                            token.span,
-                            name,
-                            name_at,
-                            body,
-                            parameters,
-                            Origin::Written,
-                            sources,
-                            reading,
-                            diagnostics,
-                        ),
-                        MacroForm::Undef { name } => match reading.macros.get(name) {
+                    Disposition::Macro(MacroForm::Undef { name }) => {
+                        match reading.macros.get(name) {
                             Some(earlier)
                                 if earlier.origin != Origin::Written && standard(name) =>
                             {
@@ -1144,92 +975,11 @@ fn read_includes(
                                 reading.macros.remove(name);
                                 reading.settled.insert(name.to_owned());
                             }
-                        },
-                        MacroForm::Unread { directive } => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                &format!("this `{directive}` is not read yet"),
-                            )
-                            .with_note(if directive == "#undef" {
-                                "an `#undef` is read when its name is ASCII letters, digits \
-                                 and `_`, with nothing after it"
-                            } else {
-                                "a `#define` is read when its name is ASCII letters, digits \
-                                 and `_`, followed by a space, `(` or the end of the line"
-                            }),
-                        ),
-                        MacroForm::Defined => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "`defined` is not read as a macro's name",
-                            )
-                            .with_note(
-                                "C17 6.10.8 p2 says it shall not be the subject of a `#define` \
-                                 or an `#undef`",
-                            ),
-                        ),
-                        MacroForm::Parameters => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "this parameter list is not read",
-                            )
-                            .with_note(
-                                "a function-like macro's parameters are read when each is a \
-                                 name of ASCII letters, digits and `_`, none named twice, \
-                                 between `(` and `)`",
-                            ),
-                        ),
-                        MacroForm::Variadic => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "this variadic parameter list is not read",
-                            )
-                            .with_note(
-                                "`...` is read as the last parameter; a named one such as \
-                                 `args...` is not read yet",
-                            ),
-                        ),
-                        MacroForm::Spliced => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_SPLICE,
-                                "a line splice or a trigraph in a `#define` is not read yet",
-                            )
-                            .with_note(
-                                "C can join the line below to this one, and it would be \
-                                 compiled as code instead",
-                            ),
-                        ),
-                        MacroForm::Other => diagnostics.report(
-                            refused(
-                                text,
-                                token.span,
-                                UNSUPPORTED_DIRECTIVE,
-                                "preprocessor directives are not supported yet",
-                            )
-                            // Which directives, rather than which stage.
-                            // `docs/frontend.md` puts the preprocessor in its
-                            // Stage 3 and `docs/roadmap.md` pulls four of them
-                            // forward, so a stage number is both a number the
-                            // reader does not have and one that stopped being
-                            // the whole answer.
-                            .with_note(
-                                "`#include \"...\"`, `#define` and `#undef`, the conditional \
-                                 directives, `#pragma`, `#line` and line markers, `#error` and \
-                                 `#warning` are read",
-                            )
-                            .with_note("the line is one token and is not compiled"),
-                        ),
-                    },
+                        }
+                    }
+                    Disposition::Macro(_) => {
+                        unreachable!("`triage` hands over only a `#define` or an `#undef` it reads")
+                    }
                 }
             }
             // Neither handed over nor expanded, so not in any extent either.
