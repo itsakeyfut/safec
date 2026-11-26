@@ -137,6 +137,12 @@ const DIRECTIVES: &[Directive] = &[
     },
 ];
 
+/// The target both compilers are asked about, the same on every host: how a
+/// line is read depends on it, a Ctrl-Z ending the file only where
+/// Microsoft's extensions are on, and run on each host's default target the
+/// count of programs both built alike moved by the 52 Ctrl-Z rows on Linux.
+const TARGET: &str = "x86_64-pc-windows-msvc";
+
 /// What can stand beside a directive's name, by a label for reports.
 const CHARACTERS: &[(&str, &str)] = &[
     ("nothing", ""),
@@ -411,7 +417,10 @@ enum Reading {
 /// holds, or a refusal.
 fn clang(file: &Path) -> Reading {
     let output = Command::new("clang")
-        .args(["-std=c17", "-fsyntax-only", "-Xclang", "-ast-dump"])
+        .arg("-std=c17")
+        .arg(format!("--target={TARGET}"))
+        .arg("-fsyntax-only")
+        .args(["-Xclang", "-ast-dump"])
         .arg(file)
         .stderr(Stdio::null())
         .output()
@@ -431,7 +440,7 @@ fn clang(file: &Path) -> Reading {
 
 fn safec(file: &Path) -> Reading {
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
-        .args(["--color", "never", "--emit", "ast"])
+        .args(["--color", "never", "--emit", "ast", "--target", TARGET])
         .arg(file)
         .output()
         .expect("safec runs");
