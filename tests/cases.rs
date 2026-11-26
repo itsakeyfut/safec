@@ -10722,6 +10722,14 @@ cases! {
         // `/*` in `message`'s string opens a comment never ended, and that
         // line is refused.
         a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma: ["--emit", "ast"],
+        // A pragma's name ends only where no identifier goes on, so
+        // `#pragma once$` is a name of its own, unknown, and the header is
+        // read twice as `clang` reads it: on the second reading `SIZE` is 1,
+        // and `b[1]` is past it. Found by architecture review 12, where
+        // `once$` was read as `once`, the header once, and this exited 0.
+        // Mutation: end the name at the `$`; the header is read once and
+        // nothing is reported.
+        a_pragma_whose_name_goes_on_past_once_is_not_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.
