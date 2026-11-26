@@ -1,0 +1,11 @@
+Declaration white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:2:1 "by_no_break_space" "int"
+Declaration white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:5:1 "by_mongolian_vowel_separator" "int"
+Declaration white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.h:1:1 "from_header" "int"
+Function white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:1 "main" "int (void)"
+  Compound white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:16
+    Return white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:18
+      Binary white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:25 "+"
+        Binary white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:25 "+"
+          Identifier white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:25 "from_header"
+          Identifier white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:39 "by_no_break_space"
+        Identifier white_space_outside_ascii_in_a_condition_or_an_include_is_white_space.c:8:59 "by_mongolian_vowel_separator"
