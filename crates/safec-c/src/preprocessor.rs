@@ -908,6 +908,24 @@ fn read_includes(
                     }
                 };
                 let text = line.text();
+                // Refused in every group, a skipped one included, since what
+                // `clang` makes of it depends on the character it names or
+                // on the group it is in. See `Name::Undecided`.
+                if line.undecided() {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "this directive's name goes on in an escape that is not read yet",
+                        )
+                        .with_note(
+                            "`clang` reads a `\\N{...}` by the character it names, and a \
+                             universal character name past U+10FFFF by the group it is in",
+                        ),
+                    );
+                    continue;
+                }
                 let form = conditional_form(&line);
                 // A splice joins the line below to this one before any
                 // directive is read (C17 5.1.1.2 p1, phase 2), and the lexer
@@ -988,7 +1006,7 @@ fn read_includes(
                     let spaced: String = text
                         .chars()
                         .map(|c| {
-                            if !c.is_ascii() && c.is_whitespace() {
+                            if line::spacing(c) {
                                 " ".repeat(c.len_utf8())
                             } else {
                                 c.to_string()
@@ -3491,7 +3509,7 @@ fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
     let name = match line.name_at(end) {
         Name::Read(name, _) => Named::Read(name),
         Name::Not => Named::Missing,
-        Name::Glued => Named::Unread,
+        Name::Glued | Name::Undecided => Named::Unread,
     };
     // Tokens go on after the name, or after the number that stands where
     // one should; what an unread name touches is among them.

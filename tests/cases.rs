@@ -10761,6 +10761,30 @@ cases! {
         // Mutation: read such white space as a space, in
         // `Line::spaced_oddly`; nothing is reported.
         white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A name ends where `clang` 22.1.8 ends it: at a universal character
+        // name not whole, at one naming white space, and at U+180E, which
+        // `clang` reads as white space and Unicode no longer does. After
+        // `#else` in a skipped group each chooses the group `clang` takes,
+        // and its use after free is reported; read as going on, each was
+        // passed over and exited 0. Found by the hunt before #1359 closed.
+        // Mutations: read a universal character name not whole, or one for
+        // white space, as going on, or U+180E as no white space, in
+        // `Line::name_at`; that function's use is not reported.
+        a_name_ends_where_clang_ends_it_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A named character touching a directive's name, or a pragma's, is
+        // refused in every group, a skipped one included: `clang` ends the
+        // name, reads it on, or refuses it by the character it names, and
+        // this has no table of the names. Read as the shorter name before
+        // it, `#ifdef GUARD\N{...}` asked about `GUARD` and a double free
+        // `clang` compiles exited 0. Found by the hunt before #1359 closed.
+        // So is a universal character name past U+10FFFF, which `clang` reads
+        // on in a skipped group and ends the name at in a compiled one, and
+        // a delimited `\u{...}`, read by its digits, touching `#ifdef`'s
+        // name. Found by review. Mutations: read `\N{` as going on, in
+        // `Line::name_at`; the skipped `#else\N{NO-BREAK SPACE}` is passed
+        // over with nothing said. Or read a universal character name out of
+        // range as ending the name; the skipped `#else\U00110000` is taken.
+        a_named_character_touching_a_directive_s_name_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And in a group that is compiled such a line is refused: `clang -E`
         // refuses it as an invalid directive and `clang` reads it as one, so
         // neither reading is taken. A conditional refused so still opens its
