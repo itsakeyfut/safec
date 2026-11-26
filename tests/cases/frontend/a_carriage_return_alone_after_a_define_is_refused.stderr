@@ -1,0 +1,8 @@
+error[SC0103]: a carriage return with no line feed after it is not read
+   ╭─[ a_carriage_return_alone_after_a_define_is_refused.c:8:15 ]
+   │
+ 8 │ #define NOTE 1?    free(p);
+   │               ┬  
+   │               ╰── this carriage return
+───╯
+  = note: `clang` reads it as the end of a line, and this compiler reads lines only at a line feed

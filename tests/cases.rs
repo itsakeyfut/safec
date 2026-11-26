@@ -9920,6 +9920,16 @@ cases! {
         // `1:16` in the `.stdout` and in the `.stderr`. Mutation: leave a lone
         // `\r` alone in `echoed`; the header says `2:9`.
         a_carriage_return_alone_is_not_a_line_break: ["--emit", "tokens"],
+        // A carriage return with no line feed after it ends a line to
+        // `clang`, which compiles the second `free` behind it: after a line
+        // comment, after a `#` that is then a null directive with `else`
+        // skipped text, after a `#define`. This opens a line only at a line
+        // feed, so each exited 0. Refused, once per file, wherever it
+        // stands. Found by a hunt. Mutation: skip `lone_carriage_return`;
+        // each exits 0 with nothing said.
+        a_carriage_return_alone_in_a_line_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_carriage_return_alone_after_a_hash_in_a_skipped_group_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_carriage_return_alone_after_a_define_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A byte-order mark in mid-line is three bytes of nothing on a
         // terminal, so its marker was drawn under the `1;` after it. It is
         // drawn as U+FFFD with the marker under that. Mutation: drop
