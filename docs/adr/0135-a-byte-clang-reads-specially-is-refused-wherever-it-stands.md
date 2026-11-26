@@ -108,5 +108,6 @@ become refusals, so `KNOWN` holds none of them.
 
 `Unread` and `unread` in `crates/safec-c/src/lexer.rs` hold the bytes,
 each variant's doc comment the place its byte was found. #1372 added the
-carriage return, #1389 the NUL, and #1383 the Ctrl-Z, under #1375. ADR-0134 is the same choice made for
-the start of a directive line.
+carriage return and #1389 the NUL, under #1375; #1383 is to add the
+Ctrl-Z. ADR-0134 is the same choice made for the start of a directive
+line.

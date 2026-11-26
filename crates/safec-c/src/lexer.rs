@@ -1231,8 +1231,17 @@ mod tests {
             nul.messages(),
             ["a NUL is not read", "unexpected character"]
         );
-        // The first of each, in the order they stand, and no second report
-        // of either.
+    }
+
+    /// What `lex` reports and in what order: the first of each byte, in the
+    /// order they stand in the file, and no second of either. A byte added
+    /// to `Unread` adds itself to the string twice, the second after the
+    /// first, and to the answer once.
+    ///
+    /// Mutations: search for the last of a byte rather than the first; or
+    /// leave the list in the order the bytes are searched for; either fails.
+    #[test]
+    fn the_first_of_each_byte_clang_reads_specially_is_reported_in_order() {
         assert_eq!(
             unread("a\0b\rc\0d\re"),
             [(1, Unread::Nul), (3, Unread::LoneCarriageReturn)]
