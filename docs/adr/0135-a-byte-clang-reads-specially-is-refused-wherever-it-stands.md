@@ -56,7 +56,9 @@ skipped in the lexer:
 
 * `a_carriage_return_alone_in_a_line_comment_is_refused` and two beside it
   (#1372);
-* the NUL case that lands with #1389;
+* `a_nul_in_the_splice_that_closes_a_block_comment_is_refused`,
+  `a_nul_in_a_line_comment_is_refused` and `a_nul_in_a_string_is_refused`
+  (#1389);
 * the Ctrl-Z case that lands with #1383.
 
 In each, the mutation makes the case exit 0 with nothing said. In
