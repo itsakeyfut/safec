@@ -10670,7 +10670,8 @@ cases! {
         a_pragma_once_in_the_input_is_warned_about_and_ignored: ["--emit", "ast"],
         // ADR-0129's refused class, by the directive and by `_Pragma`, and
         // `GCC visibility` (ADR-0132), `clang attribute` and `clang section`
-        // (ADR-0133). Mutations: read `pack` or
+        // (ADR-0133); and `pack` with a no-break space after its name, which
+        // `clang` reads as white space and packs by. Mutations: read `pack` or
         // `GCC visibility` as ignored; its report goes.
         a_pragma_that_changes_the_program_is_refused: ["--emit", "ast"],
         // `GCC error` and `GCC warning` report their string as `#error` and

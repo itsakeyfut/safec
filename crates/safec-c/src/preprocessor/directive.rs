@@ -155,7 +155,12 @@ enum Class {
 /// twice. Found by architecture review 12.
 fn names(rest: &str) -> (&str, &str, &str) {
     fn name(text: &str) -> (&str, &str) {
-        let text = text.trim_start_matches([' ', '\t', '\u{b}', '\u{c}', '\r']);
+        // White space outside ASCII, a no-break space among it, is white
+        // space to `clang` (with `-Wunicode-whitespace`), so it begins and
+        // ends a name as a space does. Read as part of a name, `pack` and a
+        // no-break space was unknown and ignored where `clang` packs the
+        // struct after it. Found by review.
+        let text = text.trim_start_matches(char::is_whitespace);
         let length = text.len()
             - text
                 .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '_')
@@ -163,7 +168,9 @@ fn names(rest: &str) -> (&str, &str, &str) {
         let (word, after) = text.split_at(length);
         // `$`, a universal character name's `\` or a letter outside ASCII
         // goes on with the name, so what was read is not it.
-        if after.starts_with(|c: char| c == '$' || c == '\\' || !c.is_ascii()) {
+        if after
+            .starts_with(|c: char| c == '$' || c == '\\' || (!c.is_ascii() && !c.is_whitespace()))
+        {
             return ("", text);
         }
         (word, after)
