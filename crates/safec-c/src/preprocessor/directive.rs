@@ -5,8 +5,8 @@
 //! compiled; in a skipped one a directive is read only as far as its name.
 
 use super::{
-    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, canonical, collected, condition,
-    hash, refused, replaced, spliced, too_deep, used_at,
+    Frame, Reading, UNSUPPORTED_DIRECTIVE, Uncollected, begin_use, blanked, canonical, collected,
+    condition, hash, refused, replaced, spliced, too_deep, used_at,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::lexer::UNSUPPORTED_SPLICE;
@@ -304,6 +304,13 @@ pub(super) fn operator(
         }
         _ => None,
     };
+    // Its text is read through translation phase 3 (C17 6.10.9 p1), each
+    // comment one space, as a `#pragma` line's is. Classified with its
+    // comments in it, `_Pragma("/**/push_macro(\"N\")")` had no name and
+    // was ignored, where ADR-0129 refuses it, and `clang` read a program
+    // with a heap overflow safec passed. Found by the hunt before #618
+    // closed. A comment the text does not end is refused, as on a line.
+    let read = read.and_then(|(literal, text)| Some((literal, blanked(&text)?)));
     match read {
         Some((literal, text)) => pragma(&text, literal.span, sources, reading, diagnostics),
         None => unread(diagnostics),

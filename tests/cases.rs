@@ -10695,6 +10695,16 @@ cases! {
         // in one it uses twice. Mutation: act on it while the argument is
         // replaced; `dropped` is reported and `twice` once.
         a_pragma_operator_in_an_argument_acts_where_the_argument_is_used: ["--emit", "ast"],
+        // `_Pragma`'s text is read through phase 3, each comment one space
+        // (C17 6.10.9 p1), before it is classified, so a comment before a
+        // refused pragma's name does not make it unknown: each refused one
+        // is refused, a comment around an ignored one leaves it ignored, a
+        // comment the text does not end is refused, and `/*` in a string
+        // in it opens nothing. Found by the hunt before #618 closed, where
+        // `/**/push_macro` let `clang`'s heap overflow pass. Mutation:
+        // classify the text with its comments; the refused six are
+        // `SC0118` warnings.
+        a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma: ["--emit", "ast"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.

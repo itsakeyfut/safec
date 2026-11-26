@@ -1,0 +1,56 @@
+error[SC0104]: `#pragma push_macro` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:2:9 ]
+   │
+ 2 │ _Pragma("/**/push_macro(\"N\")")
+   │         ───────────┬───────────  
+   │                    ╰───────────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma pop_macro` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:3:9 ]
+   │
+ 3 │ _Pragma("/**/pop_macro(\"N\")")
+   │         ───────────┬──────────  
+   │                    ╰──────────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma pack` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:4:9 ]
+   │
+ 4 │ _Pragma("/**/pack(1)")
+   │         ──────┬──────  
+   │               ╰──────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma GCC visibility` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:5:9 ]
+   │
+ 5 │ _Pragma("GCC/**/visibility push(hidden)")
+   │         ────────────────┬───────────────  
+   │                         ╰───────────────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma clang assume_nonnull` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:6:9 ]
+   │
+ 6 │ _Pragma("/**/clang assume_nonnull begin")
+   │         ────────────────┬───────────────  
+   │                         ╰───────────────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: `#pragma weak` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:7:9 ]
+   │
+ 7 │ _Pragma("/**/weak f")
+   │         ──────┬─────  
+   │               ╰─────── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: this `_Pragma` is not read
+   ╭─[ a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma.c:9:1 ]
+   │
+ 9 │ _Pragma("/* unended")
+   │ ───┬───  
+   │    ╰───── written here
+───╯
+  = note: `_Pragma` is read with `(`, what replaces to one string literal with no prefix but `L`, and `)` after it
