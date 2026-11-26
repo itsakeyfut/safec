@@ -40,7 +40,7 @@ use held::{Addition, Sources, Unadded};
 use line::{Line, Name};
 use safec_ir::source::{Cut, Edge, FileId, FileName, Piece, SourceMap, Span};
 use safec_ir::target::Target;
-use triage::{Disposition, triage};
+use triage::{Disposition, Level, triage};
 
 // `SC01xx` with the lexer's, because the topic is the same: what a line of the
 // source is before the grammar reads it. `SC0104` was the lexer's until the
@@ -876,16 +876,8 @@ fn read_includes(
                         for report in refusal.reports() {
                             diagnostics.report(report.diagnostic(text, token.span));
                         }
-                        if let (Some(form), Some(frame)) = (refusal.level(), frames.last_mut()) {
-                            conditional(
-                                form,
-                                text,
-                                token.span,
-                                frame,
-                                (sources, reading),
-                                diagnostics,
-                                true,
-                            );
+                        if let (Some(level), Some(frame)) = (refusal.level(), frames.last_mut()) {
+                            keep_level(level, hash(text, token.span), frame);
                         }
                     }
                     Disposition::Conditional { form, splice } => {
@@ -900,7 +892,6 @@ fn read_includes(
                                 frame,
                                 (sources, reading),
                                 diagnostics,
-                                false,
                             );
                         }
                     }
@@ -931,12 +922,12 @@ fn read_includes(
                             });
                         }
                     }
-                    Disposition::Macro(MacroForm::Define {
+                    Disposition::Define {
                         name,
                         name_at,
                         body,
                         parameters,
-                    }) => define(
+                    } => define(
                         text,
                         token.span,
                         name,
@@ -948,7 +939,7 @@ fn read_includes(
                         reading,
                         diagnostics,
                     ),
-                    Disposition::Macro(MacroForm::Undef { name }) => {
+                    Disposition::Undef { name } => {
                         match reading.macros.get(name) {
                             Some(earlier)
                                 if earlier.origin != Origin::Written && standard(name) =>
@@ -976,9 +967,6 @@ fn read_includes(
                                 reading.settled.insert(name.to_owned());
                             }
                         }
-                    }
-                    Disposition::Macro(_) => {
-                        unreachable!("`triage` hands over only a `#define` or an `#undef` it reads")
                     }
                 }
             }
@@ -3291,9 +3279,8 @@ fn conditional_form(line: &Line) -> Option<ConditionalForm<'_>> {
 /// or ends a level, so its `#endif` is matched rather than reported, and none
 /// of its groups from there is compiled: compiling one would compile code
 /// under a condition nobody evaluated. The refusal is an error, so nothing
-/// past it is believed either way. `already_refused` is a line refused for
-/// something else, which only keeps the level.
-#[allow(clippy::too_many_arguments)]
+/// past it is believed either way. A line refused for something else only
+/// keeps its level, through [`keep_level`].
 fn conditional(
     form: ConditionalForm,
     text: &str,
@@ -3301,7 +3288,6 @@ fn conditional(
     frame: &mut Frame,
     (sources, reading): (&mut Sources<'_>, &mut Reading),
     diagnostics: &mut DiagnosticSink,
-    already_refused: bool,
 ) {
     let opens = matches!(
         form,
@@ -3322,7 +3308,6 @@ fn conditional(
                 frame,
                 (sources, reading),
                 diagnostics,
-                already_refused,
             );
         }
         return;
@@ -3334,8 +3319,44 @@ fn conditional(
         frame,
         (sources, reading),
         diagnostics,
-        already_refused,
     );
+}
+
+/// Keep `level`, the level of a conditional refused for something other
+/// than its condition, at `at`, its `#`: in a skipped group's own nested
+/// conditional only the depth counts, as [`conditional`] says, and otherwise
+/// the level opens, settles or closes with no group from there compiled.
+fn keep_level(level: Level, at: Span, frame: &mut Frame) {
+    let opens = matches!(level, Level::Opens(_));
+    if frame.skipped_depth > 0 || (opens && frame.skipping()) {
+        if opens {
+            frame.skipped_depth += 1;
+            return;
+        } else if level == Level::Closes && frame.skipped_depth > 0 {
+            frame.skipped_depth -= 1;
+            return;
+        } else if frame.skipped_depth > 0 {
+            return;
+        }
+    }
+    match level {
+        Level::Opens(directive) => frame.conditionals.push(Conditional {
+            directive,
+            opened: at,
+            otherwise: None,
+            settled: true,
+            taking: false,
+        }),
+        Level::Settles => {
+            if let Some(conditional) = frame.conditionals.last_mut() {
+                conditional.settled = true;
+                conditional.taking = false;
+            }
+        }
+        Level::Closes => {
+            frame.conditionals.pop();
+        }
+    }
 }
 
 /// Whether `name` being defined is the compiler's to say rather than
@@ -3400,7 +3421,6 @@ fn reserved(name: &str) -> bool {
 
 /// Act on a conditional directive that is not inside a skipped group's own
 /// nested conditional: open a level, choose a group, or close one.
-#[allow(clippy::too_many_arguments)]
 fn act(
     form: ConditionalForm,
     text: &str,
@@ -3408,7 +3428,6 @@ fn act(
     frame: &mut Frame,
     (sources, reading): (&mut Sources<'_>, &mut Reading),
     diagnostics: &mut DiagnosticSink,
-    already_refused: bool,
 ) {
     let at = hash(text, directive);
     // A spliced line is refused by the frame loop, and acted on here as far
@@ -3439,24 +3458,6 @@ fn act(
             taking: taking.unwrap_or(false),
         });
     };
-    if already_refused {
-        match form {
-            ConditionalForm::If { .. } => open(frame, "#if", None),
-            ConditionalForm::Ifdef { negated, .. } => {
-                open(frame, if negated { "#ifndef" } else { "#ifdef" }, None)
-            }
-            ConditionalForm::Elif { .. } | ConditionalForm::Else { .. } => {
-                if let Some(conditional) = frame.conditionals.last_mut() {
-                    conditional.settled = true;
-                    conditional.taking = false;
-                }
-            }
-            ConditionalForm::Endif { .. } => {
-                frame.conditionals.pop();
-            }
-        }
-        return;
-    }
     let unmatched = |diagnostics: &mut DiagnosticSink, message: &str| {
         diagnostics.report(
             refused(text, directive, UNBALANCED, message)

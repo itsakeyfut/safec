@@ -13,8 +13,8 @@
 
 use super::line::{Line, spacing};
 use super::{
-    ConditionalForm, IncludeForm, MacroForm, Named, UNSUPPORTED_DIRECTIVE, conditional_form,
-    directive, include_form, macro_form, refused, spliced,
+    ConditionalForm, IncludeForm, MacroForm, UNSUPPORTED_DIRECTIVE, conditional_form, directive,
+    include_form, macro_form, refused, spliced,
 };
 use crate::diagnostics::{Code, Diagnostic};
 use crate::lexer::UNSUPPORTED_SPLICE;
@@ -37,8 +37,15 @@ pub(super) enum Disposition<'l> {
     Directive,
     /// `#include "name"`, with `quote` the offset of its opening quote.
     Include { name: &'l str, quote: u32 },
-    /// A `#define` or an `#undef` that is read.
-    Macro(MacroForm<'l>),
+    /// A `#define` that is read, as [`MacroForm::Define`] has it.
+    Define {
+        name: &'l str,
+        name_at: u32,
+        body: (u32, u32),
+        parameters: Option<Vec<&'l str>>,
+    },
+    /// An `#undef` that is read.
+    Undef { name: &'l str },
 }
 
 /// One report a refusal makes, at the directive's `#`.
@@ -67,12 +74,40 @@ impl Report {
     }
 }
 
-/// A refused line: its reports, and what it still does to the conditional
-/// stack, as [`super::conditional`] says a refused conditional does.
+/// What a refused conditional still does to the conditional stack: a
+/// refused one, `#if`, `#elif` or an `#ifdef` this cannot read, still opens
+/// or ends a level, so its `#endif` is matched rather than reported, and
+/// none of its groups from there is compiled. Its own type, so it cannot be
+/// handed to what acts on a conditional that is read: carried as a
+/// conditional's form beside a flag, setting the flag wrongly evaluated the
+/// expression of an `#if` refused for its comment. Found by review.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Level {
+    /// Opens a level, as the directive named.
+    Opens(&'static str),
+    /// Settles the open level: an `#elif` or an `#else`.
+    Settles,
+    /// Closes the open level.
+    Closes,
+}
+
+impl Level {
+    fn of(form: &ConditionalForm<'_>) -> Level {
+        match form {
+            ConditionalForm::If { .. } => Level::Opens("#if"),
+            ConditionalForm::Ifdef { negated: false, .. } => Level::Opens("#ifdef"),
+            ConditionalForm::Ifdef { negated: true, .. } => Level::Opens("#ifndef"),
+            ConditionalForm::Elif { .. } | ConditionalForm::Else { .. } => Level::Settles,
+            ConditionalForm::Endif { .. } => Level::Closes,
+        }
+    }
+}
+
+/// A refused line: its reports, and the level it still keeps.
 #[derive(Debug, PartialEq)]
 pub(super) struct Refusal {
     reports: Vec<Report>,
-    level: Option<ConditionalForm<'static>>,
+    level: Option<Level>,
 }
 
 impl Refusal {
@@ -85,7 +120,7 @@ impl Refusal {
     fn new(line: &Line, reports: Vec<Report>) -> Refusal {
         Refusal {
             reports,
-            level: conditional_form(line).map(level),
+            level: conditional_form(line).as_ref().map(Level::of),
         }
     }
 
@@ -106,7 +141,7 @@ impl Refusal {
             .collect();
         let level = Line::read(&spaced)
             .ok()
-            .and_then(|plain| conditional_form(&plain).map(level));
+            .and_then(|plain| conditional_form(&plain).as_ref().map(Level::of));
         Refusal { reports, level }
     }
 
@@ -115,38 +150,10 @@ impl Refusal {
         &self.reports
     }
 
-    /// The conditional whose level the refused line still keeps.
-    pub(super) fn level(&self) -> Option<ConditionalForm<'static>> {
-        self.level.as_ref().map(ConditionalForm::clone_shape)
+    /// The level the refused line still keeps.
+    pub(super) fn level(&self) -> Option<Level> {
+        self.level
     }
-}
-
-impl ConditionalForm<'_> {
-    /// This form with nothing borrowed, which is all a refused one is asked:
-    /// whether it opens, settles or closes a level, and for `#ifdef` which
-    /// spelling it was.
-    fn clone_shape(&self) -> ConditionalForm<'static> {
-        match self {
-            ConditionalForm::If { expression } => ConditionalForm::If {
-                expression: *expression,
-            },
-            ConditionalForm::Ifdef { negated, .. } => ConditionalForm::Ifdef {
-                negated: *negated,
-                name: Named::Missing,
-                extra: None,
-            },
-            ConditionalForm::Elif { expression } => ConditionalForm::Elif {
-                expression: *expression,
-            },
-            ConditionalForm::Else { .. } => ConditionalForm::Else { extra: None },
-            ConditionalForm::Endif { .. } => ConditionalForm::Endif { extra: None },
-        }
-    }
-}
-
-/// The shape of `form`, which is what a refused conditional keeps.
-fn level(form: ConditionalForm<'_>) -> ConditionalForm<'static> {
-    form.clone_shape()
 }
 
 /// What `line`, a directive's line, is: `ended` where every comment in it
@@ -293,7 +300,18 @@ pub(super) fn triage(line: &Line, ended: bool, skipping: bool) -> Disposition<'_
         IncludeForm::Other => {}
     }
     match macro_form(line) {
-        form @ (MacroForm::Define { .. } | MacroForm::Undef { .. }) => Disposition::Macro(form),
+        MacroForm::Define {
+            name,
+            name_at,
+            body,
+            parameters,
+        } => Disposition::Define {
+            name,
+            name_at,
+            body,
+            parameters,
+        },
+        MacroForm::Undef { name } => Disposition::Undef { name },
         MacroForm::Unread { directive } => refuse(Report::new(
             UNSUPPORTED_DIRECTIVE,
             format!("this `{directive}` is not read yet"),
@@ -372,7 +390,7 @@ mod tests {
             Disposition::PassedOver => "passed over",
             Disposition::Directive => "directive",
             Disposition::Include { .. } => "include",
-            Disposition::Macro(_) => "macro",
+            Disposition::Define { .. } | Disposition::Undef { .. } => "macro",
         }
     }
 
@@ -426,18 +444,10 @@ mod tests {
                 other => panic!("{text:?} is not refused: {other:?}"),
             }
         };
-        assert!(matches!(
-            level("#if 1 /* open"),
-            Some(ConditionalForm::If { .. })
-        ));
-        assert!(matches!(
-            level("#\u{a0}endif"),
-            Some(ConditionalForm::Endif { .. })
-        ));
-        assert!(matches!(
-            level("#\u{a0}ifndef X"),
-            Some(ConditionalForm::Ifdef { negated: true, .. })
-        ));
+        assert_eq!(level("#if 1 /* open"), Some(Level::Opens("#if")));
+        assert_eq!(level("#\u{a0}endif"), Some(Level::Closes));
+        assert_eq!(level("#\u{a0}ifndef X"), Some(Level::Opens("#ifndef")));
+        assert_eq!(level("#\u{a0}else"), Some(Level::Settles));
         assert_eq!(level("#endif$"), None);
         assert_eq!(level("#endif\\N{LATIN SMALL LETTER E WITH ACUTE}"), None);
         assert_eq!(level("#define X\\u{"), None);
