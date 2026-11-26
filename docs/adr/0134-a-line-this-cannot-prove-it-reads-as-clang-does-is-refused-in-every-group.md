@@ -55,6 +55,10 @@ one of these:
   name the lexer reads whole, which no character goes on from as `clang`
   would read it going on.
 
+In a skipped group a line whose `#` white space outside ASCII follows is
+proved as well: it is no directive to `clang` there, which passes it over,
+as this does (#1370).
+
 Any other line is refused with an error, in a skipped group as well. The
 same holds below the line, in the lexer:
 

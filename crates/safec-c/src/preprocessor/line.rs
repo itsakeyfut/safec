@@ -267,6 +267,44 @@ impl Line {
         )
     }
 
+    /// Whether everything from the line's start to the end of its
+    /// directive's name is a spelling proved to read as `clang` reads it:
+    /// ASCII blanks, `#` or `%:`, ASCII blanks, and then nothing, a line
+    /// marker's number, or a name read whole. See ADR-0134.
+    pub(super) fn proved_start(&self) -> bool {
+        let blank = |text: &str| {
+            text.bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t' | 0x0b | 0x0c))
+        };
+        let Some(&hash) = self.tokens.first() else {
+            return false;
+        };
+        if hash.kind != TokenKind::Punct(Punct::Hash) || !blank(&self.text[..hash.start]) {
+            return false;
+        }
+        let next = self.tokens.get(1);
+        if !blank(&self.text[hash.end..next.map_or(self.text.len(), |next| next.start)]) {
+            return false;
+        }
+        match next {
+            None => true,
+            Some(next) if next.kind == TokenKind::Number => true,
+            Some(_) => matches!(self.name_at(hash.end), Name::Read(..)),
+        }
+    }
+
+    /// Whether anything but ASCII blanks stands before the line's `#`, as
+    /// a line the lexer made a directive only because characters no token
+    /// can begin were followed by one. See ADR-0134.
+    pub(super) fn prefixed(&self) -> bool {
+        self.tokens.first().is_none_or(|&first| {
+            first.kind != TokenKind::Punct(Punct::Hash)
+                || !self.text[..first.start]
+                    .bytes()
+                    .all(|byte| matches!(byte, b' ' | b'\t' | 0x0b | 0x0c))
+        })
+    }
+
     /// Whether white space outside ASCII stands between the `#` and the
     /// token after it, which after a name is white space. In a group `clang`
     /// skips, the line is no directive and is passed over, not counted. In a

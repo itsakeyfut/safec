@@ -178,7 +178,8 @@ impl<'a> Lexer<'a> {
             // and `%:` is `#` (C17 6.4.6 p3) and begins one.
             let kind = if self.directives
                 && self.at_line_start
-                && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
+                && (Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
+                    || hash_after_stray(self.rest()))
             {
                 self.scan_directive()
             } else {
@@ -732,6 +733,28 @@ pub(crate) fn is_identifier(text: &str) -> bool {
 /// has already dealt with them and a run of stray characters has to end when
 /// one turns up. What this decides is where a [`TokenKind::Unknown`] token
 /// stops.
+/// Whether `text`, the rest of a line at its start, is characters no token
+/// can begin and then, past any blanks, a `#`. Such a line is a directive's
+/// to `clang` where those characters are a NUL, which it reads as white
+/// space, and scanned as the characters and then a `#` that is no line's
+/// first token, `#else` behind a NUL in a skipped group was passed over
+/// where `clang` takes the group. So the whole line is one directive token,
+/// which the preprocessor refuses, since its start is no spelling it can
+/// prove reads as `clang` reads it. See ADR-0134. Found by architecture
+/// review 13.
+fn hash_after_stray(text: &str) -> bool {
+    let stray = text.len() - text.trim_start_matches(is_stray).len();
+    // White space outside ASCII alone before a `#` makes no directive to
+    // `clang`, which passes such a line over in a skipped group, so it stays
+    // text here too. Found by the corpus that compares directive lines with
+    // `clang`.
+    if stray == 0 || text[..stray].chars().all(char::is_whitespace) {
+        return false;
+    }
+    let rest = text[stray..].trim_start_matches([' ', '\t', '\u{b}', '\u{c}']);
+    Punct::starting(rest).is_some_and(|(punct, _)| punct == Punct::Hash)
+}
+
 fn is_stray(c: char) -> bool {
     !is_whitespace(c)
         && !is_identifier_start(c)

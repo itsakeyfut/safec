@@ -196,6 +196,20 @@ pub(super) fn triage(line: &Line, ended: bool, skipping: bool) -> Disposition<'_
             )],
         ));
     }
+    // Characters before the `#` that no token can begin: what `clang` makes
+    // of the line depends on which they are, a NUL being white space to it,
+    // so the line is refused in every group before it can be read as a
+    // conditional. See ADR-0134.
+    if line.prefixed() {
+        return Disposition::Refused(Refusal::new(
+            line,
+            vec![Report::new(
+                UNSUPPORTED_DIRECTIVE,
+                "a character before this directive's `#` is not read",
+                &["`clang` reads a NUL there as white space, and the line as a directive"],
+            )],
+        ));
+    }
     let form = conditional_form(line);
     // A splice joins the line below to this one before any directive is read
     // (C17 5.1.1.2 p1, phase 2), and the lexer read that line on its own, as
@@ -223,7 +237,19 @@ pub(super) fn triage(line: &Line, ended: bool, skipping: bool) -> Disposition<'_
     // not reported.
     if skipping {
         let mut reports: Vec<Report> = splice.into_iter().collect();
-        if directive::chooses_a_group(line) {
+        // Passed over only where its start is proved to read as `clang`
+        // reads it, so a spelling nobody listed is refused rather than
+        // misread: `#` and then a NUL and `else` was passed over where
+        // `clang` takes the group. White space outside ASCII after the `#`
+        // is proved too: it makes no directive to `clang` in a skipped group,
+        // which passes the line over, as this does. See ADR-0134.
+        if !line.proved_start() && !line.spaced_oddly() {
+            reports.push(Report::new(
+                UNSUPPORTED_DIRECTIVE,
+                "this line in a group that is skipped is not read",
+                &["a character before its name may make it a directive `clang` acts on"],
+            ));
+        } else if directive::chooses_a_group(line) {
             reports.push(Report::new(
                 UNSUPPORTED_DIRECTIVE,
                 "`#elifdef` and `#elifndef` are not read yet",
@@ -418,7 +444,7 @@ mod tests {
             ("#elifdef X", "refused", "refused"),
             ("#warn x", "refused", "passed over"),
             ("#define X /* open", "refused", "refused"),
-            ("#endif$", "refused", "passed over"),
+            ("#endif$", "refused", "refused"),
             ("#\u{a0}define X", "refused", "passed over"),
             ("#endif\\N{NO-BREAK SPACE}", "refused", "refused"),
         ] {

@@ -10761,6 +10761,15 @@ cases! {
         // Mutation: read such white space as a space, in
         // `Line::spaced_oddly`; nothing is reported.
         white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A line in a skipped group is passed over only where its start is
+        // proved to read as `clang` reads it (ADR-0134), and a NUL beside
+        // its `#` is not: `clang` reads the NUL as white space, the line as
+        // an `#else`, and compiles the second `free`. Passed over, each
+        // exited 0. Found by architecture review 13. Mutations: pass over a
+        // line whose start is not proved, in `triage`; the first two
+        // functions are silent. Or scan a NUL before a `#` as text, in the
+        // lexer; the third is.
+        a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A name ends where `clang` 22.1.8 ends it: at a universal character
         // name not whole, at one naming white space, and at U+180E, which
         // `clang` reads as white space and Unicode no longer does. After
