@@ -967,6 +967,21 @@ fn read_includes(
                 }
                 // Not read as a shorter name: `#pragma once$` is not `#pragma
                 // once` to `clang`. Found by architecture review 12.
+                if line.spaced_oddly() {
+                    diagnostics.report(
+                        refused(
+                            text,
+                            token.span,
+                            UNSUPPORTED_DIRECTIVE,
+                            "white space outside ASCII after `#` makes no directive",
+                        )
+                        .with_note(
+                            "`clang -E` refuses such a line, and `clang` reads it as a \
+                             directive; after a directive's name it is white space",
+                        ),
+                    );
+                    continue;
+                }
                 if line.directive().is_none() {
                     diagnostics.report(
                         refused(

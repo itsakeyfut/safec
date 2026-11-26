@@ -162,12 +162,17 @@ impl Line {
 
     /// The directive's name and the offset just past it: `""` where none
     /// follows the `#`, and a line marker's number as written; `None` where
-    /// the name is [`Name::Glued`].
+    /// the name is [`Name::Glued`], or where white space outside ASCII
+    /// stands between the `#` and what follows it, as [`Line::spaced_oddly`]
+    /// says.
     pub(super) fn directive(&self) -> Option<(&str, usize)> {
         let hash = match self.tokens.first() {
             Some(&token) if token.kind == TokenKind::Punct(Punct::Hash) => token,
             _ => return Some(("", 0)),
         };
+        if self.spaced_oddly() {
+            return None;
+        }
         match self.tokens.get(1) {
             Some(&number) if number.kind == TokenKind::Number => {
                 Some((self.spelled(number), number.end))
@@ -178,6 +183,26 @@ impl Line {
                 Name::Glued => None,
             },
         }
+    }
+
+    /// Whether white space outside ASCII stands between the `#` and the
+    /// token after it, which after a name is white space. In a group `clang`
+    /// skips, the line is no directive and is passed over, not counted. In a
+    /// group it compiles, `clang` reads a directive with a warning and
+    /// `clang -E` refuses the line as `invalid preprocessing directive`, so
+    /// it is refused here rather than read either way. Read as a space, as
+    /// it is after a name, `#` and a
+    /// no-break space and `else` in a skipped group chose a group `clang`
+    /// never chooses, and a double free in it exited 0. Found by the hunt
+    /// before #1359 closed.
+    pub(super) fn spaced_oddly(&self) -> bool {
+        let (Some(hash), Some(next)) = (self.tokens.first(), self.tokens.get(1)) else {
+            return false;
+        };
+        hash.kind == TokenKind::Punct(Punct::Hash)
+            && self.text[hash.end..next.start]
+                .chars()
+                .any(|c| !c.is_ascii() && c.is_whitespace())
     }
 }
 
@@ -236,9 +261,14 @@ mod tests {
     /// outside ASCII touches is no name at all, and any other character
     /// touching it ends it, as `clang` ends it.
     ///
+    /// White space outside ASCII between the `#` and what follows it makes
+    /// no directive, as `clang` reads it, though after the name it is white
+    /// space.
+    ///
     /// Mutations: read a name a `$` touches as the name before it, refuse
-    /// one that `@` or a lone `\` touches, or read the token after `#` as a
-    /// name whatever it is; an assertion fails.
+    /// one that `@` or a lone `\` touches, read the token after `#` as a
+    /// name whatever it is, or read white space outside ASCII after `#` as
+    /// a space; an assertion fails.
     #[test]
     fn a_directive_s_name_is_what_the_lexer_reads_whole() {
         assert_eq!(line("#  pragma once").directive(), Some(("pragma", 9)));
@@ -256,7 +286,10 @@ mod tests {
         assert_eq!(line("#else@").directive(), Some(("else", 5)));
         assert_eq!(line("#endif\\").directive(), Some(("endif", 6)));
         assert_eq!(line("#else\u{3000}").directive(), Some(("else", 5)));
-        assert_eq!(line("#\u{a0}define X").directive(), Some(("define", 9)));
+        assert_eq!(line("#\u{a0}define X").directive(), None);
+        assert_eq!(line("# \u{3000}else").directive(), None);
+        assert_eq!(line("#define\u{a0}X").directive(), Some(("define", 7)));
+        assert_eq!(line("#\u{a0}").directive(), Some(("", 1)));
     }
 
     /// A comment is made spaces outside a literal only: `/*` and `//` in a

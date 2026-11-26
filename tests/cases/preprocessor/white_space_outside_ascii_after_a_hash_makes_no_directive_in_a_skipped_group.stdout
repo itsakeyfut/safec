@@ -1,0 +1,116 @@
+Target "x86_64-pc-windows-msvc"
+Function white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "unsigned long long" parameter
+Function white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:4:5 "chosen"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:5:14 generated
+    Call white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:5:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:5:14 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:9 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:13 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:20 generated
+    Return
+  Block "bb3"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:7:5 generated
+    Call white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:7:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:7:5 generated
+    ArgumentsEvaluated white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:12:5 generated
+    Call white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:12:5 written "free" "bb6"
+      Copy "_1"
+  Block "bb6"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:12:5 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:13:12 generated
+    Return
+Function white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:16:5 "counted"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:17:14 generated
+    Call white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:17:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:17:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:17:14 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:9 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:13 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:20 generated
+    Return
+  Block "bb3"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:18:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:19:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:19:5 generated
+    ArgumentsEvaluated white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:20:5 generated
+    Call white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:20:5 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:20:5 generated
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:24:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:24:12 generated
+    Return
+  Block "bb6"
+    Operation white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:29:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group.c:29:12 generated
+    Return
