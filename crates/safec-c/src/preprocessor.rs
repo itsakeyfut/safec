@@ -968,6 +968,19 @@ fn read_includes(
                 // rest ignored (C17 6.10.1 p6): `#include <stdio.h>` or a
                 // function-like `#define` there is not reported.
                 if skipping {
+                    if !directive::chooses_no_group(&text) {
+                        diagnostics.report(
+                            refused(
+                                &text,
+                                token.span,
+                                UNSUPPORTED_DIRECTIVE,
+                                "this directive in a group that is skipped is not read",
+                            )
+                            .with_note(
+                                "a directive this does not know may choose a group, as C23's                                  `#elifdef` and `#elifndef` do, and passed over, the group it                                  chose would not be compiled",
+                            ),
+                        );
+                    }
                     continue;
                 }
                 if directive::read(&text, token.span, sources, reading, diagnostics) {

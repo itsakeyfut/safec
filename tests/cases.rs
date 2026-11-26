@@ -10443,6 +10443,18 @@ cases! {
         // outside a skipped group, pass. Mutation: read directives in a
         // skipped group. They are reported.
         a_directive_in_a_skipped_group_is_not_read: ["--emit", "ast"],
+        // A directive this does not know may choose a group, as C23's
+        // `#elifdef` and `#elifndef` do, so in a skipped group it is refused
+        // rather than passed over: passed over, the group it chose was never
+        // taken, and `clang`'s program here frees twice while safec, reading
+        // one `free`, exited 0. Found by architecture review 12. Mutation:
+        // pass over every name again; this builds with nothing said.
+        a_directive_that_may_choose_a_group_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The null directive, a line marker, each directive this reads and
+        // each extension known to choose no group is passed over in a
+        // skipped group, as before. Mutation: drop any name from the list
+        // of those known to choose none; its line is refused.
+        a_directive_that_chooses_no_group_is_passed_over_in_a_skipped_group: ["--emit", "ast"],
         // A run no token can begin is a preprocessing token, ignored where
         // its group is skipped and an error only once it is compiled, so
         // `@class` under an `#ifdef` not taken passes. Mutation: report an

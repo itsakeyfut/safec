@@ -101,6 +101,40 @@ pub(super) fn read(
     true
 }
 
+/// Whether `text`, a directive's line in a group that is skipped, is one
+/// known to choose no group, which such a group passes over: the null
+/// directive, a line marker, a directive this reads, or an extension known
+/// to choose none. The conditionals are read before this is asked. Any
+/// other may choose a group, as C23's `#elifdef` does: passed over, the
+/// group it chose was never taken, and a `free` in it that `clang`
+/// compiles was not checked. Found by architecture review 12.
+pub(super) fn chooses_no_group(text: &str) -> bool {
+    match name(text) {
+        Some((word, _)) => {
+            word.is_empty()
+                || word.bytes().all(|byte| byte.is_ascii_digit())
+                || matches!(
+                    word,
+                    "define"
+                        | "undef"
+                        | "include"
+                        | "pragma"
+                        | "line"
+                        | "error"
+                        | "warning"
+                        | "ident"
+                        | "sccs"
+                        | "assert"
+                        | "unassert"
+                        | "import"
+                        | "include_next"
+                        | "embed"
+                )
+        }
+        None => false,
+    }
+}
+
 /// A directive's name and what follows it, of `text`, a line beginning
 /// with `#` or `%:`; `None` where the name goes on in a character an
 /// identifier may hold, as `conditional_form` ends one.

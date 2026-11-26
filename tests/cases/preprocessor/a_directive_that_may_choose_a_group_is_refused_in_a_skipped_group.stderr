@@ -1,0 +1,16 @@
+error[SC0104]: this directive in a group that is skipped is not read
+   ╭─[ a_directive_that_may_choose_a_group_is_refused_in_a_skipped_group.c:8:1 ]
+   │
+ 8 │ #elifdef B
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: a directive this does not know may choose a group, as C23's                                  `#elifdef` and `#elifndef` do, and passed over, the group it                                  chose would not be compiled
+error[SC0104]: this directive in a group that is skipped is not read
+    ╭─[ a_directive_that_may_choose_a_group_is_refused_in_a_skipped_group.c:12:1 ]
+    │
+ 12 │ #elifndef A
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: a directive this does not know may choose a group, as C23's                                  `#elifdef` and `#elifndef` do, and passed over, the group it                                  chose would not be compiled
