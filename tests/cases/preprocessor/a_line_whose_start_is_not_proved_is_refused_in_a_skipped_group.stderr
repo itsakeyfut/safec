@@ -1,3 +1,11 @@
+error[SC0103]: a NUL is not read
+   ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:9:2 ]
+   │
+ 9 │ #?else
+   │  ┬  
+   │  ╰── this NUL
+───╯
+  = note: `clang` reads it as white space, and in a splice skips it in some places and not others
 error[SC0104]: this line in a group that is skipped is not read
    ╭─[ a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group.c:9:1 ]
    │

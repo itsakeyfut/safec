@@ -84,18 +84,15 @@ const SPACED_SPLICE: Code = Code::new("SC0108");
 /// this call instead, and `a_lexical_error_stops_that_input_and_no_other`
 /// names the `has_errors` version as the mutation it fails on.
 pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) -> Vec<Token> {
-    if let Some(at) = lone_carriage_return(source.contents()) {
+    for (at, byte) in unread(source.contents()) {
         diagnostics.report(
-            Diagnostic::error("a carriage return with no line feed after it is not read")
+            Diagnostic::error(byte.message())
                 .with_code(UNEXPECTED_CHARACTERS)
                 .with_label(Label::primary(
                     Span::new(file, at as u32, at as u32 + 1),
-                    "this carriage return",
+                    byte.label(),
                 ))
-                .with_note(
-                    "`clang` reads it as the end of a line, and this compiler reads lines only \
-                     at a line feed",
-                ),
+                .with_note(byte.note()),
         );
     }
     Lexer {
@@ -108,22 +105,71 @@ pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) 
     .run(diagnostics)
 }
 
-/// The offset of the first carriage return in `text` that no line feed
-/// follows, or `None`.
+/// A byte `clang` reads as something this lexer does not, refused wherever
+/// it stands in a file. See ADR-0135.
 ///
-/// `clang` ends a line at one, and this compiler opens a line only at a line
-/// feed, so text after it was a `//` comment's, or the directive line's
-/// before it, where `clang` compiled it as code: a second `free` behind one
-/// was not seen. Found by a hunt. Refused rather than read as a line end,
-/// since reading it as one moves every line number and caret after it. One
-/// report each time a file is read, at the first, wherever it stands, a
-/// skipped group and a comment included: what it does there is where a line
-/// ends, which decides what the rest of the file is. A header included twice
-/// is read twice and reported twice, as every lexical error is.
-fn lone_carriage_return(text: &str) -> Option<usize> {
-    text.match_indices('\r')
+/// One report each time a file is read, at the first of each, a skipped
+/// group and a comment included: a header included twice is read twice and
+/// reported twice, as every lexical error is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Unread {
+    /// A carriage return no line feed follows. `clang` ends a line at one,
+    /// and this compiler opens a line only at a line feed, so text after it
+    /// was a `//` comment's, or the directive line's before it, where `clang`
+    /// compiled it as code: a second `free` behind one was not seen. Found
+    /// by a hunt. Refused rather than read as a line end, since reading it
+    /// as one moves every line number and caret after it.
+    LoneCarriageReturn,
+    /// A NUL. `clang` reads it as white space, and between a `\` and the
+    /// newline that closes a block comment skips it, so a second `free`
+    /// after `*\`, a NUL, a newline and `/` was taken for the comment's.
+    /// Found by review. It does not skip it there in a line comment, and
+    /// each place it stands was a rule of its own.
+    Nul,
+}
+
+impl Unread {
+    fn message(self) -> &'static str {
+        match self {
+            Unread::LoneCarriageReturn => {
+                "a carriage return with no line feed after it is not read"
+            }
+            Unread::Nul => "a NUL is not read",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Unread::LoneCarriageReturn => "this carriage return",
+            Unread::Nul => "this NUL",
+        }
+    }
+
+    fn note(self) -> &'static str {
+        match self {
+            Unread::LoneCarriageReturn => {
+                "`clang` reads it as the end of a line, and this compiler reads lines only at a \
+                 line feed"
+            }
+            Unread::Nul => {
+                "`clang` reads it as white space, and in a splice skips it in some places and \
+                 not others"
+            }
+        }
+    }
+}
+
+/// The first of each [`Unread`] byte in `text`, in the order they stand.
+fn unread(text: &str) -> Vec<(usize, Unread)> {
+    let lone = text
+        .match_indices('\r')
         .map(|(at, _)| at)
         .find(|&at| !text[at + 1..].starts_with('\n'))
+        .map(|at| (at, Unread::LoneCarriageReturn));
+    let nul = text.find('\0').map(|at| (at, Unread::Nul));
+    let mut found: Vec<_> = [lone, nul].into_iter().flatten().collect();
+    found.sort_unstable_by_key(|&(at, _)| at);
+    found
 }
 
 /// Scan a macro's expansion, where no `#` begins a directive.
@@ -1163,7 +1209,8 @@ mod tests {
     /// separates them too, and alone, with no line feed after it, is
     /// refused once, since `clang` ends a line there and this does not.
     ///
-    /// Mutation: skip `lone_carriage_return`; the `\r` row says nothing.
+    /// Mutation: skip the carriage return in `unread`; the `\r` row says
+    /// nothing. Or skip the NUL; the NUL rows say nothing.
     #[test]
     fn the_whitespace_c_does_know_still_separates_tokens() {
         for c in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
@@ -1177,8 +1224,19 @@ mod tests {
             assert_eq!(scan.messages(), expected, "{:?}", c as u32);
             assert_eq!(scan.texts(), ["int", "x", ";"], "{:?}", c as u32);
         }
-        let scan = scan("int\r\nx;\r\n");
-        assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
+        let crlf = scan("int\r\nx;\r\n");
+        assert!(crlf.diagnostics.is_empty(), "{:?}", crlf.messages());
+        let nul = scan("int\0x;\n");
+        assert_eq!(
+            nul.messages(),
+            ["a NUL is not read", "unexpected character"]
+        );
+        // The first of each, in the order they stand, and no second report
+        // of either.
+        assert_eq!(
+            unread("a\0b\rc\0d\re"),
+            [(1, Unread::Nul), (3, Unread::LoneCarriageReturn)]
+        );
     }
 
     /// An identifier split by something nobody can see. The scan has to say so,

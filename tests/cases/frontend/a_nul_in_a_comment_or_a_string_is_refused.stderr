@@ -1,0 +1,8 @@
+error[SC0103]: a NUL is not read
+   ╭─[ a_nul_in_a_comment_or_a_string_is_refused.c:4:10 ]
+   │
+ 4 │ // a NUL ? in a line comment
+   │          ┬  
+   │          ╰── this NUL
+───╯
+  = note: `clang` reads it as white space, and in a splice skips it in some places and not others
