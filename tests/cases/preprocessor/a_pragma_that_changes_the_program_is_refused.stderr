@@ -62,3 +62,20 @@ error[SC0104]: `#pragma clang section` is not read
    │ ╰── written here
 ───╯
   = note: ignoring it would change what the program is
+error[SC0104]: `#pragma pack` is not read
+   ╭─[ a_pragma_that_changes_the_program_is_refused.c:9:1 ]
+   │
+ 9 │ #pragma pack (2)
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: ignoring it would change what the program is
+error[SC0104]: preprocessor directives are not supported yet
+    ╭─[ a_pragma_that_changes_the_program_is_refused.c:10:1 ]
+    │
+ 10 │ #pragma pack(1)
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: `#include "..."`, `#define` and `#undef`, the conditional directives, `#pragma`, `#line` and line markers, `#error` and `#warning` are read
+  = note: the line is one token and is not compiled

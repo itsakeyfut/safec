@@ -10670,7 +10670,8 @@ cases! {
         a_pragma_once_in_the_input_is_warned_about_and_ignored: ["--emit", "ast"],
         // ADR-0129's refused class, by the directive and by `_Pragma`, and
         // `GCC visibility` (ADR-0132), `clang attribute` and `clang section`
-        // (ADR-0133). Mutations: read `pack` or
+        // (ADR-0133); and `pack` with a no-break space after its name, which
+        // `clang` reads as white space and packs by. Mutations: read `pack` or
         // `GCC visibility` as ignored; its report goes.
         a_pragma_that_changes_the_program_is_refused: ["--emit", "ast"],
         // `GCC error` and `GCC warning` report their string as `#error` and
@@ -10722,6 +10723,14 @@ cases! {
         // `/*` in `message`'s string opens a comment never ended, and that
         // line is refused.
         a_pragma_operator_with_a_comment_in_it_is_classified_as_its_pragma: ["--emit", "ast"],
+        // A pragma's name ends only where no identifier goes on, so
+        // `#pragma once$` is a name of its own, unknown, and the header is
+        // read twice as `clang` reads it: on the second reading `SIZE` is 1,
+        // and `b[1]` is past it. Found by architecture review 12, where
+        // `once$` was read as `once`, the header once, and this exited 0.
+        // Mutation: end the name at the `$`; the header is read once and
+        // nothing is reported.
+        a_pragma_whose_name_goes_on_past_once_is_not_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `#error` stops the run with its line as the message (C17 6.10.5),
         // white space around it dropped. Mutations: report it as a warning;
         // the case exits 0. Keep the white space after it; the message moves.

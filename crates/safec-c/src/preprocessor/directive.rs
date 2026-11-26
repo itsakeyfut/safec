@@ -149,14 +149,36 @@ enum Class {
 /// what follows them. A name is read only where it begins, after white
 /// space: `#pragma "once"` has none, where reading past the quote made it
 /// `once` and a header `clang` reads twice was read once. Found by review.
+/// And a name ends only where no identifier goes on, as `name` ends a
+/// directive's: `once$` is a name of its own, which `clang` ignores as
+/// unknown, where reading it as `once` read a header once that `clang` reads
+/// twice. Found by architecture review 12.
 fn names(rest: &str) -> (&str, &str, &str) {
     fn name(text: &str) -> (&str, &str) {
-        let text = text.trim_start_matches([' ', '\t', '\u{b}', '\u{c}', '\r']);
+        // White space outside ASCII, a no-break space among it, is white
+        // space to `clang` (with `-Wunicode-whitespace`), so it begins and
+        // ends a name as a space does. Read as part of a name, `pack` and a
+        // no-break space was unknown and ignored where `clang` packs the
+        // struct after it. Found by review.
+        let text = text.trim_start_matches(char::is_whitespace);
         let length = text.len()
             - text
                 .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 .len();
-        text.split_at(length)
+        let (word, after) = text.split_at(length);
+        // `$`, a universal character name or a letter outside ASCII goes on
+        // with the name, so what was read is not it. A `\` begins one only
+        // before `u` or `U`: `once\q` is `once` and a stray token to `clang`,
+        // and read as going on it was unknown, a header `clang` reads once
+        // read twice. Found by review.
+        let goes_on = after.starts_with('$')
+            || after.starts_with("\\u")
+            || after.starts_with("\\U")
+            || after.starts_with(|c: char| !c.is_ascii() && !c.is_whitespace());
+        if goes_on {
+            return ("", text);
+        }
+        (word, after)
     }
     let (first, rest) = name(rest);
     let (second, rest) = if first.is_empty() {
@@ -574,12 +596,15 @@ mod tests {
     /// ADR-0132 has it, and a name read only where it begins.
     ///
     /// Mutations: move any name to another class, read a namespace's
-    /// pragma by its first name alone, or read a name past a quote; its
-    /// assertion fails.
+    /// pragma by its first name alone, read a name past a quote, or end a
+    /// name before a `$`, a universal character name or a letter outside
+    /// ASCII, or let a `\` alone go on with one; its assertion fails.
     #[test]
     fn a_pragma_is_classified_as_adr_0129_lists_it() {
         assert_eq!(classify(" once"), Class::Once);
         assert_eq!(classify(" once extra"), Class::Once);
+        assert_eq!(classify(" once\\q"), Class::Once);
+        assert_eq!(classify(" once\\u00e9"), Class::Unknown);
         assert_eq!(classify("GCC error \"x\""), Class::Message { error: true });
         assert_eq!(
             classify("GCC warning(\"x\")"),
@@ -639,6 +664,9 @@ mod tests {
             "omp parallel",
             "\"once\"",
             "(once)",
+            "once$",
+            "GCC poison$ x",
+            "pack\u{e9}(4)",
         ] {
             assert_eq!(classify(unknown), Class::Unknown, "{unknown}");
         }
