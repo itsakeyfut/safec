@@ -56,12 +56,13 @@ const EMPTY_LITERAL: Code = Code::new("SC0105");
 /// `SC0104` is for a directive. The preprocessor refuses an `#include` line
 /// that holds a splice or a trigraph with this code too.
 pub(crate) const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
-/// A `\` and the newline it splices with only spaces or tabs between them,
-/// a warning. C17 splices only a `\` right before the newline, and how
+/// A `\` and the newline it splices with only [`SPLICE_BLANKS`] between
+/// them, a warning. C17 splices only a `\` right before the newline, and how
 /// physical lines map to source lines is phase 1's, an implementation's
-/// choice: clang and gcc splice this, with a warning, and so does this
-/// compiler, since reading the line below as code would analyse a program
-/// they do not build.
+/// choice: clang splices this, with a warning, and so does this compiler,
+/// since reading the line below as code would analyse a program clang does
+/// not build. Not said of gcc, which nobody here has run on a vertical tab
+/// or a form feed there.
 const SPACED_SPLICE: Code = Code::new("SC0108");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
@@ -574,8 +575,8 @@ impl<'a> Lexer<'a> {
     /// is performed, and say what makes it doubtful: a `??/` is a splice only
     /// where trigraphs are read, which clang's and gcc's default modes do not,
     /// so the comment it extends or closes depends on how the file is built,
-    /// and is refused (`UNSUPPORTED_SPLICE`); a `\` with spaces before the
-    /// newline is spliced as clang and gcc do, with a warning
+    /// and is refused (`UNSUPPORTED_SPLICE`); a `\` with [`SPLICE_BLANKS`]
+    /// before the newline is spliced as clang does, with a warning
     /// (`SPACED_SPLICE`).
     fn splice_in_comment(&mut self, splice: Splice, diagnostics: &mut DiagnosticSink) {
         let start = self.offset;
@@ -598,7 +599,7 @@ impl<'a> Lexer<'a> {
                     .with_code(SPACED_SPLICE)
                     .with_label(Label::primary(marker, "this joins the next line to this one"))
                     .with_note(
-                        "C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler",
+                        "C17 splices only a backslash right before the newline; clang splices this too, and so does this compiler",
                     ),
             );
         }
@@ -649,14 +650,25 @@ struct Splice {
     length: usize,
     /// The bytes of the `\` or the `??/`, which is what a caret points at.
     marker: usize,
-    /// Whether spaces or tabs stand between the marker and the newline.
+    /// Whether [`SPLICE_BLANKS`] stand between the marker and the newline.
     spaced: bool,
 }
 
+/// What may stand between a splice's `\` and its newline: spaces, tabs,
+/// vertical tabs and form feeds, which `clang` splices across with a
+/// warning where C17 names only a `\` right before the newline. Read with
+/// a vertical tab or a form feed there as no splice, a line `clang` put in
+/// a macro's body or a comment was compiled. Found by a hunt.
+///
+/// One set, read by [`splice`] here and by the preprocessor's test for a
+/// directive line that ends in one, since the two answering differently is
+/// a line the lexer splices and the preprocessor reads whole, or the other
+/// way round.
+pub(crate) const SPLICE_BLANKS: [char; 4] = [' ', '\t', '\u{b}', '\u{c}'];
+
 /// The splice `text` begins with, or `None`. The newline is `\n` or
-/// `\r\n`. Spaces and tabs before it are taken, and said, because clang and
-/// gcc splice across them where C17 names only a `\` right before the
-/// newline; see `SPACED_SPLICE`.
+/// `\r\n`. [`SPLICE_BLANKS`] before it are taken, and said; see
+/// `SPACED_SPLICE`.
 fn splice(text: &str) -> Option<Splice> {
     let marker = if text.starts_with('\\') {
         1
@@ -666,7 +678,7 @@ fn splice(text: &str) -> Option<Splice> {
         return None;
     };
     let after = &text[marker..];
-    let blank = after.len() - after.trim_start_matches([' ', '\t']).len();
+    let blank = after.len() - after.trim_start_matches(SPLICE_BLANKS).len();
     let rest = &after[blank..];
     let newline = if rest.starts_with('\n') {
         1
@@ -1053,14 +1065,16 @@ mod tests {
     }
 
     /// A splice is a `\` or `??/` before a newline, `\n` or `\r\n`, its
-    /// length covering both, with spaces or tabs between taken and said
-    /// (C17 5.1.1.2 p1 phases 1 and 2, as clang and gcc map them); anything
+    /// length covering both, with spaces, tabs, vertical tabs and form feeds
+    /// between taken and said (C17 5.1.1.2 p1 phases 1 and 2, as clang maps
+    /// them); anything
     /// else between, or a `?` too few, makes none.
     ///
     /// Mutation: refuse spaces before the newline; the spaced rows are none.
     /// Mutation: count `\r\n` as one byte; its length is short. Mutation:
     /// drop `??/`; its rows are none. Mutation: mark a spaced splice
-    /// unspaced; its row fails. Each fails this.
+    /// unspaced; its row fails. Mutation: take only spaces and tabs; the
+    /// vertical tab and form feed rows are none. Each fails this.
     #[test]
     fn a_splice_is_a_backslash_or_its_trigraph_before_a_newline() {
         let at = |length, marker, spaced| {
@@ -1077,6 +1091,8 @@ mod tests {
             ("??/\r\nx", at(5, 3, false)),
             ("\\ \nx", at(3, 1, true)),
             ("\\ \t\r\nx", at(5, 1, true)),
+            ("\\\u{b}\nx", at(3, 1, true)),
+            ("??/\u{c}\r\nx", at(6, 3, true)),
             ("\\ x\nx", None),
             ("\\x", None),
             ("?/\nx", None),

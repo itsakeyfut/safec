@@ -1,0 +1,16 @@
+error[SC0107]: a line splice or a trigraph in a `#define` is not read yet
+   ╭─[ a_directive_ending_in_a_backslash_and_a_vertical_tab_or_form_feed_is_spliced.c:8:1 ]
+   │
+ 8 │ #define NOTE \?
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: C can join the line below to this one, and it would be compiled as code instead
+error[SC0107]: a line splice or a trigraph in a directive in a skipped group is not read yet
+    ╭─[ a_directive_ending_in_a_backslash_and_a_vertical_tab_or_form_feed_is_spliced.c:19:1 ]
+    │
+ 19 │ #define X \?
+    │ ┬  
+    │ ╰── directive begins here
+────╯
+  = note: C can join the line below to this one, and it would be read on its own instead
