@@ -166,11 +166,16 @@ fn names(rest: &str) -> (&str, &str, &str) {
                 .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 .len();
         let (word, after) = text.split_at(length);
-        // `$`, a universal character name's `\` or a letter outside ASCII
-        // goes on with the name, so what was read is not it.
-        if after
-            .starts_with(|c: char| c == '$' || c == '\\' || (!c.is_ascii() && !c.is_whitespace()))
-        {
+        // `$`, a universal character name or a letter outside ASCII goes on
+        // with the name, so what was read is not it. A `\` begins one only
+        // before `u` or `U`: `once\q` is `once` and a stray token to `clang`,
+        // and read as going on it was unknown, a header `clang` reads once
+        // read twice. Found by review.
+        let goes_on = after.starts_with('$')
+            || after.starts_with("\\u")
+            || after.starts_with("\\U")
+            || after.starts_with(|c: char| !c.is_ascii() && !c.is_whitespace());
+        if goes_on {
             return ("", text);
         }
         (word, after)
@@ -592,11 +597,14 @@ mod tests {
     ///
     /// Mutations: move any name to another class, read a namespace's
     /// pragma by its first name alone, read a name past a quote, or end a
-    /// name before a `$` or a letter outside ASCII; its assertion fails.
+    /// name before a `$`, a universal character name or a letter outside
+    /// ASCII, or let a `\` alone go on with one; its assertion fails.
     #[test]
     fn a_pragma_is_classified_as_adr_0129_lists_it() {
         assert_eq!(classify(" once"), Class::Once);
         assert_eq!(classify(" once extra"), Class::Once);
+        assert_eq!(classify(" once\\q"), Class::Once);
+        assert_eq!(classify(" once\\u00e9"), Class::Unknown);
         assert_eq!(classify("GCC error \"x\""), Class::Message { error: true });
         assert_eq!(
             classify("GCC warning(\"x\")"),
