@@ -10763,8 +10763,10 @@ cases! {
         white_space_outside_ascii_after_a_hash_makes_no_directive_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And in a group that is compiled such a line is refused: `clang -E`
         // refuses it as an invalid directive and `clang` reads it as one, so
-        // neither reading is taken. Mutation: the same; the line is read as
-        // a `#define`.
+        // neither reading is taken. A conditional refused so still opens its
+        // level, so its `#endif` is not reported as closing nothing.
+        // Mutations: the same, and the line is read as a `#define`; or keep
+        // no level for the refused `#if`, and its `#endif` is reported.
         white_space_outside_ascii_after_a_hash_is_refused_in_a_group_that_is_compiled: ["--emit", "ast"],
         // And a comment around each of those names is white space (C17
         // 5.1.1.2 p1, phase 3), so the same directives with one around every

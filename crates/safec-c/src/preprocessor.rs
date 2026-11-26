@@ -980,6 +980,34 @@ fn read_includes(
                              directive; after a directive's name it is white space",
                         ),
                     );
+                    // A conditional refused here still opens or ends its
+                    // level, as one refused for its comment does: left out,
+                    // its `#endif` was reported as closing nothing, a caret
+                    // on a directive that was right. Read with the white
+                    // space made spaces of the same length. Found by review.
+                    let spaced: String = text
+                        .chars()
+                        .map(|c| {
+                            if !c.is_ascii() && c.is_whitespace() {
+                                " ".repeat(c.len_utf8())
+                            } else {
+                                c.to_string()
+                            }
+                        })
+                        .collect();
+                    if let (Ok(plain), Some(frame)) = (Line::read(&spaced), frames.last_mut()) {
+                        if let Some(form) = conditional_form(&plain) {
+                            conditional(
+                                form,
+                                text,
+                                token.span,
+                                frame,
+                                (sources, reading),
+                                diagnostics,
+                                true,
+                            );
+                        }
+                    }
                     continue;
                 }
                 if line.directive().is_none() {
