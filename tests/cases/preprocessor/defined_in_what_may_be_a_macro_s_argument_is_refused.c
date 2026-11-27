@@ -2,6 +2,8 @@
 #define F(a) (a+1)
 #define G F
 #define OPEN F(
+#define CALL(m) m
+#define NOT !
 
 #if F(defined(X)) == 2
 int a;
@@ -13,4 +15,8 @@ int b;
 
 #if OPEN defined X) == 2
 int c;
+#endif
+
+#if CALL(F)(defined X) == 2
+int e;
 #endif

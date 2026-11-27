@@ -58,35 +58,44 @@ pub(super) fn evaluate(
     // `F(defined(X))` with `X` a macro it asks about `1` and refuses the
     // line, where this answered `defined(X)` first and compiled the group.
     // C17 6.10.1 p4 leaves a `defined` met there undefined. An argument
-    // begins at a `(` right after a name, or after a macro whose list opens
-    // a `(` it does not close. Found by review.
+    // begins at a `(` after what may name a function-like macro by the time
+    // it is replaced, or after a macro whose list opens a `(` it does not
+    // close, until the line closes it. Found by review, and `CALL(F)(...)`,
+    // whose name comes out of a call, by a second review.
     let mut answered: Vec<(usize, bool, Span)> = Vec::new();
-    let mut line = Vec::with_capacity(tokens.len());
-    let mut opened_after_name: Vec<bool> = Vec::new();
-    let mut opened_by_a_macro = false;
+    let mut line: Vec<Token> = Vec::with_capacity(tokens.len());
+    let mut opens_an_argument: Vec<bool> = Vec::new();
+    let mut opened_by_macros = 0usize;
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
         if !is_name(token) || sources.snippet(token.span) != "defined" {
             match token.kind {
-                TokenKind::Punct(Punct::LeftParen) => opened_after_name
-                    .push(at > 0 && line.last().is_some_and(|&before| is_name(before))),
+                TokenKind::Punct(Punct::LeftParen) => {
+                    let before = line.last().copied();
+                    opens_an_argument.push(before.is_some_and(|before| {
+                        may_name_a_call(before, sources.snippet(before.span), reading)
+                    }));
+                }
                 TokenKind::Punct(Punct::RightParen) => {
-                    opened_after_name.pop();
+                    if opens_an_argument.pop().is_none() {
+                        opened_by_macros = opened_by_macros.saturating_sub(1);
+                    }
                 }
                 _ if is_name(token) => {
-                    opened_by_a_macro |= reading
-                        .macros
-                        .get(sources.snippet(token.span))
-                        .is_some_and(|defined| {
-                            let count = |spelled: &str| {
-                                defined
-                                    .tokens
-                                    .iter()
-                                    .filter(|(token, _)| token == spelled)
-                                    .count()
-                            };
-                            count("(") > count(")")
-                        });
+                    opened_by_macros +=
+                        reading
+                            .macros
+                            .get(sources.snippet(token.span))
+                            .map_or(0, |defined| {
+                                let count = |spelled: &str| {
+                                    defined
+                                        .tokens
+                                        .iter()
+                                        .filter(|(token, _)| token == spelled)
+                                        .count()
+                                };
+                                count("(").saturating_sub(count(")"))
+                            });
                 }
                 _ => {}
             }
@@ -94,7 +103,7 @@ pub(super) fn evaluate(
             at += 1;
             continue;
         }
-        if opened_by_a_macro || opened_after_name.contains(&true) {
+        if opened_by_macros > 0 || opens_an_argument.contains(&true) {
             diagnostics.report(
                 Diagnostic::error("`defined` in what may be a macro's argument is not read")
                     .with_code(UNSUPPORTED_DIRECTIVE)
@@ -309,6 +318,29 @@ pub(super) fn evaluate(
 }
 
 /// Whether `token` is a name, which preprocessing makes of a keyword too.
+/// Whether `token`, spelled `spelled`, may stand for a function-like
+/// macro's name once it is replaced, so that a `(` after it may open that
+/// macro's arguments: a `)`, which may close a call that becomes one
+/// (`CALL(F)(...)`); a name that is no macro, or a function-like one; and an
+/// object-like macro whose list is empty, or ends in what may itself become
+/// one. Not an object-like macro ending in anything else, such as `!`, which
+/// becomes no call.
+fn may_name_a_call(token: Token, spelled: &str, reading: &Reading) -> bool {
+    if token.kind == TokenKind::Punct(Punct::RightParen) {
+        return true;
+    }
+    if !is_name(token) {
+        return false;
+    }
+    match reading.macros.get(spelled) {
+        None => true,
+        Some(defined) if defined.parameters.is_some() => true,
+        Some(defined) => defined.tokens.last().is_none_or(|(last, _)| {
+            last == ")" || last.starts_with(|c: char| c == '_' || c.is_ascii_alphabetic())
+        }),
+    }
+}
+
 fn is_name(token: Token) -> bool {
     matches!(
         token.kind,
