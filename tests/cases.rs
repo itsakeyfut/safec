@@ -88,11 +88,14 @@ cases! {
         // elsewhere, or the owner is no union (#1432). Mutations in
         // `Lowering::member_levels`: answer the written member's levels
         // alone, and `literal_read_as_writable` goes silent; stop at the
-        // first `.`, and `a_union_of_a_union` does; treat a struct as a
-        // union, and `a_struct_is_no_union` is reported; in
+        // first `.`, and `a_union_of_a_union` does; in
         // `Lowering::pointers_at`, read an aggregate member's own type, and
         // `a_const_struct_reader` is reported; take no element of an array,
-        // and `an_array_of_writable_pointers_reads_it` goes silent.
+        // and `an_array_of_writable_pointers_reads_it` goes silent; count a
+        // function pointer, and `a_function_pointer_reads_no_level` is
+        // reported. A struct's members never share bytes, so asking one as
+        // a union's would find no reader: `a_struct_is_no_union` holds the
+        // behaviour, not the check that skips it.
         a_union_member_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it
