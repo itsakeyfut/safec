@@ -10855,6 +10855,12 @@ cases! {
         // Mutation: leave the offsets as `lex_replacement` gives them, in
         // `Line::lexed`; the run panics.
         a_u_feff_before_a_directive_s_hash_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // `_Pragma("<U+FEFF>once")` is no `#pragma once` to `clang`, which
+        // reads the U+FEFF as part of the name and ignores the pragma, so
+        // the header is read twice and frees `p` twice. Found by review.
+        // Mutation: leave the dropped U+FEFF as no token, in `Line::lexed`;
+        // the header is read once and the case exits 0.
+        a_u_feff_before_a_pragma_s_name_is_no_pragma_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A null directive, `#` or `%:` with nothing after it but white
         // space, has no effect (C17 6.10.7), and `clang` builds this; it
         // was refused as a directive not read. Found by the differential

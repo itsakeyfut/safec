@@ -163,18 +163,30 @@ impl Line {
         // A file drops a leading U+FEFF as it is made, so the tokens count
         // from past it while `text` still holds it: counted from its start,
         // a U+FEFF before a `#` put every offset inside a character and
-        // panicked. Each is moved back by what was dropped; the U+FEFF stays
-        // in `text` before the first token, a character no token begins.
-        // Found by the hunt before #1375 closed.
+        // panicked. Each is moved back by what was dropped, and the U+FEFF
+        // is a token of its own, a character no token begins, as `clang`
+        // reads one as part of the name after it: left as no token,
+        // `_Pragma("<U+FEFF>once")`'s name read as `once` where `clang`
+        // ignores it, and a header included twice was read once. Found by
+        // the hunt before #1375 closed, and the second by review.
         let dropped = text.len() - scratch.file(file).contents().len();
-        let tokens = lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new())
+        let mark = (dropped > 0).then_some(Lexed {
+            kind: TokenKind::Unknown,
+            start: 0,
+            end: dropped,
+        });
+        let tokens = mark
             .into_iter()
-            .filter(|token| !token.is_eof())
-            .map(|token| Lexed {
-                kind: token.kind,
-                start: token.span.start() as usize + dropped,
-                end: token.span.end() as usize + dropped,
-            })
+            .chain(
+                lex_replacement(file, scratch.file(file), &mut DiagnosticSink::new())
+                    .into_iter()
+                    .filter(|token| !token.is_eof())
+                    .map(|token| Lexed {
+                        kind: token.kind,
+                        start: token.span.start() as usize + dropped,
+                        end: token.span.end() as usize + dropped,
+                    }),
+            )
             // White space outside ASCII is white space to `clang`, which
             // warns of it (`-Wunicode-whitespace`), and the lexer leaves it
             // as characters no token can begin. Kept, `#pragma pack` and a

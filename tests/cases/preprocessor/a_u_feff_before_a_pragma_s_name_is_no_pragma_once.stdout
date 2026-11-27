@@ -1,0 +1,62 @@
+Target "x86_64-pc-windows-msvc"
+Function a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *" "p"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:4:14 generated
+    Call a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:4:14 written "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:4:14 generated
+    Operation a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:5:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:5:9 written "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:5:9 generated
+    Operation a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:6:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:6:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:5:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 generated
+    Call a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 written "free" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 generated
+    ArgumentsEvaluated a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 generated
+    Call a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 written "free" "bb6"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 generated
+    Operation a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:10:12 generated
+    Return
