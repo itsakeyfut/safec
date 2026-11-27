@@ -1,5 +1,10 @@
 Target "x86_64-pc-windows-msvc"
-Function a_const_compound_literal_is_read_only.c:6:5 "main"
+Function a_const_compound_literal_is_read_only.c:1:7 "memchr" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "unsigned long long" parameter "n"
+Function a_const_compound_literal_is_read_only.c:8:5 "main"
   Local "_0" "int" return
   Local "_1" "union #0" "u"
   Local "_2" "union #0 *"
@@ -15,113 +20,205 @@ Function a_const_compound_literal_is_read_only.c:6:5 "main"
   Local "_12" "union #0 *"
   Local "_13" "int **"
   Block "bb0" entry
-    Operation a_const_compound_literal_is_read_only.c:6:5 generated
+    Operation a_const_compound_literal_is_read_only.c:8:5 generated
       Destination "_0"
       Use
         Constant 0
-    Operation a_const_compound_literal_is_read_only.c:8:5 generated
+    Operation a_const_compound_literal_is_read_only.c:10:5 generated
       Destination "_2"
       Address
         Place "_1"
-    Operation a_const_compound_literal_is_read_only.c:8:5 written
+    Operation a_const_compound_literal_is_read_only.c:10:5 written
       Destination "_3"
       Address
         Place "_2"
           Deref
             Field
               Member 0
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_5"
       Address
         Place "_4"
-    Call a_const_compound_literal_is_read_only.c:8:11 initialized "memset" "bb1"
+    Call a_const_compound_literal_is_read_only.c:10:11 initialized "memset" "bb1"
       Copy "_5"
       Constant 0
       Constant 8
   Block "bb1"
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_6"
       Address
         Place "_4"
           Index
             Constant 0
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_7"
       Binary "Add"
         Copy "_6"
         Constant 0
-    Operation a_const_compound_literal_is_read_only.c:8:11 initialized
+    Operation a_const_compound_literal_is_read_only.c:10:11 initialized
       Destination "_7"
         Deref
       Use
         Constant 1
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_8"
       Address
         Place "_4"
           Index
             Constant 0
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_9"
       Binary "Add"
         Copy "_8"
         Constant 1
-    Operation a_const_compound_literal_is_read_only.c:8:11 initialized
+    Operation a_const_compound_literal_is_read_only.c:10:11 initialized
       Destination "_9"
         Deref
       Use
         Constant 2
-    Operation a_const_compound_literal_is_read_only.c:8:11 generated
+    Operation a_const_compound_literal_is_read_only.c:10:11 generated
       Destination "_10"
       Address
         Place "_4"
           Index
             Constant 0
-    Operation a_const_compound_literal_is_read_only.c:8:5 written
+    Operation a_const_compound_literal_is_read_only.c:10:5 written
       Destination "_3"
         Deref
       Use
         Copy "_10"
-    Sequenced a_const_compound_literal_is_read_only.c:8:5 generated
-    Operation a_const_compound_literal_is_read_only.c:9:14 generated
+    Sequenced a_const_compound_literal_is_read_only.c:10:5 generated
+    Operation a_const_compound_literal_is_read_only.c:11:14 generated
       Destination "_12"
       Address
         Place "_1"
-    Operation a_const_compound_literal_is_read_only.c:9:14 written
+    Operation a_const_compound_literal_is_read_only.c:11:14 written
       Destination "_13"
       Address
         Place "_12"
           Deref
             Field
               Member 1
-    Operation a_const_compound_literal_is_read_only.c:9:10 written
+    Operation a_const_compound_literal_is_read_only.c:11:10 written
       Destination "_11"
       Use
         Copy "_13"
           Deref
-    Sequenced a_const_compound_literal_is_read_only.c:9:14 generated
-    Branch a_const_compound_literal_is_read_only.c:10:9 written "bb2" "bb3"
+    Sequenced a_const_compound_literal_is_read_only.c:11:14 generated
+    Branch a_const_compound_literal_is_read_only.c:12:9 written "bb2" "bb3"
       Copy "_11"
   Block "bb2"
-    Sequenced a_const_compound_literal_is_read_only.c:10:9 generated
-    Operation a_const_compound_literal_is_read_only.c:11:9 written
+    Sequenced a_const_compound_literal_is_read_only.c:12:9 generated
+    Operation a_const_compound_literal_is_read_only.c:13:9 written
       Destination "_11"
         Deref
       Use
         Constant 3
-    Sequenced a_const_compound_literal_is_read_only.c:11:9 generated
+    Sequenced a_const_compound_literal_is_read_only.c:13:9 generated
     Goto "bb4"
   Block "bb3"
-    Sequenced a_const_compound_literal_is_read_only.c:10:9 generated
+    Sequenced a_const_compound_literal_is_read_only.c:12:9 generated
     Goto "bb4"
   Block "bb4"
-    Operation a_const_compound_literal_is_read_only.c:13:5 written
+    Operation a_const_compound_literal_is_read_only.c:15:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_const_compound_literal_is_read_only.c:13:12 generated
+    Sequenced a_const_compound_literal_is_read_only.c:15:12 generated
     Return
-Function a_const_compound_literal_is_read_only.c:8:11 "memset" declared
+Function a_const_compound_literal_is_read_only.c:18:5 "through_a_library_call"
+  Local "_0" "int" return
+  Local "_1" "char *" "q"
+  Local "_2" "char[2]"
+  Local "_3" "char (*)[2]"
+  Local "_4" "char *"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Local "_7" "char *"
+  Local "_8" "char *"
+  Local "_9" "void *"
+  Block "bb0" entry
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_3"
+      Address
+        Place "_2"
+    Call a_const_compound_literal_is_read_only.c:19:22 initialized "memset" "bb1"
+      Copy "_3"
+      Constant 0
+      Constant 2
+  Block "bb1"
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_4"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 0
+    Operation a_const_compound_literal_is_read_only.c:19:22 initialized
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_6"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_const_compound_literal_is_read_only.c:19:22 initialized
+      Destination "_7"
+        Deref
+      Use
+        Constant 2
+    Operation a_const_compound_literal_is_read_only.c:19:22 generated
+      Destination "_8"
+      Address
+        Place "_2"
+          Index
+            Constant 0
+    ArgumentsEvaluated a_const_compound_literal_is_read_only.c:19:15 generated
+    Call a_const_compound_literal_is_read_only.c:19:15 written "memchr" "bb2"
+      Destination "_9"
+      Copy "_8"
+      Constant 2
+      Constant 2
+  Block "bb2"
+    Operation a_const_compound_literal_is_read_only.c:19:11 written
+      Destination "_1"
+      Use
+        Copy "_9"
+    Sequenced a_const_compound_literal_is_read_only.c:19:15 generated
+    Branch a_const_compound_literal_is_read_only.c:20:9 written "bb3" "bb4"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_const_compound_literal_is_read_only.c:20:9 generated
+    Operation a_const_compound_literal_is_read_only.c:21:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 3
+    Sequenced a_const_compound_literal_is_read_only.c:21:9 generated
+    Goto "bb5"
+  Block "bb4"
+    Sequenced a_const_compound_literal_is_read_only.c:20:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_const_compound_literal_is_read_only.c:23:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_const_compound_literal_is_read_only.c:23:12 generated
+    Return
+Function a_const_compound_literal_is_read_only.c:10:11 "memset" declared
   Local "_0" "void *" return
   Local "_1" "void *" parameter
   Local "_2" "int" parameter

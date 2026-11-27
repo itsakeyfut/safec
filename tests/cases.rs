@@ -62,9 +62,11 @@ cases! {
         a_compound_literal_is_a_local_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `const` compound literal is storage the program may not modify,
         // as a `const` local is, however a pointer to it lost the
-        // qualifier: `SC0417` at the write through the union (#1243
-        // review). Mutation: mark nothing read-only in
-        // `Lowering::compound`; the write is silent.
+        // qualifier: `SC0417` at the write through the union and at the
+        // one through what `memchr` returned (#1243 review). Mutation: mark
+        // neither the local read-only nor its const levels in
+        // `Lowering::compound`; both writes are silent. Either marking
+        // alone still finds both, as a declared local's does.
         a_const_compound_literal_is_read_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it
@@ -9069,9 +9071,11 @@ cases! {
         // `Parser::compound_literal`; this panics.
         a_malformed_compound_literal_is_refused: ["--emit", "ast"],
         // One under `sizeof` is not evaluated, so a block's `static` may be
-        // sized by it whatever its items are (C17 6.5.3.4 p2, #1243
-        // review). Mutation: walk into `sizeof` in `holds_compound`; this
-        // is `SC0317`.
+        // sized by it whatever its items are, or offset an address by its
+        // size (C17 6.5.3.4 p2, #1243 review). Mutations: walk into
+        // `sizeof` in `holds_compound`, and `offset` is `SC0317`; hold a
+        // block's items as a file scope's in
+        // `Checker::check_static_initializers`, and `n` is.
         a_compound_literal_under_sizeof_is_a_constant: ["--emit", "ast"],
         // `[i] value` is GNU's older spelling of `[i] = value`, which
         // `clang` reads: this compiler's gap, not a syntax error (#1242

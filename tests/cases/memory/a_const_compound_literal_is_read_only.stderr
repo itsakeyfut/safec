@@ -1,7 +1,27 @@
 error[SC0417]: this may write storage the program may not modify
-    ╭─[ a_const_compound_literal_is_read_only.c:11:9 ]
+    ╭─[ a_const_compound_literal_is_read_only.c:13:9 ]
     │
- 11 │         *q = 3;
+ 13 │         *q = 3;
+    │         ───┬──  
+    │            ╰──── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this may reach outside the object `q` points at
+    ╭─[ a_const_compound_literal_is_read_only.c:21:9 ]
+    │
+ 21 │         *q = 3;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_const_compound_literal_is_read_only.c:21:9 ]
+    │
+ 21 │         *q = 3;
     │         ───┬──  
     │            ╰──── a `const` object or a string literal may be here
 ────╯
