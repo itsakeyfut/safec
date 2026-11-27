@@ -197,7 +197,7 @@ const GROUPS: &[&str] = &["compiled", "skipped", "nested"];
 /// same groups. A refusal agrees with `clang`, as ADR-0134 allows, so this
 /// is what says how much is read rather than refused: a change that refuses
 /// more, or reads more, moves it, and is stated by updating it.
-const BUILT_BY_BOTH: usize = 1067;
+const BUILT_BY_BOTH: usize = 1040;
 
 /// The plain spellings safec refuses though `clang` builds them, each with
 /// the issue that reads it.

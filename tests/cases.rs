@@ -9925,11 +9925,33 @@ cases! {
         // comment, after a `#` that is then a null directive with `else`
         // skipped text, after a `#define`. This opens a line only at a line
         // feed, so each exited 0. Refused at the first in the file,
-        // wherever it stands. Found by a hunt. Mutation: skip `lone_carriage_return`;
+        // wherever it stands. Found by a hunt. Mutation: skip the carriage return in `unread`;
         // each exits 0 with nothing said.
         a_carriage_return_alone_in_a_line_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_carriage_return_alone_after_a_hash_in_a_skipped_group_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_carriage_return_alone_after_a_define_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A NUL between the `\` and the newline of a splice that closes a
+        // block comment is skipped by `clang`, which closes the comment and
+        // compiles the second `free`; read as no splice, this took it for
+        // the comment's and exited 0. Found by review. Refused at the NUL,
+        // as a NUL is wherever it stands (ADR-0135). Mutation: drop the NUL
+        // from `unread`; the case exits 0 with nothing said.
+        a_nul_in_the_splice_that_closes_a_block_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A NUL in a line comment, and one in a string, where `clang`
+        // reads it as nothing special, is refused too, as every place it
+        // stands is (ADR-0135). A file each, since only the first in a file
+        // is reported. Mutation: drop the NUL from `unread`; each exits 0
+        // with nothing said.
+        a_nul_in_a_line_comment_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_nul_in_a_string_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A NUL no file holds: `#line`'s name decodes `\0` into one, and
+        // `clang` ends `__FILE__` there, so `buf` is 2 bytes to it and the
+        // write to `buf[5]` is out of bounds. Here `__FILE__` held the NUL,
+        // `buf` was 10 bytes and the case exited 0. Found by review. The
+        // expansion is refused at its NUL, as every text lexed is asked
+        // (ADR-0135). Mutation: drop `report_unread` from `lex_replacement`;
+        // the case exits 0 with nothing said.
+        a_nul_a_line_directive_s_name_decodes_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A byte-order mark in mid-line is three bytes of nothing on a
         // terminal, so its marker was drawn under the `1;` after it. It is
         // drawn as U+FFFD with the marker under that. Mutation: drop
