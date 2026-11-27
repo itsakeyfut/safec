@@ -273,7 +273,9 @@ pub struct Declaration {
     ///
     /// The same as [`Declaration::written`] except for a parameter, which
     /// 6.7.6.3 p7 adjusts from an array of `T` to a pointer to `T` and p8
-    /// from a function to a pointer to it. Adjusting here rather than where
+    /// from a function to a pointer to it, and for an array of character
+    /// type and unknown size a string literal initializes, which 6.7.9 p22
+    /// completes with the literal's length here and not in `written`. Adjusting here rather than where
     /// each reader asks is what makes a reader that forgets impossible: the
     /// name's type in the body, a call's arguments, whether two declarations
     /// agree and the lowering's local all read this field.

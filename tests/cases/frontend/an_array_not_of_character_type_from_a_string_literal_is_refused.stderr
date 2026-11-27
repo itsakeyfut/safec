@@ -1,10 +1,20 @@
 error[SC0310]: `s` is not an array of character type, and only one is initialized from a string literal
    ╭─[ an_array_not_of_character_type_from_a_string_literal_is_refused.c:2:9 ]
    │
- 2 │     int s[3] = "ab";
-   │         ┬      ──┬─  
-   │         ╰──────────── declared as `int[3]`
-   │                  │   
-   │                  ╰─── this initializer
+ 2 │     int s[] = "ab";
+   │         ┬     ──┬─  
+   │         ╰─────────── declared as `int[]`
+   │                 │   
+   │                 ╰─── this initializer
+───╯
+  = note: C17 6.7.9 p14 and p16
+error[SC0310]: `rows` is not an array of character type, and only one is initialized from a string literal
+   ╭─[ an_array_not_of_character_type_from_a_string_literal_is_refused.c:3:10 ]
+   │
+ 3 │     char rows[2][3] = "ab";
+   │          ──┬─         ──┬─  
+   │            ╰──────────────── declared as `char[2][3]`
+   │                         │   
+   │                         ╰─── this initializer
 ───╯
   = note: C17 6.7.9 p14 and p16

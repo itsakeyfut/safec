@@ -8943,21 +8943,30 @@ cases! {
         // nothing is reported.
         a_second_storage_class_is_refused: ["--emit", "ast"],
         // C17 6.7.9 p14 lets a string literal initialize an array of
-        // character type only, and p16 asks a list of any other (#1244).
+        // character type only, and p16 asks a list of any other, an array of
+        // arrays included (#1244). `s` keeps the `[]` it was written with.
         // Mutation: take every element type as a character in
-        // `Checker::check_initialized`; nothing is reported.
+        // `Checker::check_initialized`; nothing is reported for `s`.
         an_array_not_of_character_type_from_a_string_literal_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.9 p2 and p14: a literal's characters, its terminating zero
         // aside, have to fit, so `fits` is read and `over` refused (#1244).
         // Mutation: count the terminating zero in `Checker::check_initialized`;
         // `fits` is refused too.
         a_string_literal_longer_than_its_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `{ "ab" }` initializes the first row by brace elision (C17 6.7.9
-        // p20), which waits for braced initializers (#1241), so it is this
-        // compiler's gap and not a constraint violation (#1244). Mutation:
-        // drop the aggregate element's arm in `Checker::check_initialized`;
-        // it is refused under `SC0310` as no array of character type.
-        an_array_of_arrays_from_a_string_literal_is_not_built_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `{ "ab" }` for a struct, an array of pointers or an array of
+        // arrays initializes their first member or element (C17 6.7.9 p17,
+        // p20), so its braces are not the literal's own and the list waits
+        // for braced initializers (#1241): `SC0203`, not a constraint
+        // violation (#1244 review). Mutation: answer `true` in
+        // `Parser::takes_braced_literal`; each is refused under `SC0310` or
+        // `SC0302`.
+        a_braced_list_beginning_with_a_string_literal_is_not_read_yet: ["--emit", "ast"],
+        // `char s[5]; char s[] = "ab";` is one `char[5]` by C17 6.2.7 p3,
+        // which this compiler does not build, so it is its gap and not a
+        // conflict; `t`, with no length before, is read (#1244 review).
+        // Mutation: drop the counted arm in
+        // `Checker::check_redeclared_lengths`; `s` says `SC0313`.
+        an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet: ["--emit", "ast"],
         // Translation phase 6 joins adjacent literals (C17 5.1.1.2 p1).
         // Mutation: read one token in `Parser::string`; the second is a
         // syntax error.
