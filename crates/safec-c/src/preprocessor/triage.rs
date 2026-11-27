@@ -310,6 +310,12 @@ pub(super) fn triage(line: &Line, ended: bool, skipping: bool) -> Disposition<'_
             )],
         ));
     }
+    // A null directive has no effect (C17 6.10.7), so it is passed over in
+    // a compiled group as in a skipped one; it was refused as a directive
+    // not read. Found by the differential corpus of directive lines.
+    if line.null() {
+        return Disposition::PassedOver;
+    }
     if directive::owns(line) {
         return Disposition::Directive;
     }
@@ -448,6 +454,7 @@ mod tests {
     /// asked, send a pragma to the macro readers, or read an `#include` in a
     /// skipped group; an assertion fails. Or read the carriage return that
     /// ends a CRLF line as a character after its `#`; the `#\r` rows fail.
+    /// Or refuse a null directive in a compiled group; the `#` rows fail.
     #[test]
     fn each_line_goes_where_its_kind_is_read() {
         for (text, compiled, skipped) in [
@@ -470,8 +477,10 @@ mod tests {
             ("#endif\\N{NO-BREAK SPACE}", "refused", "refused"),
             ("\0#endif", "refused", "refused"),
             ("#endif\r", "conditional", "conditional"),
-            ("#\r", "refused", "passed over"),
-            ("# \t\r", "refused", "passed over"),
+            ("#", "passed over", "passed over"),
+            ("%: ", "passed over", "passed over"),
+            ("#\r", "passed over", "passed over"),
+            ("# \t\r", "passed over", "passed over"),
         ] {
             assert_eq!(kind(text, false), compiled, "{text:?} compiled");
             assert_eq!(kind(text, true), skipped, "{text:?} skipped");

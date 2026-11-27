@@ -300,6 +300,12 @@ impl Line {
         }
     }
 
+    /// Whether the line is a null directive, a `#` or `%:` with nothing
+    /// after it but white space, which has no effect (C17 6.10.7).
+    pub(super) fn null(&self) -> bool {
+        matches!(self.tokens.as_slice(), [only] if only.kind == TokenKind::Punct(Punct::Hash))
+    }
+
     /// Where the line's first `#` is, as a byte range of its text: at its
     /// start, or past the characters that made the lexer read the line as a
     /// directive, where [`Line::prefixed`] holds.

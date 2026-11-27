@@ -10851,6 +10851,12 @@ cases! {
         // object-like macro for a call's name; or never close what a macro
         // opened; the case is refused.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A null directive, `#` or `%:` with nothing after it but white
+        // space, has no effect (C17 6.10.7), and `clang` builds this; it
+        // was refused as a directive not read. Found by the differential
+        // corpus of directive lines. Mutation: refuse a null directive in
+        // a compiled group, in `triage`; the case is refused.
+        a_null_directive_in_a_compiled_group_has_no_effect: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below
         // is `NOTE`'s body, or the skipped `#define`'s, and each function

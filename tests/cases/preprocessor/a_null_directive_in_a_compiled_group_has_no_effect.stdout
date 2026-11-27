@@ -1,0 +1,4 @@
+Function a_null_directive_in_a_compiled_group_has_no_effect.c:4:1 "main" "int (void)"
+  Compound a_null_directive_in_a_compiled_group_has_no_effect.c:4:16
+    Return a_null_directive_in_a_compiled_group_has_no_effect.c:4:18
+      Number a_null_directive_in_a_compiled_group_has_no_effect.c:4:25 "0"
