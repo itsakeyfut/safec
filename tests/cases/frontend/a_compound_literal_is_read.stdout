@@ -9,9 +9,16 @@ Declaration a_compound_literal_is_read.c:4:1 "g" "int *"
 Function a_compound_literal_is_read.c:5:1 "f" "int (void)"
   Compound a_compound_literal_is_read.c:5:13
     Return a_compound_literal_is_read.c:6:5
-      Member a_compound_literal_is_read.c:6:12 "." "b"
-        Compound a_compound_literal_is_read.c:6:13 "struct S"
-          InitializerList a_compound_literal_is_read.c:6:23
-            Designated a_compound_literal_is_read.c:6:24
-              Member a_compound_literal_is_read.c:6:25 "b"
-              Number a_compound_literal_is_read.c:6:29 "1"
+      Binary a_compound_literal_is_read.c:6:12 "+"
+        Member a_compound_literal_is_read.c:6:12 "." "b"
+          Compound a_compound_literal_is_read.c:6:13 "struct S"
+            InitializerList a_compound_literal_is_read.c:6:23
+              Designated a_compound_literal_is_read.c:6:24
+                Member a_compound_literal_is_read.c:6:25 "b"
+                Number a_compound_literal_is_read.c:6:29 "1"
+        SizeofExpr a_compound_literal_is_read.c:6:37
+          Compound a_compound_literal_is_read.c:6:37 "int[3]"
+            InitializerList a_compound_literal_is_read.c:6:51
+              Number a_compound_literal_is_read.c:6:52 "1"
+              Number a_compound_literal_is_read.c:6:55 "2"
+              Number a_compound_literal_is_read.c:6:58 "3"

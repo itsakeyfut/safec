@@ -9029,9 +9029,10 @@ cases! {
         a_range_designator_is_not_read_yet: ["--emit", "ast"],
         // A compound literal is read as an unnamed object of its type with
         // its list under it, at file scope and in a block, an operand of
-        // the postfix operators after it (C17 6.5.2.5, #1243). Mutation:
-        // read no `{` after a type name in `Parser::cast`; this is a
-        // syntax error.
+        // the postfix operators after it, and under `sizeof` without
+        // parentheses of its own (C17 6.5.2.5, #1243). Mutations: read no
+        // `{` after a type name in `Parser::cast`, or after `sizeof (T)` in
+        // `Parser::unary`; each is a syntax error.
         a_compound_literal_is_read: ["--emit", "ast"],
         // A compound literal in a block has automatic storage, so its
         // address is no constant for a block's `static`; one of type
