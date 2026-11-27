@@ -1,0 +1,8 @@
+error[SC0103]: a Ctrl-Z is not read
+   ╭─[ <command line>:1:12 ]
+   │
+ 1 │ #define X 1?+2
+   │            ┬  
+   │            ╰── this Ctrl-Z
+───╯
+  = note: `clang` targeting MSVC reads it in code as the end of the file

@@ -9952,6 +9952,25 @@ cases! {
         // (ADR-0135). Mutation: drop `report_unread` from `lex_replacement`;
         // the case exits 0 with nothing said.
         a_nul_a_line_directive_s_name_decodes_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A Ctrl-Z after `#pragma once`: `clang` targeting MSVC ends the
+        // file there and declares nothing, where this declared `in_a`.
+        // Found by the differential corpus of directive lines. Refused at
+        // the Ctrl-Z, as it is wherever it stands (ADR-0135). Mutation:
+        // drop the Ctrl-Z from `unread`; the case declares `in_a` and exits
+        // 0.
+        a_ctrl_z_after_pragma_once_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A Ctrl-Z in a block comment, an ordinary character to `clang`
+        // there, is refused too: this lexer does not know where `clang`
+        // reads it specially, nor for which target (ADR-0135). Mutation:
+        // drop the Ctrl-Z from `unread`; the case exits 0 with nothing said.
+        a_ctrl_z_in_a_block_comment_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A Ctrl-Z in a `-D` value: `clang` targeting MSVC ends its
+        // command-line buffer there, so `-DY=3` after it defines nothing and
+        // `y_undefined` is declared, where this defined `Y` and declared
+        // `y_defined`. Found by review. The command line is lexed as a file
+        // is, so it is refused at the Ctrl-Z (ADR-0135). Mutation: drop the
+        // Ctrl-Z from `unread`; the case declares `y_defined` and exits 0.
+        a_ctrl_z_in_a_command_line_definition_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc", "-DX=1\u{1a}+2", "-DY=3"],
         // A byte-order mark in mid-line is three bytes of nothing on a
         // terminal, so its marker was drawn under the `1;` after it. It is
         // drawn as U+FFFD with the marker under that. Mutation: drop

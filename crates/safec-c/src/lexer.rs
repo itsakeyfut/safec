@@ -116,6 +116,13 @@ enum Unread {
     /// Found by review. It does not skip it there in a line comment, and
     /// each place it stands was a rule of its own.
     Nul,
+    /// A Ctrl-Z, 0x1A. `clang` targeting MSVC reads one in code as the end
+    /// of the file, and this read on, so a declaration after `#pragma once`
+    /// and a Ctrl-Z was compiled here and not by `clang`. Found by the
+    /// differential corpus of directive lines. In a comment or a string, or
+    /// for another target, it is an ordinary character to `clang`; refused
+    /// there too, as this lexer does not know the target.
+    ControlZ,
 }
 
 impl Unread {
@@ -125,6 +132,7 @@ impl Unread {
                 "a carriage return with no line feed after it is not read"
             }
             Unread::Nul => "a NUL is not read",
+            Unread::ControlZ => "a Ctrl-Z is not read",
         }
     }
 
@@ -132,6 +140,7 @@ impl Unread {
         match self {
             Unread::LoneCarriageReturn => "this carriage return",
             Unread::Nul => "this NUL",
+            Unread::ControlZ => "this Ctrl-Z",
         }
     }
 
@@ -145,6 +154,7 @@ impl Unread {
                 "`clang` reads it as white space, and in a splice skips it in some places and \
                  not others"
             }
+            Unread::ControlZ => "`clang` targeting MSVC reads it in code as the end of the file",
         }
     }
 }
@@ -157,7 +167,8 @@ fn unread(text: &str) -> Vec<(usize, Unread)> {
         .find(|&at| !text[at + 1..].starts_with('\n'))
         .map(|at| (at, Unread::LoneCarriageReturn));
     let nul = text.find('\0').map(|at| (at, Unread::Nul));
-    let mut found: Vec<_> = [lone, nul].into_iter().flatten().collect();
+    let control_z = text.find('\u{1a}').map(|at| (at, Unread::ControlZ));
+    let mut found: Vec<_> = [lone, nul, control_z].into_iter().flatten().collect();
     found.sort_unstable_by_key(|&(at, _)| at);
     found
 }
@@ -1255,8 +1266,12 @@ mod tests {
     #[test]
     fn the_first_of_each_byte_clang_reads_specially_is_reported_in_order() {
         assert_eq!(
-            unread("a\0b\rc\0d\re"),
-            [(1, Unread::Nul), (3, Unread::LoneCarriageReturn)]
+            unread("a\u{1a}b\0c\rd\0e\rf\u{1a}g"),
+            [
+                (1, Unread::ControlZ),
+                (3, Unread::Nul),
+                (5, Unread::LoneCarriageReturn)
+            ]
         );
     }
 

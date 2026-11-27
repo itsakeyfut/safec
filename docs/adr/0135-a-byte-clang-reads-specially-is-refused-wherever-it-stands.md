@@ -59,7 +59,8 @@ skipped in the lexer:
 * `a_nul_in_the_splice_that_closes_a_block_comment_is_refused`,
   `a_nul_in_a_line_comment_is_refused` and `a_nul_in_a_string_is_refused`
   (#1389);
-* the Ctrl-Z case that lands with #1383.
+* `a_ctrl_z_after_pragma_once_is_refused` and
+  `a_ctrl_z_in_a_block_comment_is_refused` (#1383).
 
 In each, the mutation makes the case exit 0 with nothing said. In
 `tests/directives.rs`, the NUL and Ctrl-Z rows of the differential corpus
@@ -74,7 +75,9 @@ become refusals, so `KNOWN` holds none of them.
   these bytes anywhere, a comment or a string included. A NUL in a string,
   which `clang` keeps with a warning, is one.
 * Bad, because a lone carriage return as a file's last byte, which moves
-  no line, is refused too.
+  no line, is refused too, and so is a Ctrl-Z there, the end-of-file mark
+  old DOS tools write, which `clang` targeting MSVC reads silently as the
+  end it already is.
 * What would reverse this: real code holding one of these bytes, which
   would make the refusal cost more than reading it as `clang` does. The
   reading would then go to the one place that byte stands in that code,
@@ -109,6 +112,5 @@ become refusals, so `KNOWN` holds none of them.
 
 `Unread` and `unread` in `crates/safec-c/src/lexer.rs` hold the bytes,
 each variant's doc comment the place its byte was found. #1372 added the
-carriage return and #1389 the NUL, under #1375; #1383 is to add the
-Ctrl-Z. ADR-0134 is the same choice made for the start of a directive
+carriage return, #1389 the NUL, and #1383 the Ctrl-Z, under #1375. ADR-0134 is the same choice made for the start of a directive
 line.
