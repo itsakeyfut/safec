@@ -10848,6 +10848,13 @@ cases! {
         // line's tokens (#1386). Mutation: refuse a call whose arguments
         // hold a token of any file but the line's; the case is refused.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A U+FEFF before a directive's `#`, in a skipped group and alone
+        // before a null directive: each panicked, the line's tokens counted
+        // from past a U+FEFF its text still held. Refused, as a character
+        // before a `#` is (ADR-0134). Found by the hunt before #1375 closed.
+        // Mutation: leave the offsets as `lex_replacement` gives them, in
+        // `Line::lexed`; the run panics.
+        a_u_feff_before_a_directive_s_hash_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A null directive, `#` or `%:` with nothing after it but white
         // space, has no effect (C17 6.10.7), and `clang` builds this; it
         // was refused as a directive not read. Found by the differential
