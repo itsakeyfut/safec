@@ -1,0 +1,184 @@
+Target "x86_64-pc-windows-msvc"
+Function a_const_local_is_initialized_from_a_braced_list.c:1:5 "initialized"
+  Local "_0" "int" return
+  Local "_1" "int[16]" "a"
+  Local "_2" "int (*)[16]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "struct #0" "q"
+  Local "_6" "struct #0 *"
+  Local "_7" "int **"
+  Local "_8" "struct #0 *"
+  Local "_9" "int *"
+  Local "_10" "int *"
+  Local "_11" "struct #0 *"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Block "bb0" entry
+    Operation a_const_local_is_initialized_from_a_braced_list.c:2:15 generated
+      Destination "_2"
+      Address
+        Place "_1"
+    Call a_const_local_is_initialized_from_a_braced_list.c:2:15 initialized "memset" "bb1"
+      Copy "_2"
+      Constant 0
+      Constant 64
+  Block "bb1"
+    Operation a_const_local_is_initialized_from_a_braced_list.c:2:15 generated
+      Destination "_3"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:2:15 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:2:15 initialized
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:2:23 generated
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 generated
+      Destination "_6"
+      Address
+        Place "_5"
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 generated
+      Destination "_7"
+      Address
+        Place "_6"
+          Deref
+            Field
+              Member 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 initialized
+      Destination "_7"
+        Deref
+      Use
+        Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 generated
+      Destination "_8"
+      Address
+        Place "_5"
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 generated
+      Destination "_9"
+      Address
+        Place "_8"
+          Deref
+            Field
+              Member 1
+    Operation a_const_local_is_initialized_from_a_braced_list.c:6:7 initialized
+      Destination "_9"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:6:11 generated
+    Operation a_const_local_is_initialized_from_a_braced_list.c:7:12 generated
+      Destination "_10"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:7:19 generated
+      Destination "_11"
+      Address
+        Place "_5"
+    Operation a_const_local_is_initialized_from_a_braced_list.c:7:19 written
+      Destination "_12"
+      Address
+        Place "_11"
+          Deref
+            Field
+              Member 1
+    Operation a_const_local_is_initialized_from_a_braced_list.c:7:12 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_10"
+          Deref
+        Copy "_12"
+          Deref
+    Operation a_const_local_is_initialized_from_a_braced_list.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:7:12 generated
+    Return
+Function a_const_local_is_initialized_from_a_braced_list.c:10:5 "written"
+  Local "_0" "int" return
+  Local "_1" "int[2]" "a"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Block "bb0" entry
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 initialized
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 generated
+      Destination "_4"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 generated
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_const_local_is_initialized_from_a_braced_list.c:11:15 initialized
+      Destination "_5"
+        Deref
+      Use
+        Constant 2
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:11:22 generated
+    Operation a_const_local_is_initialized_from_a_braced_list.c:12:13 generated
+      Destination "_6"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:12:6 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Operation a_const_local_is_initialized_from_a_braced_list.c:12:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 3
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:12:5 generated
+    Operation a_const_local_is_initialized_from_a_braced_list.c:13:12 generated
+      Destination "_8"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_const_local_is_initialized_from_a_braced_list.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_const_local_is_initialized_from_a_braced_list.c:13:12 generated
+    Return
+Function a_const_local_is_initialized_from_a_braced_list.c:2:15 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "unsigned long long" parameter

@@ -10,8 +10,8 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
-    Ast, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Storage, Type, TypeId, spell_type,
+    Ast, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Initializer, Item,
+    Parameters, Stmt, StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::Diagnostic;
 use crate::token::Token;
@@ -230,8 +230,8 @@ fn dump_declarators(
         }
         dump_declaration(sources, ast, &declarator.declaration, out);
         dump_parameters(sources, ast, declarator.declaration.ty, depth + 1, out);
-        if let Some(init) = declarator.init {
-            dump_expr(sources, ast, init, depth + 1, out);
+        if let Some(init) = &declarator.init {
+            dump_initializer(sources, ast, init, depth + 1, out);
         }
     }
 
@@ -520,6 +520,27 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
 /// kind of thing. `Number` and `Identifier` echo the source, which is content
 /// and why they are quoted; an operator comes from `BinOp::as_str` and is
 /// this compiler's own word, so `a  +  b` still prints `"+"`.
+/// An initializer: its expression, or an `InitializerList` line with each
+/// item under it. A recursion, bounded by how deep the parser lets a list
+/// nest.
+fn dump_initializer(
+    sources: &SourceMap,
+    ast: &Ast,
+    init: &Initializer,
+    depth: usize,
+    out: &mut String,
+) {
+    match init {
+        Initializer::Expr(id) => dump_expr(sources, ast, *id, depth, out),
+        Initializer::List { items, span } => {
+            dump_node(sources, "InitializerList", *span, depth, out);
+            for item in items {
+                dump_initializer(sources, ast, item, depth + 1, out);
+            }
+        }
+    }
+}
+
 fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &mut String) {
     // Children are pushed in reverse, so that they come back off in the order
     // they were written. What that makes is a pre-order walk, the same one the

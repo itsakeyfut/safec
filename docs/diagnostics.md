@@ -47,7 +47,7 @@ records why the prefix is this one and what was rejected.
 |---|---|---|
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character, a token or a directive is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108`, `SC0109`, `SC0110`, `SC0111`, `SC0112`, `SC0113`, `SC0114`, `SC0115`, `SC0116`, `SC0117`, `SC0118`, `SC0119`, `SC0120`, `SC0121`, `SC0122` |
-| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207`, `SC0208` |
+| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0204`, `SC0205`, `SC0206`, `SC0207`, `SC0208`; `SC0203` retired |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318`, `SC0319`, `SC0320`, `SC0321`, `SC0322`, `SC0323` |
 | `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408`, `SC0409`, `SC0410`, `SC0411`, `SC0412`, `SC0413`, `SC0414`, `SC0415`, `SC0416`, `SC0417`, `SC0418`, `SC0419`, `SC0420`, `SC0421` |
 | `SC05xx` | lifetime | none yet |
@@ -792,9 +792,9 @@ rule that a code, once assigned, never changes, and it is the one time a
 diagnostic has moved to another `SC` code. It was taken because leaving them
 would have split one class across two codes, and a code exists so that a
 class can be searched for; what it costs is a suppression list that named
-`SC0201` for one of those two. Two refusals of valid C keep codes of their
-own: a braced initializer `SC0203`, and an annotation this compiler does not
-read `SC0205`.
+`SC0201` for one of those two. A refusal of valid C keeps a code of its own:
+an annotation this compiler does not read, `SC0205`. A braced initializer had
+`SC0203` until #1241 read it, and the number stays retired.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from

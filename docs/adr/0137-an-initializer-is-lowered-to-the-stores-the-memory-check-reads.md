@@ -46,9 +46,10 @@ For a static, `StaticInit` gains an aggregate: one entry per member or element, 
 
 ### Confirmation
 
-* Corpus cases of each form, built and run at `--safety off` and checked at `--safety memory`, land with #1241 to #1245. #1244's: `a_char_array_takes_its_length_and_bytes_from_a_string_literal` and `a_char_array_longer_than_its_string_literal_is_zero_filled` run; `a_const_char_array_from_a_string_literal_is_not_a_write` holds the initializing mark; `an_initializer_calls_no_memset_the_program_has` holds the compiler's own copy and fill.
-* A local with a pointer, initialized from `{0}`, gets no report. The mutation that zeroes it with a `memset` brings `SC0413` back.
-* A static table of string pointers builds, and its program prints what C17 gives.
+* Corpus cases of each form, built and run at `--safety off` and checked at `--safety memory`, land with #1241 to #1245. #1244's: `a_char_array_takes_its_length_and_bytes_from_a_string_literal` and `a_char_array_longer_than_its_string_literal_is_zero_filled` run; `a_const_char_array_from_a_string_literal_is_not_a_write` holds the initializing mark; `an_initializer_calls_no_memset_the_program_has` holds the compiler's own copy and fill. #1241's: `a_braced_initializer_fills_arrays_and_structs` and `a_static_holds_addresses_of_statics` run; `a_const_local_is_initialized_from_a_braced_list` holds the initializing mark for stores.
+* A local with a pointer, initialized from a list that does not name every scalar, gets no `SC0413`: `a_local_holding_pointers_is_initialized_one_scalar_at_a_time`. The mutation that zeroes it with a `memset` brings `SC0413` back.
+* A static table of string pointers builds, and its program reads what C17 gives: `a_static_holds_addresses_of_statics`.
+* Past the bound, a local holding a pointer is refused: `a_large_local_holding_a_pointer_is_not_initialized_yet`.
 * `E0004` at every reader of `StaticInit` holds the new variant: the printer, the interpreter and the backend.
 
 ### Consequences

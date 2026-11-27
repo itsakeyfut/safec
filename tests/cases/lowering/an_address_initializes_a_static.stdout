@@ -1,0 +1,21 @@
+Target "x86_64-pc-windows-msvc"
+Static "g" "int" external zero
+Static "p" "int *" external address "g" 0
+Static "a" "int[4]" external zero
+Static "third" "int *" external address "a" 8
+Static "last" "int *" external address "a" 12
+Static "s" "struct #0" external zero
+Static "y" "int *" external address "s" 4
+Function an_address_initializes_a_static.c:10:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:10:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation an_address_initializes_a_static.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_address_initializes_a_static.c:11:12 generated
+    Return

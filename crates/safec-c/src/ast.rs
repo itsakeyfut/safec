@@ -382,10 +382,59 @@ pub struct InitDeclarator {
     /// header and ends outside it. Nothing is made of it then, rather than a
     /// wider span that could hold another declarator's tokens.
     pub span: Option<Span>,
-    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
-    ///
-    /// A braced initializer is refused by the parser and never reaches here.
-    pub init: Option<ExprId>,
+    /// C17 6.7.9's `initializer`, if one was written.
+    pub init: Option<Initializer>,
+}
+
+/// C17 6.7.9's `initializer`: one expression, or a braced list of them.
+///
+/// A designation in a list is refused by the parser until #1242 reads it,
+/// so every item here stands where its position puts it (p17).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Initializer {
+    /// An `assignment-expression`.
+    Expr(ExprId),
+    /// `{ initializer-list }`, with a trailing `,` allowed and not kept.
+    List {
+        /// The items, in the order written.
+        items: Vec<Initializer>,
+        /// From the `{` through the `}`.
+        span: Span,
+    },
+}
+
+impl Initializer {
+    /// Where it is written.
+    pub fn span(&self, ast: &Ast) -> Span {
+        match self {
+            Self::Expr(id) => ast.expr(*id).span(),
+            Self::List { span, .. } => *span,
+        }
+    }
+
+    /// The expression it is, where it is one rather than a list.
+    pub fn expr(&self) -> Option<ExprId> {
+        match self {
+            Self::Expr(id) => Some(*id),
+            Self::List { .. } => None,
+        }
+    }
+
+    /// Every expression in it, in the order written, through every nested
+    /// list. A worklist rather than a recursion, as every walk of a tree
+    /// here is: the parser bounds how deep a list nests, but a reader
+    /// should not have to know that.
+    pub fn exprs(&self) -> Vec<ExprId> {
+        let mut found = Vec::new();
+        let mut work = vec![self];
+        while let Some(init) = work.pop() {
+            match init {
+                Self::Expr(id) => found.push(*id),
+                Self::List { items, .. } => work.extend(items.iter().rev()),
+            }
+        }
+        found
+    }
 }
 
 /// An operator with an operand on each side.

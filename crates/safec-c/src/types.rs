@@ -25,9 +25,10 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, BinOp, Declaration, EnumerationId, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator,
-    Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
+    Initializer, Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::initializer::{Fault, Shapes, initializes_whole};
 use crate::sema::Resolution;
 use safec_ir::ir::{Rank, Sign};
 use safec_ir::source::{SourceMap, Span};
@@ -930,14 +931,14 @@ impl Checker<'_> {
                     Storage::Static => in_a_block.push((declarators, false)),
                     Storage::Extern => {
                         for declarator in declarators {
-                            let Some(init) = declarator.init else {
+                            let Some(init) = &declarator.init else {
                                 continue;
                             };
                             diagnostics.report(
                                 Diagnostic::error("an `extern` in a block cannot be initialized")
                                     .with_code(INITIALIZED)
                                     .with_label(Label::primary(
-                                        ast.expr(init).span(),
+                                        init.span(ast),
                                         "this initializes it",
                                     ))
                                     .with_note(
@@ -950,10 +951,16 @@ impl Checker<'_> {
             }
         }
         for (declarators, file_scope) in at_file_scope.chain(in_a_block) {
-            for declarator in declarators {
-                let Some(init) = declarator.init else {
-                    continue;
-                };
+            // Each expression of a list is held to it as one alone is: what
+            // each initializes is a constant or an address (C17 6.7.9 p4).
+            let each = declarators.iter().flat_map(|declarator| {
+                declarator
+                    .init
+                    .iter()
+                    .flat_map(Initializer::exprs)
+                    .map(move |init| (declarator, init))
+            });
+            for (declarator, init) in each {
                 let declaration = &declarator.declaration;
                 // A function with an initializer is `INITIALIZED`'s, and no
                 // initializer would make it right.
@@ -1382,7 +1389,7 @@ impl Checker<'_> {
     /// nothing else refuses that length in a block, so calling it variable is
     /// the wrong reason given for a right refusal, where leaving it out would
     /// accept it in silence.
-    fn check_initialized(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+    fn check_initialized(&mut self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         let mut declared: Vec<&InitDeclarator> = Vec::new();
         for item in ast.items() {
             if let Item::Declaration { declarators, .. } = item {
@@ -1396,9 +1403,10 @@ impl Checker<'_> {
         }
 
         for declarator in declared {
-            let Some(init) = declarator.init else {
+            let Some(initializer) = &declarator.init else {
                 continue;
             };
+            let init_span = initializer.span(ast);
             let declaration = &declarator.declaration;
             let ty = declaration.ty;
             let name = declaration.name.unwrap_or(declaration.span);
@@ -1419,6 +1427,12 @@ impl Checker<'_> {
                     format!("`{called}` is a variable length array, which cannot be initialized"),
                     "C17 6.7.9 p3",
                 ),
+                // A braced list, for any object type: what each item
+                // initializes is `Checker::check_list`'s.
+                _ if initializer.expr().is_none() => {
+                    self.check_list(ast, ty, name, initializer, diagnostics);
+                    continue;
+                }
                 // p14 lets a string literal initialize an array of character
                 // type, and p2 forbids one longer than the array, its
                 // terminating zero aside: `char s[2] = "ab";` drops the zero.
@@ -1426,10 +1440,13 @@ impl Checker<'_> {
                 // when it was declared (`Parser::completed`).
                 Type::Array {
                     element, length, ..
-                } if matches!(ast.expr(init), Expr::String { .. }) => {
-                    let Expr::String {
+                } if initializer
+                    .expr()
+                    .is_some_and(|init| matches!(ast.expr(init), Expr::String { .. })) =>
+                {
+                    let Some(Expr::String {
                         length: literal, ..
-                    } = ast.expr(init)
+                    }) = initializer.expr().map(|init| ast.expr(init))
                     else {
                         unreachable!("matched as a string literal above")
                     };
@@ -1472,14 +1489,14 @@ impl Checker<'_> {
                 // p16: "the initializer for an object that has aggregate or
                 // union type shall be a brace-enclosed list of initializers",
                 // and p14 allows a string literal for an array of character
-                // type, which the arm above takes. A brace other than `{
-                // "ab" }` is refused by the parser (`SC0203`), so whatever
-                // initializer reaches here is neither. Every kind of
+                // type, which the arm above takes. A braced list is
+                // `Checker::check_list`'s, so whatever initializer reaches
+                // here is neither. Every kind of
                 // expression is named, so that the one a compound literal
                 // becomes stops the build here rather than being refused as
                 // this; the string arm is kept only so the match is whole.
                 Type::Array { .. }
-                    if match ast.expr(init) {
+                    if initializer.expr().is_some_and(|init| match ast.expr(init) {
                         Expr::String { .. } => false,
                         Expr::Length { .. }
                         | Expr::Number { .. }
@@ -1500,7 +1517,7 @@ impl Checker<'_> {
                         | Expr::Cast { .. }
                         | Expr::Comma { .. }
                         | Expr::Error { .. } => true,
-                    } =>
+                    }) =>
                 {
                     (
                         format!(
@@ -1526,8 +1543,143 @@ impl Checker<'_> {
                         name,
                         format!("declared as `{}`", self.spelled(ast, ty)),
                     ))
-                    .with_label(Label::secondary(ast.expr(init).span(), "this initializer"))
+                    .with_label(Label::secondary(init_span, "this initializer"))
                     .with_note(clause),
+            );
+        }
+    }
+
+    /// Hold a braced list to the object of `ty` it initializes, declared at
+    /// `name`: worked out into its leaves by `initializer::Shapes`, each
+    /// held to its subobject as an initializer of it is (6.7.9 p11, by way
+    /// of 6.5.16.1), and refused where it has more items than subobjects
+    /// (p2), where it is `{}`, or where an array's length is not to be had
+    /// from it here (`Parser::completed`).
+    ///
+    /// Mutation: skip the leaves; `a_braced_initializer_is_held_to_each_subobject`
+    /// accepts a pointer initialized from an `int`.
+    fn check_list(
+        &mut self,
+        ast: &Ast,
+        ty: TypeId,
+        name: Span,
+        init: &Initializer,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let called = self.sources.snippet(name);
+        let resolved = {
+            let length = |id: ExprId| self.values[id.index()].and_then(|v| u64::try_from(v).ok());
+            let whole = |value: ExprId, ty: TypeId| self.initializes_whole(ast, value, ty);
+            let shapes = Shapes {
+                ast,
+                resolution: self.resolution,
+                length: &length,
+                whole: &whole,
+            };
+            shapes.resolve(ty, init)
+        };
+        let leaves = match resolved {
+            Ok(leaves) => leaves,
+            Err(Fault::TooMany(at)) => {
+                diagnostics.report(
+                    Diagnostic::error(format!("the initializer of `{called}` has too many items"))
+                        .with_code(INITIALIZED)
+                        .with_label(Label::primary(at, "nothing is left for this to initialize"))
+                        .with_label(Label::secondary(
+                            name,
+                            format!("declared as `{}`", self.spelled(ast, ty)),
+                        ))
+                        .with_note(
+                            "C17 6.7.9 p2: no initializer provides a value for an object \
+                             outside the one initialized",
+                        ),
+                );
+                return;
+            }
+            Err(Fault::Empty(at)) => {
+                diagnostics.report(
+                    Diagnostic::error("an empty initializer is not read yet")
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(at, "`{}`"))
+                        .with_note(
+                            "a gap in this compiler: C17 asks for at least one item, and C23 \
+                             makes `{}` zero",
+                        ),
+                );
+                return;
+            }
+            // A struct with no definition here is refused as an incomplete
+            // object (`check_complete_objects`), and a second report would
+            // be about the same fault.
+            Err(Fault::Unsized(at)) => {
+                if matches!(ast.ty(ty), Type::Array { length: None, .. }) {
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "cannot take the length of `{called}` from this list yet"
+                        ))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(at, "this elides the braces of an element"))
+                        .with_note(
+                            "a gap in this compiler: C17 6.7.9 p20 and p22 give it a length, \
+                             which this compiler counts only from one item per element",
+                        ),
+                    );
+                }
+                return;
+            }
+        };
+        for leaf in leaves {
+            if leaf.whole && matches!(ast.expr(leaf.value), Expr::String { .. }) {
+                self.check_literal_fits(ast, leaf.ty, leaf.value, name, diagnostics);
+                continue;
+            }
+            self.receivers
+                .insert(leaf.value, Receiving::Initializer { ty: leaf.ty, name });
+            self.check_received(ast, leaf.value, diagnostics);
+        }
+    }
+
+    /// Whether `value` initializes an aggregate of `ty` whole rather than
+    /// its first scalar: a struct of a compatible type (C17 6.7.9 p13), or
+    /// a string literal for an array of character type (p14).
+    fn initializes_whole(&self, ast: &Ast, value: ExprId, ty: TypeId) -> bool {
+        initializes_whole(ast, self.resolution, self.types[value.index()], value, ty)
+    }
+
+    /// Refuse the string literal `literal` where it has more characters,
+    /// its terminating zero aside, than the array of `ty` holds (C17 6.7.9
+    /// p2 and p14).
+    fn check_literal_fits(
+        &self,
+        ast: &Ast,
+        ty: TypeId,
+        literal: ExprId,
+        name: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let (Type::Array { length, .. }, Expr::String { length: needs, .. }) =
+            (ast.ty(ty), ast.expr(literal))
+        else {
+            return;
+        };
+        let holds = length.and_then(|id| self.values[id.index()]);
+        let needs = self.values[needs.index()];
+        let (Some(holds), Some(needs)) = (holds, needs) else {
+            return;
+        };
+        if needs - 1 > holds {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "the string literal has {} characters, and the array it initializes holds {holds}",
+                    needs - 1
+                ))
+                .with_code(INITIALIZED)
+                .with_label(Label::primary(ast.expr(literal).span(), "this string literal"))
+                .with_label(Label::secondary(name, "in this initializer"))
+                .with_note(
+                    "C17 6.7.9 p2: no initializer provides a value for an object outside \
+                     the one initialized",
+                ),
             );
         }
     }
@@ -2822,7 +2974,9 @@ impl Checker<'_> {
     /// a case nobody can see.
     fn initializers(&mut self, declarators: &[InitDeclarator]) {
         for declarator in declarators {
-            let Some(init) = declarator.init else {
+            // A list's items are held to their subobjects by
+            // `Checker::check_list`, once every expression is typed.
+            let Some(init) = declarator.init.as_ref().and_then(Initializer::expr) else {
                 continue;
             };
             let declaration = &declarator.declaration;

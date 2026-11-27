@@ -1,0 +1,8 @@
+error[SC0304]: cannot initialize this object one scalar at a time
+   ╭─[ a_large_local_holding_a_pointer_is_not_initialized_yet.c:2:23 ]
+   │
+ 2 │     int *many[2000] = {0};
+   │                       ─┬─  
+   │                        ╰─── it holds a pointer and more than 1024 scalars
+───╯
+  = note: a gap in this compiler: an object holding a pointer is initialized a store per scalar, so the memory check reads what each holds

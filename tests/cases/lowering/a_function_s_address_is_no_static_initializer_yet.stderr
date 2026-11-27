@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile this initializer yet
+   ╭─[ a_function_s_address_is_no_static_initializer_yet.c:2:26 ]
+   │
+ 2 │ void (*callback)(void) = f;
+   │                          ┬  
+   │                          ╰── an address, which an object with static storage duration cannot start with so far
+───╯
+  = note: an initializer that is a number or a null pointer is all this compiler holds

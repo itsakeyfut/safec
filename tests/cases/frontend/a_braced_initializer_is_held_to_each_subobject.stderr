@@ -1,0 +1,47 @@
+error[SC0302]: cannot initialize `int *` with `int`
+   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:7:19 ]
+   │
+ 7 │ struct P wrong = {1, 2};
+   │          ──┬──    ┬  
+   │            ╰───────── this holds `int *`
+   │                   │  
+   │                   ╰── this is `int`
+───╯
+error[SC0310]: the initializer of `too_many` has too many items
+   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:8:26 ]
+   │
+ 8 │ int too_many[2] = {1, 2, 3};
+   │     ────┬───             ┬  
+   │         ╰─────────────────── declared as `int[2]`
+   │                          │  
+   │                          ╰── nothing is left for this to initialize
+───╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
+error[SC0310]: the initializer of `nested_too_many` has too many items
+   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:9:34 ]
+   │
+ 9 │ struct P nested_too_many = {{&x, 1}};
+   │          ───────┬───────         ┬  
+   │                 ╰─────────────────── declared as `struct P`
+   │                                  │  
+   │                                  ╰── nothing is left for this to initialize
+───╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
+error[SC0304]: an empty initializer is not read yet
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:10:16 ]
+    │
+ 10 │ int empty[2] = {};
+    │                ─┬  
+    │                 ╰── `{}`
+────╯
+  = note: a gap in this compiler: C17 asks for at least one item, and C23 makes `{}` zero
+error[SC0310]: the string literal has 3 characters, and the array it initializes holds 2
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:11:26 ]
+    │
+ 11 │ char short_name[2][2] = {"abc"};
+    │      ─────┬────          ──┬──  
+    │           ╰───────────────────── in this initializer
+    │                            │    
+    │                            ╰──── this string literal
+────╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized

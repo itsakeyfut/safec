@@ -29,11 +29,12 @@ use safec_ir::ir::Rank;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters,
-    Stmt, StmtId, Storage, Type,
+    Ast, BinOp as AstBinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Initializer, Item,
+    Parameters, Stmt, StmtId, Storage, Type,
 };
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, VaOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::initializer::{Shapes, Step, initializes_whole};
 use crate::preprocessor::cut_words;
 use crate::sema::{Resolution, TagId};
 use crate::types::Types;
@@ -58,6 +59,12 @@ use safec_ir::target::Target;
 /// compiler cannot handle yet, and is the stage that does so: none reaches
 /// this one. See `types.rs`'s `NOT_YET`.
 const LOWERING: Code = Code::new("SC0304");
+
+/// How many scalars a local that holds a pointer may have for its
+/// initializer to be written one store each, zeros included: past it, the
+/// initializer is refused rather than made a function of that many stores.
+/// See ADR-0137.
+const LEAVES: usize = 1024;
 
 /// A jump from outside the scope of a variable length array to inside it,
 /// which C17 6.8.6.1 p1 and 6.8.4.2 p2 make a constraint violation: the jump
@@ -912,7 +919,7 @@ fn sequences(expr: &Expr) -> bool {
 
 /// One file-scope object as [`Lowering::file_objects`] gathers it, over
 /// every declaration of it.
-struct FileObject {
+struct FileObject<'a> {
     name: String,
     ty: TyId,
     /// Whether its first declaration said `static`.
@@ -925,12 +932,15 @@ struct FileObject {
     const_levels: u32,
     /// Whether a declaration defines it, tentatively or not.
     defined: bool,
-    init: StaticInit,
+    /// The initializer it was defined with and the type it was declared
+    /// with, worked out once every file-scope object has an id, since an
+    /// address in it may name one declared after it.
+    init: Option<(&'a Initializer, TypeId)>,
     /// The span of the name in each declaration of it.
     declared: Vec<Span>,
 }
 
-impl Lowering<'_> {
+impl<'a> Lowering<'a> {
     /// Give every function a [`FuncId`] before any body is built.
     ///
     /// A call names its callee by id, and a callee can be defined after its
@@ -956,12 +966,7 @@ impl Lowering<'_> {
                     storage,
                     ..
                 } => {
-                    self.file_objects(
-                        declarators,
-                        *storage,
-                        (&mut objects, &mut by_name),
-                        diagnostics,
-                    );
+                    self.file_objects(declarators, *storage, (&mut objects, &mut by_name));
                     // **A declaration that declares nothing still defines**:
                     // `struct S { int (*fp)(...); };` writes a prototype that
                     // no declarator's type carries, and a later `struct S s;`
@@ -1003,6 +1008,7 @@ impl Lowering<'_> {
             }
         }
 
+        let mut pending = Vec::new();
         for object in objects {
             // C17 6.9.2 p2: a tentative definition and no definition is a
             // definition with zero, which `StaticInit::Zero` already says;
@@ -1016,13 +1022,23 @@ impl Lowering<'_> {
                 name: object.name.clone(),
                 ty: object.ty,
                 linkage,
-                init: object.init,
+                init: StaticInit::Zero,
                 read_only: object.read_only,
             });
             self.static_levels.insert(id, object.const_levels);
             self.file_statics.insert(object.name, id);
             for span in object.declared {
                 self.statics.insert(span, id);
+            }
+            if let Some(init) = object.init {
+                pending.push((id, object.ty, init));
+            }
+        }
+        // Each initializer once every object has an id. One this cannot
+        // write was reported, and the object keeps zero in a run that fails.
+        for (id, ty, (init, declared)) in pending {
+            if let Some(init) = self.static_init(init, declared, ty, diagnostics) {
+                self.unit.set_static_init(id, init);
             }
         }
     }
@@ -1046,10 +1062,9 @@ impl Lowering<'_> {
     /// with the wrong value.
     fn file_objects(
         &mut self,
-        declarators: &[InitDeclarator],
+        declarators: &'a [InitDeclarator],
         storage: Option<Storage>,
-        (objects, by_name): (&mut Vec<FileObject>, &mut HashMap<String, usize>),
-        diagnostics: &mut DiagnosticSink,
+        (objects, by_name): (&mut Vec<FileObject<'a>>, &mut HashMap<String, usize>),
     ) {
         for declarator in declarators {
             let declaration = &declarator.declaration;
@@ -1065,13 +1080,7 @@ impl Lowering<'_> {
             let Some(ty) = self.ty(name, declaration.ty, &mut DiagnosticSink::new()) else {
                 continue;
             };
-            let init = match declarator.init {
-                Some(init) => match self.static_init(init, ty, diagnostics) {
-                    Some(init) => Some(init),
-                    None => continue,
-                },
-                None => None,
-            };
+            let init = declarator.init.as_ref().map(|init| (init, declaration.ty));
             let spelled = self.sources.snippet(name);
             let index = match by_name.get(spelled) {
                 Some(&index) => index,
@@ -1084,7 +1093,7 @@ impl Lowering<'_> {
                         const_levels: self.const_levels(declaration.ty),
                         internal: storage == Some(Storage::Static),
                         defined: false,
-                        init: StaticInit::Zero,
+                        init: None,
                         declared: Vec::new(),
                     });
                     objects.len() - 1
@@ -1092,7 +1101,7 @@ impl Lowering<'_> {
             };
             let object = &mut objects[index];
             object.defined |= storage != Some(Storage::Extern) || init.is_some();
-            if let Some(init) = init {
+            if init.is_some() {
                 object.init = init;
             }
             object.declared.push(name);
@@ -1108,7 +1117,7 @@ impl Lowering<'_> {
     /// is left without a value is an address constant, `int *p = &g;`,
     /// which C allows and a static here cannot hold yet; or one already
     /// reported, which is not reported twice.
-    fn static_init(
+    fn static_value(
         &mut self,
         init: ExprId,
         ty: TyId,
@@ -1146,6 +1155,13 @@ impl Lowering<'_> {
         if id != init && self.types.value(id) == Some(0) {
             return Some(StaticInit::Int(0));
         }
+        // An address constant: a static's or a literal's, plus a constant
+        // number of bytes (C17 6.6 p9), for a pointer.
+        if matches!(self.unit.ty(ty), Ty::Pointer(_)) {
+            if let Some((of, offset)) = self.static_address(init, diagnostics) {
+                return Some(StaticInit::Address { of, offset });
+            }
+        }
         if !diagnostics.has_errors() {
             diagnostics.report(
                 Diagnostic::error("cannot compile this initializer yet")
@@ -1158,6 +1174,199 @@ impl Lowering<'_> {
             );
         }
         None
+    }
+
+    /// What an object of `declared`, `ty` in the IR, with static storage
+    /// duration starts with: [`Lowering::static_value`] of an expression,
+    /// and of a braced list a constant shaped like the type, each item at
+    /// its subobject and every other zero. See ADR-0137.
+    ///
+    /// **Refused, as this compiler's gap**: a bit-field the list writes
+    /// other than zero, and a union whose first member is not its largest,
+    /// whose bytes past the member this would leave unwritten where C
+    /// makes them zero (6.7.9 p10).
+    ///
+    /// Mutation: put each item at its index among the leaves rather than at
+    /// its path; the run of `a_braced_initializer_fills_arrays_and_structs`
+    /// reads its file-scope struct's members out of place.
+    fn static_init(
+        &mut self,
+        init: &Initializer,
+        declared: TypeId,
+        ty: TyId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<StaticInit> {
+        let list = match init {
+            Initializer::Expr(value) => return self.static_value(*value, ty, diagnostics),
+            Initializer::List { .. } => init,
+        };
+        let leaves = self.shapes(|shapes| shapes.resolve(declared, list)).ok()?;
+        let mut root = StaticInit::Zero;
+        for leaf in leaves {
+            // Down the path, an aggregate made at each step that was zero.
+            let mut node = &mut root;
+            let mut ir_ty = ty;
+            let mut ast_ty = declared;
+            for &step in &leaf.path {
+                let (index, inner_ir) = match (step, self.unit.ty(ir_ty)) {
+                    (Step::Member(index), Ty::Struct(id)) => {
+                        let layout = self.unit.struct_layout(id);
+                        let member = layout.members[index];
+                        let refused = if member.bits.is_some() {
+                            Some("a bit-field, which a static's initializer does not write yet")
+                        } else if self.shapes(|shapes| shapes.union(ast_ty))
+                            && self.unit.size_of(member.ty) != Some(layout.size)
+                        {
+                            Some("a union's first member, which is not its largest")
+                        } else {
+                            None
+                        };
+                        if let Some(why) = refused {
+                            diagnostics.report(
+                                Diagnostic::error("cannot compile this initializer yet")
+                                    .with_code(LOWERING)
+                                    .with_label(Label::primary(
+                                        self.ast.expr(leaf.value).span(),
+                                        format!("this initializes {why}"),
+                                    ))
+                                    .with_note("a gap in this compiler: C17 6.7.9 allows it"),
+                            );
+                            return None;
+                        }
+                        (index, member.ty)
+                    }
+                    (Step::Element(index), Ty::Array { element, .. }) => (
+                        usize::try_from(index).expect("an initializer's index fits"),
+                        element,
+                    ),
+                    _ => unreachable!("a path the walk made follows the type"),
+                };
+                if !matches!(node, StaticInit::Aggregate(_)) {
+                    *node = StaticInit::Aggregate(Vec::new());
+                }
+                let StaticInit::Aggregate(entries) = node else {
+                    unreachable!("made an aggregate above")
+                };
+                if entries.len() <= index {
+                    entries.resize(index + 1, StaticInit::Zero);
+                }
+                node = &mut entries[index];
+                ir_ty = inner_ir;
+                ast_ty = self
+                    .shapes(|shapes| shapes.subobject(ast_ty, step))
+                    .expect("a path the walk made reaches a subobject");
+            }
+            *node = self.static_value(leaf.value, ir_ty, diagnostics)?;
+        }
+        Some(root)
+    }
+
+    /// The object with static storage duration and the byte offset into it
+    /// an address constant `id` holds (C17 6.6 p9): a static array or a
+    /// string literal, `&` of a static or of a member or an element of
+    /// one, and either plus or minus an integer constant, through casts.
+    /// `None` for any other, which is refused where it is asked: a
+    /// function's address among them, which a static cannot hold yet.
+    ///
+    /// Mutation: answer every member at offset zero; the run of
+    /// `a_static_holds_addresses_of_statics` reads the wrong member.
+    fn static_address(
+        &mut self,
+        id: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(StaticId, u64)> {
+        let mut offset: i128 = 0;
+        let mut at = id;
+        // `true` while `at` is asked as an address, `false` as a designator
+        // of an object, which `&` makes it.
+        let mut address = true;
+        let object = loop {
+            match self.ast.expr(at) {
+                Expr::Cast { operand, .. } if address => at = *operand,
+                Expr::String { .. } => break self.string(at),
+                Expr::Identifier { .. } => {
+                    let object = self.static_named(at)?;
+                    let array = matches!(
+                        self.types.of(at).map(|ty| self.ast.ty(ty)),
+                        Some(Type::Array { .. })
+                    );
+                    if address && !array {
+                        return None;
+                    }
+                    break object;
+                }
+                Expr::Unary {
+                    op: AstUnOp::AddrOf,
+                    operand,
+                    ..
+                } if address => {
+                    at = *operand;
+                    address = false;
+                }
+                Expr::Unary {
+                    op: AstUnOp::Deref,
+                    operand,
+                    ..
+                } if !address => {
+                    at = *operand;
+                    address = true;
+                }
+                Expr::Member { base, arrow, .. } if !address => {
+                    offset += i128::from(self.member_offset(at, diagnostics)?);
+                    address = *arrow;
+                    at = *base;
+                }
+                Expr::Subscript { base, index, .. } if !address => {
+                    let (pointer, count) = match self.types.value(*index) {
+                        Some(count) => (*base, count),
+                        None => (*index, self.types.value(*base)?),
+                    };
+                    let element = self.ty_of(at, diagnostics)?;
+                    offset += count * i128::from(self.unit.size_of(element)?);
+                    at = pointer;
+                    address = true;
+                }
+                Expr::Binary {
+                    op: op @ (AstBinOp::Add | AstBinOp::Sub),
+                    lhs,
+                    rhs,
+                    ..
+                } if address => {
+                    let (pointer, count) = match (self.types.value(*rhs), self.types.value(*lhs)) {
+                        (Some(count), _) => (*lhs, count),
+                        (None, Some(count)) if *op == AstBinOp::Add => (*rhs, count),
+                        _ => return None,
+                    };
+                    let pointer_ty = self.ty_of(pointer, diagnostics)?;
+                    let pointer_ty = self.decayed_ty(pointer_ty);
+                    let Ty::Pointer(pointee) = self.unit.ty(pointer_ty) else {
+                        return None;
+                    };
+                    let step = count * i128::from(self.unit.size_of(pointee)?);
+                    offset += if *op == AstBinOp::Add { step } else { -step };
+                    at = pointer;
+                }
+                _ => return None,
+            }
+        };
+        Some((object, u64::try_from(offset).ok()?))
+    }
+
+    /// How far into its struct the member `id` names is, through each
+    /// anonymous member on the way (#1207).
+    fn member_offset(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<u64> {
+        let member = self.types.member(id)?;
+        let (definition, path) = (member.definition, member.path.clone());
+        let mut within = self.struct_of(self.ast.expr(id).span(), definition, true, diagnostics)?;
+        let mut offset = 0;
+        for index in path {
+            let laid = self.unit.struct_layout(within).members[index];
+            offset += laid.offset;
+            if let Ty::Struct(inner) = self.unit.ty(laid.ty) {
+                within = inner;
+            }
+        }
+        Some(offset)
     }
 
     /// The object with static storage duration the identifier `id` names, if
@@ -1240,12 +1449,15 @@ impl Lowering<'_> {
     fn store_string(
         &mut self,
         builder: &mut Builder,
-        local: LocalId,
+        array: Place,
         init: ExprId,
         at: Span,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
-        let ty = builder.function.local(local);
+        let ty = self
+            .unit
+            .place_ty(&builder.function, &array)
+            .expect("a place this lowering built has a type");
         let Ty::Array {
             element,
             length: Length::Constant(length),
@@ -1256,15 +1468,10 @@ impl Lowering<'_> {
         let literal = self.string_bytes(init).len() as u64;
         let copied = length.min(literal);
         let pointer = self.unit.push_type(Ty::Pointer(element));
-        let first = builder.function.push_local(pointer);
-        builder.push(Operation {
-            place: Place::local(first),
-            value: Rvalue::Address(Place::new(
-                local,
-                vec![Projection::Index(Operand::Constant(0))],
-            )),
-            origin: Origin::Generated(at),
-        });
+        let Operand::Copy(first) = self.decayed(builder, array, at) else {
+            unreachable!("an array decays to a local holding its first element's address")
+        };
+        let first = first.local;
         let from = self.place_of(builder, init, diagnostics)?;
         let from = self.struct_address_of(builder, from, at);
         let memcpy = self.library_own("memcpy", at);
@@ -1302,6 +1509,229 @@ impl Lowering<'_> {
             );
         }
         Some(())
+    }
+
+    /// The initializer walk over this unit's tree and types. See
+    /// `initializer::Shapes`.
+    fn shapes<R>(&self, read: impl FnOnce(&Shapes<'_>) -> R) -> R {
+        let (ast, types, resolution) = (self.ast, self.types, self.resolution);
+        let length = |id: ExprId| types.value(id).and_then(|value| u64::try_from(value).ok());
+        let whole = |value: ExprId, ty: TypeId| {
+            initializes_whole(ast, resolution, types.of(value), value, ty)
+        };
+        read(&Shapes {
+            ast,
+            resolution,
+            length: &length,
+            whole: &whole,
+        })
+    }
+
+    /// Initialize the local `local` of type `ty` from the braced list
+    /// `init`, as ADR-0137 says: where the object holds no pointer, one
+    /// `memset` of it to zero when the list does not write every scalar,
+    /// then a store per item; where it holds one, a store of zero or a null
+    /// pointer to every scalar the list does not write, then a store per
+    /// item, and a refusal past [`LEAVES`] scalars. The items are stored in
+    /// the order written. Every write is [`Origin::Initialized`].
+    ///
+    /// Mutation: zero a pointer-holding local with the `memset` too;
+    /// `a_local_holding_pointers_is_initialized_one_scalar_at_a_time` says
+    /// `SC0413`. Mutation: skip the zero stores;
+    /// `a_local_holding_pointers_is_initialized_one_scalar_at_a_time`
+    /// doubts `ps[1]`.
+    fn store_list(
+        &mut self,
+        builder: &mut Builder,
+        local: LocalId,
+        ty: TypeId,
+        init: &Initializer,
+        at: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        // The type check refused a list it could not work out.
+        let leaves = self.shapes(|shapes| shapes.resolve(ty, init)).ok()?;
+        let object_ty = builder.function.local(local);
+        if self.holds_pointer(object_ty) {
+            let Some(scalars) = self.shapes(|shapes| shapes.scalars(ty, LEAVES)) else {
+                diagnostics.report(
+                    Diagnostic::error("cannot initialize this object one scalar at a time")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            init.span(self.ast),
+                            format!("it holds a pointer and more than {LEAVES} scalars"),
+                        ))
+                        .with_note(
+                            "a gap in this compiler: an object holding a pointer is initialized \
+                             a store per scalar, so the memory check reads what each holds",
+                        ),
+                );
+                return None;
+            };
+            for (path, _) in scalars {
+                if leaves.iter().any(|leaf| path.starts_with(&leaf.path)) {
+                    continue;
+                }
+                let place = self.subobject_place(builder, Place::local(local), ty, &path, at)?;
+                self.store_scalar(builder, place, Operand::Constant(0), at);
+            }
+        } else {
+            let written: Option<u64> = leaves
+                .iter()
+                .map(|leaf| self.shapes(|shapes| shapes.count(leaf.ty)))
+                .sum();
+            if self.shapes(|shapes| shapes.count(ty)) != written {
+                let size = self.unit.size_of(object_ty)?;
+                let start = self.struct_address_of(builder, Place::local(local), at);
+                let memset = self.library_own("memset", at);
+                self.call_own(
+                    builder,
+                    memset,
+                    vec![
+                        start,
+                        Operand::Constant(0),
+                        Operand::Constant(i128::from(size)),
+                    ],
+                    at,
+                );
+            }
+        }
+        for leaf in leaves {
+            let place = self.subobject_place(builder, Place::local(local), ty, &leaf.path, at)?;
+            if leaf.whole && matches!(self.ast.expr(leaf.value), Expr::String { .. }) {
+                self.store_string(builder, place, leaf.value, at, diagnostics)?;
+            } else if leaf.whole {
+                let from = self.place_of(builder, leaf.value, diagnostics)?;
+                self.copy_struct(builder, place, from, at)?;
+            } else {
+                let value = self.value(builder, leaf.value, diagnostics)?;
+                self.store_scalar(builder, place, value, at);
+            }
+        }
+        Some(())
+    }
+
+    /// Store `value` into the scalar at `place` as initializing it, and
+    /// where `place` is a bit-field's temporary, put it into the unit.
+    fn store_scalar(&mut self, builder: &mut Builder, place: Place, value: Operand, at: Span) {
+        builder.push(Operation {
+            place: place.clone(),
+            value: Rvalue::Use(value),
+            origin: Origin::Initialized(at),
+        });
+        self.write_back(builder, &place, at);
+    }
+
+    /// The place of the subobject at `path` in the object of `ty` at
+    /// `place`: each member reached as `member` reaches one, through a
+    /// temporary holding its address, each element as `a[k]` is, and a
+    /// bit-field as a temporary its unit is written back from.
+    fn subobject_place(
+        &mut self,
+        builder: &mut Builder,
+        place: Place,
+        ty: TypeId,
+        path: &[Step],
+        at: Span,
+    ) -> Option<Place> {
+        let mut place = place;
+        let mut ast_ty = ty;
+        for &step in path {
+            let ir_ty = self
+                .unit
+                .place_ty(&builder.function, &place)
+                .expect("a place this lowering built has a type");
+            let inner = self
+                .shapes(|shapes| shapes.subobject(ast_ty, step))
+                .expect("a path the walk made reaches a subobject");
+            match step {
+                Step::Member(index) => {
+                    let Ty::Struct(id) = self.unit.ty(ir_ty) else {
+                        unreachable!("a member is reached in a struct")
+                    };
+                    let laid = self.unit.struct_layout(id).members[index];
+                    let Operand::Copy(pointer) = self.struct_address_of(builder, place, at) else {
+                        unreachable!("an address is held in a local")
+                    };
+                    let pointer_ty = self.unit.push_type(Ty::Pointer(laid.ty));
+                    let address = builder.function.push_local(pointer_ty);
+                    let field = u32::try_from(index).expect("fewer than 2^32 members");
+                    builder.push(Operation {
+                        place: Place::local(address),
+                        value: Rvalue::Address(Place::new(
+                            pointer.local,
+                            vec![Projection::Deref, Projection::Field(field)],
+                        )),
+                        origin: Origin::Generated(at),
+                    });
+                    place = Place::local(address).deref();
+                    if let Some(bits) = laid.bits {
+                        let signed = match self.ast.ty(inner) {
+                            Type::Integer { rank, sign } => {
+                                self.unit.target().integer(*rank, *sign).signed()
+                            }
+                            _ => {
+                                unreachable!("the type check holds a bit-field to an integer type")
+                            }
+                        };
+                        let declared = self.ty(at, inner, &mut DiagnosticSink::new())?;
+                        let value = builder.function.push_local(declared);
+                        builder.bit_fields.insert(
+                            value,
+                            BitField {
+                                unit: place,
+                                unit_ty: laid.ty,
+                                bits,
+                                signed,
+                            },
+                        );
+                        place = Place::local(value);
+                    }
+                }
+                Step::Element(index) => {
+                    let Ty::Array { element, .. } = self.unit.ty(ir_ty) else {
+                        unreachable!("an element is reached in an array")
+                    };
+                    let first = self.decayed(builder, place, at);
+                    let pointer_ty = self.unit.push_type(Ty::Pointer(element));
+                    let address = builder.function.push_local(pointer_ty);
+                    builder.push(Operation {
+                        place: Place::local(address),
+                        value: Rvalue::Binary {
+                            op: BinOp::Add,
+                            lhs: first,
+                            rhs: Operand::Constant(i128::from(index)),
+                        },
+                        origin: Origin::Generated(at),
+                    });
+                    place = Place::local(address).deref();
+                }
+            }
+            ast_ty = inner;
+        }
+        Some(place)
+    }
+
+    /// Whether an object of `ty` holds a pointer anywhere in it, which the
+    /// memory check keeps per slot (ADR-0092), so a `memset` of it would be
+    /// read as writing no pointer where pointers are read back.
+    fn holds_pointer(&self, ty: TyId) -> bool {
+        let mut work = vec![ty];
+        while let Some(ty) = work.pop() {
+            match self.unit.ty(ty) {
+                Ty::Pointer(_) => return true,
+                Ty::Array { element, .. } => work.push(element),
+                Ty::Struct(id) => work.extend(
+                    self.unit
+                        .struct_layout(id)
+                        .members
+                        .iter()
+                        .map(|member| member.ty),
+                ),
+                Ty::Integer { .. } | Ty::Void | Ty::Function(_) => {}
+            }
+        }
+        false
     }
 
     /// A call to `callee` that initializes an object, ending the block.
@@ -1431,8 +1861,8 @@ impl Lowering<'_> {
         let spelled = self.sources.snippet(name).to_owned();
         let id = match storage {
             Storage::Static => {
-                let init = match declarator.init {
-                    Some(init) => self.static_init(init, ty, diagnostics)?,
+                let init = match &declarator.init {
+                    Some(init) => self.static_init(init, declaration.ty, ty, diagnostics)?,
                     None => StaticInit::Zero,
                 };
                 // `.` is in no C identifier, so no file-scope name and no
@@ -3286,15 +3716,36 @@ impl Lowering<'_> {
                         // ordinary `a = 1;` already carries a span that starts
                         // at the place being written, so this is what the same
                         // store gets written the other way.
-                        if let Some(init) = declarator.init {
+                        if let Some(initializer) = &declarator.init {
                             let at = self.store_span(name, span, declarator.span, diagnostics)?;
+                            let init = match initializer {
+                                Initializer::Expr(init) => *init,
+                                Initializer::List { span: list, .. } => {
+                                    self.store_list(
+                                        builder,
+                                        local,
+                                        declarator.declaration.ty,
+                                        initializer,
+                                        at,
+                                        diagnostics,
+                                    )?;
+                                    builder.sequenced(*list);
+                                    continue;
+                                }
+                            };
                             if matches!(self.ast.expr(init), Expr::String { .. })
                                 && matches!(
                                     self.ast.ty(declarator.declaration.ty),
                                     Type::Array { .. }
                                 )
                             {
-                                self.store_string(builder, local, init, at, diagnostics)?;
+                                self.store_string(
+                                    builder,
+                                    Place::local(local),
+                                    init,
+                                    at,
+                                    diagnostics,
+                                )?;
                                 builder.sequenced(self.ast.expr(init).span());
                                 continue;
                             }

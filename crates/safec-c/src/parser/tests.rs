@@ -569,7 +569,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
     for (source, code) in [
         ("int x\n", "SC0201"),
         (too_deep.as_str(), "SC0202"),
-        ("int x = {1};\n", "SC0203"),
         ("typedef int T = 1;\n", "SC0208"),
     ] {
         let parsed = parsed(source);
