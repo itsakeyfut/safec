@@ -32,3 +32,7 @@ int h;
 #if VIA_CALL defined X) == 2
 int j;
 #endif
+
+#if defined G || F(defined X) == 2
+int m;
+#endif

@@ -10833,8 +10833,11 @@ cases! {
         // argument first, asks about `1`, and refuses each line, where this
         // answered `defined X` first and compiled `a`, `b`, `c`, `e`, `h`
         // and `j`. Refused, each, at the `defined`, where `collected`
-        // gathers the arguments. Found by review. Mutation: skip the
-        // answers in `collected`; each line is read.
+        // gathers the arguments. Found by review. The last line has a
+        // `defined` before the call too, and the caret is on the one in the
+        // argument. Mutations: skip the answers in `collected`; each line
+        // is read. Or label the first `defined` the line answered; the
+        // last caret moves to `defined G`.
         defined_in_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // The other side, read as `clang` reads it, compiling `d`, `f`, `g`,
         // `i` and `l`: a `defined` in parentheses no name opens, one after a

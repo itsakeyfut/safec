@@ -83,3 +83,13 @@ error[SC0104]: `defined` in a macro's argument is not read
     │                  ╰────── asked here
 ────╯
   = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
+error[SC0104]: `defined` in a macro's argument is not read
+    ╭─[ defined_in_a_macro_s_argument_is_refused.c:36:20 ]
+    │
+ 36 │ #if defined G || F(defined X) == 2
+    │                  ┬ ────┬────  
+    │                  ╰──────────── called here
+    │                        │      
+    │                        ╰────── asked here
+────╯
+  = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
