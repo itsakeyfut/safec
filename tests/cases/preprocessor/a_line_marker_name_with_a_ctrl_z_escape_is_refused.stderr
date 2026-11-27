@@ -1,9 +1,9 @@
 error[SC0104]: this line marker is not read
    ╭─[ a_line_marker_name_with_a_ctrl_z_escape_is_refused.c:1:1 ]
    │
- 1 │ # 1 "a\x1ab"
+ 1 │ # 1 "a\x1a.c"
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `"a\x1ab"` is not a string literal with no prefix whose escapes make UTF-8 text
+  = note: `"a\x1a.c"` names its file with an escape that makes a control character other than a tab or a line feed, which is not read in a `#line` name
   = note: a line marker is read as a line from 0 to 4294967295 in decimal digits, a string literal with no prefix if it names the file, and after that `1` or `2`, then `3`, then `4` after a `3`
