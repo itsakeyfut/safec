@@ -10860,23 +10860,25 @@ cases! {
         // a compiled group, in `triage`; the case is refused.
         a_null_directive_in_a_compiled_group_has_no_effect: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A `#line` or line marker name with a universal character name, or
-        // an escape that makes a control character other than a tab or a
-        // line feed, is refused where it is written. `clang` refuses `\u0041` and reads
-        // `\u00e9`; it writes `\r` in `__FILE__` as `\n`, and a NUL or a
-        // Ctrl-Z there ends what it reads. This read `\u0041`, and refused
-        // `\r` only where `__FILE__` was used. Found by review.
-        // Mutations: read universal character names in `line`; the first
-        // two are read. Read control escapes; the last three are read or
-        // refused somewhere else.
+        // an escape that makes a carriage return, a NUL or a Ctrl-Z, is
+        // refused where it is written. `clang` refuses `\u0041` and reads
+        // `\u00e9`; it writes `\r` in `__FILE__` as `\n`, ends the name at a
+        // NUL, and keeps a Ctrl-Z. This read `\u0041`, and refused the rest
+        // only where `__FILE__` was used. Found by review. Mutations: read
+        // universal character names in `line`; the first two are read.
+        // Read those three escapes; the last three are read or refused
+        // somewhere else.
         a_line_name_with_a_universal_character_name_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         a_line_name_with_a_universal_character_name_clang_reads_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         a_line_name_with_a_carriage_return_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         a_line_name_with_a_nul_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         a_line_marker_name_with_a_ctrl_z_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // Octal escapes, which `clang -E` writes for a name outside ASCII,
-        // and a tab, which `clang` keeps, are read; a line feed is too, as
-        // `pragmas_and_line_are_read_as_c_says` runs. Mutation: refuse every
-        // escape in a `#line` name; the case is refused.
+        // a tab, and the other control characters, which `__FILE__` writes
+        // as `clang` does, are read; a line feed is too, as
+        // `pragmas_and_line_are_read_as_c_says` runs. Mutations: refuse
+        // every escape in a `#line` name, or every control character but a
+        // tab and a line feed; the case is refused.
         a_line_name_with_octal_and_a_tab_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below

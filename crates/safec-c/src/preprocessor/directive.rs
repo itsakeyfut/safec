@@ -568,22 +568,19 @@ fn line(
                     ),
                 );
             };
-            // An escape that makes a control character other than a tab or a
-            // line feed, which `__FILE__` writes as `clang` does, as it is
-            // and as `\n`: `clang` writes `\r` as `\n`, and a NUL or a
-            // Ctrl-Z ends what it reads, so each would be a `__FILE__` of
-            // another length. Refused where it is written rather than
-            // matched one by one. Found by review.
-            if read
-                .chars()
-                .any(|c| c.is_ascii_control() && c != '\t' && c != '\n')
-            {
+            // An escape that makes a byte ADR-0135 refuses wherever it
+            // stands: a carriage return, which `clang` writes in `__FILE__`
+            // as `\n`; a NUL, where `clang` ends the name; and a Ctrl-Z,
+            // which `clang` keeps here. `__FILE__` holding one was refused
+            // where it was used; it is refused where it is written now. Every
+            // other control character `__FILE__` writes as `clang` does, by
+            // measure, and is read. Found by review.
+            if read.chars().any(|c| matches!(c, '\r' | '\0' | '\u{1a}')) {
                 return refuse(
                     diagnostics,
                     format!(
-                        "`{written}` names its file with an escape that makes a control \
-                         character other than a tab or a line feed, which is not read in a \
-                         `#line` name"
+                        "`{written}` names its file with an escape that makes a carriage \
+                         return, a NUL or a Ctrl-Z, which is not read in a `#line` name"
                     ),
                 );
             }

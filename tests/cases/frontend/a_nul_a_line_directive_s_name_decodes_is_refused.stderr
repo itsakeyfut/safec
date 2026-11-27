@@ -5,5 +5,5 @@ error[SC0104]: this `#line` is not read
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `"a\0bcdefgh"` names its file with an escape that makes a control character other than a tab or a line feed, which is not read in a `#line` name
+  = note: `"a\0bcdefgh"` names its file with an escape that makes a carriage return, a NUL or a Ctrl-Z, which is not read in a `#line` name
   = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file
