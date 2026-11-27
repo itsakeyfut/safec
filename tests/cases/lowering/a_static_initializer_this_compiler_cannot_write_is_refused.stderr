@@ -11,6 +11,6 @@ error[SC0304]: cannot compile this initializer yet
    │
  9 │ } short_first = {1};
    │                  ┬  
-   │                  ╰── this initializes a union's first member, which is not its largest
+   │                  ╰── this initializes a union's member smaller than the union
 ───╯
   = note: a gap in this compiler: C17 6.7.9 allows it

@@ -420,8 +420,17 @@ programs! {
     /// union's other member, an unsized array sized by one, an item
     /// overridden by a later one and not evaluated, a literal's byte
     /// overridden in a static, and a static of a million elements two of
-    /// which are written (#1242). Mutation: keep every leaf in
-    /// `Shapes::resolve`, and this fails; the sparse aggregate is held by
-    /// `an_address_initializes_a_static`.
+    /// which are written (#1242). The review of #1242 added: a later
+    /// braced list for a subobject clearing what earlier items wrote in it,
+    /// a union holding the member written last, locally, as a static and
+    /// beside a pointer member, an override by a prefix, a designation
+    /// after a deeper one, an array sized by its largest index and not its
+    /// last, and a member after an unnamed bit-field. Mutations: keep every
+    /// leaf in `Shapes::resolve`, cover only an equal path there, keep a
+    /// union's earlier member, reset no frame on a designation in
+    /// `Shapes::list`, size by the last index in `Shapes::place`, answer a
+    /// member's index for its position in `Shapes::find`, or zero a union's
+    /// first member over another in `Lowering::store_list`, and this fails;
+    /// the sparse aggregate is held by `an_address_initializes_a_static`.
     a_designated_initializer_names_its_subobject,
 }

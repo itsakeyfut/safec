@@ -1418,7 +1418,7 @@ impl Parser<'_> {
     /// **A list gives it a length this stage cannot count** (#1241 review):
     /// how many elements its items fill turns on brace elision over the
     /// element (6.7.9 p20), on whether an item is a struct taken whole,
-    /// which only types say, and with #1242 on a designator's value. The
+    /// which only types say, and on a designator's value (#1242). The
     /// node is made here, after the items, and its value is set by the type
     /// check when it reaches it, after every item is typed and before
     /// anything that names the array (`Ast::set_length`).
@@ -1441,7 +1441,7 @@ impl Parser<'_> {
             }
             Some(Initializer::List { items, span }) => self.ast.push_expr(Expr::Length {
                 // The items' count until the type check sets it, which is
-                // what it is wherever no item elides braces.
+                // what it is wherever no item elides braces or designates.
                 value: items.len() as u64,
                 span: *span,
             }),
@@ -1629,6 +1629,22 @@ impl Parser<'_> {
                 designation.push(Designator::Index(index));
             } else {
                 break;
+            }
+        }
+        // **`[i] value`, with no `=`, is GNU's older spelling**, which
+        // `clang` reads; refused as this compiler's gap rather than as no C
+        // (#1242 review). Any other designation without its `=` is a
+        // syntax error.
+        if let [Designator::Index(_)] = designation.as_slice() {
+            if !self.check(TokenKind::Punct(Punct::Equal)) {
+                self.report_noted(
+                    UNREAD,
+                    "a designation without `=` is not read yet",
+                    "a GNU designation",
+                    "a gap in this compiler: `[i] value` is GNU's older spelling of `[i] = value`",
+                    diagnostics,
+                );
+                return None;
             }
         }
         if !designation.is_empty() {

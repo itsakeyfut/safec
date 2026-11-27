@@ -1,0 +1,12 @@
+Function a_designator_past_the_targets_limit_is_refused.c:1:1 "main" "int (void)"
+  Compound a_designator_past_the_targets_limit_is_refused.c:1:16
+    Declaration a_designator_past_the_targets_limit_is_refused.c:2:5 "a" "char[]"
+      InitializerList a_designator_past_the_targets_limit_is_refused.c:2:16
+        Designated a_designator_past_the_targets_limit_is_refused.c:2:17
+          Index a_designator_past_the_targets_limit_is_refused.c:2:18
+            Number a_designator_past_the_targets_limit_is_refused.c:2:18 "4611686018427387904"
+          Number a_designator_past_the_targets_limit_is_refused.c:2:41 "1"
+    Return a_designator_past_the_targets_limit_is_refused.c:3:5
+      Subscript a_designator_past_the_targets_limit_is_refused.c:3:12
+        Identifier a_designator_past_the_targets_limit_is_refused.c:3:12 "a"
+        Number a_designator_past_the_targets_limit_is_refused.c:3:14 "0"

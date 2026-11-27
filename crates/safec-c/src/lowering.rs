@@ -1199,7 +1199,8 @@ impl<'a> Lowering<'a> {
     /// its subobject and every other zero. See ADR-0137.
     ///
     /// **Refused, as this compiler's gap**: a bit-field the list writes
-    /// other than zero, and a union whose first member is not its largest,
+    /// other than zero, and a union member the list writes that is smaller
+    /// than the union,
     /// whose bytes past the member this would leave unwritten where C
     /// makes them zero (6.7.9 p10).
     ///
@@ -1237,7 +1238,7 @@ impl<'a> Lowering<'a> {
                         } else if self.shapes(|shapes| shapes.union(ast_ty))
                             && self.unit.size_of(member.ty) != Some(layout.size)
                         {
-                            Some("a union's first member, which is not its largest")
+                            Some("a union's member smaller than the union")
                         } else {
                             None
                         };
@@ -1706,8 +1707,24 @@ impl<'a> Lowering<'a> {
                 );
                 return None;
             };
+            // A union an item went into holds that member, so none of its
+            // other members' scalars is zeroed over it (#1242 review): the
+            // member each union was given, by its path.
+            let mut held: HashMap<Vec<Step>, Step> = HashMap::new();
+            for leaf in &written {
+                for depth in self.shapes(|shapes| shapes.unions_along(ty, leaf)) {
+                    held.insert(leaf[..depth].to_vec(), leaf[depth]);
+                }
+            }
             for (path, _) in scalars {
-                if written.iter().any(|leaf| path.starts_with(leaf)) {
+                let other_member = self
+                    .shapes(|shapes| shapes.unions_along(ty, &path))
+                    .into_iter()
+                    .any(|depth| {
+                        held.get(&path[..depth])
+                            .is_some_and(|&taken| taken != path[depth])
+                    });
+                if other_member || written.iter().any(|leaf| path.starts_with(leaf)) {
                     continue;
                 }
                 let place = self.subobject_place(builder, Place::local(local), ty, &path, at)?;

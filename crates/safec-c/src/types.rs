@@ -1596,6 +1596,36 @@ impl Checker<'_> {
         diagnostics: &mut DiagnosticSink,
     ) {
         let called = self.sources.snippet(name);
+        // **The length a list gave is held to the target's limit too**: it
+        // is no length the declarator wrote, which `Checker::report_array`
+        // asks, and a designator's index can make it as large as any
+        // (#1242 review). Mutation: skip this; the case
+        // `a_designator_past_the_targets_limit_is_refused` builds.
+        if let Type::Array {
+            element,
+            length: Some(length),
+            ..
+        } = ast.ty(ty)
+        {
+            if let (Expr::Length { .. }, Some(count)) =
+                (ast.expr(*length), self.values[length.index()])
+            {
+                if let Some((bytes, limit)) = self.too_large(ast, *element, count) {
+                    diagnostics.report(
+                        Diagnostic::error("an array this large cannot be an object on this target")
+                            .with_code(DECLARATOR)
+                            .with_label(Label::primary(
+                                init.span(ast),
+                                format!("this makes it {bytes} bytes"),
+                            ))
+                            .with_note(format!(
+                                "an object here is smaller than {limit} bytes, the most this target can address"
+                            )),
+                    );
+                    return;
+                }
+            }
+        }
         let resolved = {
             let length = |id: ExprId| self.values[id.index()].and_then(|v| u64::try_from(v).ok());
             let whole = |value: ExprId, ty: TypeId| self.initializes_whole(ast, value, ty);
@@ -1606,7 +1636,7 @@ impl Checker<'_> {
                 length: &length,
                 whole: &whole,
             };
-            shapes.resolve(ty, init)
+            shapes.every_leaf(ty, init)
         };
         let leaves = match resolved {
             Ok(leaves) => leaves,
@@ -1628,18 +1658,19 @@ impl Checker<'_> {
             }
             Err(Fault::Designator(at)) => {
                 diagnostics.report(
-                    Diagnostic::error(format!(
-                        "this designator names no subobject of `{called}`"
-                    ))
-                    .with_code(INITIALIZED)
-                    .with_label(Label::primary(at, "this designation"))
-                    .with_label(Label::secondary(
-                        name,
-                        format!("declared as `{}`", self.spelled(ast, ty)),
-                    ))
-                    .with_note(
-                        "C17 6.7.9 p6 and p7: a designator names a member of the struct or                          union it is in, or an element of the array it is in, by an integer                          constant within its bounds",
-                    ),
+                    Diagnostic::error(format!("this designator names no subobject of `{called}`"))
+                        .with_code(INITIALIZED)
+                        .with_label(Label::primary(at, "this designation"))
+                        .with_label(Label::secondary(
+                            name,
+                            format!("declared as `{}`", self.spelled(ast, ty)),
+                        ))
+                        .with_note(
+                            "C17 6.7.9 p6 and p7: a designator names a member of the struct or \
+                         union it is in, other than a flexible array member (6.7.2.1 p18), \
+                         or an element of the array it is in, by an integer constant within \
+                         its bounds",
+                        ),
                 );
                 return;
             }
@@ -1692,7 +1723,8 @@ impl Checker<'_> {
         };
         let fallback = match init {
             Initializer::List { items, .. } => items.len() as u64,
-            Initializer::Expr(_) | Initializer::Designated { .. } => 1,
+            Initializer::Expr(_) => 1,
+            Initializer::Designated { .. } => unreachable!("only a list's item is designated"),
         };
         shapes.extent(array, init).unwrap_or(fallback).max(1)
     }
@@ -2346,6 +2378,17 @@ impl Checker<'_> {
         }
     }
 
+    /// The bytes an array of `count` elements of `element` takes, and the
+    /// target's limit, where it is at least that limit: what
+    /// `Checker::report_array` refuses as no object this target can address.
+    fn too_large(&self, ast: &Ast, element: TypeId, count: i128) -> Option<(u128, u128)> {
+        let bytes = self
+            .bytes_of(ast, element)
+            .and_then(|each| u128::try_from(count).ok()?.checked_mul(each))?;
+        let limit = 1u128 << self.target.pointer_bits().min(61);
+        (bytes >= limit).then_some((bytes, limit))
+    }
+
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
     /// or, at file scope or as a member, whose length p2, 6.7.2.1 p9 and 6.6 p4
     /// forbid, and say
@@ -2440,11 +2483,7 @@ impl Checker<'_> {
         // this; `an_array_larger_than_the_target_can_address_is_refused`
         // compiles.
         if let Some(count) = self.values[length.index()] {
-            let bytes = self
-                .bytes_of(ast, element)
-                .and_then(|each| u128::try_from(count).ok()?.checked_mul(each));
-            let limit = 1u128 << self.target.pointer_bits().min(61);
-            if let Some(bytes) = bytes.filter(|&bytes| bytes >= limit) {
+            if let Some((bytes, limit)) = self.too_large(ast, element, count) {
                 diagnostics.report(
                     Diagnostic::error("an array this large cannot be an object on this target")
                         .with_code(DECLARATOR)

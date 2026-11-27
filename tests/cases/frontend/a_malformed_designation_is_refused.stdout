@@ -1,0 +1,6 @@
+Declaration a_malformed_designation_is_refused.c:1:1 "struct P"
+  Field a_malformed_designation_is_refused.c:2:5 "x" "int"
+  Field a_malformed_designation_is_refused.c:2:5 "y" "int"
+Error a_malformed_designation_is_refused.c:4:1
+Error a_malformed_designation_is_refused.c:5:1
+Error a_malformed_designation_is_refused.c:6:1

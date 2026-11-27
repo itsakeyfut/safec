@@ -10,3 +10,4 @@ int not_constant[3] = {[n] = 1};
 struct P index_of_a_struct = {[0] = 1};
 int member_of_an_array[2] = {.x = 1};
 int scalar = {.x = 1};
+int scalar_then_more = {.x = 1, 2};

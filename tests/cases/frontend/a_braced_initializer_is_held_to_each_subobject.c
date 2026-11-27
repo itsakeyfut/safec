@@ -20,6 +20,7 @@ int too_many[2] = {1, 2, 3};
 struct P nested_too_many = {{&x, 1}};
 union U one_member = {1, 2};
 struct Q other = {p};
+struct P overridden = {.p = 5, .p = 0};
 struct Outer {
     struct Q q;
     int n;
