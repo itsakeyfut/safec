@@ -8982,7 +8982,11 @@ cases! {
         // this compiler's gap (#1241). Mutations: skip the leaves in
         // `Checker::check_list`, and `wrong` is accepted; reach every member
         // of a union in `Shapes::kind`, and `one_member` is; take any struct
-        // whole in `initializes_whole`, and `other` is.
+        // whole in `initializes_whole`, and `outer`'s `p` is held to `struct
+        // Q` rather than to its `int`. `later` is initialized before its
+        // struct is complete, which 6.7.9 p3 forbids though a tentative
+        // definition may wait (6.9.2 p2); mutation: drop `!initialized` in
+        // `Checker::check_complete_objects`, and it is accepted.
         a_braced_initializer_is_held_to_each_subobject: ["--emit", "ast"],
         // A designation is read with #1242, and refused until then rather
         // than read as a position. Mutation: drop the refusal in

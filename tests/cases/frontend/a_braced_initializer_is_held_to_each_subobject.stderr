@@ -1,3 +1,11 @@
+error[SC0315]: `later` has incomplete type `struct Later`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:28:14 ]
+    │
+ 28 │ struct Later later = {1};
+    │              ──┬──  
+    │                ╰──── declared here
+────╯
+  = note: an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)
 error[SC0302]: cannot initialize `int *` with `int`
     ╭─[ a_braced_initializer_is_held_to_each_subobject.c:17:19 ]
     │
@@ -64,27 +72,36 @@ error[SC0302]: cannot initialize `int` with `struct P`
     │                   │  
     │                   ╰── this is `struct P`
 ────╯
-error[SC0302]: cannot initialize `int` with `char[3]`
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:23:22 ]
+error[SC0302]: cannot initialize `int` with `struct P`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:26:12 ]
     │
- 23 │ int numbers[2][2] = {"ab"};
+ 26 │ } outer = {p, 1};
+    │   ──┬──    ┬  
+    │     ╰───────── this holds `int`
+    │            │  
+    │            ╰── this is `struct P`
+────╯
+error[SC0302]: cannot initialize `int` with `char[3]`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:32:22 ]
+    │
+ 32 │ int numbers[2][2] = {"ab"};
     │     ───┬───          ──┬─  
     │        ╰─────────────────── this holds `int`
     │                        │   
     │                        ╰─── this is `char[3]`
 ────╯
 error[SC0304]: an empty initializer is not read yet
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:24:16 ]
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:33:16 ]
     │
- 24 │ int empty[2] = {};
+ 33 │ int empty[2] = {};
     │                ─┬  
     │                 ╰── `{}`
 ────╯
   = note: a gap in this compiler: C17 asks for at least one item, and C23 makes `{}` zero
 error[SC0310]: the string literal has 3 characters, and the array it initializes holds 2
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:25:26 ]
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:34:26 ]
     │
- 25 │ char short_name[2][2] = {"abc"};
+ 34 │ char short_name[2][2] = {"abc"};
     │      ─────┬────          ──┬──  
     │           ╰───────────────────── in this initializer
     │                            │    
@@ -99,10 +116,18 @@ error[SC0317]: the initializer of `other` is not a constant
     │                   ╰── not a constant expression
 ────╯
   = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
-error[SC0317]: the initializer of `not_constant` is not a constant
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:27:27 ]
+error[SC0317]: the initializer of `outer` is not a constant
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:26:12 ]
     │
- 27 │ int not_constant[2] = {1, x};
+ 26 │ } outer = {p, 1};
+    │            ┬  
+    │            ╰── not a constant expression
+────╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
+error[SC0317]: the initializer of `not_constant` is not a constant
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:36:27 ]
+    │
+ 36 │ int not_constant[2] = {1, x};
     │                           ┬  
     │                           ╰── not a constant expression
 ────╯
