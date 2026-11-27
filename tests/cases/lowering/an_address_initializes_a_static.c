@@ -20,6 +20,7 @@ int m[2][2];
 int *row = m[1];
 int *before = a - 1;
 int t[3] = {1, 2};
+int sparse[100] = {[99] = 1};
 struct Named {
     char name[4];
     int k;

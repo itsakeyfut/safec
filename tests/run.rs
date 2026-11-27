@@ -420,8 +420,8 @@ programs! {
     /// union's other member, an unsized array sized by one, an item
     /// overridden by a later one and not evaluated, a literal's byte
     /// overridden in a static, and a static of a million elements two of
-    /// which are written (#1242). Mutations: keep every leaf in
-    /// `Shapes::resolve`, or make the static aggregate dense with zeros,
-    /// and this fails or takes too long.
+    /// which are written (#1242). Mutation: keep every leaf in
+    /// `Shapes::resolve`, and this fails; the sparse aggregate is held by
+    /// `an_address_initializes_a_static`.
     a_designated_initializer_names_its_subobject,
 }

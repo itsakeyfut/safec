@@ -11434,8 +11434,11 @@ cases! {
         // through a cast, a member's at its offset, through `->`, an array
         // member's and a row's as they decay; one before its object is
         // refused, and a list of numbers and of a literal's bytes is an
-        // aggregate (#1241). Mutation: answer every member at offset zero in
-        // `Lowering::member_offset`; `y`'s offset is `0`.
+        // aggregate (#1241), sparse: `sparse` is the one entry its designator
+        // names (#1242). Mutations: answer every member at offset zero in
+        // `Lowering::member_offset`, and `y`'s offset is `0`; fill an
+        // aggregate's entries densely in `Lowering::static_init`, and
+        // `sparse` lists a hundred.
         an_address_initializes_a_static: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function's address is an address constant a static here cannot
         // hold yet, so it is refused rather than started as null. Mutation:
