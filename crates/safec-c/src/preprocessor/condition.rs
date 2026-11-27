@@ -52,14 +52,59 @@ pub(super) fn evaluate(
     // so a report at one is placed back at the `defined` it answers: placed
     // in that file, the caret showed `0 1`, text the reader never wrote.
     // Found by review.
+    //
+    // Not inside what may be a function-like macro's argument: `clang`
+    // replaces an argument before it reads a `defined` there, so in
+    // `F(defined(X))` with `X` a macro it asks about `1` and refuses the
+    // line, where this answered `defined(X)` first and compiled the group.
+    // C17 6.10.1 p4 leaves a `defined` met there undefined. An argument
+    // begins at a `(` right after a name, or after a macro whose list opens
+    // a `(` it does not close. Found by review.
     let mut answered: Vec<(usize, bool, Span)> = Vec::new();
     let mut line = Vec::with_capacity(tokens.len());
+    let mut opened_after_name: Vec<bool> = Vec::new();
+    let mut opened_by_a_macro = false;
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
         if !is_name(token) || sources.snippet(token.span) != "defined" {
+            match token.kind {
+                TokenKind::Punct(Punct::LeftParen) => opened_after_name
+                    .push(at > 0 && line.last().is_some_and(|&before| is_name(before))),
+                TokenKind::Punct(Punct::RightParen) => {
+                    opened_after_name.pop();
+                }
+                _ if is_name(token) => {
+                    opened_by_a_macro |= reading
+                        .macros
+                        .get(sources.snippet(token.span))
+                        .is_some_and(|defined| {
+                            let count = |spelled: &str| {
+                                defined
+                                    .tokens
+                                    .iter()
+                                    .filter(|(token, _)| token == spelled)
+                                    .count()
+                            };
+                            count("(") > count(")")
+                        });
+                }
+                _ => {}
+            }
             line.push(token);
             at += 1;
             continue;
+        }
+        if opened_by_a_macro || opened_after_name.contains(&true) {
+            diagnostics.report(
+                Diagnostic::error("`defined` in what may be a macro's argument is not read")
+                    .with_code(UNSUPPORTED_DIRECTIVE)
+                    .with_label(Label::primary(token.span, "asked here"))
+                    .with_note(
+                        "`clang` replaces an argument before it reads `defined` there, and C17 \
+                         6.10.1 p4 leaves what that means undefined",
+                    ),
+            );
+            return None;
         }
         let opened = tokens
             .get(at + 1)

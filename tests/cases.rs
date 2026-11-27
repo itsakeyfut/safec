@@ -10824,6 +10824,18 @@ cases! {
         // fourth, or the fifth and sixth, are. The comments were found by
         // review.
         a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `defined` in what may be a function-like macro's argument: `clang`
+        // replaces the argument first, asks about `1`, and refuses
+        // each line, where this answered `defined X` first and compiled `a`,
+        // `b` and `c`. Refused, each, at the `defined`. Found by review.
+        // Mutations: ignore a `(` after a name; the first two lines are
+        // read. Ignore a macro that opens a `(`; the third is.
+        defined_in_what_may_be_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // The other side: a `defined` in parentheses no name opens, and one
+        // after a call has closed, are read as `clang` reads them, and `d`
+        // is compiled. Mutation: refuse every `defined` after a `(`; the
+        // case is refused.
+        defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below
         // is `NOTE`'s body, or the skipped `#define`'s, and each function

@@ -1,0 +1,24 @@
+error[SC0104]: `defined` in what may be a macro's argument is not read
+   ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:6:7 ]
+   │
+ 6 │ #if F(defined(X)) == 2
+   │       ───┬───  
+   │          ╰───── asked here
+───╯
+  = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
+error[SC0104]: `defined` in what may be a macro's argument is not read
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:10:8 ]
+    │
+ 10 │ #if G (defined X) == 2
+    │        ───┬───  
+    │           ╰───── asked here
+────╯
+  = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
+error[SC0104]: `defined` in what may be a macro's argument is not read
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:14:10 ]
+    │
+ 14 │ #if OPEN defined X) == 2
+    │          ───┬───  
+    │             ╰───── asked here
+────╯
+  = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
