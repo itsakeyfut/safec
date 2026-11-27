@@ -10826,32 +10826,24 @@ cases! {
         // fourth, or the fifth and sixth, are. The comments were found by
         // review.
         a_line_whose_start_is_not_proved_is_refused_in_a_skipped_group: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `defined` in what may be a function-like macro's argument: `clang`
-        // replaces the argument first, asks about `1`, and refuses
-        // each line, where this answered `defined X` first and compiled `a`,
-        // `b`, `c`, `e`, `h` and `j`. Refused, each, at the `defined`. Found
-        // by review, the last three by later ones. Mutations: ignore a `(`
-        // after a name; the first two lines are read. Ignore a macro that
-        // opens a `(`; the third and the last two are. Ignore a `(` after a
-        // `)`; the fourth is. Stop at a macro's own list in `left_open`;
-        // the last two are. Follow only object-like macros; the last is.
-        // Then two lines that hold `left_open` to its bounds: `D0` names
-        // `D1` twice and so on to `D40`, `F(`, answered once each; and `C0`
-        // names `C1` and so on to `C300`, `0`, past the 256 macros it
-        // follows, so it answers `TOO_DEEP` and refuses. And a macro that
-        // names itself, where it stops too: refused, though `clang` reads
-        // it, since a stop never answers fewer than replacing would leave.
-        // Mutations: answer no macro from `known`; the run takes 2^40
-        // visits and does not end. Or follow past `OPEN_DEPTH`; the `C0`
-        // line is read. Or answer nothing at a stop; the last line is.
-        defined_in_what_may_be_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
-        // The other side, read as `clang` reads it, compiling `d`, `f` and
-        // `g`: a `defined` in parentheses no name opens, one after a call
-        // has closed, one after a macro that becomes `!` and no call,
-        // and one after the line has closed a `(` a macro opened. Found by
-        // review. Mutations: refuse every `defined` after a `(`; take every
-        // object-like macro for a call's name; or never close what a macro
-        // opened; the case is refused.
+        // `defined` in a function-like macro's argument, however the call
+        // began: on the line, through an object-like macro that becomes its
+        // name, through a macro that leaves a `(` open, after a `)`, and
+        // through a function-like macro's list. `clang` replaces the
+        // argument first, asks about `1`, and refuses each line, where this
+        // answered `defined X` first and compiled `a`, `b`, `c`, `e`, `h`
+        // and `j`. Refused, each, at the `defined`, where `collected`
+        // gathers the arguments. Found by review. Mutation: skip the
+        // answers in `collected`; each line is read.
+        defined_in_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // The other side, read as `clang` reads it, compiling `d`, `f`, `g`,
+        // `i` and `l`: a `defined` in parentheses no name opens, one after a
+        // call has closed, one after a macro that becomes `!` and no call,
+        // one after the line has closed a `(` a macro opened, one after a
+        // macro that names itself, and one after a chain of 300 macros. The
+        // last two were refused while the question was guessed from the
+        // line's tokens (#1386). Mutation: refuse a call whose arguments
+        // hold a token of any file but the line's; the case is refused.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A null directive, `#` or `%:` with nothing after it but white
         // space, has no effect (C17 6.10.7), and `clang` builds this; it

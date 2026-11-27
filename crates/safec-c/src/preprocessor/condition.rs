@@ -7,8 +7,6 @@
 //! `clang 22.1.8 -dM -E`). A name the implementation may define is refused
 //! wherever it is asked about, as `#ifdef` refuses it (ADR-0055, ADR-0059).
 
-use std::collections::HashMap;
-
 use super::held::Sources;
 use super::line::Line;
 use super::{
@@ -55,60 +53,17 @@ pub(super) fn evaluate(
     // in that file, the caret showed `0 1`, text the reader never wrote.
     // Found by review.
     //
-    // Not inside what may be a function-like macro's argument: `clang`
-    // replaces an argument before it reads a `defined` there, so in
-    // `F(defined(X))` with `X` a macro it asks about `1` and refuses the
-    // line, where this answered `defined(X)` first and compiled the group.
-    // C17 6.10.1 p4 leaves a `defined` met there undefined. An argument
-    // begins at a `(` after what may name a function-like macro by the time
-    // it is replaced, or after a macro whose list opens a `(` it does not
-    // close, until the line closes it. Found by review, and `CALL(F)(...)`,
-    // whose name comes out of a call, by a second review.
+    // Whether a `defined` ends up in a function-like macro's argument, where
+    // `clang` replaces it first, is asked where the arguments are gathered,
+    // by `collected`, from [`Reading::answers`].
     let mut answered: Vec<(usize, bool, Span)> = Vec::new();
-    let mut line: Vec<Token> = Vec::with_capacity(tokens.len());
-    let mut opens_an_argument: Vec<bool> = Vec::new();
-    let mut opened_by_macros = 0usize;
-    let mut known = HashMap::new();
+    let mut line = Vec::with_capacity(tokens.len());
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
         if !is_name(token) || sources.snippet(token.span) != "defined" {
-            match token.kind {
-                TokenKind::Punct(Punct::LeftParen) => {
-                    let before = line.last().copied();
-                    opens_an_argument.push(before.is_some_and(|before| {
-                        may_name_a_call(before, sources.snippet(before.span), reading)
-                    }));
-                }
-                TokenKind::Punct(Punct::RightParen) => {
-                    if opens_an_argument.pop().is_none() {
-                        opened_by_macros = opened_by_macros.saturating_sub(1);
-                    }
-                }
-                _ if is_name(token) => {
-                    opened_by_macros = opened_by_macros.saturating_add(left_open(
-                        sources.snippet(token.span),
-                        reading,
-                        &mut Vec::new(),
-                        &mut known,
-                    ));
-                }
-                _ => {}
-            }
             line.push(token);
             at += 1;
             continue;
-        }
-        if opened_by_macros > 0 || opens_an_argument.contains(&true) {
-            diagnostics.report(
-                Diagnostic::error("`defined` in what may be a macro's argument is not read")
-                    .with_code(UNSUPPORTED_DIRECTIVE)
-                    .with_label(Label::primary(token.span, "asked here"))
-                    .with_note(
-                        "`clang` replaces an argument before it reads `defined` there, and C17 \
-                         6.10.1 p4 leaves what that means undefined",
-                    ),
-            );
-            return None;
         }
         let opened = tokens
             .get(at + 1)
@@ -166,7 +121,12 @@ pub(super) fn evaluate(
     // Replaced as an argument is, as a use of its own.
     let errors = diagnostics.error_count();
     begin_use(reading);
+    reading.answers = answers.map(|file| {
+        let asked = answered.iter().map(|&(_, _, asked)| asked).collect();
+        (file, asked)
+    });
     let line = replaced(line, false, sources, reading, diagnostics);
+    reading.answers = None;
     if diagnostics.error_count() > errors {
         return None;
     }
@@ -309,89 +269,6 @@ pub(super) fn evaluate(
             refuse(diagnostics, &message, at);
             None
         }
-    }
-}
-
-/// How many `(` the expansion of the macro `name` leaves open, read in
-/// order through every macro its list names, as replacing it would:
-/// `#define A OPEN` with `#define OPEN F(` leaves one, and `A defined X)`
-/// was read here where `clang` takes `defined X` for `F`'s argument. Found
-/// by review. A function-like macro's list is followed too, though its
-/// arguments are not, since an argument's own `(` and `)` balance.
-///
-/// It never answers fewer than replacing would leave, since fewer reads a
-/// `defined` `clang` takes for an argument. Where it stops, at a macro
-/// already on the path or past [`OPEN_DEPTH`] macros deep, it answers
-/// [`TOO_DEEP`], more than a line closes, so every `defined` after it on
-/// the line is refused; and so does every macro whose list led there. That
-/// answer is the same from wherever the walk began, so each macro is
-/// answered once, in `known`, and a list naming one macro many times costs
-/// one visit. Found by review: a stop answered as nothing, and kept, said
-/// less than a walk from another macro would have. A `)` the list
-/// closes before any `(` closes nothing of its own; the line's reading of
-/// it is left to the refusal of a call that runs past an expansion.
-fn left_open<'a>(
-    name: &'a str,
-    reading: &'a Reading,
-    seen: &mut Vec<&'a str>,
-    known: &mut HashMap<&'a str, usize>,
-) -> usize {
-    let Some(defined) = reading.macros.get(name) else {
-        return 0;
-    };
-    if let Some(&open) = known.get(name) {
-        return open;
-    }
-    if seen.contains(&name) || seen.len() >= OPEN_DEPTH {
-        return TOO_DEEP;
-    }
-    seen.push(name);
-    let mut open = 0usize;
-    for (spelled, _) in &defined.tokens {
-        open = match spelled.as_str() {
-            "(" => open.saturating_add(1),
-            ")" => open.saturating_sub(1),
-            spelled => open.saturating_add(left_open(spelled, reading, seen, known)),
-        };
-        if open >= TOO_DEEP {
-            open = TOO_DEEP;
-            break;
-        }
-    }
-    seen.pop();
-    known.insert(name, open);
-    open
-}
-
-/// What [`left_open`] answers where it stops following macros: more `(`
-/// than any line closes.
-const TOO_DEEP: usize = usize::MAX / 2;
-
-/// How deep [`left_open`] follows macros naming macros before it answers
-/// [`TOO_DEEP`]: far past any chain a header writes, and far short of what
-/// the stack holds.
-const OPEN_DEPTH: usize = 256;
-
-/// Whether `token`, spelled `spelled`, may stand for a function-like
-/// macro's name once it is replaced, so that a `(` after it may open that
-/// macro's arguments: a `)`, which may close a call that becomes one
-/// (`CALL(F)(...)`); a name that is no macro, or a function-like one; and an
-/// object-like macro whose list is empty, or ends in what may itself become
-/// one. Not an object-like macro ending in anything else, such as `!`, which
-/// becomes no call.
-fn may_name_a_call(token: Token, spelled: &str, reading: &Reading) -> bool {
-    if token.kind == TokenKind::Punct(Punct::RightParen) {
-        return true;
-    }
-    if !is_name(token) {
-        return false;
-    }
-    match reading.macros.get(spelled) {
-        None => true,
-        Some(defined) if defined.parameters.is_some() => true,
-        Some(defined) => defined.tokens.last().is_none_or(|(last, _)| {
-            last == ")" || last.starts_with(|c: char| c == '_' || c.is_ascii_alphabetic())
-        }),
     }
 }
 

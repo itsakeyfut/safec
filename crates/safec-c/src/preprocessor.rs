@@ -176,6 +176,11 @@ struct Reading {
     /// distinct macros cost the square of its depth. Found by review.
     open_macros: HashMap<String, usize>,
     open_expansions: usize,
+    /// While an `#if` or `#elif` line is replaced, the file its `defined`
+    /// answers are tokens of, and, by an answer's index, the `defined ...`
+    /// it answers: what [`collected`] refuses in a call's arguments and
+    /// where it says the `defined` was.
+    answers: Option<(FileId, Vec<Span>)>,
     /// Every name `-D` or `-U` named, or the source has undefined, which
     /// `#ifdef` and `#ifndef` answer whether or not the compiler might
     /// predefine it. See ADR-0059.
@@ -565,6 +570,7 @@ pub fn prelude(
         expansions: 0,
         target,
         open_macros: HashMap::new(),
+        answers: None,
         open_expansions: 0,
         settled: macros.iter().map(|given| given.name().to_owned()).collect(),
         started: started(),
@@ -1642,6 +1648,33 @@ fn collected(
                 ))
                 .with_label(Label::secondary(token.span, "called here"))
                 .with_note("C17 6.10.3 p11 leaves what it means undefined"),
+        );
+        return Err(Uncollected::Refused);
+    }
+    // A `defined` an `#if` line answered, gathered into a call's arguments
+    // however the call began: `clang` replaces an argument before it reads
+    // a `defined` there, so in `F(defined(X))` with `X` a macro it asks
+    // about `1` and refuses the line, where the answer here chose a group.
+    // C17 6.10.1 p4 leaves a `defined` met there undefined. Asked here,
+    // where every argument is gathered, rather than guessed from the line's
+    // tokens, which four reviews found ways around (#1386).
+    let answered = reading.answers.as_ref().and_then(|(answers, asked)| {
+        arguments
+            .iter()
+            .flatten()
+            .find(|(argument, _)| argument.span.file() == *answers)
+            .map(|(answer, _)| asked[answer.span.start() as usize / 2])
+    });
+    if let Some(asked) = answered {
+        diagnostics.report(
+            Diagnostic::error("`defined` in a macro's argument is not read")
+                .with_code(UNSUPPORTED_DIRECTIVE)
+                .with_label(Label::primary(asked, "asked here"))
+                .with_label(Label::secondary(token.span, "called here"))
+                .with_note(
+                    "`clang` replaces an argument before it reads `defined` there, and C17 \
+                     6.10.1 p4 leaves what that means undefined",
+                ),
         );
         return Err(Uncollected::Refused);
     }
