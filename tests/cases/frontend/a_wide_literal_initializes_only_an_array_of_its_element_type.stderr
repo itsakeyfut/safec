@@ -22,6 +22,14 @@ error[SC0304]: a prefixed character constant of more than one element is not rea
    │                           ╰──── this constant
 ───╯
   = note: C17 6.4.4.4 p11 leaves its value to the implementation; an element has 16 bits on this target
+error[SC0106]: an escape whose value does not fit the literal's element type here
+    ╭─[ a_wide_literal_initializes_only_an_array_of_its_element_type.c:10:27 ]
+    │
+ 10 │ int constant_past_wchar = L'\x10000';
+    │                           ─────┬────  
+    │                                ╰────── this constant
+────╯
+  = note: C17 6.4.4.4 p9: an element has 16 bits on this target
 error[SC0310]: `not_wchar` is not an array of `unsigned short`, the type of this wide string literal's elements, and only one is initialized from it
    ╭─[ a_wide_literal_initializes_only_an_array_of_its_element_type.c:1:5 ]
    │
@@ -50,5 +58,25 @@ error[SC0310]: `not_char` is not an array of character type, and only one is ini
    │                    ╰───────────── declared as `unsigned short[]`
    │                              │   
    │                              ╰─── this initializer
+───╯
+  = note: C17 6.7.9 p14 and p16
+error[SC0310]: `wrong_sign` is not an array of `unsigned short`, the type of this wide string literal's elements, and only one is initialized from it
+   ╭─[ a_wide_literal_initializes_only_an_array_of_its_element_type.c:8:7 ]
+   │
+ 8 │ short wrong_sign[] = L"x";
+   │       ─────┬────     ──┬─  
+   │            ╰─────────────── declared as `short[2]`
+   │                        │   
+   │                        ╰─── this initializer
+───╯
+  = note: C17 6.7.9 p15 and p16
+error[SC0310]: `not_char_either` is not an array of character type, and only one is initialized from a string literal
+   ╭─[ a_wide_literal_initializes_only_an_array_of_its_element_type.c:9:16 ]
+   │
+ 9 │ unsigned short not_char_either[] = u8"x";
+   │                ───────┬───────     ──┬──  
+   │                       ╰─────────────────── declared as `unsigned short[]`
+   │                                      │    
+   │                                      ╰──── this initializer
 ───╯
   = note: C17 6.7.9 p14 and p16

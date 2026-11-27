@@ -5,3 +5,6 @@ unsigned short is_wchar[] = L"ok";
 int more_than_one = u'ab';
 int two_elements_here = L'😀';
 int past_wchar = sizeof(L"\xffffffff");
+short wrong_sign[] = L"x";
+unsigned short not_char_either[] = u8"x";
+int constant_past_wchar = L'\x10000';

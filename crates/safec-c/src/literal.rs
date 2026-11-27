@@ -273,5 +273,7 @@ mod tests {
         assert_eq!(Prefix::split("U\"a\""), (Prefix::Char32, "\"a\""));
         assert_eq!(Prefix::split("L'a'"), (Prefix::Wide, "'a'"));
         assert_eq!(Prefix::split("\"a\""), (Prefix::None, "\"a\""));
+        assert_eq!(Prefix::split("u8x"), (Prefix::None, "u8x"));
+        assert_eq!(Prefix::split("Lx"), (Prefix::None, "Lx"));
     }
 }

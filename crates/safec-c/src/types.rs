@@ -401,7 +401,10 @@ pub fn check(
     // The length each braced list gives an array of unknown size, worked
     // out when its node is reached: after the list's items, which the
     // parser pushed first, and before anything naming the array, which the
-    // node precedes (`Parser::completed`).
+    // node precedes (`Parser::completed`). An `L` literal's is counted
+    // before the sweep, reading only the source and the target, so an
+    // escape `wchar_t` does not hold is reported ahead of every other
+    // diagnostic, out of source order (`Checker::wide_lengths`).
     let counted = counted_lengths(ast);
     let wide = checker.wide_lengths(ast, diagnostics);
     for id in ast.expr_ids().collect::<Vec<_>>() {
@@ -1714,8 +1717,9 @@ impl Checker<'_> {
     /// parser's count.
     ///
     /// Mutation: count none again; on Win64 the run of
-    /// `a_prefixed_literal_is_its_encoding_s_elements` sizes `L"\u{1F600}"`
-    /// written out as two elements where it has three.
+    /// `a_prefixed_literal_is_its_encoding_s_elements` sizes an `L` literal
+    /// of the character U+1F600, written in the source, as two elements
+    /// where it has three, and exits 4.
     fn wide_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) -> HashMap<ExprId, u64> {
         let bits = self.literal_bits(Prefix::Wide);
         let mut lengths = HashMap::new();
@@ -1762,9 +1766,10 @@ impl Checker<'_> {
     /// A character constant with a prefix: of the prefix's type, and the
     /// value of its one element, read at this target's width (C17 6.4.4.4
     /// p11). One of more than one element, which p11 gives a value the
-    /// implementation chooses, is not read yet, nor is `L'\u{1F600}'`
-    /// written out where `wchar_t` has 16 bits and the character is two
-    /// elements; an escape the type does not hold is not C (p9).
+    /// implementation chooses, is not read yet, nor is an `L` constant of
+    /// the character U+1F600, written in the source, where `wchar_t` has 16
+    /// bits and the character is two elements; an escape the type does not
+    /// hold is not C (p9).
     ///
     /// Mutation: give it type `int`; `sizeof u'a'` in the run of
     /// `a_prefixed_literal_is_its_encoding_s_elements` is 4, not 2.

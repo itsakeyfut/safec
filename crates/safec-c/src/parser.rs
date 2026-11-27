@@ -1533,14 +1533,11 @@ impl Parser<'_> {
 
         // `{ "ab" }`: one literal, or a run of adjacent ones, and an optional
         // `,`, for a type it initializes as `"ab"` does. Every other list is
-        // a list.
-        // The prefix of the first token in the braces, if it is a literal.
-        let inside = self.peek_at(1);
-        let prefix = if inside.kind == TokenKind::String {
-            Prefix::split(self.sources.snippet(inside.span)).0
-        } else {
-            Prefix::None
-        };
+        // a list. Which types those are turns on the run's prefix, the one
+        // its prefixed literals share and not its first literal's, so
+        // `{ "a" L"b" }` is a wide literal (#1245 review); a run whose
+        // prefixes disagree is refused where the literal is read.
+        let prefix = self.run_prefix(1).unwrap_or(Prefix::None);
         if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty, prefix) {
             let mut ahead = 1;
             while self.peek_at(ahead).kind == TokenKind::String {
@@ -4270,8 +4267,8 @@ impl Parser<'_> {
     /// A prefixed one, which the lexer scans into the token (p1), is read
     /// at its prefix's widest element ([`Prefix::widest_bits`]), and how
     /// many elements it is the type check counts, at the target's width:
-    /// `L'\u{1F600}'` written out is one element where `wchar_t` has 32
-    /// bits and two where it has 16.
+    /// an `L` constant of the character U+1F600, written in the source, is
+    /// one element where `wchar_t` has 32 bits and two where it has 16.
     ///
     /// [`read`]: crate::literal::read
     fn character(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
@@ -4336,16 +4333,22 @@ impl Parser<'_> {
         let mut refused = false;
         // The terminating zero (C17 6.4.5 p6).
         let mut count: u64 = 1;
-        let prefix = match self.run_prefix() {
+        let prefix = match self.run_prefix(0) {
             Ok(prefix) => prefix,
-            Err(fault) => {
+            Err((at, fault)) => {
                 refused = true;
                 match fault {
                     Ok(unread) => {
-                        self.report_unread(unread, diagnostics);
+                        self.report_unread_at(at, unread, diagnostics);
                     }
                     Err(what) => {
-                        self.report(what, "this is not a string literal C allows", diagnostics);
+                        self.report_at(
+                            at,
+                            EXPECTED,
+                            what,
+                            "this is not a string literal C allows",
+                            diagnostics,
+                        );
                     }
                 }
                 Prefix::None
@@ -4393,17 +4396,22 @@ impl Parser<'_> {
         })
     }
 
-    /// The prefix of the run of string literals starting here: the one its
-    /// prefixed literals share, or none (C17 6.4.5 p5). A run that joins
-    /// `u8` with a wide prefix is not C (p2), and one that joins two wide
-    /// prefixes is valid C whose meaning the implementation chooses (p5),
-    /// which this compiler has not chosen. Mutation: answer the first
-    /// literal's prefix; `a_run_of_two_prefixes_is_refused` is read.
-    fn run_prefix(&self) -> Result<Prefix, Result<Unread, &'static str>> {
+    /// The prefix of the run of string literals starting `ahead` tokens
+    /// from here: the one its prefixed literals share, or none (C17 6.4.5
+    /// p5). A run that joins `u8` with a wide prefix is not C (p2), and one
+    /// that joins two wide prefixes is valid C whose meaning the
+    /// implementation chooses (p5), which this compiler has not chosen;
+    /// either answers the literal whose prefix disagrees, where the caret
+    /// goes, rather than the first of the run, which may have none (#1245
+    /// review). Mutation: answer the first literal's prefix;
+    /// `a_run_of_two_prefixes_is_refused` is read.
+    #[allow(clippy::type_complexity)]
+    fn run_prefix(&self, ahead: usize) -> Result<Prefix, (Span, Result<Unread, &'static str>)> {
         let mut found = Prefix::None;
-        let mut ahead = 0;
+        let mut ahead = ahead;
         while self.peek_at(ahead).kind == TokenKind::String {
-            let prefix = Prefix::split(self.sources.snippet(self.peek_at(ahead).span)).0;
+            let at = self.peek_at(ahead).span;
+            let prefix = Prefix::split(self.sources.snippet(at)).0;
             ahead += 1;
             if prefix == Prefix::None || prefix == found {
                 continue;
@@ -4411,12 +4419,15 @@ impl Parser<'_> {
             if found == Prefix::None {
                 found = prefix;
             } else if found == Prefix::Utf8 || prefix == Prefix::Utf8 {
-                return Err(Err("a `u8` string literal joined with a wide one"));
+                return Err((at, Err("a `u8` string literal joined with a wide one")));
             } else {
-                return Err(Ok(Unread {
-                    what: "a run of string literals with two different prefixes",
-                    clause: "6.4.5",
-                }));
+                return Err((
+                    at,
+                    Ok(Unread {
+                        what: "a run of string literals with two different prefixes",
+                        clause: "6.4.5",
+                    }),
+                ));
             }
         }
         Ok(found)
@@ -4773,16 +4784,27 @@ impl Parser<'_> {
     /// The report [`UNREAD`] makes, at the token here, in one wording for
     /// every construct.
     fn report_unread(&mut self, unread: Unread, diagnostics: &mut DiagnosticSink) -> Span {
-        self.report_noted(
-            UNREAD,
-            format!("{} is not read yet", unread.what),
-            "valid C, which this compiler does not read yet",
-            format!(
+        self.report_unread_at(self.peek().span, unread, diagnostics)
+    }
+
+    /// The same, at a span the caller names, as [`Parser::report_at`] is.
+    fn report_unread_at(
+        &mut self,
+        span: Span,
+        unread: Unread,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
+        let built = Diagnostic::error(format!("{} is not read yet", unread.what))
+            .with_code(UNREAD)
+            .with_label(Label::primary(
+                span,
+                "valid C, which this compiler does not read yet",
+            ))
+            .with_note(format!(
                 "C17 {} makes it valid; this compiler does not read it yet",
                 unread.clause
-            ),
-            diagnostics,
-        )
+            ));
+        self.report_built(span, built, diagnostics)
     }
 
     /// Report one, unless something already has.

@@ -27,9 +27,21 @@ int main(void) {
     if (L'\xff' != 255 || L'b' != 98) {
         return 6;
     }
-    // A run takes the prefix of its prefixed literal (6.4.5 p5).
-    if (sizeof(u"a" "b") != 6 || sizeof("a" U"b") != 12) {
+    // A run takes the prefix of its prefixed literal (6.4.5 p5), and an
+    // `L` run of several literals is counted whole.
+    if (sizeof(u"a" "b") != 6 || sizeof("a" U"b") != 12 || sizeof(u"a" u"b") != 6) {
         return 7;
+    }
+    if (sizeof(L"a" L"😀") / sizeof(L'a') != (sizeof(L'a') == 2 ? 4 : 3)) {
+        return 11;
+    }
+    // A braced run is wide whichever of its literals has the prefix, and a
+    // `u8` one initializes an array of character type (6.7.9 p14).
+    unsigned short braced[] = {"a" u"b"};
+    char s8[] = u8"ab";
+    unsigned char e8[] = u8"é";
+    if (sizeof braced != 6 || braced[1] != 'b' || sizeof s8 != 3 || sizeof e8 != 3) {
+        return 12;
     }
     // An array of the element type from a wide literal (6.7.9 p15), in a
     // block, braced, longer than the literal, and in a compound literal.

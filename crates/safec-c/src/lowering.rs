@@ -1133,10 +1133,11 @@ impl<'a> Lowering<'a> {
         ty: TyId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
-        // An array of character type from a string literal (C17 6.7.9 p14):
-        // its bytes, cut to the array's length, which the type check has held
-        // to at least the literal's characters. The zeros past them are the
-        // backend's to write (`StaticInit::Bytes`), so a large array is not
+        // An array from a string literal (C17 6.7.9 p14, p15): its elements,
+        // cut to the array's length, which the type check has held to at
+        // least the literal's characters. The zeros past them are the
+        // backend's to write (`StaticInit::Bytes` for a `char` literal,
+        // `StaticInit::Aggregate` for a wide one), so a large array is not
         // as large here.
         if let (Expr::String { .. }, Ty::Array { length, .. }) =
             (self.ast.expr(init), self.unit.ty(ty))
@@ -1560,10 +1561,12 @@ impl<'a> Lowering<'a> {
         )
     }
 
-    /// Initialize the local array `local` of character type from the string
-    /// literal `init` (C17 6.7.9 p14): a copy of as many of the literal's
-    /// bytes as the array holds, out of the static the literal is, and a
-    /// fill of zeros past them where the array is longer (p21). Two calls
+    /// Initialize the local array `local` from the string literal `init`,
+    /// one of character type from a `char` literal (C17 6.7.9 p14) or one
+    /// of a wide literal's element type from it (p15): a copy of as many of
+    /// the literal's elements as the array holds, out of the static the
+    /// literal is, and a fill of zeros past them where the array is longer
+    /// (p21), each call counted in bytes, an element's size times. Two calls
     /// however long either is, so the IR does not grow with the literal.
     /// Each is this compiler's own [`Lowering::library_own`], never the
     /// program's, and each is [`Origin::Initialized`], since the object is

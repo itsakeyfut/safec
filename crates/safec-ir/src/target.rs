@@ -279,8 +279,8 @@ impl Target {
         char_signed: bool,
         (short_bits, long_bits, long_long_bits): (u32, u32, u32),
         (pointer_bits, size): (u32, Rank),
-        // Two in one, as `(pointer_bits, size)` are, so that a row is not
-        // nine arguments.
+        // Two in one, as `(pointer_bits, size)` are, so that a row is
+        // seven arguments, under the limit a lint holds a function to.
         (widening, wide): (Widening, (Rank, Sign)),
     ) -> Self {
         Self {
@@ -371,8 +371,7 @@ impl Target {
     /// The type of `char16_t` here, which a `u` literal's elements and a
     /// `u` character constant have (C17 7.28 p2): `unsigned short` on
     /// every row of [`Target::ALL`], measured as `__CHAR16_TYPE__` is in
-    /// [`Target::wchar_type`]. A method rather than a constant so that a
-    /// target that differs is one row, not a search.
+    /// [`Target::wchar_type`], so it is not a field of a row.
     pub fn char16_type(self) -> (Rank, Sign) {
         (Rank::Short, Sign::Unsigned)
     }

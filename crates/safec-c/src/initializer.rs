@@ -47,7 +47,8 @@ pub fn initializes_whole(
 /// short` and refused where it is `int`.
 ///
 /// Mutation: answer any integer for a wide literal;
-/// `a_wide_literal_initializes_only_an_array_of_its_element_type` builds.
+/// `not_wchar` in `a_wide_literal_initializes_only_an_array_of_its_element_type`
+/// is accepted; compare the rank alone, and `wrong_sign` is.
 pub fn literal_initializes(ast: &Ast, literal: Option<TypeId>, element: TypeId) -> bool {
     let Some(Type::Array { element: of, .. }) = literal.map(|literal| ast.ty(literal)) else {
         return false;
@@ -68,8 +69,11 @@ pub fn literal_initializes(ast: &Ast, literal: Option<TypeId>, element: TypeId) 
         (ast.ty(*of), ast.ty(ast.unqualified(element))),
         (
             Type::Integer { rank, sign },
-            Type::Integer { rank: wanted, sign: signed },
-        ) if rank == wanted && sign == signed
+            Type::Integer {
+                rank: element_rank,
+                sign: element_sign,
+            },
+        ) if rank == element_rank && sign == element_sign
     )
 }
 

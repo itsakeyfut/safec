@@ -1,15 +1,30 @@
 error[SC0201]: a `u8` string literal joined with a wide one
-   ╭─[ a_run_of_two_prefixes_is_refused.c:1:29 ]
+   ╭─[ a_run_of_two_prefixes_is_refused.c:1:35 ]
    │
  1 │ const char *utf8_and_wide = u8"a" L"b";
-   │                             ──┬──  
-   │                               ╰──── this is not a string literal C allows
+   │                                   ──┬─  
+   │                                     ╰─── this is not a string literal C allows
 ───╯
 error[SC0207]: a run of string literals with two different prefixes is not read yet
-   ╭─[ a_run_of_two_prefixes_is_refused.c:2:24 ]
+   ╭─[ a_run_of_two_prefixes_is_refused.c:2:29 ]
    │
  2 │ const void *two_wide = L"a" u"b";
-   │                        ──┬─  
-   │                          ╰─── valid C, which this compiler does not read yet
+   │                             ──┬─  
+   │                               ╰─── valid C, which this compiler does not read yet
+───╯
+  = note: C17 6.4.5 makes it valid; this compiler does not read it yet
+error[SC0201]: a `u8` string literal joined with a wide one
+   ╭─[ a_run_of_two_prefixes_is_refused.c:4:34 ]
+   │
+ 4 │ const void *wide_and_utf8 = L"a" u8"b";
+   │                                  ──┬──  
+   │                                    ╰──── this is not a string literal C allows
+───╯
+error[SC0207]: a run of string literals with two different prefixes is not read yet
+   ╭─[ a_run_of_two_prefixes_is_refused.c:7:10 ]
+   │
+ 7 │     u"x" L"y";
+   │          ──┬─  
+   │            ╰─── valid C, which this compiler does not read yet
 ───╯
   = note: C17 6.4.5 makes it valid; this compiler does not read it yet
