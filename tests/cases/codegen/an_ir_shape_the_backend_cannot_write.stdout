@@ -1,3 +1,8 @@
 target triple = "i686-unknown-linux-gnu"
 
-declare ptr @memcpy(ptr, ptr, i32)
+
+define internal ptr @".memcpy"(ptr %0, ptr %1, i32 %2) alwaysinline {
+  call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr %1, i32 %2, i1 false)
+  ret ptr %0
+}
+declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)

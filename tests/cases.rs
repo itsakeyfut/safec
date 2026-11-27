@@ -54,12 +54,20 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
-        // A `char` array a string literal initializes is written to its
-        // last byte: the literal's own stores reach `terminator`'s zero, and
-        // the `memset` before them `padded`'s; `past` reads one byte beyond,
-        // which is `SC0412` (#1244). Mutation: leave out the `memset` in
-        // `Lowering::store_string`; `padded` is reported unwritten.
-        a_char_array_from_a_string_literal_is_read_within_its_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `char` array a string literal initializes has its own length,
+        // the literal's or the one written, and no other: `terminator` and
+        // `padded` read their last byte with no report, and `past` one byte
+        // beyond, which is `SC0412` (#1244). This check reports no unwritten
+        // read of a `char`, so the copy and the fill are held by the IR shown
+        // and by the run cases, not by a report. Mutation: make the fill one
+        // byte longer in `Lowering::store_string`; `padded` says `SC0412`.
+        a_char_array_from_a_string_literal_is_bounded_by_its_own_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An initializer gives a `const` array the value it starts with,
+        // which C17 6.7.3 p6 does not forbid, so `initialized` is silent; a
+        // write through a cast after it is still `SC0417` (#1244 review).
+        // Mutation: ask the locals for `Origin::Initialized` too in
+        // `read_only::handed_read_only`; `initialized` says `SC0417`.
+        a_const_char_array_from_a_string_literal_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function pointer stored, called through, compared and held in a
         // member is silent (`stored_and_called`, `in_a_member`), and a call
         // through one is a call this check cannot read (#1212, ADR-0125):
@@ -11198,11 +11206,19 @@ cases! {
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A string literal is a private constant, its bytes spelled as LLVM
+        // A string literal is an internal constant, its bytes spelled as LLVM
         // reads them: `"`, `\\` and a newline as two hex digits. Mutation:
         // push every byte as a character in `bytes_spelled`; the `"` ends
         // the constant early, and `tests/llvm.rs` refuses the module.
         llvm_ir_of_a_string_literal: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static `char` array a literal initializes is an object of the
+        // program's: a writable `global` unless `const`, with its linkage,
+        // and its zeros past the literal a `zeroinitializer` rather than one
+        // byte each, so `wide` is not 100000 bytes of IR (#1244 review).
+        // Mutation: write every `StaticInit::Bytes` as the private constant
+        // a literal was in `Emitter::global`; `wide` and `exact` are
+        // constants and `wide` loses its tail.
+        a_static_char_array_is_written_as_its_bytes_and_a_zeroed_tail: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block ending in a call that does not return ends in `unreachable`,
         // and `tests/llvm.rs` hands it to `clang`. Mutation: have `emit.rs`'s
         // `call` write nothing for no continuation; this fails, and so does

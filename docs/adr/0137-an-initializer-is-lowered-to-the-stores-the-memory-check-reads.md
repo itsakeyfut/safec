@@ -38,12 +38,15 @@ For a local, the initializer is first resolved, as 6.7.9 p17 to p21 say, into th
 
 * where the object's type holds no pointer: when some leaf is not written, one `memset` of the whole object to zero, then a store per written leaf, in the list's order;
 * where it holds a pointer: a store per leaf of the whole object, zero or a null pointer for the ones not written. Past a bound on the leaves, the initializer is refused, visibly.
+* an array of character type from a string literal holds no pointer and its leaves are the literal's bytes, so it is one copy of them out of the static the literal is, and one fill of zeros past them where the array is longer: two calls however long the literal, where a store per byte made a 2000-character literal take the memory check a minute.
+
+Each copy and fill an initializer makes is to this compiler's own `memcpy` and `memset`, never the program's, which may be a `static` of another meaning (C17 7.1.3 p1), and is marked as initializing the object, which a `const` object may be given (6.7.3 p6), so the read-only check does not ask it of the local it initializes.
 
 For a static, `StaticInit` gains an aggregate: one entry per member or element, each itself a `StaticInit`, with a leaf for the address of a static plus a byte offset. A string literal used as a pointer's initial value is that leaf. A `char` array keeps `StaticInit::Bytes`.
 
 ### Confirmation
 
-* Corpus cases of each form, built and run at `--safety off` and checked at `--safety memory`, land with #1241 to #1245.
+* Corpus cases of each form, built and run at `--safety off` and checked at `--safety memory`, land with #1241 to #1245. #1244's: `a_char_array_takes_its_length_and_bytes_from_a_string_literal` and `a_char_array_longer_than_its_string_literal_is_zero_filled` run; `a_const_char_array_from_a_string_literal_is_not_a_write` holds the initializing mark; `an_initializer_calls_no_memset_the_program_has` holds the compiler's own copy and fill.
 * A local with a pointer, initialized from `{0}`, gets no report. The mutation that zeroes it with a `memset` brings `SC0413` back.
 * A static table of string pointers builds, and its program prints what C17 gives.
 * `E0004` at every reader of `StaticInit` holds the new variant: the printer, the interpreter and the backend.

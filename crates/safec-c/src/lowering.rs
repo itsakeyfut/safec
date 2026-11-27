@@ -397,7 +397,7 @@ pub fn lower(
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
-        memset: None,
+        own: HashMap::new(),
         vla_types: HashMap::new(),
         writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
@@ -537,9 +537,9 @@ struct Lowering<'a> {
     /// The `memcpy` a struct copy calls, made once. See
     /// [`Lowering::copy_struct`].
     memcpy: Option<FuncId>,
-    /// The `memset` an array initialized from a shorter string literal
-    /// calls, made once. See [`Lowering::store_string`].
-    memset: Option<FuncId>,
+    /// The `memcpy` and `memset` an initializer calls, each made once and
+    /// never the program's. See [`Lowering::library_own`].
+    own: HashMap<&'static str, FuncId>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -1104,7 +1104,8 @@ impl Lowering<'_> {
     /// 6.5.16.1 p2), or `None` where it has none this can write.
     ///
     /// The type checker has refused one that is not a constant (6.7.9 p4).
-    /// What is left without a value is an address constant, `int *p = &g;`,
+    /// An array of character type from a string literal is its bytes. What
+    /// is left without a value is an address constant, `int *p = &g;`,
     /// which C allows and a static here cannot hold yet; or one already
     /// reported, which is not reported twice.
     fn static_init(
@@ -1114,8 +1115,10 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
         // An array of character type from a string literal (C17 6.7.9 p14):
-        // its bytes, cut or padded with zeros to the array's length, which
-        // the type check has held to at least the literal's characters.
+        // its bytes, cut to the array's length, which the type check has held
+        // to at least the literal's characters. The zeros past them are the
+        // backend's to write (`StaticInit::Bytes`), so a large array is not
+        // as large here.
         if let (Expr::String { .. }, Ty::Array { length, .. }) =
             (self.ast.expr(init), self.unit.ty(ty))
         {
@@ -1123,7 +1126,7 @@ impl Lowering<'_> {
                 unreachable!("the type check refuses a variable length array's initializer")
             };
             let mut bytes = self.string_bytes(init);
-            bytes.resize(usize::try_from(length).expect("an array's length fits"), 0);
+            bytes.truncate(usize::try_from(length).unwrap_or(usize::MAX));
             return Some(StaticInit::Bytes(bytes));
         }
         if let Some(value) = self.types.value(init) {
@@ -1219,22 +1222,27 @@ impl Lowering<'_> {
     }
 
     /// Initialize the local array `local` of character type from the string
-    /// literal `init` (C17 6.7.9 p14): a `memset` to zero where the array is
-    /// longer than the literal, then a store per byte the array holds, each
-    /// built as `s[i] = c` is. A `char` array holds no pointer, so the
-    /// `memset` is read as the write it is. See ADR-0137.
+    /// literal `init` (C17 6.7.9 p14): a copy of as many of the literal's
+    /// bytes as the array holds, out of the static the literal is, and a
+    /// fill of zeros past them where the array is longer (p21). Two calls
+    /// however long either is, so the IR does not grow with the literal.
+    /// Each is this compiler's own [`Lowering::library_own`], never the
+    /// program's, and each is [`Origin::Initialized`], since the object is
+    /// being given the value it starts with, which a `const` object may be
+    /// given. See ADR-0137.
     ///
-    /// Mutation: leave out the `memset`; the trailing bytes of
-    /// `a_char_array_longer_than_its_string_literal_is_zero_filled` are what
-    /// the stack held. Mutation: store one byte fewer;
+    /// Mutation: leave out the fill; the run of
+    /// `a_char_array_longer_than_its_string_literal_is_zero_filled` exits
+    /// with the stale bytes' sum. Mutation: copy one byte fewer; the run of
     /// `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
-    /// reads another value.
+    /// exits 2.
     fn store_string(
         &mut self,
         builder: &mut Builder,
         local: LocalId,
         init: ExprId,
         at: Span,
+        diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         let ty = builder.function.local(local);
         let Ty::Array {
@@ -1244,8 +1252,8 @@ impl Lowering<'_> {
         else {
             unreachable!("the type check initializes only a sized array from a string literal")
         };
-        let length = usize::try_from(length).expect("an array's length fits");
-        let mut bytes = self.string_bytes(init);
+        let literal = self.string_bytes(init).len() as u64;
+        let copied = length.min(literal);
         let pointer = self.unit.push_type(Ty::Pointer(element));
         let first = builder.function.push_local(pointer);
         builder.push(Operation {
@@ -1256,76 +1264,106 @@ impl Lowering<'_> {
             )),
             origin: Origin::Generated(at),
         });
-        if length > bytes.len() {
-            let memset = self.memset(at);
-            let then = builder.function.reserve_block();
-            builder.end(Terminator::Call {
-                callee: Called::Direct(memset),
-                arguments: vec![
-                    Operand::Copy(Place::local(first)),
-                    Operand::Constant(0),
-                    Operand::Constant(i128::try_from(length).expect("an array's length fits")),
-                ],
-                destination: None,
-                then: Some(then),
-                origin: Origin::Written(at),
-            });
-            builder.switch(then);
-            // Every byte past the literal's is the `memset`'s.
-        }
-        bytes.truncate(length);
-        let integer = self.unit.integer(element);
-        for (index, byte) in bytes.into_iter().enumerate() {
-            let value = i128::from(byte);
-            let value = integer.map_or(value, |int| int.convert(value));
-            let into = if index == 0 {
-                first
-            } else {
-                let into = builder.function.push_local(pointer);
-                builder.push(Operation {
-                    place: Place::local(into),
-                    value: Rvalue::Binary {
-                        op: BinOp::Add,
-                        lhs: Operand::Copy(Place::local(first)),
-                        rhs: Operand::Constant(i128::try_from(index).expect("an index fits")),
-                    },
-                    origin: Origin::Generated(at),
-                });
-                into
-            };
+        let from = self.place_of(builder, init, diagnostics)?;
+        let from = self.struct_address_of(builder, from, at);
+        let memcpy = self.library_own("memcpy", at);
+        self.call_own(
+            builder,
+            memcpy,
+            vec![
+                Operand::Copy(Place::local(first)),
+                from,
+                Operand::Constant(i128::from(copied)),
+            ],
+            at,
+        );
+        if length > copied {
+            let tail = builder.function.push_local(pointer);
             builder.push(Operation {
-                place: Place::local(into).deref(),
-                value: Rvalue::Use(Operand::Constant(value)),
-                origin: Origin::Written(at),
+                place: Place::local(tail),
+                value: Rvalue::Binary {
+                    op: BinOp::Add,
+                    lhs: Operand::Copy(Place::local(first)),
+                    rhs: Operand::Constant(i128::from(copied)),
+                },
+                origin: Origin::Generated(at),
             });
+            let memset = self.library_own("memset", at);
+            self.call_own(
+                builder,
+                memset,
+                vec![
+                    Operand::Copy(Place::local(tail)),
+                    Operand::Constant(0),
+                    Operand::Constant(i128::from(length - copied)),
+                ],
+                at,
+            );
         }
         Some(())
     }
 
-    /// The `memset` [`Lowering::store_string`] calls: the program's own
-    /// where it has one, as [`Lowering::memcpy`] is, and otherwise one this
-    /// compiler makes.
-    fn memset(&mut self, at: Span) -> FuncId {
-        if let Some(id) = self.memset {
+    /// A call to `callee` that initializes an object, ending the block.
+    fn call_own(
+        &mut self,
+        builder: &mut Builder,
+        callee: FuncId,
+        arguments: Vec<Operand>,
+        at: Span,
+    ) {
+        let then = builder.function.reserve_block();
+        builder.end(Terminator::Call {
+            callee: Called::Direct(callee),
+            arguments,
+            destination: None,
+            then: Some(then),
+            origin: Origin::Initialized(at),
+        });
+        builder.switch(then);
+    }
+
+    /// This compiler's own `memcpy` or `memset`, made once each, which an
+    /// initializer calls: **never the program's**, which may be a `static`
+    /// function of another meaning, an object, or declared with another
+    /// type, none of which a program that never calls it has to answer for
+    /// (C17 7.1.3 p1 reserves the name with external linkage only). The
+    /// memory check reads it by its row, as it reads any `memcpy`, and the
+    /// backend writes it as LLVM's own, under a name no program has.
+    ///
+    /// Mutation: take the program's where it has one; the run of
+    /// `an_initializer_calls_no_memset_the_program_has` exits 1.
+    fn library_own(&mut self, name: &'static str, at: Span) -> FuncId {
+        if let Some(&id) = self.own.get(name) {
             return id;
         }
-        let id = match self.functions.get("memset") {
-            Some(&id) => id,
-            None => {
-                let void = self.unit.push_type(Ty::Void);
-                let pointer = self.unit.push_type(Ty::Pointer(void));
-                let int = self.unit.push_type(Ty::INT);
-                let (rank, sign) = self.unit.target().size_type();
-                let size = self.unit.push_type(Ty::Integer { rank, sign });
-                self.unit.push_function(Function::builtin(
-                    "memset",
-                    at,
-                    pointer,
-                    [pointer, int, size],
-                ))
-            }
+        let void = self.unit.push_type(Ty::Void);
+        let pointer = self.unit.push_type(Ty::Pointer(void));
+        let (rank, sign) = self.unit.target().size_type();
+        let size = self.unit.push_type(Ty::Integer { rank, sign });
+        // `memcpy`'s source is a `const void *` (C17 7.24.2.1), which is
+        // what lets it be handed the literal's read-only static.
+        let (second, reads_only) = match name {
+            "memset" => (self.unit.push_type(Ty::INT), false),
+            _ => (pointer, true),
         };
-        self.memset = Some(id);
+        let parameter = |ty, reads_only| Parameter {
+            ty,
+            nonnull: None,
+            name: None,
+            reads_only,
+            passes: Passes::Value,
+        };
+        let id = self.unit.push_function(Function::builtin_with_parameters(
+            name,
+            at,
+            pointer,
+            [
+                parameter(pointer, false),
+                parameter(second, reads_only),
+                parameter(size, false),
+            ],
+        ));
+        self.own.insert(name, id);
         id
     }
 
@@ -3255,7 +3293,7 @@ impl Lowering<'_> {
                                     Type::Array { .. }
                                 )
                             {
-                                self.store_string(builder, local, init, at)?;
+                                self.store_string(builder, local, init, at, diagnostics)?;
                                 builder.sequenced(self.ast.expr(init).span());
                                 continue;
                             }

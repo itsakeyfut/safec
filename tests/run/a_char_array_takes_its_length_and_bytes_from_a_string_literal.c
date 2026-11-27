@@ -2,6 +2,8 @@ char unsized[] = "ab";
 char padded[5] = "xy";
 char exact[2] = "ab";
 const char braced[] = { "c" "d", };
+typedef char Text[];
+Text shorter = "ab", longer = "abcde";
 
 static int locals(void) {
     char s[] = "ab";
@@ -39,6 +41,14 @@ static int statics(void) {
     }
     if (sizeof braced != 3 || braced[0] != 'c' || braced[1] != 'd') {
         return 9;
+    }
+    if (sizeof shorter != 3 || sizeof longer != 6 || longer[4] != 'e') {
+        return 10;
+    }
+    unsized[0]++;
+    padded[4] = 'z';
+    if (unsized[0] != 'b' || padded[4] != 'z') {
+        return 11;
     }
     return 0;
 }

@@ -111,6 +111,18 @@ mod refused {
 
 use refused::Refused;
 
+/// The library functions LLVM lowers its own intrinsics to calls of, by
+/// name: a fill or a copy this compiler makes (`Emitter::own_library`)
+/// reaches the C library's `memset` through LLVM, and a symbol of the
+/// module named so would be called instead. **One with internal linkage is
+/// written under another name**, which changes nothing a program can see,
+/// since no other unit names it: a `static` function or object called
+/// `memset`, which C17 7.1.3 p1 allows where the header is not included,
+/// was what a local array's zero fill called (#1244 review). Mutation:
+/// leave the name alone; the run of
+/// `an_initializer_calls_no_memset_the_program_has` exits with 88.
+const LOWERED_TO: [&str; 3] = ["memcpy", "memmove", "memset"];
+
 /// What a step of writing answers: what it wrote, or that it refused and said
 /// why.
 type Refuses<T> = Result<T, Refused>;
@@ -152,6 +164,7 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         returned_in: None,
         stack_saved: false,
         va_used: false,
+        own_written: Vec::new(),
     };
 
     for id in unit.statics() {
@@ -228,6 +241,10 @@ struct Emitter<'a> {
     /// Whether a list of variadic arguments was started, ended or copied, so
     /// the module needs the three intrinsics declared (#1214).
     va_used: bool,
+    /// The library functions this compiler made and has written as
+    /// wrappers of LLVM's own, so that each is defined once however many
+    /// of the unit's functions are it. See [`Emitter::own_library`].
+    own_written: Vec<&'static str>,
 }
 
 /// What a struct parameter or result crosses a call as, with the struct's
@@ -584,7 +601,13 @@ impl Emitter<'_> {
     /// `print::shown` is the wrong escape here: LLVM reads `\xx` and nothing
     /// else, so a `\u{1b}` would arrive as six characters of name.
     fn name(&self, function: &Function) -> String {
+        if let Some(name @ ("memcpy" | "memset")) = function.made_as() {
+            return format!("@\".{name}\"");
+        }
         let spelled = function.spelled(self.sources);
+        if function.internal_linkage() && LOWERED_TO.contains(&spelled) {
+            return format!("@\"{spelled}.internal\"");
+        }
         if plain(spelled) {
             format!("@{spelled}")
         } else {
@@ -594,9 +617,14 @@ impl Emitter<'_> {
 
     /// An object with static storage duration's symbol, quoted as a function's
     /// name is where it holds what LLVM's unquoted set does not: a `static`
-    /// local's name is made unique with a `.`, which that set has.
+    /// local's name is made unique with a `.`, which that set has. One with
+    /// internal linkage named in [`LOWERED_TO`] is renamed, as a function is.
     fn global_name(&self, id: StaticId) -> String {
-        let name = &self.unit.static_object(id).name;
+        let object = self.unit.static_object(id);
+        let name = &object.name;
+        if object.linkage == Linkage::Internal && LOWERED_TO.contains(&name.as_str()) {
+            return format!("@\"{name}.internal\"");
+        }
         if plain(name) {
             format!("@{name}")
         } else {
@@ -619,7 +647,7 @@ impl Emitter<'_> {
         // a layout it has none of, this panicked (#1202 review). Mutation:
         // spell it; `an_object_of_a_struct_nothing_defines_is_declared`
         // panics.
-        let spelled = if self.unit.size_of(object.ty).is_none() {
+        let mut spelled = if self.unit.size_of(object.ty).is_none() {
             "i8".to_owned()
         } else {
             self.spell(object.ty)
@@ -627,17 +655,32 @@ impl Emitter<'_> {
         let init = match &object.init {
             StaticInit::Zero => Ok("zeroinitializer".to_owned()),
             StaticInit::Int(value) => self.constant(*value, object.ty),
-            // A string literal's array: a constant no other module names,
-            // whose address nothing compares (C17 6.4.5 p7 leaves whether two
-            // literals share storage unspecified).
+            // An array of character type, written as any object is, so a
+            // program's own `char g[] = "ab";` is writable and has its
+            // linkage, and a string literal is the internal constant its
+            // static says (#1244 review). The elements past the bytes are
+            // zero; where there are any the object is written as its bytes
+            // and a zeroed tail, as `clang` writes a long array, so the
+            // module is not as large as the array.
             StaticInit::Bytes(bytes) => {
-                writeln!(
-                    out,
-                    "{name} = private unnamed_addr constant {spelled} c\"{}\"",
-                    bytes_spelled(bytes)
-                )
-                .expect("writing to a string cannot fail");
-                return;
+                let length = match self.unit.ty(object.ty) {
+                    Ty::Array {
+                        length: Length::Constant(length),
+                        ..
+                    } => length,
+                    _ => unreachable!("bytes initialize only an array of a constant length"),
+                };
+                let written = bytes.len() as u64;
+                let text = format!("c\"{}\"", bytes_spelled(bytes));
+                if written < length {
+                    spelled = format!("<{{ [{written} x i8], [{} x i8] }}>", length - written);
+                    Ok(format!(
+                        "<{{ [{written} x i8] {text}, [{} x i8] zeroinitializer }}>",
+                        length - written
+                    ))
+                } else {
+                    Ok(text)
+                }
             }
         };
         // **A `const` object is a `constant`**, as `clang` writes one, so it
@@ -2065,6 +2108,64 @@ impl Emitter<'_> {
         Ok((name, returns, parameters))
     }
 
+    /// A `memcpy` or `memset` this compiler made, written as an internal
+    /// function over LLVM's intrinsic of that name, and once however many
+    /// of the unit's functions are it. **Under a name with a `.`**, which no
+    /// C identifier holds, so it never meets a function or an object the
+    /// program names `memcpy` or `memset`: either may be a `static` of
+    /// another meaning, which C17 7.1.3 p1 allows where the header is not
+    /// included, and the two in one module were a redefinition `clang`
+    /// refused (#1244 review). It returns its first argument, as the
+    /// library's does.
+    ///
+    /// Mutation: name it `@memset`; the run of
+    /// `an_initializer_calls_no_memset_the_program_has` does not build.
+    fn own_library(
+        &mut self,
+        made: &'static str,
+        name: &str,
+        returns: &str,
+        parameters: &[String],
+        out: &mut String,
+    ) {
+        if self.own_written.contains(&made) {
+            return;
+        }
+        self.own_written.push(made);
+        let [into, second, size] = parameters else {
+            unreachable!("the lowering makes `{made}` with three parameters")
+        };
+        let width = size.split(' ').next().unwrap_or(size);
+        let (intrinsic, passed) = match made {
+            "memset" => (
+                format!("llvm.memset.p0.{width}"),
+                "ptr %0, i8 %byte".to_owned(),
+            ),
+            _ => (
+                format!("llvm.memcpy.p0.p0.{width}"),
+                "ptr %0, ptr %1".to_owned(),
+            ),
+        };
+        let narrowed = if made == "memset" {
+            let int = second.split(' ').next().unwrap_or(second);
+            format!("  %byte = trunc {int} %1 to i8\n")
+        } else {
+            String::new()
+        };
+        writeln!(
+            out,
+            "\ndefine internal {returns} {name}({into} %0, {second} %1, {size} %2) alwaysinline {{\n\
+             {narrowed}  call void @{intrinsic}({passed}, {width} %2, i1 false)\n  ret ptr %0\n}}"
+        )
+        .expect("writing to a string cannot fail");
+        writeln!(
+            out,
+            "declare void @{intrinsic}(ptr, {}, {width}, i1)",
+            if made == "memset" { "i8" } else { "ptr" }
+        )
+        .expect("writing to a string cannot fail");
+    }
+
     /// One function, appended to the module.
     fn function(&mut self, id: FuncId, out: &mut String) {
         let unit = self.unit;
@@ -2092,6 +2193,10 @@ impl Emitter<'_> {
             (true, true) => "...",
             (true, false) => ", ...",
         };
+        if let Some(made @ ("memcpy" | "memset")) = function.made_as() {
+            self.own_library(made, &name, &returns, &parameters, out);
+            return;
+        }
         let declared = format!(
             "declare {returns} {name}({}{ellipsis})\n",
             parameters.join(", ")

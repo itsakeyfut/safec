@@ -39,7 +39,7 @@ bb1:
   store ptr %_4, ptr %_7
   %t2 = load ptr, ptr %_6
   %t3 = load ptr, ptr %_7
-  %t4 = call ptr @memcpy(ptr %t2, ptr %t3, i64 24)
+  %t4 = call ptr @".memcpy"(ptr %t2, ptr %t3, i64 24)
   br label %bb2
 
 bb2:
@@ -47,7 +47,7 @@ bb2:
   store ptr %_3, ptr %_10
   %t5 = load ptr, ptr %_9
   %t6 = load ptr, ptr %_10
-  %t7 = call ptr @memcpy(ptr %t5, ptr %t6, i64 24)
+  %t7 = call ptr @".memcpy"(ptr %t5, ptr %t6, i64 24)
   br label %bb3
 
 bb3:
@@ -102,7 +102,7 @@ bb1:
   store ptr %_4, ptr %_7
   %t7 = load ptr, ptr %_6
   %t8 = load ptr, ptr %_7
-  %t9 = call ptr @memcpy(ptr %t7, ptr %t8, i64 16)
+  %t9 = call ptr @".memcpy"(ptr %t7, ptr %t8, i64 16)
   br label %bb2
 
 bb2:
@@ -110,7 +110,7 @@ bb2:
   store ptr %_3, ptr %_10
   %t10 = load ptr, ptr %_9
   %t11 = load ptr, ptr %_10
-  %t12 = call ptr @memcpy(ptr %t10, ptr %t11, i64 16)
+  %t12 = call ptr @".memcpy"(ptr %t10, ptr %t11, i64 16)
   br label %bb3
 
 bb3:
@@ -147,4 +147,9 @@ bb0:
   ret i64 %t2
 }
 
-declare ptr @memcpy(ptr, ptr, i64)
+
+define internal ptr @".memcpy"(ptr %0, ptr %1, i64 %2) alwaysinline {
+  call void @llvm.memcpy.p0.p0.i64(ptr %0, ptr %1, i64 %2, i1 false)
+  ret ptr %0
+}
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

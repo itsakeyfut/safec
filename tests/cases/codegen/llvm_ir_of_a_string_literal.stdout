@@ -1,6 +1,6 @@
 target triple = "x86_64-pc-windows-msvc"
-@.str.0 = private unnamed_addr constant [6 x i8] c"A\0A\22q\5C\00"
-@.str.1 = private unnamed_addr constant [3 x i8] c"ab\00"
+@.str.0 = internal constant [6 x i8] c"A\0A\22q\5C\00"
+@.str.1 = internal constant [3 x i8] c"ab\00"
 
 define i32 @main() {
 entry:
