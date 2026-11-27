@@ -421,9 +421,11 @@ pub(super) fn handed_read_only(
     // ADR-0125.
     let called = callee.direct().map(|id| analysis.unit.function(id));
     // **An initializer's call is not asked**: it gives the object the
-    // value it starts with, which C17 6.7.3 p6 does not forbid, and only
-    // the lowering makes one, into the object it is initializing, whose
-    // address carries that object's `const` mark (#1244 review, #1241).
+    // value it starts with, which C17 6.7.3 p6 does not forbid. Only the
+    // lowering makes one, a copy or a fill whose destination is the object
+    // it is initializing and whose source, where it has one, is a `const
+    // void *` it only reads; so no static or literal is written through it
+    // (#1244 review, #1241).
     // Mutation: ask it; `a_const_char_array_from_a_string_literal_is_not_a_write`
     // says `SC0417`.
     if matches!(origin, Origin::Initialized(_)) {

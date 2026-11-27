@@ -5,9 +5,9 @@ Function a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:1:5 "poi
   Local "_2" "int *[2]" "ps"
   Local "_3" "int **"
   Local "_4" "int **"
-  Local "_5" "int **"
+  Local "_5" "int *"
   Local "_6" "int **"
-  Local "_7" "int *"
+  Local "_7" "int **"
   Local "_8" "int **"
   Local "_9" "int **"
   Local "_10" "int"
@@ -27,32 +27,32 @@ Function a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:1:5 "poi
       Destination "_4"
       Binary "Add"
         Copy "_3"
-        Constant 1
+        Constant 0
+    Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:19 written
+      Destination "_5"
+      Address
+        Place "_1"
     Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:10 initialized
       Destination "_4"
         Deref
       Use
-        Constant 0
+        Copy "_5"
     Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:10 generated
-      Destination "_5"
+      Destination "_6"
       Address
         Place "_2"
           Index
             Constant 0
     Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:10 generated
-      Destination "_6"
-      Binary "Add"
-        Copy "_5"
-        Constant 0
-    Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:19 written
       Destination "_7"
-      Address
-        Place "_1"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
     Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:10 initialized
-      Destination "_6"
+      Destination "_7"
         Deref
       Use
-        Copy "_7"
+        Constant 0
     Sequenced a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:3:18 generated
     Operation a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:4:12 generated
       Destination "_8"

@@ -22,11 +22,33 @@ union U {
     char c;
 };
 
+union Value {
+    int i;
+    long long l;
+};
+
+struct Gaps {
+    char c;
+    int : 5;
+    int i;
+    int rest[];
+};
+
+struct Padded {
+    char c;
+    int i;
+};
+
+int memcmp(const void *, const void *, unsigned long long);
+
 int g[4] = {1, 2};
 struct P gp = {7, 8};
 struct P gs[3] = {{1, 2}, 3, 4};
 int scalar = {5};
 union U gu = {65};
+struct Bits zero_bits = {0};
+struct Named gnamed = {"st", 4};
+char grows[2][3] = {{"ab"}, {"c"}};
 
 static int dirty(void) {
     int junk[16];
@@ -34,6 +56,39 @@ static int dirty(void) {
         junk[i] = 9;
     }
     return junk[3];
+}
+
+static struct Padded padded_after(int dirt) {
+    int junk[16];
+    for (int i = 0; i < 16; i++) {
+        junk[i] = dirt;
+    }
+    struct Padded p = {1, 2};
+    if (junk[0] != dirt) {
+        p.c = 0;
+    }
+    return p;
+}
+
+static int zeroed(void) {
+    union Value v = {0};
+    struct P elided[] = {1, 2, 3, 4, 5};
+    struct P s = {7, 8};
+    struct P whole[] = {s, s, s};
+    char h[2][3] = {{"ab"}, {"c"}};
+    struct Gaps g = {1, 2};
+    struct Padded one = padded_after(0x41);
+    struct Padded two = padded_after(0x42);
+    if (v.l != 0 || sizeof elided != 24 || elided[2].x != 5 || elided[2].y != 0) {
+        return 10;
+    }
+    if (sizeof whole != 24 || whole[2].y != 8 || h[0][1] != 'b' || h[1][0] != 'c' || h[1][1] != 0) {
+        return 11;
+    }
+    if (g.c != 1 || g.i != 2 || memcmp(&one, &two, sizeof one) != 0) {
+        return 12;
+    }
+    return 0;
 }
 
 static int counted(void) {
@@ -91,12 +146,20 @@ static int statics(void) {
     if (scalar != 5 || gu.c != 65 || counted() != 3 || counted() != 4) {
         return 8;
     }
+    if (zero_bits.low != 0 || zero_bits.high != 0 || gnamed.name[1] != 't' || gnamed.k != 4 || grows[1][0] != 'c') {
+        return 9;
+    }
     return 0;
 }
 
 int main(void) {
     dirty();
     int failed = locals();
+    if (failed != 0) {
+        return failed;
+    }
+    dirty();
+    failed = zeroed();
     if (failed != 0) {
         return failed;
     }

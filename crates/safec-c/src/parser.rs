@@ -1415,16 +1415,13 @@ impl Parser<'_> {
     /// case `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
     /// shows two arrays of one typedef with two lengths.
     ///
-    /// **A list gives it as many elements as it has items** (#1241), where
-    /// that is the count: an element that is no aggregate takes one item
-    /// each, and so does one every item of which is a braced list, or a
-    /// string literal for an array of character type. Any other list
-    /// elides braces over an aggregate element (6.7.9 p20), whose count is
-    /// the struct's or the array's to say, which this stage does not read;
-    /// that one is left as written, and the type check refuses it as this
-    /// compiler's gap. Mutation: count every list's items; the case
-    /// `an_unsized_array_a_list_elides_braces_in_is_not_built_yet` reads
-    /// `{1, 2, 3, 4}` as four structs.
+    /// **A list gives it a length this stage cannot count** (#1241 review):
+    /// how many elements its items fill turns on brace elision over the
+    /// element (6.7.9 p20), on whether an item is a struct taken whole,
+    /// which only types say, and with #1242 on a designator's value. The
+    /// node is made here, after the items, and its value is set by the type
+    /// check when it reaches it, after every item is typed and before
+    /// anything that names the array (`Ast::set_length`).
     fn completed(&mut self, ty: TypeId, init: Option<&Initializer>) -> TypeId {
         let Type::Array {
             element,
@@ -1439,26 +1436,12 @@ impl Parser<'_> {
                 Expr::String { length, .. } if self.is_character(element) => *length,
                 _ => return ty,
             },
-            Some(Initializer::List { items, span }) => {
-                let counted = items.iter().all(|item| match item {
-                    Initializer::List { .. } => true,
-                    Initializer::Expr(id) => match self.ast.ty(self.ast.unqualified(element)) {
-                        Type::Array { element: inner, .. } => {
-                            matches!(self.ast.expr(*id), Expr::String { .. })
-                                && self.is_character(*inner)
-                        }
-                        Type::Struct { .. } => false,
-                        _ => true,
-                    },
-                });
-                if !counted {
-                    return ty;
-                }
-                self.ast.push_expr(Expr::Length {
-                    value: items.len() as u64,
-                    span: *span,
-                })
-            }
+            Some(Initializer::List { items, span }) => self.ast.push_expr(Expr::Length {
+                // The items' count until the type check sets it, which is
+                // what it is wherever no item elides braces.
+                value: items.len() as u64,
+                span: *span,
+            }),
             None => return ty,
         };
         self.ast.push_type(Type::Array {
@@ -1485,7 +1468,11 @@ impl Parser<'_> {
     /// in braces") and a pointer, a scalar, whose braces p11 drops. For
     /// any other type the braces are not the literal's own: a struct's or an
     /// array of pointers' list initializes its first member or element from
-    /// the literal (p17, p20), which waits for braced lists (#1241).
+    /// the literal (p17, p20), which `initializer::Shapes` works out.
+    ///
+    /// **Kept although the list reads `{ "ab" }` too**: an array of unknown
+    /// size takes the literal's length from the literal, which only the
+    /// literal read as itself gives here (`Parser::completed`).
     fn takes_braced_literal(&self, ty: TypeId) -> bool {
         match *self.ast.ty(self.ast.unqualified(ty)) {
             Type::Pointer(_) => true,
@@ -1520,8 +1507,8 @@ impl Parser<'_> {
         }
 
         // `{ "ab" }`: one literal, or a run of adjacent ones, and an optional
-        // `,`, for a type it initializes as `"ab"` does. Every other list
-        // waits for the braced initializers that read it (#1241).
+        // `,`, for a type it initializes as `"ab"` does. Every other list is
+        // a list.
         if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty) {
             let mut ahead = 1;
             while self.peek_at(ahead).kind == TokenKind::String {

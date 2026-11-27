@@ -397,7 +397,16 @@ pub fn check(
     ast.settle_enumerations();
     checker.decide_enumerations(ast, None);
 
+    // The length each braced list gives an array of unknown size, worked
+    // out when its node is reached: after the list's items, which the
+    // parser pushed first, and before anything naming the array, which the
+    // node precedes (`Parser::completed`).
+    let counted = counted_lengths(ast);
     for id in ast.expr_ids().collect::<Vec<_>>() {
+        if let Some((element, init)) = counted.get(&id) {
+            let count = checker.extent(ast, *element, init);
+            ast.set_length(id, count);
+        }
         let errors = diagnostics.error_count();
         let ty = checker.type_of(ast, id, diagnostics);
         checker.types[id.index()] = ty;
@@ -444,6 +453,40 @@ pub fn check(
         operated: checker.operated,
         controlling: checker.controlling,
     }
+}
+
+/// Each [`Expr::Length`] a braced list gave an array of unknown size, with
+/// the element type and the list: what [`Checker::extent`] counts.
+fn counted_lengths(ast: &Ast) -> HashMap<ExprId, (TypeId, Initializer)> {
+    let mut declared: Vec<&InitDeclarator> = Vec::new();
+    for item in ast.items() {
+        if let Item::Declaration { declarators, .. } = item {
+            declared.extend(declarators);
+        }
+    }
+    for id in ast.stmt_ids() {
+        if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+            declared.extend(declarators);
+        }
+    }
+    let mut counted = HashMap::new();
+    for declarator in declared {
+        let Some(init @ Initializer::List { span, .. }) = &declarator.init else {
+            continue;
+        };
+        let Type::Array {
+            element,
+            length: Some(length),
+            ..
+        } = ast.ty(declarator.declaration.ty)
+        else {
+            continue;
+        };
+        if matches!(ast.expr(*length), Expr::Length { span: counted, .. } if counted == span) {
+            counted.insert(*length, (*element, init.clone()));
+        }
+    }
+    counted
 }
 
 /// What waits on one expression's value: see `Checker::enumerations_waiting`.
@@ -1203,8 +1246,9 @@ impl Checker<'_> {
     /// is accepted. Mutation: compare with the first declaration alone; its
     /// `a` is.
     fn check_redeclared_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        // An array whose length `Parser::completed` counted from a string
-        // literal rather than one the source wrote.
+        // An array whose length `Parser::completed` took from its
+        // initializer, a string literal or a braced list, rather than one
+        // the source wrote.
         let counted = |ast: &Ast, ty: TypeId| {
             matches!(
                 ast.ty(ty),
@@ -1258,7 +1302,7 @@ impl Checker<'_> {
                              declaration gave its length yet"
                         ))
                         .with_code(NOT_YET)
-                        .with_label(Label::primary(name, "its length is its string literal's"))
+                        .with_label(Label::primary(name, "its length is its initializer's"))
                         .with_label(Label::secondary(before, "an earlier declaration"))
                         .with_note("a gap in this compiler: C17 6.2.7 p3 makes the two one type"),
                     );
@@ -1438,18 +1482,11 @@ impl Checker<'_> {
                 // terminating zero aside: `char s[2] = "ab";` drops the zero.
                 // An array of unknown size was given the literal's length
                 // when it was declared (`Parser::completed`).
-                Type::Array {
-                    element, length, ..
-                } if initializer
-                    .expr()
-                    .is_some_and(|init| matches!(ast.expr(init), Expr::String { .. })) =>
+                Type::Array { element, .. }
+                    if initializer
+                        .expr()
+                        .is_some_and(|init| matches!(ast.expr(init), Expr::String { .. })) =>
                 {
-                    let Some(Expr::String {
-                        length: literal, ..
-                    }) = initializer.expr().map(|init| ast.expr(init))
-                    else {
-                        unreachable!("matched as a string literal above")
-                    };
                     let character = matches!(
                         ast.ty(ast.unqualified(*element)),
                         Type::Integer {
@@ -1459,9 +1496,9 @@ impl Checker<'_> {
                     );
                     // Only a bare literal reaches here for an array of any
                     // other element: the parser keeps the braces of `char
-                    // a[2][3] = { "ab" }`, which is brace elision (p20) and
-                    // waits for braced lists, and `char a[2][3] = "ab"` is
-                    // the p16 violation this says it is.
+                    // a[2][3] = { "ab" }`, a list `Checker::check_list`
+                    // reads, and `char a[2][3] = "ab"` is the p16
+                    // violation this says it is.
                     if !character {
                         (
                             format!(
@@ -1471,19 +1508,12 @@ impl Checker<'_> {
                             "C17 6.7.9 p14 and p16",
                         )
                     } else {
-                        let holds = length.and_then(|id| self.values[id.index()]);
-                        let needs = self.values[literal.index()];
-                        match (holds, needs) {
-                            (Some(holds), Some(needs)) if needs - 1 > holds => (
-                                format!(
-                                    "the string literal has {} characters, and `{called}` holds {holds}",
-                                    needs - 1
-                                ),
-                                "C17 6.7.9 p2: no initializer provides a value for an object \
-                                 outside the one initialized",
-                            ),
-                            _ => continue,
-                        }
+                        // One rule for a literal alone and one in a list.
+                        let value = initializer
+                            .expr()
+                            .expect("matched as a string literal above");
+                        self.check_literal_fits(ast, ty, value, name, diagnostics);
+                        continue;
                     }
                 }
                 // p16: "the initializer for an object that has aggregate or
@@ -1611,22 +1641,12 @@ impl Checker<'_> {
             // A struct with no definition here is refused as an incomplete
             // object (`check_complete_objects`), and a second report would
             // be about the same fault.
-            Err(Fault::Unsized(at)) => {
-                if matches!(ast.ty(ty), Type::Array { length: None, .. }) {
-                    diagnostics.report(
-                        Diagnostic::error(format!(
-                            "cannot take the length of `{called}` from this list yet"
-                        ))
-                        .with_code(NOT_YET)
-                        .with_label(Label::primary(at, "this elides the braces of an element"))
-                        .with_note(
-                            "a gap in this compiler: C17 6.7.9 p20 and p22 give it a length, \
-                             which this compiler counts only from one item per element",
-                        ),
-                    );
-                }
-                return;
-            }
+            // A struct with no definition here, refused as an incomplete
+            // object (`check_complete_objects`), or an array whose length
+            // has no value, refused where it is written: a second report
+            // would be about the same fault. An array of unknown size is
+            // always given its list's length (`Parser::completed`).
+            Err(Fault::Unsized(_)) => return,
         };
         for leaf in leaves {
             if leaf.whole && matches!(ast.expr(leaf.value), Expr::String { .. }) {
@@ -1637,6 +1657,26 @@ impl Checker<'_> {
                 .insert(leaf.value, Receiving::Initializer { ty: leaf.ty, name });
             self.check_received(ast, leaf.value, diagnostics);
         }
+    }
+
+    /// How many elements of `element` the braced list `init` initializes,
+    /// for the length of an array of unknown size (C17 6.7.9 p22). Where
+    /// the list cannot be worked out, its items' count, and
+    /// `Checker::check_list` reports why; never zero, which no array has.
+    fn extent(&self, ast: &Ast, element: TypeId, init: &Initializer) -> u64 {
+        let length = |id: ExprId| self.values[id.index()].and_then(|v| u64::try_from(v).ok());
+        let whole = |value: ExprId, ty: TypeId| self.initializes_whole(ast, value, ty);
+        let shapes = Shapes {
+            ast,
+            resolution: self.resolution,
+            length: &length,
+            whole: &whole,
+        };
+        let fallback = match init {
+            Initializer::List { items, .. } => items.len() as u64,
+            Initializer::Expr(_) => 1,
+        };
+        shapes.extent(element, init).unwrap_or(fallback).max(1)
     }
 
     /// Whether `value` initializes an aggregate of `ty` whole rather than
@@ -1945,10 +1985,14 @@ impl Checker<'_> {
                 // completed".
                 Type::Void => false,
                 // Complete where it is written, which a definition and every
-                // struct with no tag is; or, at file scope, defined anywhere.
+                // struct with no tag is; or, at file scope with no
+                // initializer, defined anywhere: a tentative definition is
+                // completed by the end of the unit (6.9.2 p2), and one with
+                // an initializer is initialized where it is, so its type is
+                // complete there (6.7.9 p3, #1241 review).
                 Type::Struct { .. } => {
                     self.resolution.complete(ast, ty)
-                        || (at_file_scope && {
+                        || (at_file_scope && !initialized && {
                             let tag = self.resolution.tag(self.resolution.bound(ast, ty));
                             self.resolution.tag_declaration(tag).defined.is_some()
                         })

@@ -959,6 +959,12 @@ pub enum StaticInit {
         of: StaticId,
         /// How far into it, in bytes.
         offset: u64,
+        /// The initializer's span where the pointer given this address does
+        /// not point at `const`, and so may be written through, which the
+        /// memory check asks of a read-only `of` as it asks a store of one
+        /// (`memory::read_only_statics`, ADR-0121); `None` where it points
+        /// at `const`.
+        writable: Option<Span>,
     },
 }
 

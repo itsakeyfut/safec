@@ -17,7 +17,7 @@ Two shapes have to be chosen: what a local's initializer becomes in the IR, whic
 * The memory check keeps what a local holds per slot where the local holds pointers (ADR-0092 rule 3), and reads every store it is given.
 * Measured on `main` at `12fcf658`: a `memset` that zeroes a local the check keeps per slot, an array of pointers, is reported as writing something that is not a pointer where pointers are read back (`SC0413`), and a later read is a null doubt (`SC0403`). A `memset` of a local with no pointer in it is read as a write.
 * An initializer can be far larger than what it names: `char buf[4096] = {0}` writes 4096 bytes from one written zero.
-* The memory check does not follow what a static holds (ADR-0115), so a static's starting value is the backend's question, not the check's.
+* The memory check does not follow what a static holds (ADR-0115), so a static's starting value is the backend's question, not the check's, with one exception: a store of a literal's or a `const` object's address into a pointer that may write it is asked where it is made (ADR-0121), and an initializer is that store made before the program begins.
 
 ## Considered Options
 
@@ -36,13 +36,15 @@ Chosen options: "leaf stores where the type holds a pointer, `memset` and leaf s
 
 For a local, the initializer is first resolved, as 6.7.9 p17 to p21 say, into the leaves it writes: each a path of members and elements to a scalar, and a value. Then:
 
-* where the object's type holds no pointer: when some leaf is not written, one `memset` of the whole object to zero, then a store per written leaf, in the list's order;
-* where it holds a pointer: a store per leaf of the whole object, zero or a null pointer for the ones not written. Past a bound on the leaves, the initializer is refused, visibly.
+* where the object's type holds no pointer: one `memset` of the whole object to zero, then a store per written leaf, in the list's order. Always, not only where a leaf is unwritten: padding and a union's bytes past its first member are no leaf's, and `clang` zeroes them, so a program reading them back as zero kept that value (#1241 review);
+* where it holds a pointer: a store per written leaf, in the list's order, then zero or a null pointer into every leaf none wrote, after them so an item reading the object reads what C gives it. Past a bound on the leaves, the initializer is refused, visibly, and so is one holding a union whose first member is not its largest, whose other bytes no leaf reaches.
 * an array of character type from a string literal holds no pointer and its leaves are the literal's bytes, so it is one copy of them out of the static the literal is, and one fill of zeros past them where the array is longer: two calls however long the literal, where a store per byte made a 2000-character literal take the memory check a minute.
 
 Each copy and fill an initializer makes is to this compiler's own `memcpy` and `memset`, never the program's, which may be a `static` of another meaning (C17 7.1.3 p1), and is marked as initializing the object, which a `const` object may be given (6.7.3 p6), so the read-only check does not ask it of the local it initializes.
 
-For a static, `StaticInit` gains an aggregate: one entry per member or element, each itself a `StaticInit`, with a leaf for the address of a static plus a byte offset. A string literal used as a pointer's initial value is that leaf. A `char` array keeps `StaticInit::Bytes`.
+For a static, `StaticInit` gains an aggregate: one entry per member or element, each itself a `StaticInit`, with a leaf for the address of a static plus a byte offset. A string literal used as a pointer's initial value is that leaf. A `char` array keeps `StaticInit::Bytes`. An address leaf given to a pointer that does not point at `const` carries the initializer's span, and the memory check asks it of a read-only object as it asks a store (`memory::read_only_statics`).
+
+The length an initializer gives an array of unknown size (6.7.9 p22) is counted by the type check, from the same resolution, once the items are typed: a struct item taken whole and brace elision decide it, and with designators a constant's value does.
 
 ### Confirmation
 
@@ -50,6 +52,7 @@ For a static, `StaticInit` gains an aggregate: one entry per member or element, 
 * A local with a pointer, initialized from a list that does not name every scalar, gets no `SC0413`: `a_local_holding_pointers_is_initialized_one_scalar_at_a_time`. The mutation that zeroes it with a `memset` brings `SC0413` back.
 * A static table of string pointers builds, and its program reads what C17 gives: `a_static_holds_addresses_of_statics`.
 * Past the bound, a local holding a pointer is refused: `a_large_local_holding_a_pointer_is_not_initialized_yet`.
+* A static pointer that may write a literal or a `const` object is `SC0417`: `a_static_pointer_to_read_only_storage_is_asked_as_a_store`.
 * `E0004` at every reader of `StaticInit` holds the new variant: the printer, the interpreter and the backend.
 
 ### Consequences

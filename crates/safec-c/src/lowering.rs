@@ -63,7 +63,10 @@ const LOWERING: Code = Code::new("SC0304");
 /// How many scalars a local that holds a pointer may have for its
 /// initializer to be written one store each, zeros included: past it, the
 /// initializer is refused rather than made a function of that many stores.
-/// See ADR-0137.
+/// See ADR-0137. A thousand stores keep a function's IR, and the memory
+/// check over it, within what a hand-written function of that size costs;
+/// the number is a bound and not a property of C, and
+/// `a_large_local_holding_a_pointer_is_not_initialized_yet` sits past it.
 const LEAVES: usize = 1024;
 
 /// A jump from outside the scope of a variable length array to inside it,
@@ -1113,13 +1116,15 @@ impl<'a> Lowering<'a> {
     /// 6.5.16.1 p2), or `None` where it has none this can write.
     ///
     /// The type checker has refused one that is not a constant (6.7.9 p4).
-    /// An array of character type from a string literal is its bytes. What
-    /// is left without a value is an address constant, `int *p = &g;`,
-    /// which C allows and a static here cannot hold yet; or one already
+    /// An array of character type from a string literal is its bytes, and
+    /// an address constant [`Lowering::static_address`] reads is an
+    /// address. What is left is an address this compiler cannot hold yet,
+    /// a function's or an integer's cast to a pointer, or one already
     /// reported, which is not reported twice.
     fn static_value(
         &mut self,
         init: ExprId,
+        declared: TypeId,
         ty: TyId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
@@ -1159,7 +1164,15 @@ impl<'a> Lowering<'a> {
         // number of bytes (C17 6.6 p9), for a pointer.
         if matches!(self.unit.ty(ty), Ty::Pointer(_)) {
             if let Some((of, offset)) = self.static_address(init, diagnostics) {
-                return Some(StaticInit::Address { of, offset });
+                // Whether what it points at is `const`, bit `0` of its
+                // levels, which the memory check asks a read-only `of` of.
+                let writable =
+                    (self.const_levels(declared) & 1 == 0).then(|| self.ast.expr(init).span());
+                return Some(StaticInit::Address {
+                    of,
+                    offset,
+                    writable,
+                });
             }
         }
         if !diagnostics.has_errors() {
@@ -1168,9 +1181,13 @@ impl<'a> Lowering<'a> {
                     .with_code(LOWERING)
                     .with_label(Label::primary(
                         self.ast.expr(init).span(),
-                        "an address, which an object with static storage duration cannot start with so far",
+                        "an address this compiler cannot write into a static",
                     ))
-                    .with_note("an initializer that is a number or a null pointer is all this compiler holds"),
+                    .with_note(
+                        "a gap in this compiler: a static holds a number, a null pointer, \
+                         or an object's address plus a constant, and not a function's address \
+                         or a number cast to a pointer yet",
+                    ),
             );
         }
         None
@@ -1196,7 +1213,9 @@ impl<'a> Lowering<'a> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
         let list = match init {
-            Initializer::Expr(value) => return self.static_value(*value, ty, diagnostics),
+            Initializer::Expr(value) => {
+                return self.static_value(*value, declared, ty, diagnostics);
+            }
             Initializer::List { .. } => init,
         };
         let leaves = self.shapes(|shapes| shapes.resolve(declared, list)).ok()?;
@@ -1211,7 +1230,8 @@ impl<'a> Lowering<'a> {
                     (Step::Member(index), Ty::Struct(id)) => {
                         let layout = self.unit.struct_layout(id);
                         let member = layout.members[index];
-                        let refused = if member.bits.is_some() {
+                        let zero = self.types.value(leaf.value) == Some(0);
+                        let refused = if member.bits.is_some() && !zero {
                             Some("a bit-field, which a static's initializer does not write yet")
                         } else if self.shapes(|shapes| shapes.union(ast_ty))
                             && self.unit.size_of(member.ty) != Some(layout.size)
@@ -1255,7 +1275,7 @@ impl<'a> Lowering<'a> {
                     .shapes(|shapes| shapes.subobject(ast_ty, step))
                     .expect("a path the walk made reaches a subobject");
             }
-            *node = self.static_value(leaf.value, ir_ty, diagnostics)?;
+            *node = self.static_value(leaf.value, ast_ty, ir_ty, diagnostics)?;
         }
         Some(root)
     }
@@ -1280,6 +1300,22 @@ impl<'a> Lowering<'a> {
         // of an object, which `&` makes it.
         let mut address = true;
         let object = loop {
+            // **An array asked as an address is the object it is**, its
+            // first element's address being its own (C17 6.3.2.1 p3): so
+            // `s.a + 1`, `&s.a[1]` and `m[1]` of an `int m[2][2]` reach the
+            // member or the row (#1241 review).
+            if address
+                && !matches!(
+                    self.ast.expr(at),
+                    Expr::String { .. } | Expr::Identifier { .. }
+                )
+                && matches!(
+                    self.types.of(at).map(|ty| self.ast.ty(ty)),
+                    Some(Type::Array { .. })
+                )
+            {
+                address = false;
+            }
             match self.ast.expr(at) {
                 Expr::Cast { operand, .. } if address => at = *operand,
                 Expr::String { .. } => break self.string(at),
@@ -1311,7 +1347,8 @@ impl<'a> Lowering<'a> {
                     address = true;
                 }
                 Expr::Member { base, arrow, .. } if !address => {
-                    offset += i128::from(self.member_offset(at, diagnostics)?);
+                    offset =
+                        offset.checked_add(i128::from(self.member_offset(at, diagnostics)?))?;
                     address = *arrow;
                     at = *base;
                 }
@@ -1321,7 +1358,8 @@ impl<'a> Lowering<'a> {
                         None => (*index, self.types.value(*base)?),
                     };
                     let element = self.ty_of(at, diagnostics)?;
-                    offset += count * i128::from(self.unit.size_of(element)?);
+                    let step = count.checked_mul(i128::from(self.unit.size_of(element)?))?;
+                    offset = offset.checked_add(step)?;
                     at = pointer;
                     address = true;
                 }
@@ -1341,8 +1379,15 @@ impl<'a> Lowering<'a> {
                     let Ty::Pointer(pointee) = self.unit.ty(pointer_ty) else {
                         return None;
                     };
-                    let step = count * i128::from(self.unit.size_of(pointee)?);
-                    offset += if *op == AstBinOp::Add { step } else { -step };
+                    // Checked, so a sum past `i128` is refused rather than
+                    // a panic or, built for release, a wrong address
+                    // (#1241 review).
+                    let step = count.checked_mul(i128::from(self.unit.size_of(pointee)?))?;
+                    offset = if *op == AstBinOp::Add {
+                        offset.checked_add(step)?
+                    } else {
+                        offset.checked_sub(step)?
+                    };
                     at = pointer;
                 }
                 _ => return None,
@@ -1551,7 +1596,83 @@ impl<'a> Lowering<'a> {
         // The type check refused a list it could not work out.
         let leaves = self.shapes(|shapes| shapes.resolve(ty, init)).ok()?;
         let object_ty = builder.function.local(local);
-        if self.holds_pointer(object_ty) {
+        let holds_pointer = self.holds_pointer(object_ty);
+        if holds_pointer {
+            // A union whose first member is not its largest leaves bytes the
+            // list does not write and no store per scalar reaches, which C
+            // makes zero for a static (6.7.9 p10) and `clang` zeroes here
+            // too; refused as a static's is (#1241 review).
+            let (ast, types, resolution) = (self.ast, self.types, self.resolution);
+            let mut size = |ty: TypeId| {
+                self.ty(at, ty, &mut DiagnosticSink::new())
+                    .and_then(|ty| self.unit.size_of(ty))
+            };
+            let short = {
+                let length = |id: ExprId| types.value(id).and_then(|v| u64::try_from(v).ok());
+                let whole = |value: ExprId, ty: TypeId| {
+                    initializes_whole(ast, resolution, types.of(value), value, ty)
+                };
+                let shapes = Shapes {
+                    ast,
+                    resolution,
+                    length: &length,
+                    whole: &whole,
+                };
+                shapes.holds_short_union(ty, &mut size)
+            };
+            if short {
+                diagnostics.report(
+                    Diagnostic::error("cannot initialize this object one scalar at a time")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            init.span(self.ast),
+                            "it holds a pointer and a union whose first member is not its largest",
+                        ))
+                        .with_note(
+                            "a gap in this compiler: the union's bytes past that member would \
+                             not be written",
+                        ),
+                );
+                return None;
+            }
+        } else {
+            // **Every byte zero first, whatever the list writes**, padding
+            // and a union's bytes past its first member included, as `clang`
+            // writes them: a store per item would leave those as the stack
+            // had them (#1241 review). One call however large the object.
+            let size = self.unit.size_of(object_ty)?;
+            let start = self.struct_address_of(builder, Place::local(local), at);
+            let memset = self.library_own("memset", at);
+            self.call_own(
+                builder,
+                memset,
+                vec![
+                    start,
+                    Operand::Constant(0),
+                    Operand::Constant(i128::from(size)),
+                ],
+                at,
+            );
+        }
+        let written: Vec<Vec<Step>> = leaves.iter().map(|leaf| leaf.path.clone()).collect();
+        for leaf in leaves {
+            let place = self.subobject_place(builder, Place::local(local), ty, &leaf.path, at)?;
+            if leaf.whole && matches!(self.ast.expr(leaf.value), Expr::String { .. }) {
+                self.store_string(builder, place, leaf.value, at, diagnostics)?;
+            } else if leaf.whole {
+                let from = self.place_of(builder, leaf.value, diagnostics)?;
+                self.copy_struct_as(builder, place, from, Origin::Initialized(at))?;
+            } else {
+                let value = self.value(builder, leaf.value, diagnostics)?;
+                self.store_scalar(builder, place, value, at);
+            }
+        }
+        // **The zeros after the items**, and only into what no item wrote:
+        // before them, an item reading the object, `{ ps[1] }`, read a zero
+        // this compiler wrote where C gives it no value yet, and the memory
+        // check read a scalar written over a pointer it had just stored
+        // (#1241 review).
+        if holds_pointer {
             let Some(scalars) = self.shapes(|shapes| shapes.scalars(ty, LEAVES)) else {
                 diagnostics.report(
                     Diagnostic::error("cannot initialize this object one scalar at a time")
@@ -1568,43 +1689,11 @@ impl<'a> Lowering<'a> {
                 return None;
             };
             for (path, _) in scalars {
-                if leaves.iter().any(|leaf| path.starts_with(&leaf.path)) {
+                if written.iter().any(|leaf| path.starts_with(leaf)) {
                     continue;
                 }
                 let place = self.subobject_place(builder, Place::local(local), ty, &path, at)?;
                 self.store_scalar(builder, place, Operand::Constant(0), at);
-            }
-        } else {
-            let written: Option<u64> = leaves
-                .iter()
-                .map(|leaf| self.shapes(|shapes| shapes.count(leaf.ty)))
-                .sum();
-            if self.shapes(|shapes| shapes.count(ty)) != written {
-                let size = self.unit.size_of(object_ty)?;
-                let start = self.struct_address_of(builder, Place::local(local), at);
-                let memset = self.library_own("memset", at);
-                self.call_own(
-                    builder,
-                    memset,
-                    vec![
-                        start,
-                        Operand::Constant(0),
-                        Operand::Constant(i128::from(size)),
-                    ],
-                    at,
-                );
-            }
-        }
-        for leaf in leaves {
-            let place = self.subobject_place(builder, Place::local(local), ty, &leaf.path, at)?;
-            if leaf.whole && matches!(self.ast.expr(leaf.value), Expr::String { .. }) {
-                self.store_string(builder, place, leaf.value, at, diagnostics)?;
-            } else if leaf.whole {
-                let from = self.place_of(builder, leaf.value, diagnostics)?;
-                self.copy_struct(builder, place, from, at)?;
-            } else {
-                let value = self.value(builder, leaf.value, diagnostics)?;
-                self.store_scalar(builder, place, value, at);
             }
         }
         Some(())
@@ -1618,7 +1707,7 @@ impl<'a> Lowering<'a> {
             value: Rvalue::Use(value),
             origin: Origin::Initialized(at),
         });
-        self.write_back(builder, &place, at);
+        self.write_back_as(builder, &place, Origin::Initialized(at));
     }
 
     /// The place of the subobject at `path` in the object of `ty` at
@@ -2335,6 +2424,36 @@ impl<'a> Lowering<'a> {
     /// slot by slot and carrying what the source holds, so a struct copy is
     /// answered by the door that already answers `memcpy`, and the backend
     /// writes the copy LLVM writes for one.
+    /// Copy the struct at `from` into `into` as initializing it: the copy an
+    /// item of a braced list taken whole is (C17 6.7.9 p13), made by this
+    /// compiler's own `memcpy` and marked [`Origin::Initialized`] as every
+    /// write of an initializer is, so a `const` object is given its value
+    /// with no report (#1241 review). See ADR-0137.
+    fn copy_struct_as(
+        &mut self,
+        builder: &mut Builder,
+        into: Place,
+        from: Place,
+        origin: Origin,
+    ) -> Option<()> {
+        let at = origin.span();
+        let ty = self
+            .unit
+            .place_ty(&builder.function, &into)
+            .expect("a place this lowering built has a type");
+        let size = self.unit.size_of(ty)?;
+        let memcpy = self.library_own("memcpy", at);
+        let into = self.struct_address_of(builder, into, at);
+        let from = self.struct_address_of(builder, from, at);
+        self.call_own(
+            builder,
+            memcpy,
+            vec![into, from, Operand::Constant(i128::from(size))],
+            at,
+        );
+        Some(())
+    }
+
     fn copy_struct(
         &mut self,
         builder: &mut Builder,
@@ -6414,6 +6533,14 @@ impl<'a> Lowering<'a> {
     /// Mutation: skip this; `a_bit_field_is_read_and_written_within_its_unit`
     /// in `tests/run.rs` fails, nothing written reaching the struct.
     fn write_back(&mut self, builder: &mut Builder, written: &Place, span: Span) {
+        self.write_back_as(builder, written, Origin::Generated(span));
+    }
+
+    /// [`Lowering::write_back`], its store into the unit made as `origin`
+    /// says: [`Origin::Initialized`] for an initializer's, which the
+    /// read-only check does not ask of a `const` object (#1241 review).
+    fn write_back_as(&mut self, builder: &mut Builder, written: &Place, origin: Origin) {
+        let span = origin.span();
         if !written.steps().is_empty() {
             return;
         }
@@ -6478,7 +6605,7 @@ impl<'a> Lowering<'a> {
         builder.push(Operation {
             place: field.unit.clone(),
             value: Rvalue::Use(Operand::Copy(Place::local(merged))),
-            origin: Origin::Generated(span),
+            origin,
         });
         self.extract(builder, &field, written.local, span);
     }

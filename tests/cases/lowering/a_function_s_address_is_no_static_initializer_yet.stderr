@@ -3,6 +3,6 @@ error[SC0304]: cannot compile this initializer yet
    │
  2 │ void (*callback)(void) = f;
    │                          ┬  
-   │                          ╰── an address, which an object with static storage duration cannot start with so far
+   │                          ╰── an address this compiler cannot write into a static
 ───╯
-  = note: an initializer that is a number or a null pointer is all this compiler holds
+  = note: a gap in this compiler: a static holds a number, a null pointer, or an object's address plus a constant, and not a function's address or a number cast to a pointer yet

@@ -738,7 +738,7 @@ fn dump_static_init(
             }
             out.push_str(" ]");
         }
-        crate::ir::StaticInit::Address { of, offset } => {
+        crate::ir::StaticInit::Address { of, offset, .. } => {
             write!(out, " address {:?} {offset}", unit.static_object(*of).name)
                 .expect("writing to a string cannot fail");
         }

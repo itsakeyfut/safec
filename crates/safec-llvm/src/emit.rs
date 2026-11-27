@@ -123,9 +123,10 @@ use refused::Refused;
 /// `an_initializer_calls_no_memset_the_program_has` fails.
 const LOWERED_TO: [&str; 3] = ["memcpy", "memmove", "memset"];
 
-/// The pieces of a global, by offset, as the members of a packed struct
-/// `size` bytes long: each piece, and `[n x i8] zeroinitializer` for each
-/// gap before one and after the last. Its types, and its values.
+/// The pieces of a global, each `(offset, size, type, value)`, as the
+/// members of a packed struct `size` bytes long: each piece, and `[n x i8]
+/// zeroinitializer` for each gap before one and after the last. Its types,
+/// and its values.
 fn packed(mut pieces: Vec<(u64, u64, String, String)>, size: u64) -> (String, String) {
     pieces.sort_by_key(|piece| piece.0);
     let mut types = Vec::new();
@@ -706,7 +707,7 @@ impl Emitter<'_> {
                     Ok(text)
                 }
             }
-            StaticInit::Address { of, offset } => Ok(self.static_address(*of, *offset)),
+            StaticInit::Address { of, offset, .. } => Ok(self.static_address(*of, *offset)),
             // **Written as its pieces at their offsets**, a packed struct of
             // each scalar and each run of bytes with zeros between, rather
             // than as the type it has: a struct's LLVM type here is its
@@ -743,7 +744,19 @@ impl Emitter<'_> {
                 format!("{name} = internal {kind} {spelled} {init}")
             }
         };
-        let line = format!("{line}{}", self.struct_align(object.ty));
+        // **A packed global is aligned as its type**, which `<{ ... }>` is
+        // not: LLVM takes a packed struct as aligned to 1, so an `int[3]`
+        // or a `long long` table written as one is given its type's own
+        // alignment, as every other global's comes from its type (#1241
+        // review).
+        let align = if spelled.starts_with("<{") {
+            self.unit
+                .align_of(object.ty)
+                .map_or_else(String::new, |align| format!(", align {align}"))
+        } else {
+            self.struct_align(object.ty)
+        };
+        let line = format!("{line}{align}");
         writeln!(out, "{line}").expect("writing to a string cannot fail");
     }
 
@@ -781,7 +794,7 @@ impl Emitter<'_> {
                 format!("[{} x i8]", bytes.len()),
                 format!("c\"{}\"", bytes_spelled(bytes)),
             )),
-            StaticInit::Address { of, offset } => {
+            StaticInit::Address { of, offset, .. } => {
                 let size = self.unit.size_of(ty).unwrap_or(8);
                 pieces.push((
                     at,

@@ -1,47 +1,109 @@
 error[SC0302]: cannot initialize `int *` with `int`
-   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:7:19 ]
-   │
- 7 │ struct P wrong = {1, 2};
-   │          ──┬──    ┬  
-   │            ╰───────── this holds `int *`
-   │                   │  
-   │                   ╰── this is `int`
-───╯
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:17:19 ]
+    │
+ 17 │ struct P wrong = {1, 2};
+    │          ──┬──    ┬  
+    │            ╰───────── this holds `int *`
+    │                   │  
+    │                   ╰── this is `int`
+────╯
+error[SC0302]: cannot initialize `int *` with `int`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:18:16 ]
+    │
+ 18 │ int *two[2] = {1, 2};
+    │      ─┬─       ┬  
+    │       ╰─────────── this holds `int *`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0302]: cannot initialize `int *` with `int`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:18:19 ]
+    │
+ 18 │ int *two[2] = {1, 2};
+    │      ─┬─          ┬  
+    │       ╰────────────── this holds `int *`
+    │                   │  
+    │                   ╰── this is `int`
+────╯
 error[SC0310]: the initializer of `too_many` has too many items
-   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:8:26 ]
-   │
- 8 │ int too_many[2] = {1, 2, 3};
-   │     ────┬───             ┬  
-   │         ╰─────────────────── declared as `int[2]`
-   │                          │  
-   │                          ╰── nothing is left for this to initialize
-───╯
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:19:26 ]
+    │
+ 19 │ int too_many[2] = {1, 2, 3};
+    │     ────┬───             ┬  
+    │         ╰─────────────────── declared as `int[2]`
+    │                          │  
+    │                          ╰── nothing is left for this to initialize
+────╯
   = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
 error[SC0310]: the initializer of `nested_too_many` has too many items
-   ╭─[ a_braced_initializer_is_held_to_each_subobject.c:9:34 ]
-   │
- 9 │ struct P nested_too_many = {{&x, 1}};
-   │          ───────┬───────         ┬  
-   │                 ╰─────────────────── declared as `struct P`
-   │                                  │  
-   │                                  ╰── nothing is left for this to initialize
-───╯
-  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
-error[SC0304]: an empty initializer is not read yet
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:10:16 ]
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:20:34 ]
     │
- 10 │ int empty[2] = {};
+ 20 │ struct P nested_too_many = {{&x, 1}};
+    │          ───────┬───────         ┬  
+    │                 ╰─────────────────── declared as `struct P`
+    │                                  │  
+    │                                  ╰── nothing is left for this to initialize
+────╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
+error[SC0310]: the initializer of `one_member` has too many items
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:21:26 ]
+    │
+ 21 │ union U one_member = {1, 2};
+    │         ─────┬────       ┬  
+    │              ╰────────────── declared as `union U`
+    │                          │  
+    │                          ╰── nothing is left for this to initialize
+────╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
+error[SC0302]: cannot initialize `int` with `struct P`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:22:19 ]
+    │
+ 22 │ struct Q other = {p};
+    │          ──┬──    ┬  
+    │            ╰───────── this holds `int`
+    │                   │  
+    │                   ╰── this is `struct P`
+────╯
+error[SC0302]: cannot initialize `int` with `char[3]`
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:23:22 ]
+    │
+ 23 │ int numbers[2][2] = {"ab"};
+    │     ───┬───          ──┬─  
+    │        ╰─────────────────── this holds `int`
+    │                        │   
+    │                        ╰─── this is `char[3]`
+────╯
+error[SC0304]: an empty initializer is not read yet
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:24:16 ]
+    │
+ 24 │ int empty[2] = {};
     │                ─┬  
     │                 ╰── `{}`
 ────╯
   = note: a gap in this compiler: C17 asks for at least one item, and C23 makes `{}` zero
 error[SC0310]: the string literal has 3 characters, and the array it initializes holds 2
-    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:11:26 ]
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:25:26 ]
     │
- 11 │ char short_name[2][2] = {"abc"};
+ 25 │ char short_name[2][2] = {"abc"};
     │      ─────┬────          ──┬──  
     │           ╰───────────────────── in this initializer
     │                            │    
     │                            ╰──── this string literal
 ────╯
   = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
+error[SC0317]: the initializer of `other` is not a constant
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:22:19 ]
+    │
+ 22 │ struct Q other = {p};
+    │                   ┬  
+    │                   ╰── not a constant expression
+────╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
+error[SC0317]: the initializer of `not_constant` is not a constant
+    ╭─[ a_braced_initializer_is_held_to_each_subobject.c:27:27 ]
+    │
+ 27 │ int not_constant[2] = {1, x};
+    │                           ┬  
+    │                           ╰── not a constant expression
+────╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)

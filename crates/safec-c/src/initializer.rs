@@ -127,6 +127,13 @@ impl Shapes<'_> {
     /// what an initializer that does not name them all sets to zero
     /// (p21). `None` past `limit` of them, or where one's count is unknown.
     pub fn scalars(&self, ty: TypeId, limit: usize) -> Option<Vec<(Vec<Step>, TypeId)>> {
+        // **Counted first, by arithmetic over the type**, so that the walk
+        // below never visits more than `limit` scalars, and skips an array
+        // of elements with none: a struct of a billion empty ones walked
+        // element by element took minutes (#1241 review).
+        if self.count(ty)? > limit as u64 {
+            return None;
+        }
         let mut found = Vec::new();
         let mut work = vec![(Vec::new(), ty)];
         while let Some((path, ty)) = work.pop() {
@@ -138,8 +145,8 @@ impl Shapes<'_> {
                     }
                 }
                 Kind::Array { element, count } => {
-                    if count > limit as u64 {
-                        return None;
+                    if self.count(element) == Some(0) {
+                        continue;
                     }
                     for index in (0..count).rev() {
                         let mut inner = path.clone();
@@ -183,6 +190,44 @@ impl Shapes<'_> {
         }
     }
 
+    /// Whether an object of `ty` holds a union, anywhere in it, whose first
+    /// member is smaller than the union, by `size`: one an initializer
+    /// writing its first member leaves bytes of unwritten.
+    pub fn holds_short_union(
+        &self,
+        ty: TypeId,
+        size: &mut dyn FnMut(TypeId) -> Option<u64>,
+    ) -> bool {
+        let mut work = vec![ty];
+        let mut seen = 0usize;
+        while let Some(ty) = work.pop() {
+            // Each type once per path is enough to answer; the bound keeps
+            // a pathological nesting from running long.
+            seen += 1;
+            if seen > 1 << 16 {
+                return true;
+            }
+            match self.ast.ty(ty) {
+                Type::Array { element, .. } => work.push(*element),
+                Type::Struct { .. } => {
+                    let Some((union, members)) = self.members(ty) else {
+                        continue;
+                    };
+                    if union
+                        && members
+                            .first()
+                            .is_some_and(|&(_, first)| size(first) != size(ty))
+                    {
+                        return true;
+                    }
+                    work.extend(members.iter().map(|&(_, member)| member));
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
     /// Whether `ty` is a union.
     pub fn union(&self, ty: TypeId) -> bool {
         matches!(self.ast.ty(ty), Type::Struct { union: true, .. })
@@ -219,6 +264,24 @@ impl Shapes<'_> {
             Kind::Array { .. } | Kind::Struct(_) => {
                 if items.is_empty() {
                     return Err(Fault::Empty(span));
+                }
+                // p14: a string literal for an array of character type,
+                // "optionally enclosed in braces", at any depth, so
+                // `{{"ab"}, {"c"}}` gives each row its literal (#1241
+                // review). The parser drops the braces of a declarator's
+                // own, so its length counts the literal.
+                if let [Initializer::Expr(value)] = items.as_slice() {
+                    if (self.whole)(*value, ty)
+                        && matches!(self.ast.expr(*value), crate::ast::Expr::String { .. })
+                    {
+                        leaves.push(Leaf {
+                            path: path.clone(),
+                            ty,
+                            value: *value,
+                            whole: true,
+                        });
+                        return Ok(());
+                    }
                 }
                 let mut at = 0;
                 self.fill(ty, items, &mut at, path, leaves)?;
@@ -262,36 +325,125 @@ impl Shapes<'_> {
                     .collect(),
             };
         for (step, sub) in subobjects {
-            let Some(item) = items.get(*at) else {
+            if *at == items.len() {
                 break;
-            };
-            path.push(step);
-            match item {
-                Initializer::List { .. } => {
-                    *at += 1;
-                    self.object(sub, item, path, leaves)?;
-                }
-                Initializer::Expr(value) => {
-                    let scalar = matches!(
-                        self.kind(sub).ok_or(Fault::Unsized(span(*at)))?,
-                        Kind::Scalar
-                    );
-                    if scalar || (self.whole)(*value, sub) {
-                        *at += 1;
-                        leaves.push(Leaf {
-                            path: path.clone(),
-                            ty: sub,
-                            value: *value,
-                            whole: !scalar,
-                        });
-                    } else {
-                        self.fill(sub, items, at, path, leaves)?;
-                    }
-                }
             }
+            path.push(step);
+            self.one(sub, items, at, path, leaves)?;
             path.pop();
         }
         Ok(())
+    }
+
+    /// The one subobject of `sub` at `path`, from `items` from `at` on: a
+    /// list item initializes it whole; an expression initializes it where
+    /// it is a scalar or the expression takes it whole, and its first
+    /// scalar otherwise, the rest of its subobjects taking the items after
+    /// it (p20).
+    fn one(
+        &self,
+        sub: TypeId,
+        items: &[Initializer],
+        at: &mut usize,
+        path: &mut Vec<Step>,
+        leaves: &mut Vec<Leaf>,
+    ) -> Result<(), Fault> {
+        let item = &items[*at];
+        match item {
+            Initializer::List { .. } => {
+                *at += 1;
+                self.object(sub, item, path, leaves)
+            }
+            Initializer::Expr(value) => {
+                let scalar = matches!(
+                    self.kind(sub).ok_or(Fault::Unsized(item.span(self.ast)))?,
+                    Kind::Scalar
+                );
+                if scalar || (self.whole)(*value, sub) {
+                    *at += 1;
+                    leaves.push(Leaf {
+                        path: path.clone(),
+                        ty: sub,
+                        value: *value,
+                        whole: !scalar,
+                    });
+                    Ok(())
+                } else {
+                    self.fill(sub, items, at, path, leaves)
+                }
+            }
+        }
+    }
+
+    /// How many elements of `element` the list `init` initializes, which is
+    /// the length of an array of unknown size it is the initializer of (C17
+    /// 6.7.9 p22): as many as `Shapes::fill` would take of an array long
+    /// enough, brace elision included. Asked by the type check once every
+    /// item is typed, since a struct taken whole is one item where its
+    /// members elided would be several. See `Parser::completed`.
+    ///
+    /// Mutation: count every item as an element; the run of
+    /// `a_braced_initializer_fills_arrays_and_structs` sizes `elided`
+    /// wrongly.
+    pub fn extent(&self, element: TypeId, init: &Initializer) -> Result<u64, Fault> {
+        let Initializer::List { items, span } = init else {
+            return Err(Fault::Unsized(init.span(self.ast)));
+        };
+        if items.is_empty() {
+            return Err(Fault::Empty(*span));
+        }
+        let (mut at, mut count) = (0, 0u64);
+        let mut scratch = Vec::new();
+        while at < items.len() {
+            let before = at;
+            self.one(element, items, &mut at, &mut Vec::new(), &mut scratch)?;
+            scratch.clear();
+            // An element that takes no item, a struct with no member an
+            // initializer reaches, would count forever.
+            if at == before {
+                return Err(Fault::TooMany(items[at].span(self.ast)));
+            }
+            count += 1;
+        }
+        Ok(count)
+    }
+
+    /// Whether the struct `ty` is a union, and every member an initializer
+    /// can reach, each with its index among the members written: every
+    /// named member and every anonymous one, but no unnamed bit-field (p9)
+    /// and no flexible array member (6.7.2.1 p18). `None` where its
+    /// definition is not to be had.
+    fn members(&self, ty: TypeId) -> Option<(bool, Vec<(usize, TypeId)>)> {
+        let Type::Struct { union, members, .. } = self.ast.ty(ty) else {
+            return None;
+        };
+        let members = match members {
+            Some(members) => members,
+            None => {
+                let bound = self.resolution.bound(self.ast, ty);
+                let definition = self.resolution.definition(self.resolution.tag(bound))?;
+                match self.ast.ty(definition) {
+                    Type::Struct {
+                        members: Some(members),
+                        ..
+                    } => members,
+                    _ => return None,
+                }
+            }
+        };
+        let last = members.len().checked_sub(1);
+        let reached = members
+            .iter()
+            .enumerate()
+            .filter(|&(index, member)| {
+                let unnamed_bits = member.name.is_none() && member.width.is_some();
+                let flexible = Some(index) == last
+                    && matches!(self.ast.ty(member.ty), Type::Array { length: None, .. });
+                !unnamed_bits && !flexible
+            })
+            .map(|(index, member)| (index, member.ty))
+            .collect();
+        Some((*union, reached))
     }
 
     /// What an object of `ty` is made of, or `None` where an array's count
@@ -304,34 +456,8 @@ impl Shapes<'_> {
                 element: *element,
                 count: (self.length)((*length)?)?,
             }),
-            Type::Struct { union, members, .. } => {
-                let union = *union;
-                let members = match members {
-                    Some(members) => members,
-                    None => {
-                        let bound = self.resolution.bound(self.ast, ty);
-                        let definition = self.resolution.definition(self.resolution.tag(bound))?;
-                        match self.ast.ty(definition) {
-                            Type::Struct {
-                                members: Some(members),
-                                ..
-                            } => members,
-                            _ => return None,
-                        }
-                    }
-                };
-                let last = members.len().checked_sub(1);
-                let mut reached: Vec<(usize, TypeId)> = members
-                    .iter()
-                    .enumerate()
-                    .filter(|&(index, member)| {
-                        let unnamed_bits = member.name.is_none() && member.width.is_some();
-                        let flexible = Some(index) == last
-                            && matches!(self.ast.ty(member.ty), Type::Array { length: None, .. });
-                        !unnamed_bits && !flexible
-                    })
-                    .map(|(index, member)| (index, member.ty))
-                    .collect();
+            Type::Struct { .. } => {
+                let (union, mut reached) = self.members(ty)?;
                 if union {
                     reached.truncate(1);
                 }

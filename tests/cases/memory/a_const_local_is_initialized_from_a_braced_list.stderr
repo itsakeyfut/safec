@@ -1,7 +1,7 @@
 error[SC0417]: this may write storage the program may not modify
-    ╭─[ a_const_local_is_initialized_from_a_braced_list.c:12:5 ]
+    ╭─[ a_const_local_is_initialized_from_a_braced_list.c:29:5 ]
     │
- 12 │     ((int *)a)[0] = 3;
+ 29 │     ((int *)a)[0] = 3;
     │     ────────┬────────  
     │             ╰────────── a `const` object or a string literal may be here
 ────╯
