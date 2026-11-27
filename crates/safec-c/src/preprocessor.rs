@@ -1672,8 +1672,8 @@ fn collected(
                 .with_label(Label::primary(asked, "asked here"))
                 .with_label(Label::secondary(token.span, "called here"))
                 .with_note(
-                    "`clang` replaces an argument before it reads `defined` there, and C17 \
-                     6.10.1 p4 leaves what that means undefined",
+                    "C17 6.10.1 p4 leaves what a `defined` in an argument means undefined, and \
+                     `clang` reads it after replacing the argument where the macro uses it",
                 ),
         );
         return Err(Uncollected::Refused);
