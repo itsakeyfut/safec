@@ -7,6 +7,8 @@
 //! `clang 22.1.8 -dM -E`). A name the implementation may define is refused
 //! wherever it is asked about, as `#ifdef` refuses it (ADR-0055, ADR-0059).
 
+use std::collections::HashMap;
+
 use super::held::Sources;
 use super::line::Line;
 use super::{
@@ -66,6 +68,7 @@ pub(super) fn evaluate(
     let mut line: Vec<Token> = Vec::with_capacity(tokens.len());
     let mut opens_an_argument: Vec<bool> = Vec::new();
     let mut opened_by_macros = 0usize;
+    let mut known = HashMap::new();
     let mut at = 0;
     while let Some(&token) = tokens.get(at) {
         if !is_name(token) || sources.snippet(token.span) != "defined" {
@@ -82,8 +85,12 @@ pub(super) fn evaluate(
                     }
                 }
                 _ if is_name(token) => {
-                    opened_by_macros +=
-                        left_open(sources.snippet(token.span), reading, &mut Vec::new());
+                    opened_by_macros += left_open(
+                        sources.snippet(token.span),
+                        reading,
+                        &mut Vec::new(),
+                        &mut known,
+                    );
                 }
                 _ => {}
             }
@@ -305,21 +312,37 @@ pub(super) fn evaluate(
     }
 }
 
-/// Whether `token` is a name, which preprocessing makes of a keyword too.
 /// How many `(` the expansion of the macro `name` leaves open, read in
-/// order through the object-like macros its list names, as replacing it
-/// would: `#define A OPEN` with `#define OPEN F(` leaves one, and `A
-/// defined X)` was read here where `clang` takes `defined X` for `F`'s
-/// argument. Found by review. Each macro is followed once on a path, so a
-/// list naming itself ends. A `)` the list closes before any `(` closes
-/// nothing of its own; the line's reading of it is left to the refusal of a
-/// call that runs past an expansion.
-fn left_open<'a>(name: &'a str, reading: &'a Reading, seen: &mut Vec<&'a str>) -> usize {
+/// order through every macro its list names, as replacing it would:
+/// `#define A OPEN` with `#define OPEN F(` leaves one, and `A defined X)`
+/// was read here where `clang` takes `defined X` for `F`'s argument. Found
+/// by review. A function-like macro's list is followed too, though its
+/// arguments are not, since an argument's own `(` and `)` balance.
+///
+/// Each macro is answered once, in `known`, so a list naming one macro
+/// many times costs one visit, and a macro already on the path answers
+/// nothing, so a list naming itself ends. Past [`OPEN_DEPTH`] macros deep
+/// it answers one, which refuses the `defined` after it rather than
+/// following a chain no stack holds. Found by review. A `)` the list
+/// closes before any `(` closes nothing of its own; the line's reading of
+/// it is left to the refusal of a call that runs past an expansion.
+fn left_open<'a>(
+    name: &'a str,
+    reading: &'a Reading,
+    seen: &mut Vec<&'a str>,
+    known: &mut HashMap<&'a str, usize>,
+) -> usize {
     let Some(defined) = reading.macros.get(name) else {
         return 0;
     };
+    if let Some(&open) = known.get(name) {
+        return open;
+    }
     if seen.contains(&name) {
         return 0;
+    }
+    if seen.len() >= OPEN_DEPTH {
+        return 1;
     }
     seen.push(name);
     let mut open = 0usize;
@@ -327,20 +350,18 @@ fn left_open<'a>(name: &'a str, reading: &'a Reading, seen: &mut Vec<&'a str>) -
         match spelled.as_str() {
             "(" => open += 1,
             ")" => open = open.saturating_sub(1),
-            _ => {
-                if reading
-                    .macros
-                    .get(spelled.as_str())
-                    .is_some_and(|inner| inner.parameters.is_none())
-                {
-                    open += left_open(spelled, reading, seen);
-                }
-            }
+            spelled => open += left_open(spelled, reading, seen, known),
         }
     }
     seen.pop();
+    known.insert(name, open);
     open
 }
+
+/// How deep [`left_open`] follows macros naming macros before it answers
+/// that one may be left open: far past any chain a header writes, and far
+/// short of what the stack holds.
+const OPEN_DEPTH: usize = 256;
 
 /// Whether `token`, spelled `spelled`, may stand for a function-like
 /// macro's name once it is replaced, so that a `(` after it may open that
@@ -365,6 +386,7 @@ fn may_name_a_call(token: Token, spelled: &str, reading: &Reading) -> bool {
     }
 }
 
+/// Whether `token` is a name, which preprocessing makes of a keyword too.
 fn is_name(token: Token) -> bool {
     matches!(
         token.kind,

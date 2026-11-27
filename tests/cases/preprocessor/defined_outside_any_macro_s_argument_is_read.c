@@ -6,6 +6,8 @@
 #define NOT !
 #define ALSO_OPEN OPEN
 #define SELF SELF
+#define F2(a) F(
+#define VIA_CALL F2(0)
 
 #if (defined X) && F(0) == 1 && defined(X)
 int d;

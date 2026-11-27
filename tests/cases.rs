@@ -10827,11 +10827,18 @@ cases! {
         // `defined` in what may be a function-like macro's argument: `clang`
         // replaces the argument first, asks about `1`, and refuses
         // each line, where this answered `defined X` first and compiled `a`,
-        // `b`, `c`, `e` and `h`. Refused, each, at the `defined`. Found by
-        // review, the last two by later ones. Mutations: ignore a `(` after
-        // a name; the first two lines are read. Ignore a macro that opens
-        // a `(`; the third and the last are. Ignore a `(` after a `)`; the
-        // fourth is. Stop at a macro's own list in `left_open`; the last is.
+        // `b`, `c`, `e`, `h` and `j`. Refused, each, at the `defined`. Found
+        // by review, the last three by later ones. Mutations: ignore a `(`
+        // after a name; the first two lines are read. Ignore a macro that
+        // opens a `(`; the third and the last two are. Ignore a `(` after a
+        // `)`; the fourth is. Stop at a macro's own list in `left_open`;
+        // the last two are. Follow only object-like macros; the last is.
+        // Then two lines that hold `left_open` to its bounds: `D0` names
+        // `D1` twice and so on to `D40`, `F(`, answered once each; and `C0`
+        // names `C1` and so on to `C300`, `0`, past the 256 macros it
+        // follows, so it answers one and refuses. Mutations: answer no
+        // macro from `known`; the run takes 2^40 visits and does not end.
+        // Or follow past `OPEN_DEPTH`; the last line is read.
         defined_in_what_may_be_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // The other side, read as `clang` reads it, compiling `d`, `f` and
         // `g`: a `defined` in parentheses no name opens, one after a call
