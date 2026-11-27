@@ -1,0 +1,37 @@
+warning[SC0118]: this `#pragma` is not read, and is ignored
+   ╭─[ a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:1:9 ]
+   │
+ 1 │ _Pragma("�once")
+   │         ───┬───  
+   │            ╰───── written here
+───╯
+  = note: C17 6.10.6 p1 lets a compiler ignore a pragma it does not know
+warning[SC0118]: this `#pragma` is not read, and is ignored
+   ╭─[ a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:1:9 ]
+   │
+ 1 │ _Pragma("�once")
+   │         ───┬───  
+   │            ╰───── written here
+───╯
+  = note: C17 6.10.6 p1 lets a compiler ignore a pragma it does not know
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_u_feff_before_a_pragma_s_name_is_no_pragma_once.c:4:14 ]
+   │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │
+   ├─[ a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:1:16 ]
+   │
+ 2 │ free(p);
+   │ ───┬───  
+   │    ╰───── freed here
+   │
+   ├─[ a_u_feff_before_a_pragma_s_name_is_no_pragma_once.h:2:1 ]
+   │
+ 2 │ free(p);
+   │ ───┬───  
+   │    ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

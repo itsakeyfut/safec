@@ -1,0 +1,24 @@
+error[SC0104]: a character before this directive's `#` is not read
+   ╭─[ a_u_feff_before_a_directive_s_hash_is_refused.c:2:2 ]
+   │
+ 2 │ �#if 1
+   │  ┬  
+   │  ╰── directive begins here
+───╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0104]: a character before this directive's `#` is not read
+   ╭─[ a_u_feff_before_a_directive_s_hash_is_refused.c:4:2 ]
+   │
+ 4 │ �#
+   │  ┬  
+   │  ╰── directive begins here
+───╯
+  = note: `clang` reads a NUL there as white space and the line as a directive, and other characters there as no directive
+error[SC0115]: `#if` is not closed in this file
+   ╭─[ a_u_feff_before_a_directive_s_hash_is_refused.c:1:1 ]
+   │
+ 1 │ #if 0
+   │ ┬  
+   │ ╰── opened here
+───╯
+  = note: a conditional ends with an `#endif` in the file it begins in
