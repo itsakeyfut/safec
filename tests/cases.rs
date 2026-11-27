@@ -54,6 +54,12 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A `char` array a string literal initializes is written to its
+        // last byte: the literal's own stores reach `terminator`'s zero, and
+        // the `memset` before them `padded`'s; `past` reads one byte beyond,
+        // which is `SC0412` (#1244). Mutation: leave out the `memset` in
+        // `Lowering::store_string`; `padded` is reported unwritten.
+        a_char_array_from_a_string_literal_is_read_within_its_bytes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function pointer stored, called through, compared and held in a
         // member is silent (`stored_and_called`, `in_a_member`), and a call
         // through one is a call this check cannot read (#1212, ADR-0125):
@@ -8936,10 +8942,22 @@ cases! {
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
         a_second_storage_class_is_refused: ["--emit", "ast"],
-        // C17 6.7.9 p14 allows it, and this compiler does not build it yet.
-        // Mutation: drop the string arm in `Checker::check_initialized`; this
-        // reaches the lowering as an array of no length.
-        an_array_initialized_from_a_string_literal_is_not_built_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p14 lets a string literal initialize an array of
+        // character type only, and p16 asks a list of any other (#1244).
+        // Mutation: take every element type as a character in
+        // `Checker::check_initialized`; nothing is reported.
+        an_array_not_of_character_type_from_a_string_literal_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p2 and p14: a literal's characters, its terminating zero
+        // aside, have to fit, so `fits` is read and `over` refused (#1244).
+        // Mutation: count the terminating zero in `Checker::check_initialized`;
+        // `fits` is refused too.
+        a_string_literal_longer_than_its_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `{ "ab" }` initializes the first row by brace elision (C17 6.7.9
+        // p20), which waits for braced initializers (#1241), so it is this
+        // compiler's gap and not a constraint violation (#1244). Mutation:
+        // drop the aggregate element's arm in `Checker::check_initialized`;
+        // it is refused under `SC0310` as no array of character type.
+        an_array_of_arrays_from_a_string_literal_is_not_built_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Translation phase 6 joins adjacent literals (C17 5.1.1.2 p1).
         // Mutation: read one token in `Parser::string`; the second is a
         // syntax error.

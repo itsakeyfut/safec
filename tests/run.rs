@@ -368,4 +368,16 @@ programs! {
     /// takes 7; ask `ty` itself in the resolver's skip, and `qualified` is
     /// refused; stop at a function type, and `returning` counts 4.
     a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is,
+    /// An array of `char`, `unsigned char` and `signed char` from a string
+    /// literal, in braces or not, unsized, exactly as long as its characters
+    /// and longer, at block and file scope (#1244). Mutations: put the
+    /// `SC0304` refusal back in `Checker::check_initialized`, and this does
+    /// not build; store one byte fewer in `Lowering::store_string`, and it
+    /// exits 1.
+    a_char_array_takes_its_length_and_bytes_from_a_string_literal,
+    /// The bytes of a local array past its string literal are zero, not what
+    /// the stack held before (C17 6.7.9 p21), however dirty the frame
+    /// before it left them (#1244). Mutation: leave out the `memset` in
+    /// `Lowering::store_string`; this exits with the stale bytes' sum.
+    a_char_array_longer_than_its_string_literal_is_zero_filled,
 }

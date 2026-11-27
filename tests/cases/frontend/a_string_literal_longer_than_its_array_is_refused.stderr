@@ -1,0 +1,10 @@
+error[SC0310]: the string literal has 2 characters, and `over` holds 1
+   ╭─[ a_string_literal_longer_than_its_array_is_refused.c:3:10 ]
+   │
+ 3 │     char over[1] = "ab";
+   │          ──┬─      ──┬─  
+   │            ╰───────────── declared as `char[1]`
+   │                      │   
+   │                      ╰─── this initializer
+───╯
+  = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized

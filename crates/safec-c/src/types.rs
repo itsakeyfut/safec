@@ -1390,18 +1390,71 @@ impl Checker<'_> {
                     "C17 6.7.9 p3",
                 ),
                 // p14 lets a string literal initialize an array of character
-                // type, which this compiler does not build yet: the lowering
-                // would otherwise be handed an array to assign to.
-                Type::Array { .. } if matches!(ast.expr(init), Expr::String { .. }) => {
-                    diagnostics.report(
-                        Diagnostic::error(format!(
-                            "cannot initialize `{called}` from a string literal yet"
-                        ))
-                        .with_code(NOT_YET)
-                        .with_label(Label::primary(ast.expr(init).span(), "a string literal"))
-                        .with_note("a gap in this compiler: C17 6.7.9 p14 allows it"),
+                // type, and p2 forbids one longer than the array, its
+                // terminating zero aside: `char s[2] = "ab";` drops the zero.
+                // An array of unknown size was given the literal's length
+                // when it was declared (`Parser::completed`).
+                Type::Array {
+                    element, length, ..
+                } if matches!(ast.expr(init), Expr::String { .. }) => {
+                    let Expr::String {
+                        length: literal, ..
+                    } = ast.expr(init)
+                    else {
+                        unreachable!("matched as a string literal above")
+                    };
+                    let character = matches!(
+                        ast.ty(ast.unqualified(*element)),
+                        Type::Integer {
+                            rank: Rank::Char,
+                            ..
+                        }
                     );
-                    continue;
+                    // An element that is itself an array or a struct is
+                    // what `char a[2][3] = { "ab" }` initializes by brace
+                    // elision (p20), which waits for the braced initializers
+                    // that read it (#1241): refused as this compiler's gap,
+                    // and not as the constraint violation it is not.
+                    if matches!(
+                        ast.ty(ast.unqualified(*element)),
+                        Type::Array { .. } | Type::Struct { .. }
+                    ) {
+                        diagnostics.report(
+                            Diagnostic::error(format!(
+                                "cannot initialize `{called}`'s elements from a string literal yet"
+                            ))
+                            .with_code(NOT_YET)
+                            .with_label(Label::primary(ast.expr(init).span(), "a string literal"))
+                            .with_note(
+                                "a gap in this compiler: an aggregate's elements are initialized \
+                                 by a braced list, which is not read yet",
+                            ),
+                        );
+                        continue;
+                    }
+                    if !character {
+                        (
+                            format!(
+                                "`{called}` is not an array of character type, and only one is \
+                                 initialized from a string literal"
+                            ),
+                            "C17 6.7.9 p14 and p16",
+                        )
+                    } else {
+                        let holds = length.and_then(|id| self.values[id.index()]);
+                        let needs = self.values[literal.index()];
+                        match (holds, needs) {
+                            (Some(holds), Some(needs)) if needs - 1 > holds => (
+                                format!(
+                                    "the string literal has {} characters, and `{called}` holds {holds}",
+                                    needs - 1
+                                ),
+                                "C17 6.7.9 p2: no initializer provides a value for an object \
+                                 outside the one initialized",
+                            ),
+                            _ => continue,
+                        }
+                    }
                 }
                 // p16: "the initializer for an object that has aggregate or
                 // union type shall be a brace-enclosed list of initializers",

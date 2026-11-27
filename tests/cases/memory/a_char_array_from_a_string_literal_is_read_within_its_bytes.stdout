@@ -1,0 +1,188 @@
+Target "x86_64-pc-windows-msvc"
+Function a_char_array_from_a_string_literal_is_read_within_its_bytes.c:1:5 "terminator"
+  Local "_0" "int" return
+  Local "_1" "char[3]" "s"
+  Local "_2" "char *"
+  Local "_3" "char *"
+  Local "_4" "char *"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 97
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 98
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_2"
+        Constant 2
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:10 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:2:17 generated
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:3:12 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:3:12 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 2
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:3:12 generated
+    Return
+Function a_char_array_from_a_string_literal_is_read_within_its_bytes.c:6:5 "padded"
+  Local "_0" "int" return
+  Local "_1" "char[8]" "s"
+  Local "_2" "char *"
+  Local "_3" "char *"
+  Local "_4" "char *"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Call a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 written "memset" "bb1"
+      Copy "_2"
+      Constant 0
+      Constant 8
+  Block "bb1"
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 97
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 98
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_2"
+        Constant 2
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:17 generated
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:8:12 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:8:12 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 7
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:8:12 generated
+    Return
+Function a_char_array_from_a_string_literal_is_read_within_its_bytes.c:11:5 "past"
+  Local "_0" "int" return
+  Local "_1" "char[3]" "s"
+  Local "_2" "char *"
+  Local "_3" "char *"
+  Local "_4" "char *"
+  Local "_5" "char *"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 97
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 98
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_2"
+        Constant 2
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:10 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 0
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:12:17 generated
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:13:12 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:13:12 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 3
+    Operation a_char_array_from_a_string_literal_is_read_within_its_bytes.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_char_array_from_a_string_literal_is_read_within_its_bytes.c:13:12 generated
+    Return
+Function a_char_array_from_a_string_literal_is_read_within_its_bytes.c:7:10 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "unsigned long long" parameter

@@ -1373,6 +1373,7 @@ impl Parser<'_> {
             };
             self.declare_name(name, named, diagnostics)?;
             let init = self.initializer(diagnostics)?;
+            let completed = self.completed(ty, init);
             if typedef && init.is_some() {
                 self.report_at(
                     declarator,
@@ -1388,8 +1389,9 @@ impl Parser<'_> {
             declarators.push(InitDeclarator {
                 declaration: Declaration {
                     name: Some(name),
-                    ty,
-                    // Not a parameter, so nothing is adjusted.
+                    ty: completed,
+                    // Not a parameter, so nothing is adjusted; but an array
+                    // of unknown size its initializer completes is.
                     written: ty,
                     span: self.declaration_span(start, declarator, end, diagnostics),
                     // The pointer a function declared at file scope returns,
@@ -1413,6 +1415,33 @@ impl Parser<'_> {
         }
     }
 
+    /// `ty`, a declarator's type, completed by its initializer `init` where
+    /// it is an array of unknown size (C17 6.7.9 p22): a string literal gives
+    /// it the literal's length, the terminating zero included, which
+    /// [`Parser::string`] has already counted. A new node rather than `ty`
+    /// changed in place, since `ty` may be a typedef's, which keeps its own
+    /// unknown size for every other declarator that names it (6.7.9 p25's
+    /// example). Whether the literal may initialize the array at all is the
+    /// type check's (6.7.9 p14), as is every other initializer's length.
+    fn completed(&mut self, ty: TypeId, init: Option<ExprId>) -> TypeId {
+        let length = match init.map(|init| self.ast.expr(init)) {
+            Some(Expr::String { length, .. }) => *length,
+            _ => return ty,
+        };
+        match *self.ast.ty(ty) {
+            Type::Array {
+                element,
+                length: None,
+                ..
+            } => self.ast.push_type(Type::Array {
+                element,
+                length: Some(length),
+                written: None,
+            }),
+            _ => ty,
+        }
+    }
+
     /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
     ///
     /// [`Parser::assignment`] rather than [`Parser::expression`], which is the
@@ -1430,6 +1459,28 @@ impl Parser<'_> {
             return Some(None);
         }
 
+        // `{ "ab" }`, which C17 6.7.9 p14 lets initialize an array of
+        // character type as `"ab"` does, and p11 a scalar: one literal, or a
+        // run of adjacent ones, and an optional `,`. Every other list waits
+        // for the braced initializers that read it (#1241).
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            let mut ahead = 1;
+            while self.peek_at(ahead).kind == TokenKind::String {
+                ahead += 1;
+            }
+            let literal = ahead > 1;
+            if literal && self.peek_at(ahead).kind == TokenKind::Punct(Punct::Comma) {
+                ahead += 1;
+            }
+            if literal && self.peek_at(ahead).kind == TokenKind::Punct(Punct::RightBrace) {
+                self.advance();
+                let string = self.assignment(diagnostics);
+                // Seen above, so what the literal left is these.
+                self.eat(TokenKind::Punct(Punct::Comma));
+                self.advance();
+                return Some(Some(string));
+            }
+        }
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
             self.report_noted(
                 BRACED_INITIALIZER,

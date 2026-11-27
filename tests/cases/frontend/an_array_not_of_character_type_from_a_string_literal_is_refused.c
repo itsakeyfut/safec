@@ -1,4 +1,4 @@
 int main(void) {
-    char s[] = "abc";
+    int s[3] = "ab";
     return 0;
 }

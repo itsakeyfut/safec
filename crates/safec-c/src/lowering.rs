@@ -397,6 +397,7 @@ pub fn lower(
         laying_out: HashSet::new(),
         refused_structs: HashSet::new(),
         memcpy: None,
+        memset: None,
         vla_types: HashMap::new(),
         writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
@@ -536,6 +537,9 @@ struct Lowering<'a> {
     /// The `memcpy` a struct copy calls, made once. See
     /// [`Lowering::copy_struct`].
     memcpy: Option<FuncId>,
+    /// The `memset` an array initialized from a shorter string literal
+    /// calls, made once. See [`Lowering::store_string`].
+    memset: Option<FuncId>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -1109,6 +1113,19 @@ impl Lowering<'_> {
         ty: TyId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
+        // An array of character type from a string literal (C17 6.7.9 p14):
+        // its bytes, cut or padded with zeros to the array's length, which
+        // the type check has held to at least the literal's characters.
+        if let (Expr::String { .. }, Ty::Array { length, .. }) =
+            (self.ast.expr(init), self.unit.ty(ty))
+        {
+            let Length::Constant(length) = length else {
+                unreachable!("the type check refuses a variable length array's initializer")
+            };
+            let mut bytes = self.string_bytes(init);
+            bytes.resize(usize::try_from(length).expect("an array's length fits"), 0);
+            return Some(StaticInit::Bytes(bytes));
+        }
         if let Some(value) = self.types.value(init) {
             let value = self
                 .unit
@@ -1162,20 +1179,7 @@ impl Lowering<'_> {
         if let Some(&object) = self.strings.get(&id) {
             return object;
         }
-        let Expr::String { parts, .. } = self.ast.expr(id) else {
-            unreachable!("a string literal is asked for only of one")
-        };
-        let mut bytes = Vec::new();
-        for &part in parts {
-            let text = self.sources.snippet(part);
-            let body = &text[1..text.len() - 1];
-            let values = crate::literal::unescape(body)
-                .expect("the parser keeps only a literal every escape of which it reads");
-            bytes.extend(values.into_iter().map(|value| {
-                u8::try_from(value).expect("`unescape` refuses a value no `char` holds")
-            }));
-        }
-        bytes.push(0);
+        let bytes = self.string_bytes(id);
         let element = self.unit.push_type(Ty::CHAR);
         let ty = self.unit.push_type(Ty::Array {
             element,
@@ -1192,6 +1196,137 @@ impl Lowering<'_> {
         });
         self.strings.insert(id, object);
         object
+    }
+
+    /// The bytes of the string literal `id`: each literal's characters,
+    /// escapes read, adjacent literals joined, then a terminating zero.
+    fn string_bytes(&self, id: ExprId) -> Vec<u8> {
+        let Expr::String { parts, .. } = self.ast.expr(id) else {
+            unreachable!("a string literal is asked for only of one")
+        };
+        let mut bytes = Vec::new();
+        for &part in parts {
+            let text = self.sources.snippet(part);
+            let body = &text[1..text.len() - 1];
+            let values = crate::literal::unescape(body)
+                .expect("the parser keeps only a literal every escape of which it reads");
+            bytes.extend(values.into_iter().map(|value| {
+                u8::try_from(value).expect("`unescape` refuses a value no `char` holds")
+            }));
+        }
+        bytes.push(0);
+        bytes
+    }
+
+    /// Initialize the local array `local` of character type from the string
+    /// literal `init` (C17 6.7.9 p14): a `memset` to zero where the array is
+    /// longer than the literal, then a store per byte the array holds, each
+    /// built as `s[i] = c` is. A `char` array holds no pointer, so the
+    /// `memset` is read as the write it is. See ADR-0137.
+    ///
+    /// Mutation: leave out the `memset`; the trailing bytes of
+    /// `a_char_array_longer_than_its_string_literal_is_zero_filled` are what
+    /// the stack held. Mutation: store one byte fewer;
+    /// `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
+    /// reads another value.
+    fn store_string(
+        &mut self,
+        builder: &mut Builder,
+        local: LocalId,
+        init: ExprId,
+        at: Span,
+    ) -> Option<()> {
+        let ty = builder.function.local(local);
+        let Ty::Array {
+            element,
+            length: Length::Constant(length),
+        } = self.unit.ty(ty)
+        else {
+            unreachable!("the type check initializes only a sized array from a string literal")
+        };
+        let length = usize::try_from(length).expect("an array's length fits");
+        let mut bytes = self.string_bytes(init);
+        let pointer = self.unit.push_type(Ty::Pointer(element));
+        let first = builder.function.push_local(pointer);
+        builder.push(Operation {
+            place: Place::local(first),
+            value: Rvalue::Address(Place::new(
+                local,
+                vec![Projection::Index(Operand::Constant(0))],
+            )),
+            origin: Origin::Generated(at),
+        });
+        if length > bytes.len() {
+            let memset = self.memset(at);
+            let then = builder.function.reserve_block();
+            builder.end(Terminator::Call {
+                callee: Called::Direct(memset),
+                arguments: vec![
+                    Operand::Copy(Place::local(first)),
+                    Operand::Constant(0),
+                    Operand::Constant(i128::try_from(length).expect("an array's length fits")),
+                ],
+                destination: None,
+                then: Some(then),
+                origin: Origin::Written(at),
+            });
+            builder.switch(then);
+            // Every byte past the literal's is the `memset`'s.
+        }
+        bytes.truncate(length);
+        let integer = self.unit.integer(element);
+        for (index, byte) in bytes.into_iter().enumerate() {
+            let value = i128::from(byte);
+            let value = integer.map_or(value, |int| int.convert(value));
+            let into = if index == 0 {
+                first
+            } else {
+                let into = builder.function.push_local(pointer);
+                builder.push(Operation {
+                    place: Place::local(into),
+                    value: Rvalue::Binary {
+                        op: BinOp::Add,
+                        lhs: Operand::Copy(Place::local(first)),
+                        rhs: Operand::Constant(i128::try_from(index).expect("an index fits")),
+                    },
+                    origin: Origin::Generated(at),
+                });
+                into
+            };
+            builder.push(Operation {
+                place: Place::local(into).deref(),
+                value: Rvalue::Use(Operand::Constant(value)),
+                origin: Origin::Written(at),
+            });
+        }
+        Some(())
+    }
+
+    /// The `memset` [`Lowering::store_string`] calls: the program's own
+    /// where it has one, as [`Lowering::memcpy`] is, and otherwise one this
+    /// compiler makes.
+    fn memset(&mut self, at: Span) -> FuncId {
+        if let Some(id) = self.memset {
+            return id;
+        }
+        let id = match self.functions.get("memset") {
+            Some(&id) => id,
+            None => {
+                let void = self.unit.push_type(Ty::Void);
+                let pointer = self.unit.push_type(Ty::Pointer(void));
+                let int = self.unit.push_type(Ty::INT);
+                let (rank, sign) = self.unit.target().size_type();
+                let size = self.unit.push_type(Ty::Integer { rank, sign });
+                self.unit.push_function(Function::builtin(
+                    "memset",
+                    at,
+                    pointer,
+                    [pointer, int, size],
+                ))
+            }
+        };
+        self.memset = Some(id);
+        id
     }
 
     /// Whether an object of `ty` may not be modified: `const` at its
@@ -3114,6 +3249,16 @@ impl Lowering<'_> {
                         // store gets written the other way.
                         if let Some(init) = declarator.init {
                             let at = self.store_span(name, span, declarator.span, diagnostics)?;
+                            if matches!(self.ast.expr(init), Expr::String { .. })
+                                && matches!(
+                                    self.ast.ty(declarator.declaration.ty),
+                                    Type::Array { .. }
+                                )
+                            {
+                                self.store_string(builder, local, init, at)?;
+                                builder.sequenced(self.ast.expr(init).span());
+                                continue;
+                            }
                             // A struct is copied from where it is, as an
                             // assignment copies one (#1201).
                             if self.is_struct(init) {
