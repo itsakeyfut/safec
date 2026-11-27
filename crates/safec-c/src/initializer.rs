@@ -113,9 +113,10 @@ pub struct Shapes<'a> {
 impl Shapes<'_> {
     /// The leaves `init` writes in an object of `ty`, in the order written.
     ///
-    /// Mutation: in `Shapes::fill`, descend into an aggregate from a
-    /// list item too; the run of `a_braced_initializer_fills_arrays_and_structs`
-    /// puts `{3, 4}`'s items in one struct's members.
+    /// Mutation: in `Shapes::fill`, take an expression item for an
+    /// aggregate subobject whole rather than its first scalar; the run of
+    /// `a_braced_initializer_fills_arrays_and_structs`, whose lists elide
+    /// braces, fails.
     pub fn resolve(&self, ty: TypeId, init: &Initializer) -> Result<Vec<Leaf>, Fault> {
         let mut leaves = Vec::new();
         self.object(ty, init, &mut Vec::new(), &mut leaves)?;

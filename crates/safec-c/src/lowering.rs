@@ -1186,9 +1186,8 @@ impl<'a> Lowering<'a> {
     /// whose bytes past the member this would leave unwritten where C
     /// makes them zero (6.7.9 p10).
     ///
-    /// Mutation: put each item at its index among the leaves rather than at
-    /// its path; the run of `a_braced_initializer_fills_arrays_and_structs`
-    /// reads its file-scope struct's members out of place.
+    /// Mutation: put every member at index zero; the run of
+    /// `a_braced_initializer_fills_arrays_and_structs` fails.
     fn static_init(
         &mut self,
         init: &Initializer,

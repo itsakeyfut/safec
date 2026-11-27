@@ -396,9 +396,10 @@ programs! {
     /// (#1241). `{ "q" }` for a struct is a list whose first member the
     /// literal initializes, not the literal (#1244 review). Mutations:
     /// refuse a `{` in `Parser::initializer`, or answer `true` in
-    /// `Parser::takes_braced_literal`, and this does not build; descend into an aggregate from a list item in
-    /// `Shapes::fill`, or put each item at its index among the leaves in
-    /// `Lowering::static_init`, and it fails.
+    /// `Parser::takes_braced_literal`, and this does not build; take an
+    /// expression whole for an aggregate subobject in `Shapes::fill`, or
+    /// put every member at index zero in `Lowering::static_init`, and it
+    /// fails.
     a_braced_initializer_fills_arrays_and_structs,
     /// Statics that start as addresses: string literals in a table, one
     /// plus a number, `&g`, an element's, an array plus a number, a
