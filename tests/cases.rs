@@ -77,13 +77,22 @@ cases! {
         // IR this shows changes.
         a_wide_literal_is_a_static_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store through one member of a union is asked at the levels the
-        // least `const` of its members that read a pointer there keeps:
-        // `SC0417` where a `char *` reads back a literal a `const char *`
-        // stored, in a named union and an anonymous one, and nothing where
-        // every reader is `const` or the other member is an integer
-        // (#1432). Mutation: answer the written member's levels alone in
-        // `Lowering::member_levels`; `literal_read_as_writable` and
-        // `through_an_anonymous_union` go silent.
+        // least `const` of the pointers other members hold over the same
+        // bytes keeps: `SC0417` where a `char *` reads back a literal a
+        // `const char *` stored, in a named union, an anonymous one, two
+        // anonymous members deep, a union of a union, a struct in a union,
+        // through `->`, an array or a struct whose pointer sits there, a
+        // reader declared after the writer, and two levels down; nothing
+        // where every such reader is `const`, the other member is an
+        // integer, a function pointer or a struct whose pointer is
+        // elsewhere, or the owner is no union (#1432). Mutations in
+        // `Lowering::member_levels`: answer the written member's levels
+        // alone, and `literal_read_as_writable` goes silent; stop at the
+        // first `.`, and `a_union_of_a_union` does; treat a struct as a
+        // union, and `a_struct_is_no_union` is reported; in
+        // `Lowering::pointers_at`, read an aggregate member's own type, and
+        // `a_const_struct_reader` is reported; take no element of an array,
+        // and `an_array_of_writable_pointers_reads_it` goes silent.
         a_union_member_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it

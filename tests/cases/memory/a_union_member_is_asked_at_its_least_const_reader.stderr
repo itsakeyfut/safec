@@ -28,3 +28,103 @@ error[SC0417]: this may write storage the program may not modify
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:75:5 ]
+    │
+ 75 │     outer.in.b = "abc";
+    │     ─────────┬────────  
+    │              ╰────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:80:5 ]
+    │
+ 80 │     holds_a_struct.s.b = "abc";
+    │     ─────────────┬────────────  
+    │                  ╰────────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:86:9 ]
+    │
+ 86 │         h->u.b = "abc";
+    │         ───────┬──────  
+    │                ╰──────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this may reach outside the object it points at
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:196:5 ]
+     │
+ 196 │     not_a_union.b = "abc";
+     │     ──────────┬──────────  
+     │               ╰──────────── this check cannot say this is inside its object
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:200:5 ]
+     │
+ 200 │     array_reader.b = "abc";
+     │     ───────────┬──────────  
+     │                ╰──────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:204:5 ]
+     │
+ 204 │     struct_reader_first.b = "abc";
+     │     ──────────────┬──────────────  
+     │                   ╰──────────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:212:5 ]
+     │
+ 212 │     reader_after.b = "abc";
+     │     ───────────┬──────────  
+     │                ╰──────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:216:5 ]
+     │
+ 216 │     two_deep.b = &literal;
+     │     ──────────┬──────────  
+     │               ╰──────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this may reach outside the object it points at
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:220:5 ]
+     │
+ 220 │     two_anonymous.b = "abc";
+     │     ───────────┬───────────  
+     │                ╰───────────── this check cannot say this is inside its object
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+     ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:220:5 ]
+     │
+ 220 │     two_anonymous.b = "abc";
+     │     ───────────┬───────────  
+     │                ╰───────────── a `const` object or a string literal may be here
+─────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
