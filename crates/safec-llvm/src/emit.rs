@@ -812,14 +812,20 @@ impl Emitter<'_> {
                         .iter()
                         .map(|member| (member.ty, member.offset))
                         .collect();
-                    for (entry, (member, offset)) in entries.iter().zip(members) {
+                    for (index, entry) in entries {
+                        let Some(&(member, offset)) = usize::try_from(*index)
+                            .ok()
+                            .and_then(|index| members.get(index))
+                        else {
+                            return self.refuse("an aggregate's member past the struct's last");
+                        };
                         self.pieces(member, entry, at + offset, pieces)?;
                     }
                 }
                 Ty::Array { element, .. } => {
                     let size = self.unit.size_of(element).unwrap_or(0);
-                    for (index, entry) in entries.iter().enumerate() {
-                        self.pieces(element, entry, at + index as u64 * size, pieces)?;
+                    for (index, entry) in entries {
+                        self.pieces(element, entry, at + index * size, pieces)?;
                     }
                 }
                 Ty::Integer { .. } | Ty::Pointer(_) | Ty::Void | Ty::Function(_) => {

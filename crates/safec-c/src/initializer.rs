@@ -8,9 +8,11 @@
 //! the `2` in, and the one that drifted would build a program that does not
 //! do what the checked one says. See ADR-0137.
 
-use crate::ast::{Ast, ExprId, Initializer, Type, TypeId};
+use std::collections::HashSet;
+
+use crate::ast::{Ast, Declaration, Designator, ExprId, Initializer, Type, TypeId};
 use crate::sema::Resolution;
-use safec_ir::source::Span;
+use safec_ir::source::{SourceMap, Span};
 
 /// Whether `value`, of type `of`, initializes an aggregate of `ty` whole
 /// rather than its first scalar: a struct of a compatible type (C17 6.7.9
@@ -43,7 +45,7 @@ pub fn initializes_whole(
 }
 
 /// One step from an object to a subobject of it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Step {
     /// The member at this index among its struct's members in the order
     /// written, as `types::Member::path` counts them.
@@ -80,6 +82,11 @@ pub enum Fault {
     /// unknown size the parser could not complete (`Parser::completed`), or
     /// one of a struct this place cannot see the definition of.
     Unsized(Span),
+    /// A designator that names no subobject of the current object: a
+    /// member it has none of, an index that is no integer constant or is
+    /// past the array's end, or either for an object of the wrong kind
+    /// (p6, p7).
+    Designator(Span),
 }
 
 /// What an object is made of, for initializing it.
@@ -98,6 +105,8 @@ enum Kind {
 /// The walk, with what it reads of the program.
 #[allow(missing_debug_implementations)] // Two closures, which have no `Debug`.
 pub struct Shapes<'a> {
+    /// The source, for a designator's member name.
+    pub sources: &'a SourceMap,
     /// The tree.
     pub ast: &'a Ast,
     /// Where each struct is defined.
@@ -111,16 +120,36 @@ pub struct Shapes<'a> {
 }
 
 impl Shapes<'_> {
-    /// The leaves `init` writes in an object of `ty`, in the order written.
+    /// The leaves `init` writes in an object of `ty`, in the order written,
+    /// each that a later one wholly covers left out: a later initializer
+    /// for a subobject overrides an earlier one (p19), and the earlier is
+    /// not evaluated, as `clang` builds it. What is left is disjoint where
+    /// one does not hold another, so writing them in order is writing what
+    /// C gives.
     ///
-    /// Mutation: in `Shapes::fill`, take an expression item for an
+    /// Mutation: in `Shapes::place`, take an expression item for an
     /// aggregate subobject whole rather than its first scalar; the run of
     /// `a_braced_initializer_fills_arrays_and_structs`, whose lists elide
-    /// braces, fails.
+    /// braces, fails. Mutation: keep every leaf; the run of
+    /// `a_designated_initializer_names_its_subobject` reads an overridden
+    /// value.
     pub fn resolve(&self, ty: TypeId, init: &Initializer) -> Result<Vec<Leaf>, Fault> {
         let mut leaves = Vec::new();
         self.object(ty, init, &mut Vec::new(), &mut leaves)?;
-        Ok(leaves)
+        // From the last: a leaf is kept unless a later one's path is a
+        // prefix of its own. A set of the paths seen, so each leaf asks its
+        // own prefixes and not every later leaf.
+        let mut seen: HashSet<Vec<Step>> = HashSet::new();
+        let mut kept = Vec::with_capacity(leaves.len());
+        for leaf in leaves.into_iter().rev() {
+            let covered = (0..=leaf.path.len()).any(|len| seen.contains(&leaf.path[..len]));
+            seen.insert(leaf.path.clone());
+            if !covered {
+                kept.push(leaf);
+            }
+        }
+        kept.reverse();
+        Ok(kept)
     }
 
     /// Every scalar of an object of `ty`, in order, with its path and type:
@@ -179,13 +208,17 @@ impl Shapes<'_> {
     }
 
     /// The type of the subobject `step` reaches in an object of `ty`.
+    /// Every member, a union's past its first included, since a designator
+    /// reaches any of them.
     pub fn subobject(&self, ty: TypeId, step: Step) -> Option<TypeId> {
-        match (self.kind(ty)?, step) {
-            (Kind::Array { element, .. }, Step::Element(_)) => Some(element),
-            (Kind::Struct(members), Step::Member(index)) => members
-                .iter()
-                .find(|&&(at, _)| at == index)
-                .map(|&(_, member)| member),
+        match (self.ast.ty(ty), step) {
+            (Type::Array { element, .. }, Step::Element(_)) => Some(*element),
+            (Type::Struct { .. }, Step::Member(index)) => self
+                .members(ty)?
+                .1
+                .into_iter()
+                .find(|&(at, _)| at == index)
+                .map(|(_, member)| member),
             _ => None,
         }
     }
@@ -252,19 +285,19 @@ impl Shapes<'_> {
                 return Ok(());
             }
             Initializer::List { items, span } => (items, *span),
+            // Only ever a list's item, which `Shapes::list` takes apart.
+            Initializer::Designated { span, .. } => return Err(Fault::Designator(*span)),
         };
         match self.kind(ty).ok_or(Fault::Unsized(span))? {
             // p11: a scalar's initializer is one expression, optionally
-            // in braces.
+            // in braces; a designator names nothing in one (p7).
             Kind::Scalar => match items.as_slice() {
                 [] => Err(Fault::Empty(span)),
+                [Initializer::Designated { span, .. }] => Err(Fault::Designator(*span)),
                 [one] => self.object(ty, one, path, leaves),
                 [_, extra, ..] => Err(Fault::TooMany(extra.span(self.ast))),
             },
             Kind::Array { .. } | Kind::Struct(_) => {
-                if items.is_empty() {
-                    return Err(Fault::Empty(span));
-                }
                 // p14: a string literal for an array of character type,
                 // "optionally enclosed in braces", at any depth, so
                 // `{{"ab"}, {"c"}}` gives each row its literal (#1241
@@ -283,129 +316,288 @@ impl Shapes<'_> {
                         return Ok(());
                     }
                 }
-                let mut at = 0;
-                self.fill(ty, items, &mut at, path, leaves)?;
-                match items.get(at) {
-                    Some(extra) => Err(Fault::TooMany(extra.span(self.ast))),
-                    None => Ok(()),
-                }
+                self.list(ty, items, span, path, false, leaves).map(|_| ())
             }
         }
     }
 
-    /// The subobjects of the aggregate of `ty` at `path`, in order, from
-    /// `items` from `at` on, until either runs out (p17). A list item
-    /// initializes the next subobject whole; an expression initializes it
-    /// where it is a scalar or the expression takes it whole, and its first
-    /// scalar otherwise, the rest of its subobjects taking the items after
-    /// it (p20). A recursion, bounded by how deep the type nests.
-    fn fill(
+    /// The braced list `items` for the aggregate of `ty` at `path`, item by
+    /// item (p17 to p20). The current object is a stack of frames, the
+    /// list's own at the bottom: a designation starts again from it and
+    /// descends to what it names; an item without one goes to the next
+    /// subobject of the deepest frame, a frame that has run out giving way
+    /// to the one below it; and an expression for an aggregate it does not
+    /// take whole pushes that aggregate's frame and goes to its first
+    /// subobject (p20). `unbounded` lets the list's own array grow to what
+    /// the items reach, for `Shapes::extent`. The elements the list's own
+    /// array is given, one past the last reached.
+    ///
+    /// A recursion through `Shapes::object` for each braced item, bounded
+    /// by how deep the parser lets a list nest; a loop otherwise.
+    fn list(
         &self,
         ty: TypeId,
         items: &[Initializer],
-        at: &mut usize,
-        path: &mut Vec<Step>,
+        span: Span,
+        path: &[Step],
+        unbounded: bool,
         leaves: &mut Vec<Leaf>,
-    ) -> Result<(), Fault> {
-        let span = |at: usize| items[at.min(items.len() - 1)].span(self.ast);
-        let subobjects: Vec<(Step, TypeId)> =
-            match self.kind(ty).ok_or(Fault::Unsized(span(*at)))? {
-                Kind::Scalar => unreachable!("only an aggregate is filled"),
-                Kind::Array { element, count } => {
-                    // No more elements than items are left: a long array takes
-                    // what is written and leaves the rest to zero.
-                    let left = (items.len() - *at) as u64;
-                    (0..count.min(left))
-                        .map(|index| (Step::Element(index), element))
-                        .collect()
+    ) -> Result<u64, Fault> {
+        if items.is_empty() {
+            return Err(Fault::Empty(span));
+        }
+        let mut stack = vec![
+            self.frame(ty, path.to_vec(), unbounded)
+                .ok_or(Fault::Unsized(span))?,
+        ];
+        let mut reached = 0u64;
+        for item in items {
+            let at = item.span(self.ast);
+            let init = match item {
+                Initializer::Designated {
+                    designation, init, ..
+                } => {
+                    stack.truncate(1);
+                    self.designate(&mut stack, designation, at)?;
+                    &**init
                 }
-                Kind::Struct(members) => members
-                    .into_iter()
-                    .map(|(index, member)| (Step::Member(index), member))
-                    .collect(),
+                _ => {
+                    // The next subobject, past every frame that has run out.
+                    while self
+                        .next(stack.last().expect("the list's frame stays"))
+                        .is_none()
+                    {
+                        if stack.len() == 1 {
+                            return Err(Fault::TooMany(at));
+                        }
+                        stack.pop();
+                        stack.last_mut().expect("one is left").advance();
+                    }
+                    item
+                }
             };
-        for (step, sub) in subobjects {
-            if *at == items.len() {
-                break;
+            self.place(&mut stack, init, at, leaves, &mut reached)?;
+        }
+        Ok(reached)
+    }
+
+    /// Move `stack` to the subobject `designation` names, from the list's
+    /// own frame: each designator but the last a frame of its own, the last
+    /// the next subobject of the deepest one (p17's "current object").
+    fn designate(
+        &self,
+        stack: &mut Vec<Frame>,
+        designation: &[Designator],
+        at: Span,
+    ) -> Result<(), Fault> {
+        for (index, designator) in designation.iter().enumerate() {
+            let frame = stack.last_mut().expect("the list's frame stays");
+            match (designator, &frame.subs) {
+                (Designator::Index(value), Subs::Array { count, .. }) => {
+                    let position = (self.length)(*value).ok_or(Fault::Designator(at))?;
+                    if count.is_some_and(|count| position >= count) {
+                        return Err(Fault::Designator(at));
+                    }
+                    frame.next = position;
+                }
+                (Designator::Member(name), Subs::Members { .. }) => {
+                    let name = self.sources.snippet(*name);
+                    let chain = self.find(frame.ty, name).ok_or(Fault::Designator(at))?;
+                    // Through each anonymous member on the way, a frame each.
+                    let (last, through) = chain.split_last().expect("a found member has a place");
+                    for &position in through {
+                        let frame = stack.last_mut().expect("the list's frame stays");
+                        frame.select(position);
+                        let (step, sub) = self.next(frame).ok_or(Fault::Designator(at))?;
+                        let mut path = frame.path.clone();
+                        path.push(step);
+                        stack.push(self.frame(sub, path, false).ok_or(Fault::Designator(at))?);
+                    }
+                    stack
+                        .last_mut()
+                        .expect("the list's frame stays")
+                        .select(*last);
+                }
+                _ => return Err(Fault::Designator(at)),
             }
-            path.push(step);
-            self.one(sub, items, at, path, leaves)?;
-            path.pop();
+            if index + 1 < designation.len() {
+                let frame = stack.last().expect("the list's frame stays");
+                let (step, sub) = self.next(frame).ok_or(Fault::Designator(at))?;
+                let mut path = frame.path.clone();
+                path.push(step);
+                stack.push(self.frame(sub, path, false).ok_or(Fault::Designator(at))?);
+            }
         }
         Ok(())
     }
 
-    /// The one subobject of `sub` at `path`, from `items` from `at` on: a
-    /// list item initializes it whole; an expression initializes it where
-    /// it is a scalar or the expression takes it whole, and its first
-    /// scalar otherwise, the rest of its subobjects taking the items after
-    /// it (p20).
-    fn one(
+    /// Initialize the next subobject of the deepest frame from `init`, and
+    /// move past it: a list or an expression that takes it whole is that
+    /// subobject's; an expression for an aggregate it does not take whole
+    /// goes to the aggregate's first scalar, its frame pushed (p20).
+    /// `reached` is one past the last element of the list's own array an
+    /// item went to.
+    fn place(
         &self,
-        sub: TypeId,
-        items: &[Initializer],
-        at: &mut usize,
-        path: &mut Vec<Step>,
+        stack: &mut Vec<Frame>,
+        init: &Initializer,
+        at: Span,
         leaves: &mut Vec<Leaf>,
+        reached: &mut u64,
     ) -> Result<(), Fault> {
-        let item = &items[*at];
-        match item {
-            Initializer::List { .. } => {
-                *at += 1;
-                self.object(sub, item, path, leaves)
+        loop {
+            let frame = stack.last().expect("the list's frame stays");
+            let Some((step, sub)) = self.next(frame) else {
+                // An aggregate with nothing an initializer reaches, entered
+                // by elision: the item goes past it.
+                if stack.len() == 1 {
+                    return Err(Fault::TooMany(at));
+                }
+                stack.pop();
+                stack.last_mut().expect("one is left").advance();
+                continue;
+            };
+            let mut path = frame.path.clone();
+            path.push(step);
+            if let Subs::Array { .. } = stack[0].subs {
+                *reached = (*reached).max(stack[0].next + 1);
             }
-            Initializer::Expr(value) => {
-                let scalar = matches!(
-                    self.kind(sub).ok_or(Fault::Unsized(item.span(self.ast)))?,
-                    Kind::Scalar
-                );
-                if scalar || (self.whole)(*value, sub) {
-                    *at += 1;
-                    leaves.push(Leaf {
-                        path: path.clone(),
-                        ty: sub,
-                        value: *value,
-                        whole: !scalar,
-                    });
-                    Ok(())
-                } else {
-                    self.fill(sub, items, at, path, leaves)
+            match init {
+                Initializer::Expr(value) => {
+                    let scalar = matches!(self.kind(sub).ok_or(Fault::Unsized(at))?, Kind::Scalar);
+                    if scalar || (self.whole)(*value, sub) {
+                        leaves.push(Leaf {
+                            path,
+                            ty: sub,
+                            value: *value,
+                            whole: !scalar,
+                        });
+                        stack.last_mut().expect("the list's frame stays").advance();
+                        return Ok(());
+                    }
+                    stack.push(self.frame(sub, path, false).ok_or(Fault::Unsized(at))?);
+                }
+                Initializer::List { .. } | Initializer::Designated { .. } => {
+                    self.object(sub, init, &mut path, leaves)?;
+                    stack.last_mut().expect("the list's frame stays").advance();
+                    return Ok(());
                 }
             }
         }
     }
 
+    /// The frame of the aggregate of `ty` at `path`, its first subobject
+    /// next; an array's count `None` where it is `unbounded`. `None` for a
+    /// scalar, or where a count or a definition is not to be had.
+    fn frame(&self, ty: TypeId, path: Vec<Step>, unbounded: bool) -> Option<Frame> {
+        let subs = match self.ast.ty(ty) {
+            Type::Array {
+                element, length, ..
+            } => Subs::Array {
+                element: *element,
+                count: if unbounded {
+                    None
+                } else {
+                    Some((self.length)((*length)?)?)
+                },
+            },
+            Type::Struct { .. } => {
+                let (union, members) = self.members(ty)?;
+                Subs::Members { members, union }
+            }
+            _ => return None,
+        };
+        Some(Frame {
+            ty,
+            path,
+            subs,
+            next: 0,
+            done: false,
+        })
+    }
+
+    /// The step to and the type of `frame`'s next subobject, or `None`
+    /// where it has run out: past the array's end, past the last member,
+    /// or a union once one member is initialized.
+    fn next(&self, frame: &Frame) -> Option<(Step, TypeId)> {
+        match &frame.subs {
+            Subs::Array { element, count } => count
+                .is_none_or(|count| frame.next < count)
+                .then_some((Step::Element(frame.next), *element)),
+            Subs::Members { members, .. } => {
+                if frame.done {
+                    return None;
+                }
+                let &(index, member) = members.get(usize::try_from(frame.next).ok()?)?;
+                Some((Step::Member(index), member))
+            }
+        }
+    }
+
+    /// Where the member spelled `name` is among the members of the struct
+    /// `ty` an initializer reaches: its position, or an anonymous member's
+    /// followed by the position within it, as `types::Checker::find_member`
+    /// finds one for `.`. A recursion, bounded by how deep the parser nests
+    /// a member list.
+    fn find(&self, ty: TypeId, name: &str) -> Option<Vec<u64>> {
+        let declared = self.declared(ty)?;
+        let (_, members) = self.members(ty)?;
+        for (position, &(index, member)) in members.iter().enumerate() {
+            let position = position as u64;
+            match declared[index].name {
+                Some(spelled) if self.sources.snippet(spelled) == name => {
+                    return Some(vec![position]);
+                }
+                Some(_) => {}
+                None => {
+                    if let Some(mut within) = self.find(member, name) {
+                        within.insert(0, position);
+                        return Some(within);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// How many elements of `element` the list `init` initializes, which is
     /// the length of an array of unknown size it is the initializer of (C17
-    /// 6.7.9 p22): as many as `Shapes::fill` would take of an array long
-    /// enough, brace elision included. Asked by the type check once every
-    /// item is typed, since a struct taken whole is one item where its
-    /// members elided would be several. See `Parser::completed`.
+    /// 6.7.9 p22): one past the last element an item reaches, by position
+    /// or by designator, brace elision included. Asked by the type check
+    /// once every item is typed, since a struct taken whole is one item
+    /// where its members elided would be several, and a designator's index
+    /// is a value. See `Parser::completed`.
     ///
     /// Mutation: count every item as an element; the run of
     /// `a_braced_initializer_fills_arrays_and_structs` sizes `elided`
     /// wrongly.
-    pub fn extent(&self, element: TypeId, init: &Initializer) -> Result<u64, Fault> {
+    pub fn extent(&self, array: TypeId, init: &Initializer) -> Result<u64, Fault> {
         let Initializer::List { items, span } = init else {
             return Err(Fault::Unsized(init.span(self.ast)));
         };
-        if items.is_empty() {
-            return Err(Fault::Empty(*span));
-        }
-        let (mut at, mut count) = (0, 0u64);
-        let mut scratch = Vec::new();
-        while at < items.len() {
-            let before = at;
-            self.one(element, items, &mut at, &mut Vec::new(), &mut scratch)?;
-            scratch.clear();
-            // An element that takes no item, a struct with no member an
-            // initializer reaches, would count forever.
-            if at == before {
-                return Err(Fault::TooMany(items[at].span(self.ast)));
+        self.list(array, items, *span, &[], true, &mut Vec::new())
+    }
+
+    /// The members of the struct `ty` as its definition declares them.
+    fn declared(&self, ty: TypeId) -> Option<&[Declaration]> {
+        match self.ast.ty(ty) {
+            Type::Struct {
+                members: Some(members),
+                ..
+            } => Some(members),
+            Type::Struct { members: None, .. } => {
+                let bound = self.resolution.bound(self.ast, ty);
+                let definition = self.resolution.definition(self.resolution.tag(bound))?;
+                match self.ast.ty(definition) {
+                    Type::Struct {
+                        members: Some(members),
+                        ..
+                    } => Some(members),
+                    _ => None,
+                }
             }
-            count += 1;
+            _ => None,
         }
-        Ok(count)
     }
 
     /// Whether the struct `ty` is a union, and every member an initializer
@@ -414,23 +606,10 @@ impl Shapes<'_> {
     /// and no flexible array member (6.7.2.1 p18). `None` where its
     /// definition is not to be had.
     fn members(&self, ty: TypeId) -> Option<(bool, Vec<(usize, TypeId)>)> {
-        let Type::Struct { union, members, .. } = self.ast.ty(ty) else {
+        let Type::Struct { union, .. } = self.ast.ty(ty) else {
             return None;
         };
-        let members = match members {
-            Some(members) => members,
-            None => {
-                let bound = self.resolution.bound(self.ast, ty);
-                let definition = self.resolution.definition(self.resolution.tag(bound))?;
-                match self.ast.ty(definition) {
-                    Type::Struct {
-                        members: Some(members),
-                        ..
-                    } => members,
-                    _ => return None,
-                }
-            }
-        };
+        let members = self.declared(ty)?;
         let last = members.len().checked_sub(1);
         let reached = members
             .iter()
@@ -470,4 +649,49 @@ impl Shapes<'_> {
             | Type::Function { .. } => Some(Kind::Scalar),
         }
     }
+}
+
+/// One aggregate a list is filling, and where in it the next item goes.
+struct Frame {
+    /// Its type.
+    ty: TypeId,
+    /// Where it is in the object the list initializes.
+    path: Vec<Step>,
+    /// What it is made of.
+    subs: Subs,
+    /// The next element, or the position of the next member among
+    /// [`Subs::Members`].
+    next: u64,
+    /// For a union, whether one member has been initialized, after which
+    /// it has run out (p17: a union's list initializes one member).
+    done: bool,
+}
+
+impl Frame {
+    /// Past the subobject just initialized.
+    fn advance(&mut self) {
+        self.next += 1;
+        if matches!(self.subs, Subs::Members { union: true, .. }) {
+            self.done = true;
+        }
+    }
+
+    /// The member at `position` next, as a designator names it: a union's
+    /// may be any of its members.
+    fn select(&mut self, position: u64) {
+        self.next = position;
+        self.done = false;
+    }
+}
+
+/// What a frame's aggregate is made of.
+enum Subs {
+    /// Elements of `element`, `count` of them or as many as items reach.
+    Array { element: TypeId, count: Option<u64> },
+    /// The members an initializer reaches, each with its index among the
+    /// struct's members, and whether it is a union.
+    Members {
+        members: Vec<(usize, TypeId)>,
+        union: bool,
+    },
 }

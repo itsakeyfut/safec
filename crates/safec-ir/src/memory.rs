@@ -1271,7 +1271,9 @@ pub fn read_only_statics(unit: &TranslationUnit) -> Vec<Span> {
         let mut work = vec![&unit.static_object(id).init];
         while let Some(init) = work.pop() {
             match init {
-                StaticInit::Aggregate(entries) => work.extend(entries),
+                StaticInit::Aggregate(entries) => {
+                    work.extend(entries.iter().map(|(_, entry)| entry))
+                }
                 StaticInit::Address {
                     of,
                     writable: Some(at),

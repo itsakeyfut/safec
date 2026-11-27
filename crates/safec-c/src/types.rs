@@ -403,8 +403,8 @@ pub fn check(
     // node precedes (`Parser::completed`).
     let counted = counted_lengths(ast);
     for id in ast.expr_ids().collect::<Vec<_>>() {
-        if let Some((element, init)) = counted.get(&id) {
-            let count = checker.extent(ast, *element, init);
+        if let Some((array, init)) = counted.get(&id) {
+            let count = checker.extent(ast, *array, init);
             ast.set_length(id, count);
         }
         let errors = diagnostics.error_count();
@@ -456,7 +456,7 @@ pub fn check(
 }
 
 /// Each [`Expr::Length`] a braced list gave an array of unknown size, with
-/// the element type and the list: what [`Checker::extent`] counts.
+/// the array's type and the list: what [`Checker::extent`] counts.
 fn counted_lengths(ast: &Ast) -> HashMap<ExprId, (TypeId, Initializer)> {
     let mut declared: Vec<&InitDeclarator> = Vec::new();
     for item in ast.items() {
@@ -475,7 +475,6 @@ fn counted_lengths(ast: &Ast) -> HashMap<ExprId, (TypeId, Initializer)> {
             continue;
         };
         let Type::Array {
-            element,
             length: Some(length),
             ..
         } = ast.ty(declarator.declaration.ty)
@@ -483,7 +482,7 @@ fn counted_lengths(ast: &Ast) -> HashMap<ExprId, (TypeId, Initializer)> {
             continue;
         };
         if matches!(ast.expr(*length), Expr::Length { span: counted, .. } if counted == span) {
-            counted.insert(*length, (*element, init.clone()));
+            counted.insert(*length, (declarator.declaration.ty, init.clone()));
         }
     }
     counted
@@ -1601,6 +1600,7 @@ impl Checker<'_> {
             let length = |id: ExprId| self.values[id.index()].and_then(|v| u64::try_from(v).ok());
             let whole = |value: ExprId, ty: TypeId| self.initializes_whole(ast, value, ty);
             let shapes = Shapes {
+                sources: self.sources,
                 ast,
                 resolution: self.resolution,
                 length: &length,
@@ -1623,6 +1623,23 @@ impl Checker<'_> {
                             "C17 6.7.9 p2: no initializer provides a value for an object \
                              outside the one initialized",
                         ),
+                );
+                return;
+            }
+            Err(Fault::Designator(at)) => {
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "this designator names no subobject of `{called}`"
+                    ))
+                    .with_code(INITIALIZED)
+                    .with_label(Label::primary(at, "this designation"))
+                    .with_label(Label::secondary(
+                        name,
+                        format!("declared as `{}`", self.spelled(ast, ty)),
+                    ))
+                    .with_note(
+                        "C17 6.7.9 p6 and p7: a designator names a member of the struct or                          union it is in, or an element of the array it is in, by an integer                          constant within its bounds",
+                    ),
                 );
                 return;
             }
@@ -1659,14 +1676,15 @@ impl Checker<'_> {
         }
     }
 
-    /// How many elements of `element` the braced list `init` initializes,
+    /// How many elements the braced list `init` gives the array of `array`,
     /// for the length of an array of unknown size (C17 6.7.9 p22). Where
     /// the list cannot be worked out, its items' count, and
     /// `Checker::check_list` reports why; never zero, which no array has.
-    fn extent(&self, ast: &Ast, element: TypeId, init: &Initializer) -> u64 {
+    fn extent(&self, ast: &Ast, array: TypeId, init: &Initializer) -> u64 {
         let length = |id: ExprId| self.values[id.index()].and_then(|v| u64::try_from(v).ok());
         let whole = |value: ExprId, ty: TypeId| self.initializes_whole(ast, value, ty);
         let shapes = Shapes {
+            sources: self.sources,
             ast,
             resolution: self.resolution,
             length: &length,
@@ -1674,9 +1692,9 @@ impl Checker<'_> {
         };
         let fallback = match init {
             Initializer::List { items, .. } => items.len() as u64,
-            Initializer::Expr(_) => 1,
+            Initializer::Expr(_) | Initializer::Designated { .. } => 1,
         };
-        shapes.extent(element, init).unwrap_or(fallback).max(1)
+        shapes.extent(array, init).unwrap_or(fallback).max(1)
     }
 
     /// Whether `value` initializes an aggregate of `ty` whole rather than

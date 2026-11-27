@@ -1,0 +1,27 @@
+Declaration a_designated_initializer_is_read.c:1:1 "struct P"
+  Field a_designated_initializer_is_read.c:2:5 "x" "int"
+  Field a_designated_initializer_is_read.c:2:5 "y" "int"
+Declaration a_designated_initializer_is_read.c:4:1 "member" "struct P"
+  InitializerList a_designated_initializer_is_read.c:4:19
+    Designated a_designated_initializer_is_read.c:4:20
+      Member a_designated_initializer_is_read.c:4:21 "y"
+      Number a_designated_initializer_is_read.c:4:25 "1"
+Declaration a_designated_initializer_is_read.c:5:1 "index" "int[3]"
+  InitializerList a_designated_initializer_is_read.c:5:16
+    Designated a_designated_initializer_is_read.c:5:17
+      Index a_designated_initializer_is_read.c:5:18
+        Number a_designated_initializer_is_read.c:5:18 "2"
+      Number a_designated_initializer_is_read.c:5:23 "1"
+    Designated a_designated_initializer_is_read.c:5:26
+      Index a_designated_initializer_is_read.c:5:27
+        Number a_designated_initializer_is_read.c:5:27 "0"
+      Number a_designated_initializer_is_read.c:5:32 "3"
+Declaration a_designated_initializer_is_read.c:6:1 "nested" "struct L"
+  InitializerList a_designated_initializer_is_read.c:8:12
+    Designated a_designated_initializer_is_read.c:8:13
+      Member a_designated_initializer_is_read.c:8:14 "a"
+      Index a_designated_initializer_is_read.c:8:16
+        Number a_designated_initializer_is_read.c:8:16 "1"
+      Member a_designated_initializer_is_read.c:8:19 "y"
+      Number a_designated_initializer_is_read.c:8:23 "4"
+  Field a_designated_initializer_is_read.c:7:5 "a" "struct P[2]"

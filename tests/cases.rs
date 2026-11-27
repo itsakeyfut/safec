@@ -54,6 +54,13 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A designated item is stored where it names, `ps[2]`, and the
+        // scalars no item names are stored zero after it, which the IR here
+        // shows; one past a designated array's end is `SC0412` (#1242). The
+        // `SC0403` at `*ps[2]` is the check's older doubt of an element
+        // written beside others, #1418's. Mutation: write the item at the
+        // next position in `Shapes::designate`; the stores in the IR move.
+        a_designated_pointer_is_written_where_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local holding a pointer is initialized a store per scalar, the
         // ones the list does not name with zero, so `ps[1]` is read as
         // written and no `SC0413` says a `memset` wrote no pointer; one
@@ -8988,10 +8995,20 @@ cases! {
         // definition may wait (6.9.2 p2); mutation: drop `!initialized` in
         // `Checker::check_complete_objects`, and it is accepted.
         a_braced_initializer_is_held_to_each_subobject: ["--emit", "ast"],
-        // A designation is read with #1242, and refused until then rather
-        // than read as a position. Mutation: drop the refusal in
-        // `Parser::initializer_items`; `.y` is a syntax error instead.
-        a_designated_initializer_is_not_read_yet: ["--emit", "ast"],
+        // A designation is read before its item, `.m` and `[i]` and both
+        // chained, each designator a line (#1242). Mutation: read no
+        // designation in `Parser::initializer_items`; `.y` is a syntax error.
+        a_designated_initializer_is_read: ["--emit", "ast"],
+        // A designator names a member of the struct it is in or an element
+        // of the array it is in, by an integer constant within its bounds
+        // (C17 6.7.9 p6, p7); each other is `SC0310` (#1242). Mutation: drop
+        // the bound in `Shapes::designate`; `past` is accepted.
+        a_designator_that_names_no_subobject_is_refused: ["--emit", "ast"],
+        // A GNU range, `[a ... b]`, is this compiler's gap until #1197, not
+        // read as `[a]`, which would initialize one element of several.
+        // Mutation: drop the refusal in `Parser::designation`; this is a
+        // syntax error at `...`.
+        a_range_designator_is_not_read_yet: ["--emit", "ast"],
         // C17 6.7.1 p2: one storage class per declaration. Mutation: let a
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.

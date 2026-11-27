@@ -415,4 +415,13 @@ programs! {
     /// Mutation: answer every member at offset zero in
     /// `Lowering::member_offset`; this fails.
     a_static_holds_addresses_of_statics,
+    /// Designators by member and by index, chained, mixed with positional
+    /// items that go on from them, through an anonymous member, into a
+    /// union's other member, an unsized array sized by one, an item
+    /// overridden by a later one and not evaluated, a literal's byte
+    /// overridden in a static, and a static of a million elements two of
+    /// which are written (#1242). Mutations: keep every leaf in
+    /// `Shapes::resolve`, or make the static aggregate dense with zeros,
+    /// and this fails or takes too long.
+    a_designated_initializer_names_its_subobject,
 }

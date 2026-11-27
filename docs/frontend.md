@@ -191,7 +191,7 @@ from the construct instead. The macro is the same rule: `N * 4` reads `3 * 4`
 as one operand, so the multiplication holds part of `N`'s expansion, and
 ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9's bit-field and p13's
 anonymous member are read (#1206, #1207), and so is a braced initializer
-(#1241), whose designators are refused under `SC0207` until #1242 reads them.
+(#1241), designators included (#1242); a GNU range, `[a ... b]`, is refused under `SC0207` until #1197 reads it.
 
 `SC0207` is the code for valid C the parser does not read yet, told apart
 from C it cannot parse where the parse failed. A compound literal, a prefixed

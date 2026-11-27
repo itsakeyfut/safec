@@ -1217,6 +1217,7 @@ impl<'a> Lowering<'a> {
                 return self.static_value(*value, declared, ty, diagnostics);
             }
             Initializer::List { .. } => init,
+            Initializer::Designated { .. } => unreachable!("only a list's item is designated"),
         };
         let leaves = self.shapes(|shapes| shapes.resolve(declared, list)).ok()?;
         let mut root = StaticInit::Zero;
@@ -1252,24 +1253,38 @@ impl<'a> Lowering<'a> {
                             );
                             return None;
                         }
-                        (index, member.ty)
+                        (index as u64, member.ty)
                     }
-                    (Step::Element(index), Ty::Array { element, .. }) => (
-                        usize::try_from(index).expect("an initializer's index fits"),
-                        element,
-                    ),
+                    (Step::Element(index), Ty::Array { element, .. }) => (index, element),
                     _ => unreachable!("a path the walk made follows the type"),
                 };
+                // A literal's bytes a later item reaches into, `.s = "ab",
+                // .s[1] = 'x'`, become one entry each, so the item replaces
+                // its byte and keeps the rest (p19).
+                if let StaticInit::Bytes(bytes) = node {
+                    let entries = bytes
+                        .iter()
+                        .enumerate()
+                        .map(|(at, &byte)| (at as u64, StaticInit::Int(i128::from(byte))))
+                        .collect();
+                    *node = StaticInit::Aggregate(entries);
+                }
                 if !matches!(node, StaticInit::Aggregate(_)) {
                     *node = StaticInit::Aggregate(Vec::new());
                 }
                 let StaticInit::Aggregate(entries) = node else {
                     unreachable!("made an aggregate above")
                 };
-                if entries.len() <= index {
-                    entries.resize(index + 1, StaticInit::Zero);
-                }
-                node = &mut entries[index];
+                // Sparse and in order: the entry at `index`, made zero where
+                // there was none (#1242).
+                let at = match entries.binary_search_by_key(&index, |&(at, _)| at) {
+                    Ok(at) => at,
+                    Err(at) => {
+                        entries.insert(at, (index, StaticInit::Zero));
+                        at
+                    }
+                };
+                node = &mut entries[at].1;
                 ir_ty = inner_ir;
                 ast_ty = self
                     .shapes(|shapes| shapes.subobject(ast_ty, step))
@@ -1564,6 +1579,7 @@ impl<'a> Lowering<'a> {
             initializes_whole(ast, resolution, types.of(value), value, ty)
         };
         read(&Shapes {
+            sources: self.sources,
             ast,
             resolution,
             length: &length,
@@ -1602,7 +1618,8 @@ impl<'a> Lowering<'a> {
             // list does not write and no store per scalar reaches, which C
             // makes zero for a static (6.7.9 p10) and `clang` zeroes here
             // too; refused as a static's is (#1241 review).
-            let (ast, types, resolution) = (self.ast, self.types, self.resolution);
+            let (sources, ast, types, resolution) =
+                (self.sources, self.ast, self.types, self.resolution);
             let mut size = |ty: TypeId| {
                 self.ty(at, ty, &mut DiagnosticSink::new())
                     .and_then(|ty| self.unit.size_of(ty))
@@ -1613,6 +1630,7 @@ impl<'a> Lowering<'a> {
                     initializes_whole(ast, resolution, types.of(value), value, ty)
                 };
                 let shapes = Shapes {
+                    sources,
                     ast,
                     resolution,
                     length: &length,
@@ -3838,6 +3856,9 @@ impl<'a> Lowering<'a> {
                             let at = self.store_span(name, span, declarator.span, diagnostics)?;
                             let init = match initializer {
                                 Initializer::Expr(init) => *init,
+                                Initializer::Designated { .. } => {
+                                    unreachable!("only a list's item is designated")
+                                }
                                 Initializer::List { span: list, .. } => {
                                     self.store_list(
                                         builder,

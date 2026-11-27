@@ -387,9 +387,6 @@ pub struct InitDeclarator {
 }
 
 /// C17 6.7.9's `initializer`: one expression, or a braced list of them.
-///
-/// A designation in a list is refused by the parser until #1242 reads it,
-/// so every item here stands where its position puts it (p17).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Initializer {
     /// An `assignment-expression`.
@@ -401,6 +398,29 @@ pub enum Initializer {
         /// From the `{` through the `}`.
         span: Span,
     },
+    /// An item of a list with a designation before it, `.m = 1` or `[2] =
+    /// {...}` (6.7.9 p6, p7): the subobject it names is the current object
+    /// the item initializes, and the items after it go on from there
+    /// (p17). Only ever an item of a [`Initializer::List`].
+    Designated {
+        /// The designators, outermost first: `.a[2].b` is three.
+        designation: Vec<Designator>,
+        /// What the named subobject is initialized with: never itself
+        /// designated.
+        init: Box<Initializer>,
+        /// From the first designator through the item.
+        span: Span,
+    },
+}
+
+/// One step of a designation, C17 6.7.9 p6.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Designator {
+    /// `.name`, a member of the current struct or union: the span of the
+    /// name.
+    Member(Span),
+    /// `[constant-expression]`, an element of the current array.
+    Index(ExprId),
 }
 
 impl Initializer {
@@ -408,7 +428,7 @@ impl Initializer {
     pub fn span(&self, ast: &Ast) -> Span {
         match self {
             Self::Expr(id) => ast.expr(*id).span(),
-            Self::List { span, .. } => *span,
+            Self::List { span, .. } | Self::Designated { span, .. } => *span,
         }
     }
 
@@ -416,12 +436,13 @@ impl Initializer {
     pub fn expr(&self) -> Option<ExprId> {
         match self {
             Self::Expr(id) => Some(*id),
-            Self::List { .. } => None,
+            Self::List { .. } | Self::Designated { .. } => None,
         }
     }
 
     /// Every expression in it, in the order written, through every nested
-    /// list. A worklist, so that its depth costs no stack; the walks that
+    /// list, a designator's index among them, so that each is resolved and
+    /// typed. A worklist, so that its depth costs no stack; the walks that
     /// recurse over a list instead say what bounds them.
     pub fn exprs(&self) -> Vec<ExprId> {
         let mut found = Vec::new();
@@ -430,6 +451,19 @@ impl Initializer {
             match init {
                 Self::Expr(id) => found.push(*id),
                 Self::List { items, .. } => work.extend(items.iter().rev()),
+                Self::Designated {
+                    designation, init, ..
+                } => {
+                    found.extend(
+                        designation
+                            .iter()
+                            .filter_map(|designator| match designator {
+                                Designator::Index(index) => Some(*index),
+                                Designator::Member(_) => None,
+                            }),
+                    );
+                    work.push(init);
+                }
             }
         }
         found
