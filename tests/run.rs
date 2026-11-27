@@ -436,9 +436,13 @@ programs! {
     /// Compound literals: a struct's and an array's in a block, made again
     /// each time a loop reaches one, a scalar's, one under `.` and `[]`,
     /// one passed to a function and one under `sizeof`, and at file scope
-    /// an array's, a struct's address and a table of strings (C17 6.5.2.5,
-    /// #1243). Mutations: initialize a block's once, not where evaluated,
-    /// in `Lowering::compound`, and this exits 1; read no `{` after a type
-    /// name in `Parser::cast`, and it does not build.
+    /// an array's, a struct's address and a table of strings, and arrays of
+    /// unknown size completed by a braced string, a designator and brace
+    /// elision (C17 6.5.2.5, #1243). Mutations: initialize a block's once,
+    /// not where evaluated, in `Lowering::compound`, and this exits 1; read
+    /// no `{` after a type name in `Parser::cast`, or complete a braced
+    /// string from the items' count in `Parser::compound_literal`, and it
+    /// does not build; count no compound literal's list in
+    /// `counted_lengths`, and it does not build either.
     a_compound_literal_is_an_unnamed_object,
 }

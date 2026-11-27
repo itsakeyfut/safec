@@ -1,0 +1,11 @@
+Function a_compound_literal_under_sizeof_is_a_constant.c:1:1 "f" "int (int)"
+  Parameter a_compound_literal_under_sizeof_is_a_constant.c:1:7 "x" "int"
+  Compound a_compound_literal_under_sizeof_is_a_constant.c:1:14
+    Declaration a_compound_literal_under_sizeof_is_a_constant.c:2:5 static "n" "int"
+      SizeofExpr a_compound_literal_under_sizeof_is_a_constant.c:2:20
+        Compound a_compound_literal_under_sizeof_is_a_constant.c:2:27 "int[2]"
+          InitializerList a_compound_literal_under_sizeof_is_a_constant.c:2:34
+            Identifier a_compound_literal_under_sizeof_is_a_constant.c:2:35 "x"
+            Number a_compound_literal_under_sizeof_is_a_constant.c:2:38 "2"
+    Return a_compound_literal_under_sizeof_is_a_constant.c:3:5
+      Identifier a_compound_literal_under_sizeof_is_a_constant.c:3:12 "n"

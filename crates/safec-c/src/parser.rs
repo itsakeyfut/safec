@@ -3974,13 +3974,35 @@ impl Parser<'_> {
         let Some(init) = self.initializer_list(diagnostics) else {
             return self.ast.push_expr(Expr::Error { span: start });
         };
-        let ty = self.completed(ty, Some(&init));
+        // **`{ "ab" }` completes a character array as `"ab"` does** (C17
+        // 6.7.9 p14, p22), with the literal's length and its null, where
+        // the items' count would leave one byte. A declarator's list is
+        // read as the literal itself by `Parser::initializer`; this one is
+        // kept a list, which `initializer::Shapes` reads the same way, and
+        // only its length is the literal's. Mutation: complete it from the
+        // list alone; the run of `a_compound_literal_is_an_unnamed_object`
+        // does not build.
+        let literal = match &init {
+            Initializer::List { items, .. } if self.takes_braced_literal(ty) => {
+                match items.as_slice() {
+                    [Initializer::Expr(id)]
+                        if matches!(self.ast.expr(*id), Expr::String { .. }) =>
+                    {
+                        Some(Initializer::Expr(*id))
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+        let ty = self.completed(ty, Some(literal.as_ref().unwrap_or(&init)));
         let span = self.join(start, self.previous().span, diagnostics);
         let literal = self.ast.push_expr(Expr::Compound { ty, init, span });
         self.postfix_from(literal, start, diagnostics)
     }
 
-    /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4.
+    /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4. With
+    /// a `{` after the `)`, a compound literal instead (6.5.2.5).
     fn cast(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let start = self.advance().span;
         let Some(ty) = self.type_name(diagnostics) else {
@@ -4005,7 +4027,9 @@ impl Parser<'_> {
 
     /// `sizeof ( type-name )` or `sizeof unary-expression`, with the
     /// `sizeof` here. C17 6.5.3.4. A `(` that begins no type name begins the
-    /// operand, so `sizeof (x)` is the size of `x`.
+    /// operand, so `sizeof (x)` is the size of `x`; and one that does, with
+    /// a `{` after its `)`, begins a compound literal that is the operand,
+    /// so `sizeof (int[]){1, 2}` is that literal's size (6.5.2.5).
     fn sizeof(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let start = self.advance().span;
         if self.check(TokenKind::Punct(Punct::LeftParen)) && self.type_name_follows() {

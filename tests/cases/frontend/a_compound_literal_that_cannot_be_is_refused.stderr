@@ -1,25 +1,75 @@
+error[SC0318]: the left operand of `=` cannot be written to
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:38:5 ]
+    │
+ 38 │     (const int){0} = 1;
+    │     ───────┬──────  
+    │            ╰──────── this is `const int`
+────╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)
+error[SC0310]: `a` is an array, and its initializer is not a brace-enclosed list
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:33:9 ]
+    │
+ 33 │     int a[2] = (int[2]){1, 2};
+    │         ┬      ───────┬──────  
+    │         ╰────────────────────── declared as `int[2]`
+    │                       │        
+    │                       ╰──────── this initializer
+────╯
+  = note: C17 6.7.9 p16
 error[SC0310]: a compound literal cannot have type `void`
-   ╭─[ a_compound_literal_that_cannot_be_is_refused.c:7:5 ]
-   │
- 7 │     (void){0};
-   │     ────┬────  
-   │         ╰────── this compound literal
-───╯
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:13:5 ]
+    │
+ 13 │     (void){0};
+    │     ────┬────  
+    │         ╰────── this compound literal
+────╯
+  = note: C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size
+error[SC0310]: a compound literal cannot have type `int (void)`
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:18:5 ]
+    │
+ 18 │     (int(void)){0};
+    │     ───────┬──────  
+    │            ╰──────── this compound literal
+────╯
   = note: C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size
 error[SC0310]: the initializer of `(int[1]){1, 2}` has too many items
-    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:12:24 ]
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:23:24 ]
     │
- 12 │     return (int[1]){1, 2}[0];
+ 23 │     return (int[1]){1, 2}[0];
     │            ───────┬────┬─  
     │                   ╰──────── declared as `int[1]`
     │                        │   
     │                        ╰─── nothing is left for this to initialize
 ────╯
   = note: C17 6.7.9 p2: no initializer provides a value for an object outside the one initialized
-error[SC0317]: the initializer of `p` is not a constant
-   ╭─[ a_compound_literal_that_cannot_be_is_refused.c:2:21 ]
+error[SC0315]: `struct U` is not complete here, and a compound literal cannot be one
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:27:5 ]
+    │
+ 27 │     (struct U){0};
+    │     ──────┬──────  
+    │           ╰──────── this compound literal
+────╯
+  = note: C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size
+error[SC0315]: `struct U` is not complete here, and a compound literal cannot be one
+    ╭─[ a_compound_literal_that_cannot_be_is_refused.c:28:5 ]
+    │
+ 28 │     (struct U[1]){0};
+    │     ────────┬───────  
+    │             ╰───────── this compound literal
+────╯
+  = note: C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size
+error[SC0317]: the initializer of `non_constant` is not a constant
+   ╭─[ a_compound_literal_that_cannot_be_is_refused.c:5:29 ]
    │
- 2 │     static int *p = (int[]){1};
+ 5 │ int *non_constant = (int[]){f()};
+   │                             ─┬─  
+   │                              ╰─── not a constant expression
+───╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
+error[SC0317]: the initializer of `p` is not a constant
+   ╭─[ a_compound_literal_that_cannot_be_is_refused.c:8:21 ]
+   │
+ 8 │     static int *p = (int[]){1};
    │                     ─────┬────  
    │                          ╰────── not a constant expression
 ───╯

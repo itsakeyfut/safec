@@ -1632,6 +1632,16 @@ impl<'a> Lowering<'a> {
         let (ty, span) = (*ty, *span);
         let ir_ty = self.ty(span, ty, diagnostics)?;
         let local = builder.function.push_local(ir_ty);
+        // Marked as a declarator's local is, so that a `const` one is
+        // storage the program may not modify however a pointer to it
+        // loses the qualifier (#1243 review). Mutation: mark nothing;
+        // `a_const_compound_literal_is_read_only` is silent.
+        if self.read_only(ty) {
+            builder.function.mark_read_only(local);
+        }
+        builder
+            .function
+            .mark_const_levels(local, self.const_levels(ty));
         self.store_list(builder, local, ty, init, span, diagnostics)?;
         Some(Place::local(local))
     }
@@ -7670,8 +7680,9 @@ impl<'a> Lowering<'a> {
                     work.extend(arguments.iter().rev().map(|&argument| (argument, false)));
                     work.push((*callee, false));
                 }
-                // Its items are evaluated where it is, unsequenced among
-                // themselves (C17 6.7.9 p23).
+                // Its items are evaluated where it is, indeterminately
+                // sequenced among themselves (C17 6.7.9 p23), and not
+                // before what surrounds it (6.8 p4).
                 Expr::Compound { init, .. } => {
                     work.extend(init.exprs().into_iter().rev().map(|item| (item, false)));
                 }
@@ -7977,8 +7988,13 @@ impl<'a> Lowering<'a> {
                     work.push((*index, ordered));
                     work.push((*base, ordered));
                 }
+                // As its surroundings are: C17 6.8 p4 makes no full
+                // expression of a compound literal's list, so nothing
+                // orders its items before the store. Mutation: `true`;
+                // `stored` in `a_compound_literals_items_are_unsequenced_with_what_surrounds_it`
+                // is silent.
                 Expr::Compound { init, .. } => {
-                    work.extend(init.exprs().into_iter().map(|item| (item, true)));
+                    work.extend(init.exprs().into_iter().map(|item| (item, ordered)));
                 }
                 Expr::Cast { operand, .. } => work.push((*operand, ordered)),
                 // Its operand is not evaluated, so it writes nothing.

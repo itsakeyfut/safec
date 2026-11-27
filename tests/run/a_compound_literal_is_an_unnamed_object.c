@@ -37,5 +37,12 @@ int main(void) {
     if (sum((int[]){1, 2, 3}, 3) != 6 || sizeof((int[]){1, 2, 3}) != 12) {
         return 3;
     }
+    char *c = (char[]){"ab"};
+    if (sizeof((char[]){"a"}) != 2 || c[1] != 'b' || c[2] != 0) {
+        return 4;
+    }
+    if (sizeof((int[]){[3] = 1}) != 16 || sizeof((struct S[]){1, 2, 3}) != 16) {
+        return 5;
+    }
     return 0;
 }

@@ -56,9 +56,25 @@ cases! {
     "memory" => {
         // A compound literal in a block is a local the memory check names
         // as it names any: read within its two elements, and `SC0412` one
-        // past them (#1243). Mutation: give it no local of its own in
-        // `Lowering::compound`; this does not build.
+        // past them, which is what this case holds (#1243). Mutation:
+        // initialize a second local in `Lowering::compound` and give the
+        // first; `within` is doubted as reading uninitialized storage.
         a_compound_literal_is_a_local_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `const` compound literal is storage the program may not modify,
+        // as a `const` local is, however a pointer to it lost the
+        // qualifier: `SC0417` at the write through the union (#1243
+        // review). Mutation: mark nothing read-only in
+        // `Lowering::compound`; the write is silent.
+        a_const_compound_literal_is_read_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A compound literal's items are no full expression (C17 6.8 p4),
+        // so a write among them is unsequenced with the store around it
+        // and with the other operands of a call: `SC0409` in each function
+        // (#1243 review). Mutations: order the items in
+        // `Lowering::unordered_writes`, and `stored` is silent; read none
+        // of them in `Lowering::accesses`, and `read_beside_a_write` is;
+        // answer `false` for one in `writes_below`, and
+        // `written_beside_a_read` is.
+        a_compound_literals_items_are_unsequenced_with_what_surrounds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A designated item is stored where it names, `ps[2]`, and the
         // scalars no item names are stored zero after it, which the IR here
         // shows; one past a designated array's end is `SC0412` (#1242). The
@@ -9032,15 +9048,31 @@ cases! {
         // the postfix operators after it, and under `sizeof` without
         // parentheses of its own (C17 6.5.2.5, #1243). Mutations: read no
         // `{` after a type name in `Parser::cast`, or after `sizeof (T)` in
-        // `Parser::unary`; each is a syntax error.
+        // `Parser::sizeof`; each is a syntax error.
         a_compound_literal_is_read: ["--emit", "ast"],
         // A compound literal in a block has automatic storage, so its
         // address is no constant for a block's `static`; one of type
-        // `void` initializes nothing; and its list is held to its type as a
-        // declarator's is (#1243). Mutation: answer every compound literal
-        // an address constant in `Checker::check_static_initializers`;
-        // `in_a_block` is accepted.
+        // `void`, of a function type or of a struct not complete
+        // initializes nothing; its list is held to its type as a
+        // declarator's is; at file scope its items are constants; an array
+        // is not initialized from one; and a `const` one is not written
+        // (#1243). Mutations: answer every compound literal an address
+        // constant in `Checker::check_static_initializers`, and
+        // `in_a_block` is accepted; skip the incomplete check in
+        // `Checker::check_compounds`, and `incomplete` is accepted; drop
+        // `compound_items`, and `non_constant` is `SC0304`; designate
+        // nothing for one in `Checker::designates`, and
+        // `written_though_const` is accepted.
         a_compound_literal_that_cannot_be_is_refused: ["--emit", "ast"],
+        // A compound literal whose list does not parse is a syntax error,
+        // not a panic (#1243 review). Mutation: unwrap the list in
+        // `Parser::compound_literal`; this panics.
+        a_malformed_compound_literal_is_refused: ["--emit", "ast"],
+        // One under `sizeof` is not evaluated, so a block's `static` may be
+        // sized by it whatever its items are (C17 6.5.3.4 p2, #1243
+        // review). Mutation: walk into `sizeof` in `holds_compound`; this
+        // is `SC0317`.
+        a_compound_literal_under_sizeof_is_a_constant: ["--emit", "ast"],
         // `[i] value` is GNU's older spelling of `[i] = value`, which
         // `clang` reads: this compiler's gap, not a syntax error (#1242
         // review). Mutation: drop the refusal in `Parser::designation`; this
@@ -11186,6 +11218,11 @@ cases! {
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
     }
     "codegen" => {
+        // A compound literal outside a block is an internal static, a
+        // `const` one a constant (#1243 review). Mutations: give
+        // `Lowering::compound_static` external linkage, or no read-only
+        // flag; a line changes.
+        a_file_scope_compound_literal_is_an_internal_static: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct returned and one passed by value through function
         // pointers, on a target whose C ABI puts both in memory: the call
         // through the pointer carries `sret` and `byval`, as a direct call

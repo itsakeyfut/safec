@@ -1,0 +1,205 @@
+Target "x86_64-pc-windows-msvc"
+Static "a" "int[2]" external zero
+Function a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:1:5 "h" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter "a"
+  Local "_2" "int" parameter "b"
+Function a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:5:5 "stored"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int (*)[2]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Block "bb0" entry
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:6:9 generated
+      Destination "_2"
+      Static "a"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:6:9 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:6:5 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:6:5 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:17 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:17 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:17 written
+      Destination "_1"
+      Use
+        Copy "_6"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:9 initialized
+      Destination "_4"
+      Use
+        Copy "_5"
+    UnsequencedAccess a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:5 written "_1" Operands
+      Written a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:17
+      WrittenAgain a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:5
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:5 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:5 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:8:12 generated
+    Return
+Function a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:11:5 "read_beside_a_write"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "q"
+  Local "_2" "int" "x"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:12:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:12:13 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:13:9 generated
+      Destination "_3"
+      Static "a"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:13:9 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:13:5 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:13:5 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:14 generated
+      Destination "_6"
+      Address
+        Place "_5"
+    Call a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:14 initialized "memset" "bb1"
+      Copy "_6"
+      Constant 0
+      Constant 4
+  Block "bb1"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:14 initialized
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:31 written
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:27 written
+      Destination "_1"
+      Use
+        Copy "_7"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:27 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    UnsequencedAccess a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:12 written "_1" Arguments
+      Written a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:27
+      Read a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:21
+    ArgumentsEvaluated a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:12 generated
+    Call a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:12 written "h" "bb2"
+      Destination "_9"
+      Copy "_5"
+      Copy "_8"
+        Deref
+  Block "bb2"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:12 generated
+    Return
+Function a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:17:5 "written_beside_a_read"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter "q"
+  Local "_2" "int" "x"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:18:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:18:13 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:19:9 generated
+      Destination "_3"
+      Static "a"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:19:9 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:19:5 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:19:5 generated
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:18 generated
+      Destination "_6"
+      Address
+        Place "_5"
+    Call a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:18 initialized "memset" "bb1"
+      Copy "_6"
+      Constant 0
+      Constant 4
+  Block "bb1"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:30 written
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:26 written
+      Destination "_1"
+      Use
+        Copy "_7"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:26 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:18 initialized
+      Destination "_5"
+      Use
+        Copy "_8"
+          Deref
+    UnsequencedAccess a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:12 written "_1" Arguments
+      Written a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:26
+      Read a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:15
+    ArgumentsEvaluated a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:12 generated
+    Call a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:12 written "h" "bb2"
+      Destination "_9"
+      Copy "_1"
+        Deref
+      Copy "_5"
+  Block "bb2"
+    Operation a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:12 generated
+    Return
+Function a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:14 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "unsigned long long" parameter
