@@ -54,6 +54,20 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A `char` array a string literal initializes has its own length,
+        // the literal's or the one written, and no other: `terminator` and
+        // `padded` read their last byte with no report, and `past` one byte
+        // beyond, which is `SC0412` (#1244). This check reports no unwritten
+        // read of a `char`, so the copy and the fill are held by the IR shown
+        // and by the run cases, not by a report. Mutation: make the fill one
+        // byte longer in `Lowering::store_string`; `padded` says `SC0412`.
+        a_char_array_from_a_string_literal_is_bounded_by_its_own_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An initializer gives a `const` array the value it starts with,
+        // which C17 6.7.3 p6 does not forbid, so `initialized` is silent; a
+        // write through a cast after it is still `SC0417` (#1244 review).
+        // Mutation: ask the locals for `Origin::Initialized` too in
+        // `read_only::handed_read_only`; `initialized` says `SC0417`.
+        a_const_char_array_from_a_string_literal_is_not_a_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function pointer stored, called through, compared and held in a
         // member is silent (`stored_and_called`, `in_a_member`), and a call
         // through one is a call this check cannot read (#1212, ADR-0125):
@@ -8936,10 +8950,31 @@ cases! {
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
         a_second_storage_class_is_refused: ["--emit", "ast"],
-        // C17 6.7.9 p14 allows it, and this compiler does not build it yet.
-        // Mutation: drop the string arm in `Checker::check_initialized`; this
-        // reaches the lowering as an array of no length.
-        an_array_initialized_from_a_string_literal_is_not_built_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p14 lets a string literal initialize an array of
+        // character type only, and p16 asks a list of any other, an array of
+        // arrays included (#1244). `s` keeps the `[]` it was written with.
+        // Mutation: take every element type as a character in
+        // `Checker::check_initialized`; nothing is reported for `s`.
+        an_array_not_of_character_type_from_a_string_literal_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7.9 p2 and p14: a literal's characters, its terminating zero
+        // aside, have to fit, so `fits` is read and `over` refused (#1244).
+        // Mutation: count the terminating zero in `Checker::check_initialized`;
+        // `fits` is refused too.
+        a_string_literal_longer_than_its_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `{ "ab" }` for a struct, an array of pointers or an array of
+        // arrays initializes their first member or element (C17 6.7.9 p17,
+        // p20), so its braces are not the literal's own and the list waits
+        // for braced initializers (#1241): `SC0203`, not a constraint
+        // violation (#1244 review). Mutation: answer `true` in
+        // `Parser::takes_braced_literal`; each is refused under `SC0310` or
+        // `SC0302`.
+        a_braced_list_beginning_with_a_string_literal_is_not_read_yet: ["--emit", "ast"],
+        // `char s[5]; char s[] = "ab";` is one `char[5]` by C17 6.2.7 p3,
+        // which this compiler does not build, so it is its gap and not a
+        // conflict; `t`, with no length before, is read (#1244 review).
+        // Mutation: drop the counted arm in
+        // `Checker::check_redeclared_lengths`; `s` says `SC0313`.
+        an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet: ["--emit", "ast"],
         // Translation phase 6 joins adjacent literals (C17 5.1.1.2 p1).
         // Mutation: read one token in `Parser::string`; the second is a
         // syntax error.
@@ -11171,11 +11206,19 @@ cases! {
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A string literal is a private constant, its bytes spelled as LLVM
+        // A string literal is an internal constant, its bytes spelled as LLVM
         // reads them: `"`, `\\` and a newline as two hex digits. Mutation:
         // push every byte as a character in `bytes_spelled`; the `"` ends
         // the constant early, and `tests/llvm.rs` refuses the module.
         llvm_ir_of_a_string_literal: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static `char` array a literal initializes is an object of the
+        // program's: a writable `global` unless `const`, with its linkage,
+        // and its zeros past the literal a `zeroinitializer` rather than one
+        // byte each, so `wide` is not 100000 bytes of IR (#1244 review).
+        // Mutation: write every `StaticInit::Bytes` as the private constant
+        // a literal was in `Emitter::global`; `wide` and `exact` are
+        // constants and `wide` loses its tail.
+        a_static_char_array_is_written_as_its_bytes_and_a_zeroed_tail: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block ending in a call that does not return ends in `unreachable`,
         // and `tests/llvm.rs` hands it to `clang`. Mutation: have `emit.rs`'s
         // `call` write nothing for no continuation; this fails, and so does

@@ -64,8 +64,9 @@ const TOO_DEEP: Code = Code::new("SC0202");
 /// scalar's initializer be a single expression "optionally enclosed in
 /// braces", so that program is valid C with no designator and no nested list
 /// in it, and `clang -std=c17 -pedantic-errors` accepts it in silence. This
-/// refuses it all the same, because unwrapping the braces is only correct
-/// where the declared type is scalar and this stage does not know the type.
+/// refuses it all the same: braced lists are read with #1241, and until then
+/// the braces are unwrapped only from `{ "ab" }`, where the declarator's type
+/// takes it as it takes `"ab"` (`Parser::takes_braced_literal`).
 /// `docs/frontend.md` carries the row, which is where a reader looks to tell a
 /// gap from a decision.
 const BRACED_INITIALIZER: Code = Code::new("SC0203");
@@ -1372,7 +1373,8 @@ impl Parser<'_> {
                 Named::Ordinary
             };
             self.declare_name(name, named, diagnostics)?;
-            let init = self.initializer(diagnostics)?;
+            let init = self.initializer(ty, diagnostics)?;
+            let completed = self.completed(ty, init);
             if typedef && init.is_some() {
                 self.report_at(
                     declarator,
@@ -1388,8 +1390,10 @@ impl Parser<'_> {
             declarators.push(InitDeclarator {
                 declaration: Declaration {
                     name: Some(name),
-                    ty,
-                    // Not a parameter, so nothing is adjusted.
+                    ty: completed,
+                    // Not a parameter, so nothing is adjusted. An array of
+                    // unknown size a string literal completes keeps `[]`
+                    // here, as written, and has its length in `ty`.
                     written: ty,
                     span: self.declaration_span(start, declarator, end, diagnostics),
                     // The pointer a function declared at file scope returns,
@@ -1413,7 +1417,68 @@ impl Parser<'_> {
         }
     }
 
-    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
+    /// `ty`, a declarator's type, completed by its initializer `init` where
+    /// it is an array of character type and unknown size (C17 6.7.9 p22): a
+    /// string literal gives it the literal's length, the terminating zero
+    /// included, which [`Parser::string`] has already counted. An array of
+    /// any other element is left as written, so the type check's refusal
+    /// (6.7.9 p14) names the type the source wrote.
+    ///
+    /// A new node rather than `ty` changed in place, since `ty` may be a
+    /// typedef's, which keeps its own unknown size for every other
+    /// declarator that names it (6.7.9 p31's example). The AST has no way to
+    /// change a type in place, so that half is held by the compiler; the run
+    /// case `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
+    /// shows two arrays of one typedef with two lengths.
+    fn completed(&mut self, ty: TypeId, init: Option<ExprId>) -> TypeId {
+        let length = match init.map(|init| self.ast.expr(init)) {
+            Some(Expr::String { length, .. }) => *length,
+            _ => return ty,
+        };
+        match *self.ast.ty(ty) {
+            Type::Array {
+                element,
+                length: None,
+                ..
+            } if self.is_character(element) => self.ast.push_type(Type::Array {
+                element,
+                length: Some(length),
+                written: None,
+            }),
+            _ => ty,
+        }
+    }
+
+    /// Whether `ty` is a character type, `char`, `signed char` or `unsigned
+    /// char`, qualified or not (C17 6.2.5 p15).
+    fn is_character(&self, ty: TypeId) -> bool {
+        matches!(
+            self.ast.ty(self.ast.unqualified(ty)),
+            Type::Integer {
+                rank: Rank::Char,
+                ..
+            }
+        )
+    }
+
+    /// Whether `{ "ab" }` initializes an object of `ty` exactly as `"ab"`
+    /// does: an array of character type (C17 6.7.9 p14, "optionally enclosed
+    /// in braces") and a pointer, a scalar, whose braces p11 drops. For
+    /// any other type the braces are not the literal's own: a struct's or an
+    /// array of pointers' list initializes its first member or element from
+    /// the literal (p17, p20), which waits for braced lists (#1241).
+    fn takes_braced_literal(&self, ty: TypeId) -> bool {
+        match *self.ast.ty(self.ast.unqualified(ty)) {
+            Type::Pointer(_) => true,
+            Type::Array { element, .. } => self.is_character(element),
+            _ => false,
+        }
+    }
+
+    /// C17 6.7.9's `initializer` for a declarator of type `ty`: its
+    /// `assignment-expression` form, and `{ "ab" }` where that means `"ab"`
+    /// ([`Parser::takes_braced_literal`]). Every other braced list is
+    /// refused, under [`BRACED_INITIALIZER`].
     ///
     /// [`Parser::assignment`] rather than [`Parser::expression`], which is the
     /// difference between the two and the whole of why both exist. An
@@ -1425,11 +1490,37 @@ impl Parser<'_> {
     ///
     /// `Some(None)` is a declarator with no initializer and is the ordinary
     /// case. `None` is a refusal that has already been reported.
-    fn initializer(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Option<ExprId>> {
+    fn initializer(
+        &mut self,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Option<ExprId>> {
         if !self.eat(TokenKind::Punct(Punct::Equal)) {
             return Some(None);
         }
 
+        // `{ "ab" }`: one literal, or a run of adjacent ones, and an optional
+        // `,`, for a type it initializes as `"ab"` does. Every other list
+        // waits for the braced initializers that read it (#1241).
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty) {
+            let mut ahead = 1;
+            while self.peek_at(ahead).kind == TokenKind::String {
+                ahead += 1;
+            }
+            let literal = ahead > 1;
+            if literal && self.peek_at(ahead).kind == TokenKind::Punct(Punct::Comma) {
+                ahead += 1;
+            }
+            if literal && self.peek_at(ahead).kind == TokenKind::Punct(Punct::RightBrace) {
+                self.advance();
+                let string = self.assignment(diagnostics);
+                // The optional `,` and the `}`, both seen by the lookahead
+                // above, are what the literal left.
+                self.eat(TokenKind::Punct(Punct::Comma));
+                self.advance();
+                return Some(Some(string));
+            }
+        }
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
             self.report_noted(
                 BRACED_INITIALIZER,

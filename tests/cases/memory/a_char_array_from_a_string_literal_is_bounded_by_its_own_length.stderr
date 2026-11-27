@@ -1,0 +1,9 @@
+error[SC0412]: this reaches 4 bytes into an object of 3 bytes
+    ╭─[ a_char_array_from_a_string_literal_is_bounded_by_its_own_length.c:13:5 ]
+    │
+ 13 │     return s[3];
+    │     ──────┬─────  
+    │           ╰─────── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

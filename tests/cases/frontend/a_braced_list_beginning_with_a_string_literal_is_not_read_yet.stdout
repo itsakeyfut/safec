@@ -1,0 +1,6 @@
+Declaration a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:1:1 "struct Named"
+  Field a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:2:5 "name" "const char *"
+  Field a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:3:5 "size" "int"
+Error a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:6:1
+Error a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:7:1
+Error a_braced_list_beginning_with_a_string_literal_is_not_read_yet.c:8:1

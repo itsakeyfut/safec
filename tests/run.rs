@@ -368,4 +368,25 @@ programs! {
     /// takes 7; ask `ty` itself in the resolver's skip, and `qualified` is
     /// refused; stop at a function type, and `returning` counts 4.
     a_typedef_of_a_variable_length_array_is_sized_where_the_typedef_is,
+    /// An array of `char`, `unsigned char` and `signed char` from a string
+    /// literal, in braces or not, unsized, exactly as long as its characters
+    /// and longer, at block and file scope, two of one typedef with two
+    /// lengths, and a static one written to (#1244). Mutations: put the
+    /// `SC0304` refusal back in `Checker::check_initialized`, and this does
+    /// not build; copy one byte fewer in `Lowering::store_string`, and it
+    /// fails; write a static's bytes as a private constant in
+    /// `Emitter::global`, and the write faults.
+    a_char_array_takes_its_length_and_bytes_from_a_string_literal,
+    /// The bytes of a local array past its string literal are zero, not what
+    /// the stack held before (C17 6.7.9 p21), however dirty the frame
+    /// before it left them (#1244). Mutation: leave out the `memset` in
+    /// `Lowering::store_string`; this exits with the stale bytes' sum.
+    a_char_array_longer_than_its_string_literal_is_zero_filled,
+    /// A program's own `static` function named `memset` and `static` object
+    /// named `memcpy`, which C17 7.1.3 p1 allows without the header, are
+    /// neither called nor named by an initializer's fill and copy (#1244
+    /// review). Mutations: take the program's `memset` in
+    /// `Lowering::library_own`, or leave the program's name alone in
+    /// `Emitter::name`, and this fails.
+    an_initializer_calls_no_memset_the_program_has,
 }

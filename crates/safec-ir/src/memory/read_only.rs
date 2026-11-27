@@ -4,7 +4,9 @@
 //! and a call handed a pointer it may write through. See ADR-0120.
 
 use crate::analysis::Conclusion;
-use crate::ir::{Element, FuncId, Function, Operand, Place, Rvalue, Shape, Terminator, Ty, TyId};
+use crate::ir::{
+    Element, FuncId, Function, Operand, Origin, Place, Rvalue, Shape, Terminator, Ty, TyId,
+};
 use crate::library::Callee;
 
 use super::allocations::Allocations;
@@ -409,7 +411,18 @@ pub(super) fn handed_read_only(
     // argument is asked at its own and none is believed only read. See
     // ADR-0125.
     let called = callee.direct().map(|id| analysis.unit.function(id));
-    let read_only = read_only_locals(function);
+    // **An initializer's call is not asked of the `const` locals**: it gives
+    // the object the value it starts with, which C17 6.7.3 p6 does not
+    // forbid, and only the lowering makes one, into the local it is
+    // initializing. A static or a literal it may reach is still asked, by
+    // its value's mark (#1244 review). Mutation: ask the locals too;
+    // `a_const_char_array_from_a_string_literal_is_not_a_write` says
+    // `SC0417`.
+    let read_only = if matches!(origin, Origin::Initialized(_)) {
+        Vec::new()
+    } else {
+        read_only_locals(function)
+    };
     let parameters: Vec<_> = called
         .map(|called| called.parameters().collect())
         .unwrap_or_default();

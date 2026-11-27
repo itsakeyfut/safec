@@ -20,14 +20,14 @@ bb0:
   store ptr %_3, ptr %_4
   %t2 = load ptr, ptr %_4
   %t3 = load ptr, ptr %_2
-  %t4 = call ptr @memcpy(ptr %t2, ptr %t3, i64 3)
+  %t4 = call ptr @".memcpy"(ptr %t2, ptr %t3, i64 3)
   br label %bb1
 
 bb1:
   store ptr %_3, ptr %_5
   %t5 = load ptr, ptr %_1
   %t6 = load ptr, ptr %_5
-  %t7 = call ptr @memcpy(ptr %t5, ptr %t6, i64 3)
+  %t7 = call ptr @".memcpy"(ptr %t5, ptr %t6, i64 3)
   br label %bb2
 
 bb2:
@@ -60,14 +60,14 @@ bb0:
   store ptr %_3, ptr %_4
   %t5 = load ptr, ptr %_4
   %t6 = load ptr, ptr %_2
-  %t7 = call ptr @memcpy(ptr %t5, ptr %t6, i64 12)
+  %t7 = call ptr @".memcpy"(ptr %t5, ptr %t6, i64 12)
   br label %bb1
 
 bb1:
   store ptr %_3, ptr %_5
   %t8 = load ptr, ptr %_1
   %t9 = load ptr, ptr %_5
-  %t10 = call ptr @memcpy(ptr %t8, ptr %t9, i64 12)
+  %t10 = call ptr @".memcpy"(ptr %t8, ptr %t9, i64 12)
   br label %bb2
 
 bb2:
@@ -118,7 +118,7 @@ bb0:
   store ptr %_7, ptr %_8
   %t4 = load ptr, ptr %_8
   %t5 = load ptr, ptr %_6
-  %t6 = call ptr @memcpy(ptr %t4, ptr %t5, i64 16)
+  %t6 = call ptr @".memcpy"(ptr %t4, ptr %t5, i64 16)
   br label %bb1
 
 bb1:
@@ -168,14 +168,14 @@ bb0:
   store ptr %_3, ptr %_4
   %t0 = load ptr, ptr %_4
   %t1 = load ptr, ptr %_2
-  %t2 = call ptr @memcpy(ptr %t0, ptr %t1, i64 24)
+  %t2 = call ptr @".memcpy"(ptr %t0, ptr %t1, i64 24)
   br label %bb1
 
 bb1:
   store ptr %_3, ptr %_5
   %t3 = load ptr, ptr %_1
   %t4 = load ptr, ptr %_5
-  %t5 = call ptr @memcpy(ptr %t3, ptr %t4, i64 24)
+  %t5 = call ptr @".memcpy"(ptr %t3, ptr %t4, i64 24)
   br label %bb2
 
 bb2:
@@ -320,7 +320,7 @@ bb0:
   store ptr %_1, ptr %_29
   %t33 = load ptr, ptr %_28
   %t34 = load ptr, ptr %_29
-  %t35 = call ptr @memcpy(ptr %t33, ptr %t34, i64 3)
+  %t35 = call ptr @".memcpy"(ptr %t33, ptr %t34, i64 3)
   br label %bb1
 
 bb1:
@@ -345,7 +345,7 @@ bb2:
   store ptr %_2, ptr %_37
   %t45 = load ptr, ptr %_36
   %t46 = load ptr, ptr %_37
-  %t47 = call ptr @memcpy(ptr %t45, ptr %t46, i64 12)
+  %t47 = call ptr @".memcpy"(ptr %t45, ptr %t46, i64 12)
   br label %bb3
 
 bb3:
@@ -386,7 +386,7 @@ bb4:
   store ptr %_3, ptr %_46
   %t71 = load ptr, ptr %_45
   %t72 = load ptr, ptr %_46
-  %t73 = call ptr @memcpy(ptr %t71, ptr %t72, i64 16)
+  %t73 = call ptr @".memcpy"(ptr %t71, ptr %t72, i64 16)
   br label %bb5
 
 bb5:
@@ -414,7 +414,7 @@ bb6:
   store ptr %_4, ptr %_53
   %t87 = load ptr, ptr %_52
   %t88 = load ptr, ptr %_53
-  %t89 = call ptr @memcpy(ptr %t87, ptr %t88, i64 24)
+  %t89 = call ptr @".memcpy"(ptr %t87, ptr %t88, i64 24)
   br label %bb7
 
 bb7:
@@ -447,4 +447,9 @@ bb8:
   ret i32 %t103
 }
 
-declare ptr @memcpy(ptr, ptr, i64)
+
+define internal ptr @".memcpy"(ptr %0, ptr %1, i64 %2) alwaysinline {
+  call void @llvm.memcpy.p0.p0.i64(ptr %0, ptr %1, i64 %2, i1 false)
+  ret ptr %0
+}
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

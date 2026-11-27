@@ -193,8 +193,9 @@ as one operand, so the multiplication holds part of `N`'s expansion, and
 ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9's bit-field and p13's
 anonymous member are read (#1206, #1207). 6.7.9 p11 lets a scalar's initializer be a
 single expression "optionally enclosed in braces", so it is valid with no
-designator and no nested list in it; unwrapping the braces is only correct
-where the declared type is scalar, and the parser does not know the type.
+designator and no nested list in it. Braced lists are read with #1241; until
+then the parser unwraps only `{ "ab" }`, where the declarator's type takes it
+as it takes `"ab"`: an array of character type (6.7.9 p14) or a pointer.
 
 `SC0207` is the code for valid C the parser does not read yet, told apart
 from C it cannot parse where the parse failed. A compound literal, a prefixed

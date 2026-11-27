@@ -1,0 +1,6 @@
+Declaration an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:1:1 "s" "char[5]"
+Declaration an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:2:1 "s" "char[]"
+  String an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:2:12 "\"ab\""
+Declaration an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:4:1 extern "t" "char[]"
+Declaration an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:5:1 "t" "char[]"
+  String an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:5:12 "\"ab\""

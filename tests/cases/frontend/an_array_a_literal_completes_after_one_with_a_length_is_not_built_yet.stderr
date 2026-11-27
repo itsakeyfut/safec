@@ -1,0 +1,11 @@
+error[SC0304]: cannot complete `s` from its initializer where an earlier declaration gave its length yet
+   ╭─[ an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet.c:2:6 ]
+   │
+ 1 │ char s[5];
+   │      ┬  
+   │      ╰── an earlier declaration
+ 2 │ char s[] = "ab";
+   │      ┬  
+   │      ╰── its length is its string literal's
+───╯
+  = note: a gap in this compiler: C17 6.2.7 p3 makes the two one type

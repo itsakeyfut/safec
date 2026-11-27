@@ -939,8 +939,12 @@ pub enum StaticInit {
     Zero,
     /// An integer constant, converted to the object's type.
     Int(i128),
-    /// The bytes of a string literal, its terminating zero included (C17
-    /// 6.4.5 p6), one per element of an array of `char`.
+    /// The first elements of an array of character type, one byte each, and
+    /// zero for every element past them: a string literal's bytes, its
+    /// terminating zero included (C17 6.4.5 p6), or an array a literal
+    /// initializes, cut to its length or with its zeros left to whoever
+    /// writes the object (6.7.9 p14 and p21), so that a large array is not
+    /// as large in the IR.
     Bytes(Vec<u8>),
 }
 
@@ -1034,6 +1038,11 @@ pub enum Origin {
     Written(Span),
     /// Nobody wrote this. It exists because of what is at this span.
     Generated(Span),
+    /// The initializer at this span gives an object the value it starts
+    /// with. Not an assignment, so the prohibition on modifying a `const`
+    /// object (C17 6.7.3 p6) is not about it, and the read-only check does
+    /// not ask it of the local it initializes (#1244 review).
+    Initialized(Span),
 }
 
 impl Origin {
@@ -1046,13 +1055,14 @@ impl Origin {
         match self {
             Self::Written(_) => "written",
             Self::Generated(_) => "generated",
+            Self::Initialized(_) => "initialized",
         }
     }
 
     /// Where to point, whichever kind it is.
     pub fn span(self) -> Span {
         match self {
-            Self::Written(span) | Self::Generated(span) => span,
+            Self::Written(span) | Self::Generated(span) | Self::Initialized(span) => span,
         }
     }
 }
@@ -1839,6 +1849,25 @@ impl Function {
         let mut declared = Self::declaration(at, returns, parameters);
         declared.builtin = Some(library);
         declared
+    }
+
+    /// [`Function::builtin`], with what each parameter was declared as: a
+    /// `const void *` the library only reads through, as `memcpy`'s source.
+    pub fn builtin_with_parameters(
+        library: &'static str,
+        at: Span,
+        returns: TyId,
+        parameters: impl IntoIterator<Item = Parameter>,
+    ) -> Self {
+        let mut declared = Self::declaration_with_parameters(at, returns, parameters);
+        declared.builtin = Some(library);
+        declared
+    }
+
+    /// The library function this compiler made this as, or `None` for one
+    /// the program declared or defined.
+    pub fn made_as(&self) -> Option<&'static str> {
+        self.builtin
     }
 
     /// The name this function is called by: the library function it is,

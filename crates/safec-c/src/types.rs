@@ -1196,6 +1196,15 @@ impl Checker<'_> {
     /// is accepted. Mutation: compare with the first declaration alone; its
     /// `a` is.
     fn check_redeclared_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        // An array whose length `Parser::completed` counted from a string
+        // literal rather than one the source wrote.
+        let counted = |ast: &Ast, ty: TypeId| {
+            matches!(
+                ast.ty(ty),
+                Type::Array { length: Some(length), .. }
+                    if matches!(ast.expr(*length), Expr::Length { .. })
+            )
+        };
         let mut declared: Vec<(Span, TypeId)> = Vec::new();
         for item in ast.items() {
             match item {
@@ -1228,6 +1237,27 @@ impl Checker<'_> {
                 .iter()
                 .find(|&&(_, before_ty)| self.lengths_disagree(ast, before_ty, ty))
             {
+                // `char s[5]; char s[] = "ab";` is valid: the composite type
+                // is `char[5]` (C17 6.2.7 p3), which this compiler does not
+                // build where the literal completed the second, so that is
+                // its gap and not the conflict it is not (#1244 review).
+                // Mutation: drop this arm; the case
+                // `an_array_a_literal_completes_after_one_with_a_length_is_not_built_yet`
+                // says `SC0313`.
+                if counted(ast, ty) {
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "cannot complete `{spelled}` from its initializer where an earlier \
+                             declaration gave its length yet"
+                        ))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(name, "its length is its string literal's"))
+                        .with_label(Label::secondary(before, "an earlier declaration"))
+                        .with_note("a gap in this compiler: C17 6.2.7 p3 makes the two one type"),
+                    );
+                    earlier.push((name, ty));
+                    continue;
+                }
                 diagnostics.report(
                     Diagnostic::error(format!("conflicting types for `{spelled}`"))
                         .with_code(CONFLICTING)
@@ -1390,28 +1420,64 @@ impl Checker<'_> {
                     "C17 6.7.9 p3",
                 ),
                 // p14 lets a string literal initialize an array of character
-                // type, which this compiler does not build yet: the lowering
-                // would otherwise be handed an array to assign to.
-                Type::Array { .. } if matches!(ast.expr(init), Expr::String { .. }) => {
-                    diagnostics.report(
-                        Diagnostic::error(format!(
-                            "cannot initialize `{called}` from a string literal yet"
-                        ))
-                        .with_code(NOT_YET)
-                        .with_label(Label::primary(ast.expr(init).span(), "a string literal"))
-                        .with_note("a gap in this compiler: C17 6.7.9 p14 allows it"),
+                // type, and p2 forbids one longer than the array, its
+                // terminating zero aside: `char s[2] = "ab";` drops the zero.
+                // An array of unknown size was given the literal's length
+                // when it was declared (`Parser::completed`).
+                Type::Array {
+                    element, length, ..
+                } if matches!(ast.expr(init), Expr::String { .. }) => {
+                    let Expr::String {
+                        length: literal, ..
+                    } = ast.expr(init)
+                    else {
+                        unreachable!("matched as a string literal above")
+                    };
+                    let character = matches!(
+                        ast.ty(ast.unqualified(*element)),
+                        Type::Integer {
+                            rank: Rank::Char,
+                            ..
+                        }
                     );
-                    continue;
+                    // Only a bare literal reaches here for an array of any
+                    // other element: the parser keeps the braces of `char
+                    // a[2][3] = { "ab" }`, which is brace elision (p20) and
+                    // waits for braced lists, and `char a[2][3] = "ab"` is
+                    // the p16 violation this says it is.
+                    if !character {
+                        (
+                            format!(
+                                "`{called}` is not an array of character type, and only one is \
+                                 initialized from a string literal"
+                            ),
+                            "C17 6.7.9 p14 and p16",
+                        )
+                    } else {
+                        let holds = length.and_then(|id| self.values[id.index()]);
+                        let needs = self.values[literal.index()];
+                        match (holds, needs) {
+                            (Some(holds), Some(needs)) if needs - 1 > holds => (
+                                format!(
+                                    "the string literal has {} characters, and `{called}` holds {holds}",
+                                    needs - 1
+                                ),
+                                "C17 6.7.9 p2: no initializer provides a value for an object \
+                                 outside the one initialized",
+                            ),
+                            _ => continue,
+                        }
+                    }
                 }
                 // p16: "the initializer for an object that has aggregate or
                 // union type shall be a brace-enclosed list of initializers",
                 // and p14 allows a string literal for an array of character
-                // type. A brace is refused by the parser (`SC0203`) and a
-                // string literal is not read (`SC0207`), so whatever
+                // type, which the arm above takes. A brace other than `{
+                // "ab" }` is refused by the parser (`SC0203`), so whatever
                 // initializer reaches here is neither. Every kind of
-                // expression is named, so that the one a string literal or a
-                // compound literal becomes stops the build here rather than
-                // being refused as this: `char s[] = "abc";` is valid C.
+                // expression is named, so that the one a compound literal
+                // becomes stops the build here rather than being refused as
+                // this; the string arm is kept only so the match is whole.
                 Type::Array { .. }
                     if match ast.expr(init) {
                         Expr::String { .. } => false,

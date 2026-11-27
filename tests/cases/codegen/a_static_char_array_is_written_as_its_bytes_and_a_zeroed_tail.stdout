@@ -1,0 +1,4 @@
+target triple = "x86_64-pc-windows-msvc"
+@wide = global <{ [3 x i8], [99997 x i8] }> <{ [3 x i8] c"ab\00", [99997 x i8] zeroinitializer }>
+@fixed = constant <{ [3 x i8], [1 x i8] }> <{ [3 x i8] c"ab\00", [1 x i8] zeroinitializer }>
+@exact = global [2 x i8] c"ab"
