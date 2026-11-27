@@ -71,8 +71,10 @@ cases! {
         // A wide literal is a read-only static of its element type, which
         // the memory check reads as any: `SC0412` one element past it,
         // `SC0417` at a write into it, and a local array it initializes
-        // bounded by its own length (#1245). Mutation: give the static
-        // `char` elements in `Lowering::string`; `past` is in bounds.
+        // bounded by its own length (#1245). Mutations: give the static
+        // `char` elements in `Lowering::string`, or fill the local's tail
+        // in elements rather than bytes in `Lowering::store_string`; the
+        // IR this shows changes.
         a_wide_literal_is_a_static_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it
@@ -10177,8 +10179,9 @@ cases! {
         // escape a 16-bit `wchar_t` does not hold is not C (6.4.4.4 p9,
         // #1245). Mutations: answer any integer for a wide literal in
         // `initializer::literal_initializes`, and `not_wchar` is accepted;
-        // count no `L` literal again in `Checker::wide_lengths`, and
-        // `past_wchar` is.
+        // report no escape in `Checker::wide_lengths`, and `past_wchar` is;
+        // let the parser count a prefixed constant's elements, and `u'ab'`
+        // is `SC0207`.
         a_wide_literal_initializes_only_an_array_of_its_element_type: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A run that joins `u8` with a wide literal is not C (C17 6.4.5
         // p2), and one that joins two wide prefixes is not read yet (p5);
