@@ -75,7 +75,9 @@ become refusals, so `KNOWN` holds none of them.
   these bytes anywhere, a comment or a string included. A NUL in a string,
   which `clang` keeps with a warning, is one.
 * Bad, because a lone carriage return as a file's last byte, which moves
-  no line, is refused too.
+  no line, is refused too, and so is a Ctrl-Z there, the end-of-file mark
+  old DOS tools write, which `clang` targeting MSVC reads silently as the
+  end it already is.
 * What would reverse this: real code holding one of these bytes, which
   would make the refusal cost more than reading it as `clang` does. The
   reading would then go to the one place that byte stands in that code,
