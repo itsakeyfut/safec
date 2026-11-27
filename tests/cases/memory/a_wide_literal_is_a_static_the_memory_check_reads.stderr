@@ -1,0 +1,29 @@
+error[SC0412]: this may reach outside the object it points at
+   ╭─[ a_wide_literal_is_a_static_the_memory_check_reads.c:3:5 ]
+   │
+ 3 │     return p[3];
+   │     ──────┬─────  
+   │           ╰─────── this check cannot say this is inside its object
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_wide_literal_is_a_static_the_memory_check_reads.c:8:5 ]
+   │
+ 8 │     p[0] = 1;
+   │     ────┬───  
+   │         ╰───── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this reaches 10 bytes into an object of 8 bytes
+    ╭─[ a_wide_literal_is_a_static_the_memory_check_reads.c:14:12 ]
+    │
+ 14 │     return w[3] + w[4];
+    │            ─────┬─────  
+    │                 ╰─────── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

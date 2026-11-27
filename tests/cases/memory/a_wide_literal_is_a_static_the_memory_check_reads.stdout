@@ -1,0 +1,152 @@
+Target "x86_64-pc-windows-msvc"
+Static ".str.0" "unsigned short[3]" internal [ 0: 97 1: 98 ]
+Static ".str.1" "unsigned short[3]" internal [ 0: 97 1: 98 ]
+Static ".str.2" "unsigned short[3]" internal [ 0: 97 1: 98 ]
+Function a_wide_literal_is_a_static_the_memory_check_reads.c:1:5 "past"
+  Local "_0" "int" return
+  Local "_1" "unsigned short *" "p"
+  Local "_2" "unsigned short (*)[3]"
+  Local "_3" "unsigned short *"
+  Local "_4" "unsigned short *"
+  Block "bb0" entry
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:2:31 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:2:31 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:2:27 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:2:31 generated
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:3:12 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+        Constant 3
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:3:12 generated
+    Return
+Function a_wide_literal_is_a_static_the_memory_check_reads.c:6:5 "written"
+  Local "_0" "int" return
+  Local "_1" "unsigned short *" "p"
+  Local "_2" "unsigned short (*)[3]"
+  Local "_3" "unsigned short *"
+  Local "_4" "unsigned short *"
+  Block "bb0" entry
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:7:43 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:7:43 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:7:25 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:7:21 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:7:25 generated
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:8:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:8:5 generated
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:9:12 generated
+    Return
+Function a_wide_literal_is_a_static_the_memory_check_reads.c:12:5 "local"
+  Local "_0" "int" return
+  Local "_1" "unsigned short[4]" "w"
+  Local "_2" "unsigned short *"
+  Local "_3" "unsigned short (*)[3]"
+  Local "_4" "unsigned short *"
+  Local "_5" "unsigned short *"
+  Local "_6" "unsigned short *"
+  Local "_7" "unsigned short *"
+  Local "_8" "unsigned short *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:13:27 generated
+      Destination "_3"
+      Static ".str.2"
+    Call a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 initialized "memcpy" "bb1"
+      Copy "_2"
+      Copy "_3"
+      Constant 6
+  Block "bb1"
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_2"
+        Constant 3
+    Call a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 initialized "memset" "bb2"
+      Copy "_4"
+      Constant 0
+      Constant 2
+  Block "bb2"
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:13:27 generated
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:12 generated
+      Destination "_5"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:12 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_5"
+        Constant 3
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:19 generated
+      Destination "_7"
+      Address
+        Place "_1"
+          Index
+            Constant 0
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:19 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 4
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:12 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_6"
+          Deref
+        Copy "_8"
+          Deref
+    Operation a_wide_literal_is_a_static_the_memory_check_reads.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_wide_literal_is_a_static_the_memory_check_reads.c:14:12 generated
+    Return
+Function a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "unsigned long long" parameter
+Function a_wide_literal_is_a_static_the_memory_check_reads.c:13:20 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "unsigned long long" parameter

@@ -1,8 +1,0 @@
-error[SC0207]: a prefixed character constant is not read yet
-   ╭─[ an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:3:12 ]
-   │
- 3 │     return L'\xff' == 255;
-   │            ───┬───  
-   │               ╰───── valid C, which this compiler does not read yet
-───╯
-  = note: C17 6.4.4.4 makes it valid; this compiler does not read it yet

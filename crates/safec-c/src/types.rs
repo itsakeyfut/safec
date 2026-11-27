@@ -28,7 +28,8 @@ use crate::ast::{
     Initializer, Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::initializer::{Fault, Shapes, initializes_whole};
+use crate::initializer::{Fault, Shapes, initializes_whole, literal_initializes};
+use crate::literal::Prefix;
 use crate::sema::Resolution;
 use safec_ir::ir::{Rank, Sign};
 use safec_ir::source::{SourceMap, Span};
@@ -402,7 +403,11 @@ pub fn check(
     // parser pushed first, and before anything naming the array, which the
     // node precedes (`Parser::completed`).
     let counted = counted_lengths(ast);
+    let wide = checker.wide_lengths(ast, diagnostics);
     for id in ast.expr_ids().collect::<Vec<_>>() {
+        if let Some(&count) = wide.get(&id) {
+            ast.set_length(id, count);
+        }
         if let Some((array, init)) = counted.get(&id) {
             let count = checker.extent(ast, *array, init);
             ast.set_length(id, count);
@@ -636,6 +641,7 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
             parts: _,
             span: _,
             length: _,
+            prefix: _,
         }
         | Expr::Length { value: _, span: _ }
         | Expr::Identifier { span: _ }
@@ -1563,19 +1569,38 @@ impl Checker<'_> {
                         .expr()
                         .is_some_and(|init| matches!(ast.expr(init), Expr::String { .. })) =>
                 {
-                    let character = matches!(
-                        ast.ty(ast.unqualified(*element)),
-                        Type::Integer {
-                            rank: Rank::Char,
+                    let literal = initializer
+                        .expr()
+                        .expect("matched as a string literal above");
+                    let literal_ty = self.types[literal.index()];
+                    let wide = !matches!(
+                        ast.expr(literal),
+                        Expr::String {
+                            prefix: Prefix::None | Prefix::Utf8,
                             ..
                         }
                     );
+                    let character = literal_initializes(ast, literal_ty, *element);
                     // Only a bare literal reaches here for an array of any
                     // other element: the parser keeps the braces of `char
                     // a[2][3] = { "ab" }`, a list `Checker::check_list`
                     // reads, and `char a[2][3] = "ab"` is the p16
                     // violation this says it is.
-                    if !character {
+                    if !character && wide {
+                        let wanted = literal_ty
+                            .and_then(|ty| match ast.ty(ty) {
+                                Type::Array { element, .. } => Some(self.spelled(ast, *element)),
+                                _ => None,
+                            })
+                            .unwrap_or_default();
+                        (
+                            format!(
+                                "`{called}` is not an array of `{wanted}`, the type of this wide \
+                                 string literal's elements, and only one is initialized from it"
+                            ),
+                            "C17 6.7.9 p15 and p16",
+                        )
+                    } else if !character {
                         (
                             format!(
                                 "`{called}` is not an array of character type, and only one is \
@@ -1656,6 +1681,142 @@ impl Checker<'_> {
                     .with_label(Label::secondary(init_span, "this initializer"))
                     .with_note(clause),
             );
+        }
+    }
+
+    /// The element type of a string literal with `prefix`, and the type of
+    /// a character constant with it: `char` with none or `u8` (C17 6.4.5
+    /// p6), and the target's `wchar_t`, `char16_t` or `char32_t` for `L`,
+    /// `u` and `U`.
+    fn literal_element(&self, prefix: Prefix) -> Type {
+        let (rank, sign) = match prefix {
+            Prefix::None | Prefix::Utf8 => return Type::CHAR,
+            Prefix::Wide => self.target.wchar_type(),
+            Prefix::Char16 => self.target.char16_type(),
+            Prefix::Char32 => self.target.char32_type(),
+        };
+        Type::Integer { rank, sign }
+    }
+
+    /// How many bits an element of a literal with `prefix` has here.
+    fn literal_bits(&self, prefix: Prefix) -> u32 {
+        match self.literal_element(prefix) {
+            Type::Integer { rank, sign } => self.target.integer(rank, sign).bits(),
+            _ => unreachable!("a literal's element is an integer"),
+        }
+    }
+
+    /// The length each `L` string literal has at this target's `wchar_t`,
+    /// by its [`Expr::Length`]: the parser counted it at the widest, and a
+    /// character outside the Basic Multilingual Plane is two elements of
+    /// UTF-16. An escape `wchar_t` does not hold here is a constraint
+    /// violation (C17 6.4.4.4 p9), reported, and its literal keeps the
+    /// parser's count.
+    ///
+    /// Mutation: count none again; on Win64 the run of
+    /// `a_prefixed_literal_is_its_encoding_s_elements` sizes `L"\u{1F600}"`
+    /// written out as two elements where it has three.
+    fn wide_lengths(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) -> HashMap<ExprId, u64> {
+        let bits = self.literal_bits(Prefix::Wide);
+        let mut lengths = HashMap::new();
+        for id in ast.expr_ids() {
+            let Expr::String {
+                parts,
+                length,
+                prefix: Prefix::Wide,
+                ..
+            } = ast.expr(id)
+            else {
+                continue;
+            };
+            let mut count: u64 = 1;
+            let mut fits = true;
+            for &part in parts {
+                let quoted = Prefix::split(self.sources.snippet(part)).1;
+                let body = &quoted[1..quoted.len() - 1];
+                match crate::literal::read(body, Prefix::Wide, bits) {
+                    Ok(values) => count += values.len() as u64,
+                    Err(crate::literal::Unreadable::Malformed(what)) => {
+                        fits = false;
+                        diagnostics.report(
+                            Diagnostic::error(format!("{what} here"))
+                                .with_code(MALFORMED_CONSTANT)
+                                .with_label(Label::primary(part, "in this string literal"))
+                                .with_note(format!(
+                                    "C17 6.4.4.4 p9: `wchar_t` has {bits} bits on this target"
+                                )),
+                        );
+                    }
+                    Err(crate::literal::Unreadable::Unread(_)) => {
+                        unreachable!("the parser refused what a wider reading refuses")
+                    }
+                }
+            }
+            if fits {
+                lengths.insert(*length, count);
+            }
+        }
+        lengths
+    }
+
+    /// A character constant with a prefix: of the prefix's type, and the
+    /// value of its one element, read at this target's width (C17 6.4.4.4
+    /// p11). One of more than one element, which p11 gives a value the
+    /// implementation chooses, is not read yet, nor is `L'\u{1F600}'`
+    /// written out where `wchar_t` has 16 bits and the character is two
+    /// elements; an escape the type does not hold is not C (p9).
+    ///
+    /// Mutation: give it type `int`; `sizeof u'a'` in the run of
+    /// `a_prefixed_literal_is_its_encoding_s_elements` is 4, not 2.
+    fn prefixed_character(
+        &mut self,
+        ast: &mut Ast,
+        id: ExprId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let (prefix, quoted) = Prefix::split(self.sources.snippet(span));
+        let body = &quoted[1..quoted.len() - 1];
+        let element = self.literal_element(prefix);
+        let Type::Integer { rank, sign } = element else {
+            unreachable!("a literal's element is an integer")
+        };
+        let integer = self.target.integer(rank, sign);
+        match crate::literal::read(body, prefix, integer.bits()) {
+            Ok(values) if values.len() == 1 => {
+                self.values[id.index()] = Some(integer.convert(i128::from(values[0])));
+                Some(ast.push_type(element))
+            }
+            Ok(_) => {
+                diagnostics.report(
+                    Diagnostic::error(
+                        "a prefixed character constant of more than one element is not read yet",
+                    )
+                    .with_code(NOT_YET)
+                    .with_label(Label::primary(span, "this constant"))
+                    .with_note(format!(
+                        "C17 6.4.4.4 p11 leaves its value to the implementation; an element \
+                         has {} bits on this target",
+                        integer.bits()
+                    )),
+                );
+                None
+            }
+            Err(crate::literal::Unreadable::Malformed(what)) => {
+                diagnostics.report(
+                    Diagnostic::error(format!("{what} here"))
+                        .with_code(MALFORMED_CONSTANT)
+                        .with_label(Label::primary(span, "this constant"))
+                        .with_note(format!(
+                            "C17 6.4.4.4 p9: an element has {} bits on this target",
+                            integer.bits()
+                        )),
+                );
+                None
+            }
+            Err(crate::literal::Unreadable::Unread(_)) => {
+                unreachable!("the parser refused what a wider reading refuses")
+            }
         }
     }
 
@@ -3238,6 +3399,11 @@ impl Checker<'_> {
 
         match expr {
             Expr::Number { span } => self.constant(ast, id, span, diagnostics),
+            Expr::Character { span }
+                if Prefix::split(self.sources.snippet(span)).0 != Prefix::None =>
+            {
+                self.prefixed_character(ast, id, span, diagnostics)
+            }
             Expr::Character { span } => {
                 // C17 6.4.4.4 p10: type `int`, and the value of a `char`
                 // whose object representation is the character's, so
@@ -3264,8 +3430,11 @@ impl Checker<'_> {
             // to every rule that compares or spells one. Mutation: give it no
             // length; `a_string_literal_s_address_is_a_pointer_to_its_whole_array`
             // accepts `char (*)[9]`.
-            Expr::String { length, .. } => {
-                let element = ast.push_type(Type::CHAR);
+            // An array of `wchar_t`, `char16_t` or `char32_t` for a wide one
+            // (6.4.5 p6), whose length the sweep counted at the target's
+            // width (`wide_lengths`).
+            Expr::String { length, prefix, .. } => {
+                let element = ast.push_type(self.literal_element(prefix));
                 Some(ast.push_type(Type::Array {
                     element,
                     length: Some(length),

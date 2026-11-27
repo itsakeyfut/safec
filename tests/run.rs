@@ -445,4 +445,14 @@ programs! {
     /// does not build; count no compound literal's list in
     /// `counted_lengths`, and it does not build either.
     a_compound_literal_is_an_unnamed_object,
+    /// Prefixed literals and constants: each element of its prefix's type
+    /// and encoding, UTF-16 two elements outside the Basic Multilingual
+    /// Plane, a constant of its prefix's type rather than `int`, a run
+    /// taking its prefixed literal's prefix, and arrays a wide literal
+    /// initializes, in a block, braced, longer than it, in a compound
+    /// literal and at file scope (C17 6.4.5, 6.4.4.4, 6.7.9 p15, #1245).
+    /// Mutations: encode every character as one element in
+    /// `literal::read`, and this exits 3; give a prefixed constant type
+    /// `int` in `Checker::prefixed_character`, and it exits 5.
+    a_prefixed_literal_is_its_encoding_s_elements,
 }

@@ -68,6 +68,12 @@ cases! {
         // `Lowering::compound`; both writes are silent. Either marking
         // alone still finds both, as a declared local's does.
         a_const_compound_literal_is_read_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A wide literal is a read-only static of its element type, which
+        // the memory check reads as any: `SC0412` one element past it,
+        // `SC0417` at a write into it, and a local array it initializes
+        // bounded by its own length (#1245). Mutation: give the static
+        // `char` elements in `Lowering::string`; `past` is in bounds.
+        a_wide_literal_is_a_static_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it
         // and with the other operands of a call: `SC0409` in each function
@@ -10158,11 +10164,28 @@ cases! {
         // a character constant no value in `values`; the length is refused.
         a_character_constant_is_an_array_length: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.4.4.4 p1: `L'\xff'` is one token, so no macro named `L`
-        // reaches it, and it is refused as not read yet rather than read as
-        // the `char` constant it would be without its prefix. Mutation: scan
-        // the prefix as a word of its own; the run builds, and answers what
-        // `clang` does not. Found by review.
+        // reaches it, and it is the `wchar_t` 255 rather than the `char`
+        // constant it would be without its prefix, -1 where `char` is
+        // signed (#1245). Mutation: scan the prefix as a word of its own;
+        // the array's length is negative, and refused. Found by review.
         an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says: ["--emit", "ast"],
+        // A wide literal initializes an array of its element type alone
+        // (C17 6.7.9 p15), which on Win64 is `unsigned short` and not
+        // `int`; a `char` one, an array of character type alone (p14); a
+        // prefixed constant of more than one element, `u'ab'` or a
+        // character two elements of UTF-16 make, is not read yet; and an
+        // escape a 16-bit `wchar_t` does not hold is not C (6.4.4.4 p9,
+        // #1245). Mutations: answer any integer for a wide literal in
+        // `initializer::literal_initializes`, and `not_wchar` is accepted;
+        // count no `L` literal again in `Checker::wide_lengths`, and
+        // `past_wchar` is.
+        a_wide_literal_initializes_only_an_array_of_its_element_type: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A run that joins `u8` with a wide literal is not C (C17 6.4.5
+        // p2), and one that joins two wide prefixes is not read yet (p5);
+        // one with a prefix among literals without is read as that prefix
+        // (#1245). Mutation: answer the first literal's prefix in
+        // `Parser::run_prefix`; `two_wide` is read.
+        a_run_of_two_prefixes_is_refused: ["--emit", "ast"],
         // C17 6.5.16 p2, 6.5.2.4 p1: an assignment, a compound assignment,
         // `++` and `--` to a `const` object, and an assignment to a `const`
         // pointer, are each `SC0318`; what it points to may be written. A
@@ -11222,6 +11245,12 @@ cases! {
         an_included_path_with_a_control_character_is_shown_escaped: ["--emit", "ast"],
     }
     "codegen" => {
+        // On Linux `wchar_t` is a 32-bit `int`: `L"ab"` is twelve bytes, a
+        // character outside the Basic Multilingual Plane one element, and
+        // an `int` array is initialized from a wide literal (#1245).
+        // Mutation: give `wchar_t` Win64's type on every target in
+        // `Target::new`; every line changes.
+        a_wide_literal_is_as_wide_as_the_target_s_wchar_t: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
         // A compound literal outside a block is an internal static, a
         // `const` one a constant (#1243 review). Mutations: give
         // `Lowering::compound_static` external linkage, or no read-only

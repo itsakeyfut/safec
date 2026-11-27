@@ -1144,9 +1144,10 @@ impl<'a> Lowering<'a> {
             let Length::Constant(length) = length else {
                 unreachable!("the type check refuses a variable length array's initializer")
             };
-            let mut bytes = self.string_bytes(init);
-            bytes.truncate(usize::try_from(length).unwrap_or(usize::MAX));
-            return Some(StaticInit::Bytes(bytes));
+            let element = self.string_element(init);
+            let mut units = self.string_units(init);
+            units.truncate(usize::try_from(length).unwrap_or(usize::MAX));
+            return Some(self.string_init(init, element, units));
         }
         if let Some(value) = self.types.value(init) {
             let value = self
@@ -1447,10 +1448,12 @@ impl<'a> Lowering<'a> {
     }
 
     /// The static a string literal is, made the first time it is asked for:
-    /// an array of `char` holding each literal's characters, escapes read,
-    /// then a terminating zero (C17 6.4.5 p6), adjacent literals joined
-    /// (5.1.1.2 phase 6). Internal and named with a `.`, which no C
-    /// identifier holds, so it is no object the program can name.
+    /// an array of its element type holding each literal's characters,
+    /// escapes read, then a terminating zero (C17 6.4.5 p6), adjacent
+    /// literals joined (5.1.1.2 phase 6). Internal and named with a `.`,
+    /// which no C identifier holds, so it is no object the program can
+    /// name. A `char` one starts as its bytes, and a wide one as its
+    /// elements, each converted to the element type.
     ///
     /// Mutation: leave out the zero; `a_string_literal_is_its_bytes_and_a_zero`
     /// answers another length. Mutation: read only the first literal of a
@@ -1459,17 +1462,18 @@ impl<'a> Lowering<'a> {
         if let Some(&object) = self.strings.get(&id) {
             return object;
         }
-        let bytes = self.string_bytes(id);
-        let element = self.unit.push_type(Ty::CHAR);
+        let element = self.string_element(id);
+        let units = self.string_units(id);
         let ty = self.unit.push_type(Ty::Array {
             element,
-            length: Length::Constant(bytes.len() as u64),
+            length: Length::Constant(units.len() as u64),
         });
+        let init = self.string_init(id, element, units);
         let object = self.unit.push_static(Static {
             name: format!(".str.{}", self.strings.len()),
             ty,
             linkage: Linkage::Internal,
-            init: StaticInit::Bytes(bytes),
+            init,
             // C17 6.4.5 p7: a literal may not be modified, whatever its type
             // says. See ADR-0120.
             read_only: true,
@@ -1478,24 +1482,82 @@ impl<'a> Lowering<'a> {
         object
     }
 
-    /// The bytes of the string literal `id`: each literal's characters,
-    /// escapes read, adjacent literals joined, then a terminating zero.
-    fn string_bytes(&self, id: ExprId) -> Vec<u8> {
-        let Expr::String { parts, .. } = self.ast.expr(id) else {
+    /// The element type of the string literal `id`, as the type check gave
+    /// it: `char`, or the target's `wchar_t`, `char16_t` or `char32_t`.
+    fn string_element(&mut self, id: ExprId) -> TyId {
+        let element = self.types.of(id).and_then(|ty| match self.ast.ty(ty) {
+            Type::Array { element, .. } => Some(*element),
+            _ => None,
+        });
+        match element.map(|element| self.ast.ty(element)) {
+            Some(&Type::Integer { rank, sign }) => self.unit.push_type(Ty::Integer { rank, sign }),
+            _ => unreachable!("the type check gives a string literal an array of an integer"),
+        }
+    }
+
+    /// The elements of the string literal `id`: each literal's characters,
+    /// escapes read and encoded as its prefix says at the width of its
+    /// element here, adjacent literals joined, then a terminating zero.
+    fn string_units(&mut self, id: ExprId) -> Vec<u32> {
+        let element = self.string_element(id);
+        let bits = self
+            .unit
+            .integer(element)
+            .expect("a literal's element is an integer")
+            .bits();
+        let Expr::String { parts, prefix, .. } = self.ast.expr(id) else {
             unreachable!("a string literal is asked for only of one")
         };
-        let mut bytes = Vec::new();
+        let mut units = Vec::new();
         for &part in parts {
-            let text = self.sources.snippet(part);
-            let body = &text[1..text.len() - 1];
-            let values = crate::literal::unescape(body)
-                .expect("the parser keeps only a literal every escape of which it reads");
-            bytes.extend(values.into_iter().map(|value| {
-                u8::try_from(value).expect("`unescape` refuses a value no `char` holds")
-            }));
+            let quoted = crate::literal::Prefix::split(self.sources.snippet(part)).1;
+            let body = &quoted[1..quoted.len() - 1];
+            units.extend(
+                crate::literal::read(body, *prefix, bits)
+                    .expect("the parser and the type check keep only a literal they read"),
+            );
         }
-        bytes.push(0);
-        bytes
+        units.push(0);
+        units
+    }
+
+    /// What an array of `element` starts as from the first of `units` of
+    /// the literal `id`: its bytes where the element is a `char`, and
+    /// otherwise each element that is not zero by its index, converted to
+    /// the element type, the zeros past and between them left to the
+    /// backend as an aggregate's are (`StaticInit::Aggregate`).
+    fn string_init(&self, id: ExprId, element: TyId, units: Vec<u32>) -> StaticInit {
+        if matches!(
+            self.ast.expr(id),
+            Expr::String {
+                prefix: crate::literal::Prefix::None | crate::literal::Prefix::Utf8,
+                ..
+            }
+        ) {
+            return StaticInit::Bytes(
+                units
+                    .into_iter()
+                    .map(|unit| u8::try_from(unit).expect("a `char` literal's elements are bytes"))
+                    .collect(),
+            );
+        }
+        let integer = self
+            .unit
+            .integer(element)
+            .expect("a literal's element is an integer");
+        StaticInit::Aggregate(
+            units
+                .into_iter()
+                .enumerate()
+                .filter(|&(_, unit)| unit != 0)
+                .map(|(at, unit)| {
+                    (
+                        at as u64,
+                        StaticInit::Int(integer.convert(i128::from(unit))),
+                    )
+                })
+                .collect(),
+        )
     }
 
     /// Initialize the local array `local` of character type from the string
@@ -1533,8 +1595,11 @@ impl<'a> Lowering<'a> {
         else {
             unreachable!("the type check initializes only a sized array from a string literal")
         };
-        let literal = self.string_bytes(init).len() as u64;
+        let literal = self.string_units(init).len() as u64;
         let copied = length.min(literal);
+        // In bytes for the two calls, as many as an element is wide; the
+        // pointer arithmetic below counts elements.
+        let size = self.unit.size_of(element).expect("an integer has a size");
         let pointer = self.unit.push_type(Ty::Pointer(element));
         let Operand::Copy(first) = self.decayed(builder, array, at) else {
             unreachable!("an array decays to a local holding its first element's address")
@@ -1549,7 +1614,7 @@ impl<'a> Lowering<'a> {
             vec![
                 Operand::Copy(Place::local(first)),
                 from,
-                Operand::Constant(i128::from(copied)),
+                Operand::Constant(i128::from(copied * size)),
             ],
             at,
         );
@@ -1571,7 +1636,7 @@ impl<'a> Lowering<'a> {
                 vec![
                     Operand::Copy(Place::local(tail)),
                     Operand::Constant(0),
-                    Operand::Constant(i128::from(length - copied)),
+                    Operand::Constant(i128::from((length - copied) * size)),
                 ],
                 at,
             );

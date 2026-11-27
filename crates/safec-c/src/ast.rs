@@ -637,9 +637,14 @@ pub enum Expr {
         parts: Vec<Span>,
         /// The whole run.
         span: Span,
-        /// How many `char`s the array holds, terminating zero included, as
-        /// an [`Expr::Length`] the type's length can name.
+        /// How many elements the array holds, terminating zero included,
+        /// as an [`Expr::Length`] the type's length can name. An `L`
+        /// literal's is counted again by the type check, which knows how
+        /// wide `wchar_t` is.
         length: ExprId,
+        /// The run's encoding prefix: the one its prefixed literals share,
+        /// which C17 6.4.5 p5 gives the whole run.
+        prefix: crate::literal::Prefix,
     },
     /// A length this compiler counted rather than one the source wrote: a
     /// string literal's, which C17 6.4.5 p6 makes the bytes of the run and a

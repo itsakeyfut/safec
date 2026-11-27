@@ -257,7 +257,6 @@ Phase 9.
     `_Noreturn`, `_Static_assert`, `_Alignas` and `_Alignof`, `_Generic`,
     `_Thread_local`, `_Atomic`, `_Complex`, old-style definitions, and
     `__func__`
-  - initializers: the prefixed literals `L`, `u8`, `u` and `U`
   - the rest of the preprocessor: variadic macros, the predefined macros,
     `#pragma`, `_Pragma`, `#line`, `#error` and `#warning`
   - reading the system's own headers after the shipped ones

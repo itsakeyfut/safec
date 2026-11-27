@@ -692,11 +692,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ),
         // The token pairs.
         (
-            "int main(void) { return L'a'; }\n",
-            "a prefixed character constant",
-            "6.4.4.4",
-        ),
-        (
             "int main(void) { return 'ab'; }\n",
             "a character constant of more than one character",
             "6.4.4.4",
@@ -705,11 +700,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "int main(void) { return '\\u00e9'; }\n",
             "a universal character name",
             "6.4.4.4",
-        ),
-        (
-            "int main(void) { return L\"a\"[0]; }\n",
-            "a prefixed string literal",
-            "6.4.5",
         ),
     ];
     let malformed = [
