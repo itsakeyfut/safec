@@ -362,6 +362,18 @@ enum Escapes {
     Every,
 }
 
+/// Whether `literal`, a string literal, writes a universal character name:
+/// a `\u` or `\U` whose backslash is not itself escaped.
+fn universal_escape(literal: &str) -> bool {
+    let mut chars = literal.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' && matches!(chars.next(), Some('u' | 'U')) {
+            return true;
+        }
+    }
+    false
+}
+
 /// The text of `literal`, a string literal with no prefix, its quotes
 /// dropped and its escapes read as `escapes` says; `None` for any other.
 fn destringized(literal: &str, escapes: Escapes) -> Option<String> {
@@ -534,6 +546,19 @@ fn line(
         None => None,
         Some(name) => {
             let written = sources.snippet(name.span);
+            // A universal character name is not read here, as it is not in
+            // a string literal yet: `\u0041` is one `clang` refuses, which
+            // this read. `clang -E` writes a name outside ASCII in octal,
+            // which is read. Found by review.
+            if universal_escape(written) {
+                return refuse(
+                    diagnostics,
+                    format!(
+                        "`{written}` names its file with a universal character name, which is \
+                         not read in a `#line` name, as it is not in a string literal yet"
+                    ),
+                );
+            }
             let Some(read) = destringized(written, Escapes::Every) else {
                 return refuse(
                     diagnostics,
@@ -543,6 +568,22 @@ fn line(
                     ),
                 );
             };
+            // An escape that makes a byte ADR-0135 refuses wherever it
+            // stands: a carriage return, which `clang` writes in `__FILE__`
+            // as `\n`; a NUL, where `clang` ends the name; and a Ctrl-Z,
+            // which `clang` keeps here. `__FILE__` holding one was refused
+            // where it was used; it is refused where it is written now. Every
+            // other control character `__FILE__` writes as `clang` does, by
+            // measure, and is read. Found by review.
+            if read.chars().any(|c| matches!(c, '\r' | '\0' | '\u{1a}')) {
+                return refuse(
+                    diagnostics,
+                    format!(
+                        "`{written}` names its file with an escape that makes a carriage \
+                         return, a NUL or a Ctrl-Z, which is not read in a `#line` name"
+                    ),
+                );
+            }
             Some(read)
         }
     };
@@ -739,5 +780,17 @@ mod tests {
         assert_eq!(destringized(r#""\q.c""#, line), None);
         assert_eq!(destringized("L\"once\"", pragma), None);
         assert_eq!(destringized("u8\"x.c\"", line), None);
+    }
+
+    /// A universal character name is found where a `\u` or `\U` is an
+    /// escape, and not where its backslash is itself escaped.
+    ///
+    /// Mutation: take any `\` before a `u` for one; the `\\u` row fails.
+    #[test]
+    fn a_universal_character_name_is_found_where_it_is_an_escape() {
+        assert!(universal_escape(r#""\u0041.c""#));
+        assert!(universal_escape(r#""a\U0001F600""#));
+        assert!(!universal_escape(r#""C:\\users\\x.c""#));
+        assert!(!universal_escape(r#""\303\251.c""#));
     }
 }
