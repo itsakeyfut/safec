@@ -6582,7 +6582,7 @@ impl<'a> Lowering<'a> {
             [&Operand::Copy(Place::local(pointer))],
         ) & 1;
         if let Some(written) = self.types.of(id) {
-            levels |= self.pointing_at_levels(written);
+            levels |= self.member_levels(id, written);
         }
         builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
@@ -7043,6 +7043,163 @@ impl<'a> Lowering<'a> {
             element,
             length: Length::Local(held),
         })))
+    }
+
+    /// The `const` levels of a pointer to the member the access `id` names,
+    /// written as type `written`: [`Self::pointing_at_levels`] of it, with
+    /// the levels of every pointer another member of an enclosing union
+    /// holds over the same bytes ANDed in. A store through one member lands
+    /// where each of them reads it back (C17 6.5.2.3 p3, p6), so it is asked
+    /// as the least `const` of them keeps it: `u.b = "abc"; g(u.a);` through
+    /// a `const char *b` and a `char *a` let the literal leave writable
+    /// (#1432).
+    ///
+    /// **Every union around it**, out through each `.` to the object
+    /// accessed, the byte offset carried outward, since a union of a union,
+    /// or a union whose member is a struct, overlays the bytes as much as
+    /// one union does; through a `->` the object around is not known, and
+    /// the walk stops there (#1432 review). **A reader is the pointer it
+    /// holds at those bytes**, not its member's type: a struct or an array
+    /// of `const char *` keeps the levels its pointer does, and a function
+    /// pointer or an integer reads no level below (#1432 review).
+    ///
+    /// Mutation: answer the written member's levels alone;
+    /// `a_union_member_is_asked_at_its_least_const_reader`'s
+    /// `literal_read_as_writable` goes silent.
+    fn member_levels(&self, id: ExprId, written: TypeId) -> u32 {
+        let own = self.pointing_at_levels(written);
+        let mut readers = Vec::new();
+        // Where the member written starts, in bytes, within the object the
+        // access being walked names a member of.
+        let mut at = 0u64;
+        let mut access = id;
+        while let Expr::Member { base, arrow, .. } = *self.ast.expr(access) {
+            let Some(member) = self.types.member(access) else {
+                break;
+            };
+            let Some(mut layout) = self.laid_out(member.definition) else {
+                break;
+            };
+            // Each step's owner, from the definition in through each
+            // anonymous member, as `Lowering::member` walks them.
+            let mut owner = self.defined(member.definition);
+            let mut steps = Vec::new();
+            for &index in &member.path {
+                steps.push((owner, layout, index));
+                let Type::Struct {
+                    members: Some(members),
+                    ..
+                } = self.ast.ty(owner)
+                else {
+                    break;
+                };
+                if let Ty::Struct(inner) = self
+                    .unit
+                    .ty(self.unit.struct_layout(layout).members[index].ty)
+                {
+                    owner = self.defined(members[index].ty);
+                    layout = inner;
+                }
+            }
+            for &(owner, layout, index) in steps.iter().rev() {
+                let laid = &self.unit.struct_layout(layout).members;
+                at += laid[index].offset;
+                if let Type::Struct {
+                    union: true,
+                    members: Some(members),
+                    ..
+                } = self.ast.ty(owner)
+                {
+                    for (other, (declaration, each)) in members.iter().zip(laid).enumerate() {
+                        if other != index {
+                            if let Some(within) = at.checked_sub(each.offset) {
+                                self.pointers_at(declaration.ty, each.ty, within, &mut readers);
+                            }
+                        }
+                    }
+                }
+            }
+            if arrow {
+                break;
+            }
+            access = base;
+        }
+        readers.into_iter().fold(own, |levels, reader| {
+            levels & self.pointing_at_levels(reader)
+        })
+    }
+
+    /// Every object pointer an object of type `ty`, laid out as `laid`,
+    /// holds starting `at` bytes into it, through its elements and members
+    /// (all of a union's that cover the byte): what a reader of those bytes
+    /// may read a pointer out of. A function pointer is no reader of data,
+    /// and a bit-field holds no pointer.
+    fn pointers_at(&self, ty: TypeId, laid: TyId, at: u64, readers: &mut Vec<TypeId>) {
+        let mut work = vec![(ty, laid, at)];
+        while let Some((ty, laid, at)) = work.pop() {
+            match (self.ast.ty(self.ast.unqualified(ty)), self.unit.ty(laid)) {
+                (Type::Pointer(pointee), Ty::Pointer(_)) => {
+                    let code = matches!(
+                        self.ast.ty(self.ast.unqualified(*pointee)),
+                        Type::Function { .. }
+                    );
+                    if at == 0 && !code {
+                        readers.push(ty);
+                    }
+                }
+                (Type::Array { element, .. }, Ty::Array { element: each, .. }) => {
+                    if let Some(size) = self.unit.size_of(each).filter(|&size| size > 0) {
+                        work.push((*element, each, at % size));
+                    }
+                }
+                (Type::Struct { .. }, Ty::Struct(id)) => {
+                    let Type::Struct {
+                        members: Some(members),
+                        ..
+                    } = self.ast.ty(self.defined(ty))
+                    else {
+                        continue;
+                    };
+                    for (declaration, member) in
+                        members.iter().zip(&self.unit.struct_layout(id).members)
+                    {
+                        let size = self.unit.size_of(member.ty).unwrap_or(0);
+                        if member.bits.is_none() && member.offset <= at && at < member.offset + size
+                        {
+                            work.push((declaration.ty, member.ty, at - member.offset));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// The struct or union `ty` names, as it was defined with its members:
+    /// `ty` itself where it was written with them, and otherwise its tag's
+    /// definition, or `ty` where there is none.
+    fn defined(&self, ty: TypeId) -> TypeId {
+        let unqualified = self.ast.unqualified(ty);
+        if matches!(
+            self.ast.ty(unqualified),
+            Type::Struct {
+                members: Some(_),
+                ..
+            }
+        ) {
+            return unqualified;
+        }
+        let tag = self
+            .resolution
+            .tag(self.resolution.bound(self.ast, unqualified));
+        self.resolution.definition(tag).unwrap_or(unqualified)
+    }
+
+    /// The layout the struct or union `ty` was given, where it was laid out.
+    fn laid_out(&self, ty: TypeId) -> Option<StructId> {
+        let tag = self.resolution.tag(self.resolution.bound(self.ast, ty));
+        let id = *self.structs.get(&tag)?;
+        self.unit.layout_of(id).is_some().then_some(id)
     }
 
     /// The `const` levels of a pointer to an object of type `ty`: bit `0`
