@@ -7,7 +7,7 @@
 //! with `switch`, `break`, `continue`, `goto` and labels from 6.8.1, 6.8.4.2 and 6.8.6, and a struct or union with its members, anonymous ones and bit-fields too, and member access (6.7.2.1, 6.5.2.3). What
 //! it does not read yet is casts,
 //! `sizeof`, the type qualifiers but `const`, the storage classes but `static`, `extern` and `typedef`,
-//! `volatile` and `_Atomic` in a parameter's brackets, `[*]`, and a prefixed string literal. Each arrives in a
+//! `volatile` and `_Atomic` in a parameter's brackets, and `[*]`. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
@@ -32,6 +32,7 @@ use crate::ast::{
     Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::literal::Prefix;
 use crate::preprocessor::Preprocessed;
 use crate::preprocessor::cut_words;
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
@@ -1433,7 +1434,9 @@ impl Parser<'_> {
         };
         let length = match init {
             Some(Initializer::Expr(id)) => match self.ast.expr(*id) {
-                Expr::String { length, .. } if self.is_character(element) => *length,
+                Expr::String { length, prefix, .. } if self.holds_literal(*prefix, element) => {
+                    *length
+                }
                 _ => return ty,
             },
             Some(Initializer::Designated { .. }) => {
@@ -1476,11 +1479,30 @@ impl Parser<'_> {
     /// **Kept although the list reads `{ "ab" }` too**: an array of unknown
     /// size takes the literal's length from the literal, which only the
     /// literal read as itself gives here (`Parser::completed`).
-    fn takes_braced_literal(&self, ty: TypeId) -> bool {
+    fn takes_braced_literal(&self, ty: TypeId, prefix: Prefix) -> bool {
         match *self.ast.ty(self.ast.unqualified(ty)) {
             Type::Pointer(_) => true,
-            Type::Array { element, .. } => self.is_character(element),
+            Type::Array { element, .. } => self.holds_literal(prefix, element),
             _ => false,
+        }
+    }
+
+    /// Whether an array of `element` may take its length from a literal
+    /// with `prefix`: one of character type from a literal with none or
+    /// `u8` (C17 6.7.9 p14), and one of another integer type from a wide
+    /// one (p15). Which wide type the element has to be is the target's,
+    /// which this stage does not know, so any integer is let through here
+    /// and the type check holds it to the literal's
+    /// (`initializer::literal_initializes`).
+    fn holds_literal(&self, prefix: Prefix, element: TypeId) -> bool {
+        match prefix {
+            Prefix::None | Prefix::Utf8 => self.is_character(element),
+            Prefix::Wide | Prefix::Char16 | Prefix::Char32 => {
+                matches!(
+                    self.ast.ty(self.ast.unqualified(element)),
+                    Type::Integer { .. }
+                ) && !self.is_character(element)
+            }
         }
     }
 
@@ -1511,8 +1533,12 @@ impl Parser<'_> {
 
         // `{ "ab" }`: one literal, or a run of adjacent ones, and an optional
         // `,`, for a type it initializes as `"ab"` does. Every other list is
-        // a list.
-        if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty) {
+        // a list. Which types those are turns on the run's prefix, the one
+        // its prefixed literals share and not its first literal's, so
+        // `{ "a" L"b" }` is a wide literal (#1245 review); a run whose
+        // prefixes disagree is refused where the literal is read.
+        let prefix = self.run_prefix(1).unwrap_or(Prefix::None);
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty, prefix) {
             let mut ahead = 1;
             while self.peek_at(ahead).kind == TokenKind::String {
                 ahead += 1;
@@ -3983,16 +4009,15 @@ impl Parser<'_> {
         // list alone; the run of `a_compound_literal_is_an_unnamed_object`
         // does not build.
         let literal = match &init {
-            Initializer::List { items, .. } if self.takes_braced_literal(ty) => {
-                match items.as_slice() {
-                    [Initializer::Expr(id)]
-                        if matches!(self.ast.expr(*id), Expr::String { .. }) =>
-                    {
+            Initializer::List { items, .. } => match items.as_slice() {
+                [Initializer::Expr(id)] => match self.ast.expr(*id) {
+                    Expr::String { prefix, .. } if self.takes_braced_literal(ty, *prefix) => {
                         Some(Initializer::Expr(*id))
                     }
                     _ => None,
-                }
-            }
+                },
+                _ => None,
+            },
             _ => None,
         };
         let ty = self.completed(ty, Some(literal.as_ref().unwrap_or(&init)));
@@ -4235,31 +4260,27 @@ impl Parser<'_> {
     /// character this compiler reads.
     ///
     /// More than one is valid C with a value the implementation chooses (p10),
-    /// and refused as not read yet, as is anything [`unescape`] says is.
+    /// and refused as not read yet, as is anything [`read`] says is.
     /// What it says is not C is a syntax error. The value is the type
     /// checker's.
     ///
-    /// [`unescape`]: crate::literal::unescape
+    /// A prefixed one, which the lexer scans into the token (p1), is read
+    /// at its prefix's widest element ([`Prefix::widest_bits`]), and how
+    /// many elements it is the type check counts, at the target's width:
+    /// an `L` constant of the character U+1F600, written in the source, is
+    /// one element where `wchar_t` has 32 bits and two where it has 16.
+    ///
+    /// [`read`]: crate::literal::read
     fn character(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> ExprId {
         let text = self.sources.snippet(span);
-        // The lexer scans an encoding prefix into the token (C17 6.4.4.4 p1).
-        if !text.starts_with('\'') {
-            self.report_unread(
-                Unread {
-                    what: "a prefixed character constant",
-                    clause: "6.4.4.4",
-                },
-                diagnostics,
-            );
-            self.advance();
-            return self.ast.push_expr(Expr::Error { span });
-        }
-        let body = text
+        let (prefix, quoted) = Prefix::split(text);
+        let body = quoted
             .strip_prefix('\'')
             .and_then(|text| text.strip_suffix('\''))
             .unwrap_or("");
-        let refused = match crate::literal::unescape(body) {
+        let refused = match crate::literal::read(body, prefix, prefix.widest_bits()) {
             Ok(values) if values.len() == 1 => None,
+            Ok(values) if prefix != Prefix::None && !values.is_empty() => None,
             // The lexer has reported an empty one already.
             Ok(values) if values.is_empty() => Some(None),
             Ok(_) => Some(Some(Unread {
@@ -4300,7 +4321,10 @@ impl Parser<'_> {
     /// [`unescape`](crate::literal::unescape): what it says this compiler
     /// does not read is refused as not read yet, and what it says is not C
     /// is a syntax error. An encoding prefix, which the lexer scans into the
-    /// token, is not read yet (6.4.5 p3).
+    /// token, is the run's (6.4.5 p5): every literal of it is read as one
+    /// with that prefix, at its widest element ([`Prefix::widest_bits`]),
+    /// so an `L` run's count is the type check's to set again where
+    /// `wchar_t` is narrower.
     ///
     /// Every literal of the run is read, refused or not, so that the next
     /// token is what follows the run; the first refusal is the one reported.
@@ -4309,26 +4333,38 @@ impl Parser<'_> {
         let mut refused = false;
         // The terminating zero (C17 6.4.5 p6).
         let mut count: u64 = 1;
-        while self.check(TokenKind::String) {
-            let span = self.peek().span;
-            if !refused {
-                let text = self.sources.snippet(span);
-                let body = text
-                    .strip_prefix('"')
-                    .and_then(|text| text.strip_suffix('"'));
-                match body.map(crate::literal::unescape) {
-                    Some(Ok(values)) => count += values.len() as u64,
-                    None => {
-                        refused = true;
-                        self.report_unread(
-                            Unread {
-                                what: "a prefixed string literal",
-                                clause: "6.4.5",
-                            },
+        let prefix = match self.run_prefix(0) {
+            Ok(prefix) => prefix,
+            Err((at, fault)) => {
+                refused = true;
+                match fault {
+                    Ok(unread) => {
+                        self.report_unread_at(at, unread, diagnostics);
+                    }
+                    Err(what) => {
+                        self.report_at(
+                            at,
+                            EXPECTED,
+                            what,
+                            "this is not a string literal C allows",
                             diagnostics,
                         );
                     }
-                    Some(Err(crate::literal::Unreadable::Unread(what))) => {
+                }
+                Prefix::None
+            }
+        };
+        while self.check(TokenKind::String) {
+            let span = self.peek().span;
+            if !refused {
+                let text = Prefix::split(self.sources.snippet(span)).1;
+                let body = text
+                    .strip_prefix('"')
+                    .and_then(|text| text.strip_suffix('"'))
+                    .unwrap_or("");
+                match crate::literal::read(body, prefix, prefix.widest_bits()) {
+                    Ok(values) => count += values.len() as u64,
+                    Err(crate::literal::Unreadable::Unread(what)) => {
                         refused = true;
                         self.report_unread(
                             Unread {
@@ -4338,7 +4374,7 @@ impl Parser<'_> {
                             diagnostics,
                         );
                     }
-                    Some(Err(crate::literal::Unreadable::Malformed(what))) => {
+                    Err(crate::literal::Unreadable::Malformed(what)) => {
                         refused = true;
                         self.report(what, "this is not a string literal C allows", diagnostics);
                     }
@@ -4356,7 +4392,45 @@ impl Parser<'_> {
             parts,
             span,
             length,
+            prefix,
         })
+    }
+
+    /// The prefix of the run of string literals starting `ahead` tokens
+    /// from here: the one its prefixed literals share, or none (C17 6.4.5
+    /// p5). A run that joins `u8` with a wide prefix is not C (p2), and one
+    /// that joins two wide prefixes is valid C whose meaning the
+    /// implementation chooses (p5), which this compiler has not chosen;
+    /// either answers the literal whose prefix disagrees, where the caret
+    /// goes, rather than the first of the run, which may have none (#1245
+    /// review). Mutation: answer the first literal's prefix;
+    /// `a_run_of_two_prefixes_is_refused` is read.
+    #[allow(clippy::type_complexity)]
+    fn run_prefix(&self, ahead: usize) -> Result<Prefix, (Span, Result<Unread, &'static str>)> {
+        let mut found = Prefix::None;
+        let mut ahead = ahead;
+        while self.peek_at(ahead).kind == TokenKind::String {
+            let at = self.peek_at(ahead).span;
+            let prefix = Prefix::split(self.sources.snippet(at)).0;
+            ahead += 1;
+            if prefix == Prefix::None || prefix == found {
+                continue;
+            }
+            if found == Prefix::None {
+                found = prefix;
+            } else if found == Prefix::Utf8 || prefix == Prefix::Utf8 {
+                return Err((at, Err("a `u8` string literal joined with a wide one")));
+            } else {
+                return Err((
+                    at,
+                    Ok(Unread {
+                        what: "a run of string literals with two different prefixes",
+                        clause: "6.4.5",
+                    }),
+                ));
+            }
+        }
+        Ok(found)
     }
 
     /// Part of C17 6.5.1: an integer constant, a character constant, a
@@ -4710,16 +4784,27 @@ impl Parser<'_> {
     /// The report [`UNREAD`] makes, at the token here, in one wording for
     /// every construct.
     fn report_unread(&mut self, unread: Unread, diagnostics: &mut DiagnosticSink) -> Span {
-        self.report_noted(
-            UNREAD,
-            format!("{} is not read yet", unread.what),
-            "valid C, which this compiler does not read yet",
-            format!(
+        self.report_unread_at(self.peek().span, unread, diagnostics)
+    }
+
+    /// The same, at a span the caller names, as [`Parser::report_at`] is.
+    fn report_unread_at(
+        &mut self,
+        span: Span,
+        unread: Unread,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
+        let built = Diagnostic::error(format!("{} is not read yet", unread.what))
+            .with_code(UNREAD)
+            .with_label(Label::primary(
+                span,
+                "valid C, which this compiler does not read yet",
+            ))
+            .with_note(format!(
                 "C17 {} makes it valid; this compiler does not read it yet",
                 unread.clause
-            ),
-            diagnostics,
-        )
+            ));
+        self.report_built(span, built, diagnostics)
     }
 
     /// Report one, unless something already has.

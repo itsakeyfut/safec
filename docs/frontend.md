@@ -194,7 +194,7 @@ anonymous member are read (#1206, #1207), and so is a braced initializer
 (#1241), designators included (#1242); a GNU range, `[a ... b]`, is refused under `SC0207` until #1197 reads it.
 
 `SC0207` is the code for valid C the parser does not read yet, told apart
-from C it cannot parse where the parse failed. A prefixed string literal
+from C it cannot parse where the parse failed. A universal character name
 and the other constructs the parser does not read are
 reported under it, each naming the clause
 that makes it valid; `parser.rs::unread_keyword` and the checks beside it
@@ -510,9 +510,15 @@ A character constant (6.4.4.4) has type `int` and the value of a `char`, so
 it too turns on the target: `'\xff'` is -1 where `char` is signed and 255
 where it is not, and `int a['\xff'];` is refused on the first and accepted on
 the second, as `clang` does on each. What it does not read yet is refused as
-`SC0207`: more than one character, a universal character name, a character
-outside ASCII, and an encoding prefix, which the lexer scans into the token so
-that no macro can take it away. An escape C17 does not define, `'\e'` among
+`SC0207`: more than one character, a universal character name, and a
+character outside ASCII where there is no encoding prefix. A prefix, which the
+lexer scans into the token so that no macro can take it away, gives the
+constant its type, the target's `wchar_t` for `L`, `char16_t` for `u` and
+`char32_t` for `U` (6.4.4.4 p11), and a string literal its elements' (6.4.5
+p6), each character encoded as UTF-8, UTF-16 or UTF-32. `wchar_t` is the one
+whose width differs by target, 16 bits on Win64, so an `L` literal's length is
+counted by the type check rather than the parser. A prefixed constant of more
+than one element is `SC0304`. An escape C17 does not define, `'\e'` among
 them, is `SC0201`, where `clang` accepts it unless `-pedantic-errors` is
 given.
 

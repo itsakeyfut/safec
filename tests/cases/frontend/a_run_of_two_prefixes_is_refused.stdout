@@ -1,0 +1,10 @@
+Declaration a_run_of_two_prefixes_is_refused.c:1:1 "utf8_and_wide" "const char *"
+  Error a_run_of_two_prefixes_is_refused.c:1:29
+Declaration a_run_of_two_prefixes_is_refused.c:2:1 "two_wide" "const void *"
+  Error a_run_of_two_prefixes_is_refused.c:2:24
+Declaration a_run_of_two_prefixes_is_refused.c:3:1 "one_prefix" "const void *"
+  String a_run_of_two_prefixes_is_refused.c:3:26 "\"a\"" "L\"b\"" "\"c\""
+Declaration a_run_of_two_prefixes_is_refused.c:4:1 "wide_and_utf8" "const void *"
+  Error a_run_of_two_prefixes_is_refused.c:4:29
+Declaration a_run_of_two_prefixes_is_refused.c:5:1 "after_an_innocent_line" "const void *"
+  Error a_run_of_two_prefixes_is_refused.c:6:5

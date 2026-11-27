@@ -1,1 +1,7 @@
-Error an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:2:1
+Declaration an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:2:1 "prefixed" "int[L'\\xff' == 255 ? 1 : -1]"
+Function an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:3:1 "main" "int (void)"
+  Compound an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:3:16
+    Return an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:4:5
+      Binary an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:4:12 "=="
+        Character an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:4:12 "L'\\xff'"
+        Number an_encoding_prefix_is_part_of_its_constant_whatever_a_macro_says.c:4:23 "255"

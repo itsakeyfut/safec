@@ -163,6 +163,9 @@ pub struct Target {
     /// gives them `unsigned int` and `unsigned long`.
     size: Rank,
     widening: Widening,
+    /// `wchar_t`, which an `L` literal's elements have. See
+    /// [`Target::wchar_type`].
+    wide: (Rank, Sign),
 }
 
 impl Target {
@@ -197,7 +200,7 @@ impl Target {
             true,
             (16, 64, 64),
             (64, Rank::Long),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Signed)),
         ),
         Self::new(
             "aarch64-unknown-linux-gnu",
@@ -206,7 +209,7 @@ impl Target {
             false,
             (16, 64, 64),
             (64, Rank::Long),
-            Widening::None,
+            (Widening::None, (Rank::Int, Sign::Unsigned)),
         ),
         Self::new(
             "armv7-unknown-linux-gnueabihf",
@@ -215,7 +218,7 @@ impl Target {
             false,
             (16, 32, 64),
             (32, Rank::Int),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Unsigned)),
         ),
         Self::new(
             "i686-unknown-linux-gnu",
@@ -224,7 +227,7 @@ impl Target {
             true,
             (16, 32, 64),
             (32, Rank::Int),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Signed)),
         ),
         Self::new(
             "wasm32-unknown-unknown",
@@ -233,7 +236,7 @@ impl Target {
             true,
             (16, 32, 64),
             (32, Rank::Long),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Signed)),
         ),
         Self::new(
             "x86_64-apple-darwin",
@@ -242,7 +245,7 @@ impl Target {
             true,
             (16, 64, 64),
             (64, Rank::Long),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Signed)),
         ),
         Self::new(
             "x86_64-pc-windows-msvc",
@@ -251,7 +254,7 @@ impl Target {
             true,
             (16, 32, 64),
             (64, Rank::LongLong),
-            Widening::None,
+            (Widening::None, (Rank::Short, Sign::Unsigned)),
         ),
         Self::new(
             "x86_64-unknown-linux-gnu",
@@ -260,7 +263,7 @@ impl Target {
             true,
             (16, 64, 64),
             (64, Rank::Long),
-            Widening::Required,
+            (Widening::Required, (Rank::Int, Sign::Signed)),
         ),
     ];
 
@@ -276,10 +279,13 @@ impl Target {
         char_signed: bool,
         (short_bits, long_bits, long_long_bits): (u32, u32, u32),
         (pointer_bits, size): (u32, Rank),
-        widening: Widening,
+        // Two in one, as `(pointer_bits, size)` are, so that a row is
+        // seven arguments, under the limit a lint holds a function to.
+        (widening, wide): (Widening, (Rank, Sign)),
     ) -> Self {
         Self {
             triple,
+            wide,
             size,
             short_bits,
             long_bits,
@@ -350,6 +356,32 @@ impl Target {
     /// unsigned, of the rank the target gives it.
     pub fn size_type(self) -> (Rank, Sign) {
         (self.size, Sign::Unsigned)
+    }
+
+    /// The type of `wchar_t` here, which an `L` string literal's elements
+    /// and an `L` character constant have (C17 6.4.5 p6, 6.4.4.4 p11).
+    /// Measured on every row of [`Target::ALL`] with `clang 22.1.8
+    /// --target=<triple> -dM -E` reading `__WCHAR_TYPE__`: `unsigned short`
+    /// on Win64, `unsigned int` on `aarch64` and `armv7` Linux, and `int`
+    /// on the other five (#1245).
+    pub fn wchar_type(self) -> (Rank, Sign) {
+        self.wide
+    }
+
+    /// The type of `char16_t` here, which a `u` literal's elements and a
+    /// `u` character constant have (C17 7.28 p2): `unsigned short` on
+    /// every row of [`Target::ALL`], measured as `__CHAR16_TYPE__` is in
+    /// [`Target::wchar_type`], so it is not a field of a row.
+    pub fn char16_type(self) -> (Rank, Sign) {
+        (Rank::Short, Sign::Unsigned)
+    }
+
+    /// The type of `char32_t` here, which a `U` literal's elements and a
+    /// `U` character constant have (C17 7.28 p2): `unsigned int` on every
+    /// row of [`Target::ALL`], measured as `__CHAR32_TYPE__` is in
+    /// [`Target::wchar_type`].
+    pub fn char32_type(self) -> (Rank, Sign) {
+        (Rank::Int, Sign::Unsigned)
     }
 
     /// The type of `ptrdiff_t` here, which a pointer minus a pointer has
@@ -495,6 +527,40 @@ impl Target {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `wchar_t`, `char16_t` and `char32_t` on every target, written out
+    /// as `clang 22.1.8 --target=<triple> -dM -E` printed `__WCHAR_TYPE__`,
+    /// `__CHAR16_TYPE__` and `__CHAR32_TYPE__`, rather than read back from
+    /// the rows this module also answers from. Mutation: give `wchar_t`
+    /// one type on every row; this fails on Win64 or on the others.
+    #[test]
+    fn the_wide_character_types_are_what_each_target_measured() {
+        let measured = [
+            ("aarch64-apple-darwin", (Rank::Int, Sign::Signed)),
+            ("aarch64-unknown-linux-gnu", (Rank::Int, Sign::Unsigned)),
+            ("armv7-unknown-linux-gnueabihf", (Rank::Int, Sign::Unsigned)),
+            ("i686-unknown-linux-gnu", (Rank::Int, Sign::Signed)),
+            ("wasm32-unknown-unknown", (Rank::Int, Sign::Signed)),
+            ("x86_64-apple-darwin", (Rank::Int, Sign::Signed)),
+            ("x86_64-pc-windows-msvc", (Rank::Short, Sign::Unsigned)),
+            ("x86_64-unknown-linux-gnu", (Rank::Int, Sign::Signed)),
+        ];
+        assert_eq!(Target::ALL.len(), measured.len());
+        for (triple, wchar) in measured {
+            let target = Target::from_triple(triple).expect("a measured triple is known");
+            assert_eq!(target.wchar_type(), wchar, "{triple}: wchar_t");
+            assert_eq!(
+                target.char16_type(),
+                (Rank::Short, Sign::Unsigned),
+                "{triple}: char16_t"
+            );
+            assert_eq!(
+                target.char32_type(),
+                (Rank::Int, Sign::Unsigned),
+                "{triple}: char32_t"
+            );
+        }
+    }
 
     /// The table says what `clang` says, written out rather than walked.
     ///

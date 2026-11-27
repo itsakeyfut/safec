@@ -317,7 +317,8 @@ impl<'a> Lexer<'a> {
         // constant or the literal it is written against, one token. Scanned
         // as a word and a literal, a `#define L` expanded the prefix away and
         // `L'\xff'` built as the `char` constant `'\xff'`, with another value.
-        // Found by review. The parser refuses a prefixed one as not read yet.
+        // Found by review. The parser reads it with its prefix
+        // (`literal::Prefix`).
         let prefix = ["u8\"", "L'", "u'", "U'", "L\"", "u\"", "U\""]
             .into_iter()
             .find(|prefix| self.rest().starts_with(prefix));

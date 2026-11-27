@@ -16,8 +16,9 @@ use safec_ir::source::{SourceMap, Span};
 
 /// Whether `value`, of type `of`, initializes an aggregate of `ty` whole
 /// rather than its first scalar: a struct of a compatible type (C17 6.7.9
-/// p13), or a string literal for an array of character type (p14). One
-/// answer for the type check and the lowering, as the walk is.
+/// p13), or a string literal for an array whose element it fits (p14, p15,
+/// [`literal_initializes`]). One answer for the type check and the
+/// lowering, as the walk is.
 pub fn initializes_whole(
     ast: &Ast,
     resolution: &Resolution,
@@ -32,16 +33,48 @@ pub fn initializes_whole(
         }),
         Type::Array { element, .. } => {
             matches!(ast.expr(value), crate::ast::Expr::String { .. })
-                && matches!(
-                    ast.ty(ast.unqualified(*element)),
-                    Type::Integer {
-                        rank: safec_ir::ir::Rank::Char,
-                        ..
-                    }
-                )
+                && literal_initializes(ast, of, *element)
         }
         _ => false,
     }
+}
+
+/// Whether a string literal of type `literal` initializes an array of
+/// `element`: one of character type from a literal of `char`, with no
+/// prefix or `u8` (C17 6.7.9 p14), and one of a type compatible with the
+/// unqualified element type of a wide literal from that literal (p15),
+/// so `unsigned short a[] = L"ab"` is one where `wchar_t` is `unsigned
+/// short` and refused where it is `int`.
+///
+/// Mutation: answer any integer for a wide literal;
+/// `not_wchar` in `a_wide_literal_initializes_only_an_array_of_its_element_type`
+/// is accepted; compare the rank alone, and `wrong_sign` is.
+pub fn literal_initializes(ast: &Ast, literal: Option<TypeId>, element: TypeId) -> bool {
+    let Some(Type::Array { element: of, .. }) = literal.map(|literal| ast.ty(literal)) else {
+        return false;
+    };
+    let character = |ty: TypeId| {
+        matches!(
+            ast.ty(ast.unqualified(ty)),
+            Type::Integer {
+                rank: safec_ir::ir::Rank::Char,
+                ..
+            }
+        )
+    };
+    if character(*of) {
+        return character(element);
+    }
+    matches!(
+        (ast.ty(*of), ast.ty(ast.unqualified(element))),
+        (
+            Type::Integer { rank, sign },
+            Type::Integer {
+                rank: element_rank,
+                sign: element_sign,
+            },
+        ) if rank == element_rank && sign == element_sign
+    )
 }
 
 /// One step from an object to a subobject of it.
