@@ -4,6 +4,8 @@
 #define OPEN F(
 #define CALL(m) m
 #define NOT !
+#define ALSO_OPEN OPEN
+#define SELF SELF
 
 #if F(defined(X)) == 2
 int a;
@@ -19,4 +21,8 @@ int c;
 
 #if CALL(F)(defined X) == 2
 int e;
+#endif
+
+#if ALSO_OPEN defined X) == 2
+int h;
 #endif

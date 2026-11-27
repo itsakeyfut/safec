@@ -1,3 +1,4 @@
-Declaration defined_outside_any_macro_s_argument_is_read.c:9:1 "d" "int"
-Declaration defined_outside_any_macro_s_argument_is_read.c:14:1 "f" "int"
-Declaration defined_outside_any_macro_s_argument_is_read.c:18:1 "g" "int"
+Declaration defined_outside_any_macro_s_argument_is_read.c:11:1 "d" "int"
+Declaration defined_outside_any_macro_s_argument_is_read.c:16:1 "f" "int"
+Declaration defined_outside_any_macro_s_argument_is_read.c:20:1 "g" "int"
+Declaration defined_outside_any_macro_s_argument_is_read.c:24:1 "i" "int"

@@ -83,19 +83,7 @@ pub(super) fn evaluate(
                 }
                 _ if is_name(token) => {
                     opened_by_macros +=
-                        reading
-                            .macros
-                            .get(sources.snippet(token.span))
-                            .map_or(0, |defined| {
-                                let count = |spelled: &str| {
-                                    defined
-                                        .tokens
-                                        .iter()
-                                        .filter(|(token, _)| token == spelled)
-                                        .count()
-                                };
-                                count("(").saturating_sub(count(")"))
-                            });
+                        left_open(sources.snippet(token.span), reading, &mut Vec::new());
                 }
                 _ => {}
             }
@@ -318,6 +306,42 @@ pub(super) fn evaluate(
 }
 
 /// Whether `token` is a name, which preprocessing makes of a keyword too.
+/// How many `(` the expansion of the macro `name` leaves open, read in
+/// order through the object-like macros its list names, as replacing it
+/// would: `#define A OPEN` with `#define OPEN F(` leaves one, and `A
+/// defined X)` was read here where `clang` takes `defined X` for `F`'s
+/// argument. Found by review. Each macro is followed once on a path, so a
+/// list naming itself ends. A `)` the list closes before any `(` closes
+/// nothing of its own; the line's reading of it is left to the refusal of a
+/// call that runs past an expansion.
+fn left_open<'a>(name: &'a str, reading: &'a Reading, seen: &mut Vec<&'a str>) -> usize {
+    let Some(defined) = reading.macros.get(name) else {
+        return 0;
+    };
+    if seen.contains(&name) {
+        return 0;
+    }
+    seen.push(name);
+    let mut open = 0usize;
+    for (spelled, _) in &defined.tokens {
+        match spelled.as_str() {
+            "(" => open += 1,
+            ")" => open = open.saturating_sub(1),
+            _ => {
+                if reading
+                    .macros
+                    .get(spelled.as_str())
+                    .is_some_and(|inner| inner.parameters.is_none())
+                {
+                    open += left_open(spelled, reading, seen);
+                }
+            }
+        }
+    }
+    seen.pop();
+    open
+}
+
 /// Whether `token`, spelled `spelled`, may stand for a function-like
 /// macro's name once it is replaced, so that a `(` after it may open that
 /// macro's arguments: a `)`, which may close a call that becomes one

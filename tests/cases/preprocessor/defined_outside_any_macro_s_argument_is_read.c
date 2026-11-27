@@ -4,6 +4,8 @@
 #define OPEN F(
 #define CALL(m) m
 #define NOT !
+#define ALSO_OPEN OPEN
+#define SELF SELF
 
 #if (defined X) && F(0) == 1 && defined(X)
 int d;
@@ -16,4 +18,8 @@ int f;
 
 #if OPEN 0) == 1 && defined X
 int g;
+#endif
+
+#if SELF + 1 && defined X
+int i;
 #endif

@@ -1,32 +1,40 @@
 error[SC0104]: `defined` in what may be a macro's argument is not read
-   ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:8:7 ]
-   │
- 8 │ #if F(defined(X)) == 2
-   │       ───┬───  
-   │          ╰───── asked here
-───╯
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:10:7 ]
+    │
+ 10 │ #if F(defined(X)) == 2
+    │       ───┬───  
+    │          ╰───── asked here
+────╯
   = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
 error[SC0104]: `defined` in what may be a macro's argument is not read
-    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:12:8 ]
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:14:8 ]
     │
- 12 │ #if G (defined X) == 2
+ 14 │ #if G (defined X) == 2
     │        ───┬───  
     │           ╰───── asked here
 ────╯
   = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
 error[SC0104]: `defined` in what may be a macro's argument is not read
-    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:16:10 ]
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:18:10 ]
     │
- 16 │ #if OPEN defined X) == 2
+ 18 │ #if OPEN defined X) == 2
     │          ───┬───  
     │             ╰───── asked here
 ────╯
   = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
 error[SC0104]: `defined` in what may be a macro's argument is not read
-    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:20:13 ]
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:22:13 ]
     │
- 20 │ #if CALL(F)(defined X) == 2
+ 22 │ #if CALL(F)(defined X) == 2
     │             ───┬───  
     │                ╰───── asked here
+────╯
+  = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined
+error[SC0104]: `defined` in what may be a macro's argument is not read
+    ╭─[ defined_in_what_may_be_a_macro_s_argument_is_refused.c:26:15 ]
+    │
+ 26 │ #if ALSO_OPEN defined X) == 2
+    │               ───┬───  
+    │                  ╰───── asked here
 ────╯
   = note: `clang` replaces an argument before it reads `defined` there, and C17 6.10.1 p4 leaves what that means undefined

@@ -10827,16 +10827,18 @@ cases! {
         // `defined` in what may be a function-like macro's argument: `clang`
         // replaces the argument first, asks about `1`, and refuses
         // each line, where this answered `defined X` first and compiled `a`,
-        // `b`, `c` and `e`. Refused, each, at the `defined`. Found by
-        // review, the last by a second. Mutations: ignore a `(` after a
-        // name; the first two lines are read. Ignore a macro that opens a
-        // `(`; the third is. Ignore a `(` after a `)`; the last is.
+        // `b`, `c`, `e` and `h`. Refused, each, at the `defined`. Found by
+        // review, the last two by later ones. Mutations: ignore a `(` after
+        // a name; the first two lines are read. Ignore a macro that opens
+        // a `(`; the third and the last are. Ignore a `(` after a `)`; the
+        // fourth is. Stop at a macro's own list in `left_open`; the last is.
         defined_in_what_may_be_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // The other side, read as `clang` reads it, compiling `d`, `f` and
         // `g`: a `defined` in parentheses no name opens, one after a call
         // has closed, one after a macro that becomes `!` and no call, and
-        // one after the line has closed a `(` a macro opened. Found by
-        // review. Mutations: refuse every `defined` after a `(`; take every
+        // one after the line has closed a `(` a macro opened, and one after
+        // a macro that names itself, which `left_open` follows once and
+        // stops. Found by review. Mutations: refuse every `defined` after a `(`; take every
         // object-like macro for a call's name; or never close what a macro
         // opened; the case is refused.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
