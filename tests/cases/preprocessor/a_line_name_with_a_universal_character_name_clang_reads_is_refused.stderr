@@ -1,0 +1,9 @@
+error[SC0104]: this `#line` is not read
+   ╭─[ a_line_name_with_a_universal_character_name_clang_reads_is_refused.c:1:1 ]
+   │
+ 1 │ #line 1 "\u00e9.c"
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `"\u00e9.c"` names its file with a universal character name, which is not read in a `#line` name, as it is not in a string literal yet
+  = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file

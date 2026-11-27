@@ -9948,9 +9948,11 @@ cases! {
         // `clang` ends `__FILE__` there, so `buf` is 2 bytes to it and the
         // write to `buf[5]` is out of bounds. Here `__FILE__` held the NUL,
         // `buf` was 10 bytes and the case exited 0. Found by review. The
-        // expansion is refused at its NUL, as every text lexed is asked
-        // (ADR-0135). Mutation: drop `report_unread` from `lex_replacement`;
-        // the case exits 0 with nothing said.
+        // `#line` is refused where it is written, and the expansion would be
+        // refused at its NUL too, as every text lexed is asked (ADR-0135).
+        // Mutations: read control escapes in a `#line` name; the case is
+        // refused at the expansion instead. Do that and drop `report_unread`
+        // from `lex_replacement`; the case exits 0 with nothing said.
         a_nul_a_line_directive_s_name_decodes_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A Ctrl-Z after `#pragma once`: `clang` targeting MSVC ends the
         // file there and declares nothing, where this declared `in_a`.
@@ -10857,6 +10859,25 @@ cases! {
         // corpus of directive lines. Mutation: refuse a null directive in
         // a compiled group, in `triage`; the case is refused.
         a_null_directive_in_a_compiled_group_has_no_effect: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // A `#line` or line marker name with a universal character name, or
+        // an escape that makes a control character other than a tab or a
+        // line feed, is refused where it is written. `clang` refuses `\u0041` and reads
+        // `\u00e9`; it writes `\r` in `__FILE__` as `\n`, and a NUL or a
+        // Ctrl-Z there ends what it reads. This read `\u0041`, and refused
+        // `\r` only where `__FILE__` was used. Found by review.
+        // Mutations: read universal character names in `line`; the first
+        // two are read. Read control escapes; the last three are read or
+        // refused somewhere else.
+        a_line_name_with_a_universal_character_name_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        a_line_name_with_a_universal_character_name_clang_reads_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        a_line_name_with_a_carriage_return_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        a_line_name_with_a_nul_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        a_line_marker_name_with_a_ctrl_z_escape_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
+        // Octal escapes, which `clang -E` writes for a name outside ASCII,
+        // and a tab, which `clang` keeps, are read; a line feed is too, as
+        // `pragmas_and_line_are_read_as_c_says` runs. Mutation: refuse every
+        // escape in a `#line` name; the case is refused.
+        a_line_name_with_octal_and_a_tab_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below
         // is `NOTE`'s body, or the skipped `#define`'s, and each function

@@ -1,0 +1,9 @@
+error[SC0104]: this `#line` is not read
+   ╭─[ a_line_name_with_a_nul_escape_is_refused.c:1:1 ]
+   │
+ 1 │ #line 1 "a\0b"
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `"a\0b"` names its file with an escape that makes a control character other than a tab or a line feed, which is not read in a `#line` name
+  = note: `#line` is read as a line from 1 to 2147483647 in decimal digits, and a string literal with no prefix after it if it names the file

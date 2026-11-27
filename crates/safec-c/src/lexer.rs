@@ -185,9 +185,12 @@ pub(crate) fn lex_replacement(
     source: &SourceFile,
     diagnostics: &mut DiagnosticSink,
 ) -> Vec<Token> {
-    // Text made here can hold a byte no file did: `#line 1 "a\0b"` decodes
+    // Text made here can hold a byte no file did: `#line 1 "a\0b"` decoded
     // its escape into a NUL in `__FILE__`, where `clang` ends the name, and
-    // `sizeof(__FILE__)` was 4 here and 2 to `clang`. Found by review.
+    // `sizeof(__FILE__)` was 4 here and 2 to `clang`. Found by review. Such
+    // a `#line` is refused where it is written now, and no other text made
+    // here is known to hold one, so this is the second answer to the same
+    // question, kept for the one nobody has found.
     report_unread(file, source.contents(), diagnostics);
     Lexer {
         file,
