@@ -239,20 +239,7 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
             spell_ty(unit, object.ty)
         )
         .expect("writing to a string cannot fail");
-        match &object.init {
-            crate::ir::StaticInit::Zero => out.push_str(" zero"),
-            // As numbers, so that no byte a literal holds reaches the
-            // artifact as a character it would have to answer for.
-            crate::ir::StaticInit::Bytes(bytes) => {
-                out.push_str(" bytes");
-                for byte in bytes {
-                    write!(out, " {byte}").expect("writing to a string cannot fail");
-                }
-            }
-            crate::ir::StaticInit::Int(value) => {
-                write!(out, " {value}").expect("writing to a string cannot fail");
-            }
-        }
+        dump_static_init(unit, &object.init, out);
         out.push('\n');
     }
 
@@ -719,6 +706,41 @@ fn dump_terminator(
         Terminator::Abnormal { to } => {
             write!(out, " {:?}", block_name(to.index())).expect("writing to a string cannot fail");
             out.push('\n');
+        }
+    }
+}
+
+/// What a static starts with, on its line: `zero`, an integer, `bytes`
+/// and each byte as a number, so that no byte a literal holds reaches the
+/// artifact as a character it would have to answer for, `address` and the
+/// object's name and offset, or an aggregate's entries in brackets. A
+/// recursion, bounded by how deep a type nests.
+fn dump_static_init(
+    unit: &crate::ir::TranslationUnit,
+    init: &crate::ir::StaticInit,
+    out: &mut String,
+) {
+    match init {
+        crate::ir::StaticInit::Zero => out.push_str(" zero"),
+        crate::ir::StaticInit::Bytes(bytes) => {
+            out.push_str(" bytes");
+            for byte in bytes {
+                write!(out, " {byte}").expect("writing to a string cannot fail");
+            }
+        }
+        crate::ir::StaticInit::Int(value) => {
+            write!(out, " {value}").expect("writing to a string cannot fail");
+        }
+        crate::ir::StaticInit::Aggregate(entries) => {
+            out.push_str(" [");
+            for entry in entries {
+                dump_static_init(unit, entry, out);
+            }
+            out.push_str(" ]");
+        }
+        crate::ir::StaticInit::Address { of, offset } => {
+            write!(out, " address {:?} {offset}", unit.static_object(*of).name)
+                .expect("writing to a string cannot fail");
         }
     }
 }

@@ -946,6 +946,20 @@ pub enum StaticInit {
     /// writes the object (6.7.9 p14 and p21), so that a large array is not
     /// as large in the IR.
     Bytes(Vec<u8>),
+    /// A struct's members or an array's elements, in order, each its own
+    /// starting value, and zero for every one past the last given: a
+    /// constant shaped like its type. A union's is its first member's
+    /// alone. See ADR-0137.
+    Aggregate(Vec<StaticInit>),
+    /// The address of the object `of` plus `offset` bytes: an address
+    /// constant (C17 6.6 p9), which has no value until the program is
+    /// linked.
+    Address {
+        /// The object it points into.
+        of: StaticId,
+        /// How far into it, in bytes.
+        offset: u64,
+    },
 }
 
 /// What an operation computes.
@@ -2556,6 +2570,13 @@ impl TranslationUnit {
         let id = StaticId(u32::try_from(self.statics.len()).expect("fewer than 2^32 statics"));
         self.statics.push(object);
         id
+    }
+
+    /// Give the object `id` the value it starts with, once every object an
+    /// address in it may name has an id: the C frontend works out a
+    /// file-scope initializer after it has made every file-scope object.
+    pub fn set_static_init(&mut self, id: StaticId, init: StaticInit) {
+        self.statics[id.index()].init = init;
     }
 
     /// The object with static storage duration an id names.
