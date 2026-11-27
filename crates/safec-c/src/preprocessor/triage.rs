@@ -455,6 +455,8 @@ mod tests {
     /// skipped group; an assertion fails. Or read the carriage return that
     /// ends a CRLF line as a character after its `#`; the `#\r` rows fail.
     /// Or refuse a null directive in a compiled group; the `#` rows fail.
+    /// Or let white space outside ASCII after a null directive's `#` pass;
+    /// the `#\u{a0}` row fails.
     #[test]
     fn each_line_goes_where_its_kind_is_read() {
         for (text, compiled, skipped) in [
@@ -481,6 +483,12 @@ mod tests {
             ("%: ", "passed over", "passed over"),
             ("#\r", "passed over", "passed over"),
             ("# \t\r", "passed over", "passed over"),
+            ("# /* c */", "passed over", "passed over"),
+            ("#\u{a0}", "refused", "refused"),
+            // A null directive only because the lexer leaves a `\` as a
+            // character: a lexer that read the splice would join the line
+            // below, which `clang` reads as a directive, and pass both over.
+            ("#\\", "refused", "refused"),
         ] {
             assert_eq!(kind(text, false), compiled, "{text:?} compiled");
             assert_eq!(kind(text, true), skipped, "{text:?} skipped");
