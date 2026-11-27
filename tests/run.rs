@@ -374,7 +374,7 @@ programs! {
     /// lengths, and a static one written to (#1244). Mutations: put the
     /// `SC0304` refusal back in `Checker::check_initialized`, and this does
     /// not build; copy one byte fewer in `Lowering::store_string`, and it
-    /// exits 2; write a static's bytes as a private constant in
+    /// fails; write a static's bytes as a private constant in
     /// `Emitter::global`, and the write faults.
     a_char_array_takes_its_length_and_bytes_from_a_string_literal,
     /// The bytes of a local array past its string literal are zero, not what
@@ -386,7 +386,7 @@ programs! {
     /// named `memcpy`, which C17 7.1.3 p1 allows without the header, are
     /// neither called nor named by an initializer's fill and copy (#1244
     /// review). Mutations: take the program's `memset` in
-    /// `Lowering::library_own`, and this exits 1; leave the program's name
-    /// alone in `Emitter::name`, and it exits 2.
+    /// `Lowering::library_own`, or leave the program's name alone in
+    /// `Emitter::name`, and this fails.
     an_initializer_calls_no_memset_the_program_has,
 }

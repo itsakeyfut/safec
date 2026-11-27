@@ -1235,7 +1235,8 @@ impl Lowering<'_> {
     /// `a_char_array_longer_than_its_string_literal_is_zero_filled` exits
     /// with the stale bytes' sum. Mutation: copy one byte fewer; the run of
     /// `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
-    /// exits 2.
+    /// fails, and `a_char_array_from_a_string_literal_is_bounded_by_its_own_length`
+    /// shows the shorter copy.
     fn store_string(
         &mut self,
         builder: &mut Builder,
@@ -1331,7 +1332,7 @@ impl Lowering<'_> {
     /// backend writes it as LLVM's own, under a name no program has.
     ///
     /// Mutation: take the program's where it has one; the run of
-    /// `an_initializer_calls_no_memset_the_program_has` exits 1.
+    /// `an_initializer_calls_no_memset_the_program_has` fails.
     fn library_own(&mut self, name: &'static str, at: Span) -> FuncId {
         if let Some(&id) = self.own.get(name) {
             return id;

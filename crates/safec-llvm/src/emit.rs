@@ -120,7 +120,7 @@ use refused::Refused;
 /// `memset`, which C17 7.1.3 p1 allows where the header is not included,
 /// was what a local array's zero fill called (#1244 review). Mutation:
 /// leave the name alone; the run of
-/// `an_initializer_calls_no_memset_the_program_has` exits with 88.
+/// `an_initializer_calls_no_memset_the_program_has` fails.
 const LOWERED_TO: [&str; 3] = ["memcpy", "memmove", "memset"];
 
 /// What a step of writing answers: what it wrote, or that it refused and said
@@ -2118,8 +2118,8 @@ impl Emitter<'_> {
     /// refused (#1244 review). It returns its first argument, as the
     /// library's does.
     ///
-    /// Mutation: name it `@memset`; the run of
-    /// `an_initializer_calls_no_memset_the_program_has` does not build.
+    /// Mutation: name it as the library's; every struct copy's blessed LLVM
+    /// IR, `a_struct_crosses_a_call_as_win64_says` among them, changes.
     fn own_library(
         &mut self,
         made: &'static str,
