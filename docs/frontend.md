@@ -194,8 +194,8 @@ anonymous member are read (#1206, #1207), and so is a braced initializer
 (#1241), designators included (#1242); a GNU range, `[a ... b]`, is refused under `SC0207` until #1197 reads it.
 
 `SC0207` is the code for valid C the parser does not read yet, told apart
-from C it cannot parse where the parse failed. A compound literal, a prefixed
-string literal and the other constructs the parser does not read are
+from C it cannot parse where the parse failed. A prefixed string literal
+and the other constructs the parser does not read are
 reported under it, each naming the clause
 that makes it valid; `parser.rs::unread_keyword` and the checks beside it
 decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the

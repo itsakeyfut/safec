@@ -3954,24 +3954,55 @@ impl Parser<'_> {
         Some(ty)
     }
 
-    /// The `)` closing a type name, and a refusal of the compound literal a
-    /// `{` after it would begin (C17 6.5.2.5), which is not read yet.
+    /// The `)` closing a type name.
     fn close_type_name(&mut self, diagnostics: &mut DiagnosticSink) -> Option<()> {
         self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
-        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            self.report_unread(
-                Unread {
-                    what: "a compound literal",
-                    clause: "6.5.2.5",
-                },
-                diagnostics,
-            );
-            return None;
-        }
         Some(())
     }
 
-    /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4.
+    /// A compound literal, `( type-name ) { initializer-list }` (C17
+    /// 6.5.2.5), the `{` next and `start` its `(`, with whatever postfix
+    /// operators follow it, since it is a postfix expression: `(struct
+    /// S){1}.a` and `(int[]){1, 2}[1]`. An array of unknown size is
+    /// completed by its list as a declarator's is (p4).
+    fn compound_literal(
+        &mut self,
+        start: Span,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> ExprId {
+        let Some(init) = self.initializer_list(diagnostics) else {
+            return self.ast.push_expr(Expr::Error { span: start });
+        };
+        // **`{ "ab" }` completes a character array as `"ab"` does** (C17
+        // 6.7.9 p14, p22), with the literal's length and its null, where
+        // the items' count would leave one byte. A declarator's list is
+        // read as the literal itself by `Parser::initializer`; this one is
+        // kept a list, which `initializer::Shapes` reads the same way, and
+        // only its length is the literal's. Mutation: complete it from the
+        // list alone; the run of `a_compound_literal_is_an_unnamed_object`
+        // does not build.
+        let literal = match &init {
+            Initializer::List { items, .. } if self.takes_braced_literal(ty) => {
+                match items.as_slice() {
+                    [Initializer::Expr(id)]
+                        if matches!(self.ast.expr(*id), Expr::String { .. }) =>
+                    {
+                        Some(Initializer::Expr(*id))
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+        let ty = self.completed(ty, Some(literal.as_ref().unwrap_or(&init)));
+        let span = self.join(start, self.previous().span, diagnostics);
+        let literal = self.ast.push_expr(Expr::Compound { ty, init, span });
+        self.postfix_from(literal, start, diagnostics)
+    }
+
+    /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4. With
+    /// a `{` after the `)`, a compound literal instead (6.5.2.5).
     fn cast(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let start = self.advance().span;
         let Some(ty) = self.type_name(diagnostics) else {
@@ -3979,6 +4010,9 @@ impl Parser<'_> {
         };
         if self.close_type_name(diagnostics).is_none() {
             return self.ast.push_expr(Expr::Error { span: start });
+        }
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            return self.compound_literal(start, ty, diagnostics);
         }
         self.deeper(
             diagnostics,
@@ -3993,7 +4027,9 @@ impl Parser<'_> {
 
     /// `sizeof ( type-name )` or `sizeof unary-expression`, with the
     /// `sizeof` here. C17 6.5.3.4. A `(` that begins no type name begins the
-    /// operand, so `sizeof (x)` is the size of `x`.
+    /// operand, so `sizeof (x)` is the size of `x`; and one that does, with
+    /// a `{` after its `)`, begins a compound literal that is the operand,
+    /// so `sizeof (int[]){1, 2}` is that literal's size (6.5.2.5).
     fn sizeof(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let start = self.advance().span;
         if self.check(TokenKind::Punct(Punct::LeftParen)) && self.type_name_follows() {
@@ -4003,6 +4039,13 @@ impl Parser<'_> {
             };
             if self.close_type_name(diagnostics).is_none() {
                 return self.ast.push_expr(Expr::Error { span: start });
+            }
+            // `sizeof (T){...}` is the size of a compound literal, an
+            // expression, not of the type name alone.
+            if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+                let operand = self.compound_literal(start, ty, diagnostics);
+                let span = self.join(start, self.previous().span, diagnostics);
+                return self.ast.push_expr(Expr::SizeofExpr { operand, span });
             }
             let span = self.join(start, self.previous().span, diagnostics);
             return self.ast.push_expr(Expr::SizeofType { ty, span });
@@ -4022,7 +4065,18 @@ impl Parser<'_> {
     fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         // The token the primary starts at, for the reason `climb` gives.
         let first = self.peek().span;
-        let mut base = self.primary(diagnostics);
+        let base = self.primary(diagnostics);
+        self.postfix_from(base, first, diagnostics)
+    }
+
+    /// The postfix operators after `base`, which starts at `first`.
+    fn postfix_from(
+        &mut self,
+        base: ExprId,
+        first: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> ExprId {
+        let mut base = base;
 
         while !self.failed {
             let TokenKind::Punct(punct) = self.peek().kind else {

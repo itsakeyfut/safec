@@ -779,6 +779,19 @@ pub enum Expr {
         /// The `sizeof` and its operand.
         span: Span,
     },
+    /// `( type-name ) { initializer-list }`, a compound literal: an unnamed
+    /// object of the type, initialized by the list (C17 6.5.2.5), with
+    /// automatic storage in a block and static storage outside one (p5). An
+    /// lvalue (p4).
+    Compound {
+        /// The object's type, an array of unknown size completed by the
+        /// list as a declarator's is (p4, `Parser::completed`).
+        ty: TypeId,
+        /// What it is initialized with: always a braced list.
+        init: Initializer,
+        /// The opening parenthesis through the `}`.
+        span: Span,
+    },
     /// `( type-name ) cast-expression`. C17 6.5.4.
     Cast {
         /// The type converted to.
@@ -1188,6 +1201,7 @@ impl Expr {
             Self::SizeofType { .. } => "SizeofType",
             Self::SizeofExpr { .. } => "SizeofExpr",
             Self::Cast { .. } => "Cast",
+            Self::Compound { .. } => "Compound",
             Self::Comma { .. } => "Comma",
             Self::VaOp { .. } => "VaOp",
             Self::VaArg { .. } => "VaArg",
@@ -1214,6 +1228,7 @@ impl Expr {
             | Self::SizeofType { span, .. }
             | Self::SizeofExpr { span, .. }
             | Self::Cast { span, .. }
+            | Self::Compound { span, .. }
             | Self::Comma { span, .. }
             | Self::VaOp { span, .. }
             | Self::VaArg { span, .. }
@@ -1292,6 +1307,9 @@ impl Expr {
                 out.push(*callee);
                 out.extend(arguments.iter().copied());
             }
+            // Each item, and each designator's index, as the walks that
+            // resolve and type a declarator's list reach them.
+            Self::Compound { init, .. } => out.extend(init.exprs()),
         }
     }
 }

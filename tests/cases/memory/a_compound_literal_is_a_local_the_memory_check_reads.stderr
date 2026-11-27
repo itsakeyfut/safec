@@ -1,0 +1,9 @@
+error[SC0412]: this reaches 12 bytes into an object of 8 bytes
+   ╭─[ a_compound_literal_is_a_local_the_memory_check_reads.c:8:5 ]
+   │
+ 8 │     return p[2];
+   │     ──────┬─────  
+   │           ╰─────── wider than the object it reaches
+───╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

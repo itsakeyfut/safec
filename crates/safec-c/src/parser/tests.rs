@@ -711,16 +711,6 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "a prefixed string literal",
             "6.4.5",
         ),
-        (
-            "int main(void) { return (int){0}; }\n",
-            "a compound literal",
-            "6.5.2.5",
-        ),
-        (
-            "int main(void) { return sizeof(int){0}; }\n",
-            "a compound literal",
-            "6.5.2.5",
-        ),
     ];
     let malformed = [
         "int main(void) { case 1: return 0; }\n",

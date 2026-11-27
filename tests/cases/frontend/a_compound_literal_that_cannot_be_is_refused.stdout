@@ -1,0 +1,74 @@
+Declaration a_compound_literal_that_cannot_be_is_refused.c:1:1 "struct U"
+Declaration a_compound_literal_that_cannot_be_is_refused.c:3:1 "f" "int (void)"
+Declaration a_compound_literal_that_cannot_be_is_refused.c:5:1 "non_constant" "int *"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:5:21 "int[1]"
+    InitializerList a_compound_literal_that_cannot_be_is_refused.c:5:28
+      Call a_compound_literal_that_cannot_be_is_refused.c:5:29
+        Identifier a_compound_literal_that_cannot_be_is_refused.c:5:29 "f"
+Function a_compound_literal_that_cannot_be_is_refused.c:7:1 "in_a_block" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:7:22
+    Declaration a_compound_literal_that_cannot_be_is_refused.c:8:5 static "p" "int *"
+      Compound a_compound_literal_that_cannot_be_is_refused.c:8:21 "int[1]"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:8:28
+          Number a_compound_literal_that_cannot_be_is_refused.c:8:29 "1"
+    Return a_compound_literal_that_cannot_be_is_refused.c:9:5
+      Unary a_compound_literal_that_cannot_be_is_refused.c:9:12 "*"
+        Identifier a_compound_literal_that_cannot_be_is_refused.c:9:13 "p"
+Function a_compound_literal_that_cannot_be_is_refused.c:12:1 "of_void" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:12:19
+    Expression a_compound_literal_that_cannot_be_is_refused.c:13:5
+      Compound a_compound_literal_that_cannot_be_is_refused.c:13:5 "void"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:13:11
+          Number a_compound_literal_that_cannot_be_is_refused.c:13:12 "0"
+    Return a_compound_literal_that_cannot_be_is_refused.c:14:5
+      Number a_compound_literal_that_cannot_be_is_refused.c:14:12 "0"
+Function a_compound_literal_that_cannot_be_is_refused.c:17:1 "of_a_function" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:17:25
+    Expression a_compound_literal_that_cannot_be_is_refused.c:18:5
+      Compound a_compound_literal_that_cannot_be_is_refused.c:18:5 "int (void)"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:18:16
+          Number a_compound_literal_that_cannot_be_is_refused.c:18:17 "0"
+    Return a_compound_literal_that_cannot_be_is_refused.c:19:5
+      Number a_compound_literal_that_cannot_be_is_refused.c:19:12 "0"
+Function a_compound_literal_that_cannot_be_is_refused.c:22:1 "too_many" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:22:20
+    Return a_compound_literal_that_cannot_be_is_refused.c:23:5
+      Subscript a_compound_literal_that_cannot_be_is_refused.c:23:12
+        Compound a_compound_literal_that_cannot_be_is_refused.c:23:12 "int[1]"
+          InitializerList a_compound_literal_that_cannot_be_is_refused.c:23:20
+            Number a_compound_literal_that_cannot_be_is_refused.c:23:21 "1"
+            Number a_compound_literal_that_cannot_be_is_refused.c:23:24 "2"
+        Number a_compound_literal_that_cannot_be_is_refused.c:23:27 "0"
+Function a_compound_literal_that_cannot_be_is_refused.c:26:1 "incomplete" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:26:22
+    Expression a_compound_literal_that_cannot_be_is_refused.c:27:5
+      Compound a_compound_literal_that_cannot_be_is_refused.c:27:5 "struct U"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:27:15
+          Number a_compound_literal_that_cannot_be_is_refused.c:27:16 "0"
+    Expression a_compound_literal_that_cannot_be_is_refused.c:28:5
+      Compound a_compound_literal_that_cannot_be_is_refused.c:28:5 "struct U[1]"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:28:18
+          Number a_compound_literal_that_cannot_be_is_refused.c:28:19 "0"
+    Return a_compound_literal_that_cannot_be_is_refused.c:29:5
+      Number a_compound_literal_that_cannot_be_is_refused.c:29:12 "0"
+Function a_compound_literal_that_cannot_be_is_refused.c:32:1 "an_array_from_one" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:32:29
+    Declaration a_compound_literal_that_cannot_be_is_refused.c:33:5 "a" "int[2]"
+      Compound a_compound_literal_that_cannot_be_is_refused.c:33:16 "int[2]"
+        InitializerList a_compound_literal_that_cannot_be_is_refused.c:33:24
+          Number a_compound_literal_that_cannot_be_is_refused.c:33:25 "1"
+          Number a_compound_literal_that_cannot_be_is_refused.c:33:28 "2"
+    Return a_compound_literal_that_cannot_be_is_refused.c:34:5
+      Subscript a_compound_literal_that_cannot_be_is_refused.c:34:12
+        Identifier a_compound_literal_that_cannot_be_is_refused.c:34:12 "a"
+        Number a_compound_literal_that_cannot_be_is_refused.c:34:14 "0"
+Function a_compound_literal_that_cannot_be_is_refused.c:37:1 "written_though_const" "int (void)"
+  Compound a_compound_literal_that_cannot_be_is_refused.c:37:32
+    Expression a_compound_literal_that_cannot_be_is_refused.c:38:5
+      Assign a_compound_literal_that_cannot_be_is_refused.c:38:5 "="
+        Compound a_compound_literal_that_cannot_be_is_refused.c:38:5 "const int"
+          InitializerList a_compound_literal_that_cannot_be_is_refused.c:38:16
+            Number a_compound_literal_that_cannot_be_is_refused.c:38:17 "0"
+        Number a_compound_literal_that_cannot_be_is_refused.c:38:22 "1"
+    Return a_compound_literal_that_cannot_be_is_refused.c:39:5
+      Number a_compound_literal_that_cannot_be_is_refused.c:39:12 "0"

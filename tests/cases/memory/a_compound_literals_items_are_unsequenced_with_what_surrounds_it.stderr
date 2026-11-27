@@ -1,0 +1,36 @@
+error[SC0409]: this writes `p`, which another operand of the same expression writes too
+   ╭─[ a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:7:5 ]
+   │
+ 7 │     p = (int *){p++};
+   │     ┬           ─┬─  
+   │     ╰──────────────── written here as well
+   │                  │   
+   │                  ╰─── written here
+───╯
+  = note: C17 6.5 p2 makes this undefined wherever both are evaluated: nothing orders an operator's operands against each other (6.5 p3)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before this expression
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:14:21 ]
+    │
+ 14 │     return h((int){*q}, *(q = &x));
+    │                     ┬     ───┬──  
+    │                     ╰───────────── read here
+    │                              │    
+    │                              ╰──── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call
+error[SC0409]: this reads `q`, which another argument of the same call writes
+    ╭─[ a_compound_literals_items_are_unsequenced_with_what_surrounds_it.c:20:15 ]
+    │
+ 20 │     return h(*q, (int){*(q = &x)});
+    │               ┬          ───┬──  
+    │               ╰────────────────── read here
+    │                             │    
+    │                             ╰──── written here
+────╯
+  = note: C17 6.5 p2 makes this call undefined wherever both are evaluated: nothing orders a call's arguments against each other (6.5 p3), only before the call (6.5.2.2 p10)
+  = note: this check belongs to safety level 1
+  = help: assign it in a statement of its own before the call

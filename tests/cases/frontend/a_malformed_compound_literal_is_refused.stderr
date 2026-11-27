@@ -1,0 +1,7 @@
+error[SC0201]: expected `}` to close the initializer
+   ╭─[ a_malformed_compound_literal_is_refused.c:1:17 ]
+   │
+ 1 │ int x = (int){1 2};
+   │                 ┬  
+   │                 ╰── `}` to close the initializer is missing here
+───╯

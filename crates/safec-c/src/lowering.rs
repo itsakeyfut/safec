@@ -408,6 +408,7 @@ pub fn lower(
         refused_structs: HashSet::new(),
         memcpy: None,
         own: HashMap::new(),
+        compounds: HashMap::new(),
         vla_types: HashMap::new(),
         writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
@@ -550,6 +551,9 @@ struct Lowering<'a> {
     /// The `memcpy` and `memset` an initializer calls, each made once and
     /// never the program's. See [`Lowering::library_own`].
     own: HashMap<&'static str, FuncId>,
+    /// The static each compound literal outside a block is, made once. See
+    /// [`Lowering::compound_static`].
+    compounds: HashMap<ExprId, StaticId>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -910,6 +914,7 @@ fn sequences(expr: &Expr) -> bool {
         | Expr::Member { .. }
         | Expr::Assign { .. }
         | Expr::Call { .. }
+        | Expr::Compound { .. }
         | Expr::Subscript { .. }
         | Expr::SizeofType { .. }
         | Expr::SizeofExpr { .. }
@@ -1335,6 +1340,9 @@ impl<'a> Lowering<'a> {
             match self.ast.expr(at) {
                 Expr::Cast { operand, .. } if address => at = *operand,
                 Expr::String { .. } => break self.string(at),
+                Expr::Compound { .. } if !address => {
+                    break self.compound_static(at, diagnostics)?;
+                }
                 Expr::Identifier { .. } => {
                     let object = self.static_named(at)?;
                     let array = matches!(
@@ -1569,6 +1577,73 @@ impl<'a> Lowering<'a> {
             );
         }
         Some(())
+    }
+
+    /// The unnamed object of the compound literal `id` outside a block, an
+    /// object with static storage duration (C17 6.5.2.5 p5) named with a
+    /// `.`, which no C identifier holds, made once and starting as its list
+    /// says, as a file-scope object does. Mutation: answer `None`; the run
+    /// of `a_compound_literal_is_an_unnamed_object` does not build.
+    fn compound_static(
+        &mut self,
+        id: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<StaticId> {
+        if let Some(&object) = self.compounds.get(&id) {
+            return Some(object);
+        }
+        let Expr::Compound { ty, init, span } = self.ast.expr(id) else {
+            unreachable!("asked of a compound literal")
+        };
+        let (ty, span) = (*ty, *span);
+        let ir_ty = self.ty(span, ty, diagnostics)?;
+        let start = self.static_init(init, ty, ir_ty, diagnostics)?;
+        let object = self.unit.push_static(Static {
+            name: format!(".compound.{}", self.compounds.len()),
+            ty: ir_ty,
+            linkage: Linkage::Internal,
+            init: start,
+            read_only: self.read_only(ty),
+        });
+        self.static_levels.insert(object, self.const_levels(ty));
+        self.compounds.insert(id, object);
+        Some(object)
+    }
+
+    /// The unnamed object of the compound literal `id` at block scope, a
+    /// local of its own initialized from its list where it is evaluated, as
+    /// a declarator's is, and again each time (C17 6.5.2.5 p5, p16): its
+    /// place, which an lvalue's reader takes. Its storage is the local's,
+    /// which the memory check names as it names any; where it ends, the
+    /// enclosing block's end, is the lifetime check's (Phase 6).
+    ///
+    /// Mutation: initialize it once, not where evaluated; the run of
+    /// `a_compound_literal_is_an_unnamed_object` reads an earlier turn's
+    /// value and exits 1.
+    fn compound(
+        &mut self,
+        builder: &mut Builder,
+        id: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Place> {
+        let Expr::Compound { ty, init, span } = self.ast.expr(id) else {
+            unreachable!("asked of a compound literal")
+        };
+        let (ty, span) = (*ty, *span);
+        let ir_ty = self.ty(span, ty, diagnostics)?;
+        let local = builder.function.push_local(ir_ty);
+        // Marked as a declarator's local is, so that a `const` one is
+        // storage the program may not modify however a pointer to it
+        // loses the qualifier (#1243 review). Mutation: mark nothing;
+        // `a_const_compound_literal_is_read_only` is silent.
+        if self.read_only(ty) {
+            builder.function.mark_read_only(local);
+        }
+        builder
+            .function
+            .mark_const_levels(local, self.const_levels(ty));
+        self.store_list(builder, local, ty, init, span, diagnostics)?;
+        Some(Place::local(local))
     }
 
     /// The initializer walk over this unit's tree and types. See
@@ -4906,6 +4981,7 @@ impl<'a> Lowering<'a> {
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Identifier { .. }
             | Expr::Member { .. }
             | Expr::Conditional { .. }
@@ -4969,6 +5045,7 @@ impl<'a> Lowering<'a> {
             | Expr::Member { .. }
             | Expr::VaOp { .. }
             | Expr::VaArg { .. }
+            | Expr::Compound { .. }
             | Expr::Error { .. } => false,
         }
     }
@@ -5085,6 +5162,7 @@ impl<'a> Lowering<'a> {
             Expr::Identifier { .. }
             | Expr::Subscript { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Member { .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Place(id));
@@ -5279,6 +5357,9 @@ impl<'a> Lowering<'a> {
                 Some(object) => places.push(self.reach_static(builder, object, *span)),
                 None => places.push(Place::local(self.local(id, diagnostics)?)),
             },
+            // The unnamed object a compound literal is, made and initialized
+            // where it is evaluated (C17 6.5.2.5 p5, p16).
+            Expr::Compound { .. } => places.push(self.compound(builder, id, diagnostics)?),
             // The array a literal is, through its address as any static is.
             Expr::String { span, .. } => {
                 let object = self.string(id);
@@ -5643,6 +5724,7 @@ impl<'a> Lowering<'a> {
             Expr::Identifier { .. }
             | Expr::Subscript { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Member { .. } => {
                 let place = places.pop().expect("a place");
                 if self
@@ -6224,6 +6306,7 @@ impl<'a> Lowering<'a> {
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Identifier { .. }
             | Expr::Binary { .. }
             | Expr::Assign { .. }
@@ -7018,6 +7101,7 @@ impl<'a> Lowering<'a> {
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Assign { .. }
@@ -7596,6 +7680,12 @@ impl<'a> Lowering<'a> {
                     work.extend(arguments.iter().rev().map(|&argument| (argument, false)));
                     work.push((*callee, false));
                 }
+                // Its items are evaluated where it is, indeterminately
+                // sequenced among themselves (C17 6.7.9 p23), and not
+                // before what surrounds it (6.8 p4).
+                Expr::Compound { init, .. } => {
+                    work.extend(init.exprs().into_iter().rev().map(|item| (item, false)));
+                }
                 Expr::Cast { operand, .. } => work.push((*operand, false)),
                 // A member is refused before anything reads it, the other two
                 // name nothing, and `sizeof` evaluates nothing.
@@ -7705,6 +7795,7 @@ impl<'a> Lowering<'a> {
             | Expr::Character { .. }
             | Expr::Length { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Identifier { .. }
             | Expr::Unary { .. }
             | Expr::Conditional { .. }
@@ -7896,6 +7987,14 @@ impl<'a> Lowering<'a> {
                 Expr::Subscript { base, index, .. } => {
                     work.push((*index, ordered));
                     work.push((*base, ordered));
+                }
+                // As its surroundings are: C17 6.8 p4 makes no full
+                // expression of a compound literal's list, so nothing
+                // orders its items before the store. Mutation: `true`;
+                // `stored` in `a_compound_literals_items_are_unsequenced_with_what_surrounds_it`
+                // is silent.
+                Expr::Compound { init, .. } => {
+                    work.extend(init.exprs().into_iter().map(|item| (item, ordered)));
                 }
                 Expr::Cast { operand, .. } => work.push((*operand, ordered)),
                 // Its operand is not evaluated, so it writes nothing.
@@ -8093,6 +8192,7 @@ fn writes_below(ast: &Ast) -> Vec<bool> {
             Expr::Call {
                 callee, arguments, ..
             } => below(&[*callee]) || below(arguments),
+            Expr::Compound { init, .. } => below(&init.exprs()),
             Expr::Member { base, .. } => below(&[*base]),
             Expr::SizeofExpr { operand, .. } | Expr::Cast { operand, .. } => below(&[*operand]),
             Expr::Number { .. }

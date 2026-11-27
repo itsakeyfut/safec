@@ -441,6 +441,7 @@ pub fn check(
     checker.check_definition_parameters(ast, diagnostics);
     checker.check_incomplete_values(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
+    checker.check_compounds(ast, diagnostics);
     checker.check_static_initializers(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
     checker.check_switches(ast, diagnostics);
@@ -453,6 +454,41 @@ pub fn check(
         operated: checker.operated,
         controlling: checker.controlling,
     }
+}
+
+/// `id`, and every item of a compound literal within it, through nested
+/// ones: what a file-scope initializer holds to be constant. An item is
+/// held whatever surrounds its literal, under `sizeof` too, because C17
+/// 6.5.2.5 p3 asks it of every compound literal outside a function, where
+/// the other operands of an expression answer only to 6.6. One visit per
+/// node: a literal's items are exactly its children.
+fn compound_items(ast: &Ast, id: ExprId) -> Vec<ExprId> {
+    let mut found = vec![id];
+    let mut work = vec![id];
+    while let Some(at) = work.pop() {
+        let children = subexpressions(ast.expr(at));
+        if matches!(ast.expr(at), Expr::Compound { .. }) {
+            found.extend(children.iter().copied());
+        }
+        work.extend(children);
+    }
+    found
+}
+
+/// Whether a compound literal `id` evaluates is anywhere in it: one under
+/// `sizeof` is not evaluated (C17 6.5.3.4 p2), so it makes no object to
+/// take the address of. Mutation: walk into `sizeof`;
+/// `a_compound_literal_under_sizeof_is_a_constant` reports `SC0317`.
+fn holds_compound(ast: &Ast, id: ExprId) -> bool {
+    let mut work = vec![id];
+    while let Some(at) = work.pop() {
+        match ast.expr(at) {
+            Expr::Compound { .. } => return true,
+            Expr::SizeofExpr { .. } => {}
+            expr => work.extend(subexpressions(expr)),
+        }
+    }
+    false
 }
 
 /// Each [`Expr::Length`] a braced list gave an array of unknown size, with
@@ -483,6 +519,28 @@ fn counted_lengths(ast: &Ast) -> HashMap<ExprId, (TypeId, Initializer)> {
         };
         if matches!(ast.expr(*length), Expr::Length { span: counted, .. } if counted == span) {
             counted.insert(*length, (declarator.declaration.ty, init.clone()));
+        }
+    }
+    // And each compound literal's, completed as a declarator's is (C17
+    // 6.5.2.5 p4).
+    for id in ast.expr_ids() {
+        let Expr::Compound {
+            ty,
+            init: init @ Initializer::List { span, .. },
+            ..
+        } = ast.expr(id)
+        else {
+            continue;
+        };
+        let Type::Array {
+            length: Some(length),
+            ..
+        } = ast.ty(*ty)
+        else {
+            continue;
+        };
+        if matches!(ast.expr(*length), Expr::Length { span: counted, .. } if counted == span) {
+            counted.insert(*length, (*ty, init.clone()));
         }
     }
     counted
@@ -587,6 +645,7 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
         }
         | Expr::SizeofType { ty: _, span: _ }
         | Expr::Error { span: _ } => Vec::new(),
+        Expr::Compound { init, .. } => init.exprs(),
         Expr::VaOp {
             op: _,
             operands,
@@ -995,11 +1054,21 @@ impl Checker<'_> {
         for (declarators, file_scope) in at_file_scope.chain(in_a_block) {
             // Each expression of a list is held to it as one alone is: what
             // each initializes is a constant or an address (C17 6.7.9 p4).
+            // And each item of a compound literal they hold, which has
+            // static storage at file scope and is held to the same rule
+            // (C17 6.5.2.5 p3).
             let each = declarators.iter().flat_map(|declarator| {
                 declarator
                     .init
                     .iter()
                     .flat_map(Initializer::exprs)
+                    .flat_map(move |init| match file_scope {
+                        true => compound_items(ast, init),
+                        // In a block a literal it evaluates is refused
+                        // whole below, and one it does not evaluate makes
+                        // no object.
+                        false => vec![init],
+                    })
                     .map(move |init| (declarator, init))
             });
             for (declarator, init) in each {
@@ -1036,7 +1105,11 @@ impl Checker<'_> {
                     }
                     continue;
                 }
-                if self.values[init.index()].is_some() || self.address_constant(ast, init) {
+                // A compound literal in a block has automatic storage, so its
+                // address is no address constant there (6.5.2.5 p5).
+                let constant_address =
+                    self.address_constant(ast, init) && (file_scope || !holds_compound(ast, init));
+                if self.values[init.index()].is_some() || constant_address {
                     continue;
                 }
                 // **A difference of two address constants is this
@@ -1146,8 +1219,12 @@ impl Checker<'_> {
             if designator {
                 id = match *ast.expr(id) {
                     // A name, or a string literal, which has static storage
-                    // duration (C17 6.4.5 p6).
-                    Expr::Identifier { .. } | Expr::String { .. } => return true,
+                    // duration (C17 6.4.5 p6), or a compound literal, which
+                    // does outside a block (6.5.2.5 p5; a block's is asked
+                    // by `check_static_initializers`).
+                    Expr::Identifier { .. } | Expr::String { .. } | Expr::Compound { .. } => {
+                        return true;
+                    }
                     Expr::Subscript { base, index, .. } => {
                         designator = false;
                         if constant(index) {
@@ -1521,9 +1598,12 @@ impl Checker<'_> {
                 // type, which the arm above takes. A braced list is
                 // `Checker::check_list`'s, so whatever initializer reaches
                 // here is neither. Every kind of
-                // expression is named, so that the one a compound literal
-                // becomes stops the build here rather than being refused as
-                // this; the string arm is kept only so the match is whole.
+                // expression is named, so that a kind added later stops the
+                // build here rather than being refused as this; a compound
+                // literal is refused, since an array is not initialized from
+                // another (`an_array_from_one` in
+                // `a_compound_literal_that_cannot_be_is_refused`), and the
+                // string arm is kept only so the match is whole.
                 Type::Array { .. }
                     if initializer.expr().is_some_and(|init| match ast.expr(init) {
                         Expr::String { .. } => false,
@@ -1544,6 +1624,7 @@ impl Checker<'_> {
                         | Expr::SizeofType { .. }
                         | Expr::SizeofExpr { .. }
                         | Expr::Cast { .. }
+                        | Expr::Compound { .. }
                         | Expr::Comma { .. }
                         | Expr::Error { .. } => true,
                     }) =>
@@ -1575,6 +1656,53 @@ impl Checker<'_> {
                     .with_label(Label::secondary(init_span, "this initializer"))
                     .with_note(clause),
             );
+        }
+    }
+
+    /// Hold each compound literal's list to its object, as a declarator's is
+    /// (C17 6.5.2.5 p3, p4), reported at the literal.
+    fn check_compounds(&mut self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for id in ast.expr_ids() {
+            if let Expr::Compound { ty, init, span } = ast.expr(id) {
+                // A function or `void` has no object to initialize (p1).
+                if matches!(ast.ty(*ty), Type::Function { .. } | Type::Void) {
+                    let spelled = self.spelled(ast, *ty);
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "a compound literal cannot have type `{spelled}`"
+                        ))
+                        .with_code(INITIALIZED)
+                        .with_label(Label::primary(*span, "this compound literal"))
+                        .with_note("C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size"),
+                    );
+                    continue;
+                }
+                // **Nor does a struct, or an array of them, not complete
+                // here**: the lowering has no size to give its object, and
+                // reported nothing, so the function holding it lost its body
+                // and was checked as though it had none (#1243 review).
+                // Mutation: skip this; `incomplete` in
+                // `a_compound_literal_that_cannot_be_is_refused` is accepted.
+                let mut element = *ty;
+                while let Type::Array { element: inner, .. } = ast.ty(element) {
+                    element = *inner;
+                }
+                if matches!(ast.ty(element), Type::Struct { .. })
+                    && !self.resolution.complete_at(ast, element, id)
+                {
+                    let spelled = self.spelled(ast, element);
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "`{spelled}` is not complete here, and a compound literal cannot be one"
+                        ))
+                        .with_code(INCOMPLETE_OBJECT)
+                        .with_label(Label::primary(*span, "this compound literal"))
+                        .with_note("C17 6.5.2.5 p1: its type is a complete object type or an array of unknown size"),
+                    );
+                    continue;
+                }
+                self.check_list(ast, *ty, *span, init, diagnostics);
+            }
         }
     }
 
@@ -2570,6 +2698,7 @@ impl Checker<'_> {
             Expr::Number { .. }
             | Expr::Character { .. }
             | Expr::String { .. }
+            | Expr::Compound { .. }
             | Expr::Length { .. }
             | Expr::Identifier { .. }
             // Its value is known or it has none, as a constant's is.
@@ -3143,6 +3272,11 @@ impl Checker<'_> {
                     written: None,
                 }))
             }
+            // C17 6.5.2.5 p4: the unnamed object's type, an array of unknown
+            // size completed by its list (`Parser::completed`). What its list
+            // initializes is `Checker::check_compounds`'s, once every item
+            // is typed.
+            Expr::Compound { ty, .. } => Some(ty),
             // The parser counted it. Typed `int`, as a written length that
             // fits one is, since nothing but an array's type reads it.
             Expr::Length { value, .. } => {
@@ -4592,6 +4726,11 @@ impl Checker<'_> {
                 Some(Type::Function { .. }) => Designates::Function,
                 Some(_) => Designates::Object,
             },
+            // C17 6.5.2.5 p4: a compound literal is an lvalue.
+            Expr::Compound { .. } => match typed(id) {
+                None => Designates::Unknown,
+                Some(_) => Designates::Object,
+            },
             // C17 6.5.1 p4: a string literal is an lvalue.
             Expr::String { .. } => match typed(id) {
                 None => Designates::Unknown,
@@ -5852,6 +5991,9 @@ impl Checker<'_> {
             }
             // Counted, and so known.
             Expr::Length { value, .. } => Some(i128::from(value)),
+            // An object, whose value is no constant (6.6 p7 lists no compound
+            // literal among a constant's operands).
+            Expr::Compound { .. } => None,
             Expr::Enumerator { enumerator, .. } => self.enumerator_values[enumerator.index()],
             // To an integer type, the operand's value converted to it (6.3.1.3);
             // a pointer has no value here, and `(int *)0` is lowered as the

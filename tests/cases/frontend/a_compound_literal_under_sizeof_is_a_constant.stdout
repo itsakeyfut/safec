@@ -1,0 +1,23 @@
+Declaration a_compound_literal_under_sizeof_is_a_constant.c:1:1 static "buffer" "char[16]"
+Function a_compound_literal_under_sizeof_is_a_constant.c:3:1 "f" "int (int)"
+  Parameter a_compound_literal_under_sizeof_is_a_constant.c:3:7 "x" "int"
+  Compound a_compound_literal_under_sizeof_is_a_constant.c:3:14
+    Declaration a_compound_literal_under_sizeof_is_a_constant.c:4:5 static "n" "int"
+      SizeofExpr a_compound_literal_under_sizeof_is_a_constant.c:4:20
+        Compound a_compound_literal_under_sizeof_is_a_constant.c:4:27 "int[2]"
+          InitializerList a_compound_literal_under_sizeof_is_a_constant.c:4:34
+            Identifier a_compound_literal_under_sizeof_is_a_constant.c:4:35 "x"
+            Number a_compound_literal_under_sizeof_is_a_constant.c:4:38 "2"
+    Declaration a_compound_literal_under_sizeof_is_a_constant.c:5:5 static "offset" "char *"
+      Binary a_compound_literal_under_sizeof_is_a_constant.c:5:27 "+"
+        Identifier a_compound_literal_under_sizeof_is_a_constant.c:5:27 "buffer"
+        SizeofExpr a_compound_literal_under_sizeof_is_a_constant.c:5:36
+          Compound a_compound_literal_under_sizeof_is_a_constant.c:5:43 "int[2]"
+            InitializerList a_compound_literal_under_sizeof_is_a_constant.c:5:50
+              Number a_compound_literal_under_sizeof_is_a_constant.c:5:51 "1"
+              Number a_compound_literal_under_sizeof_is_a_constant.c:5:54 "2"
+    Return a_compound_literal_under_sizeof_is_a_constant.c:6:5
+      Binary a_compound_literal_under_sizeof_is_a_constant.c:6:12 "+"
+        Identifier a_compound_literal_under_sizeof_is_a_constant.c:6:12 "n"
+        Unary a_compound_literal_under_sizeof_is_a_constant.c:6:16 "*"
+          Identifier a_compound_literal_under_sizeof_is_a_constant.c:6:17 "offset"
