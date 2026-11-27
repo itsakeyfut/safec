@@ -10838,9 +10838,10 @@ cases! {
         // has closed, one after a macro that becomes `!` and no call, and
         // one after the line has closed a `(` a macro opened, and one after
         // a macro that names itself, which `left_open` follows once and
-        // stops. Found by review. Mutations: refuse every `defined` after a `(`; take every
-        // object-like macro for a call's name; or never close what a macro
-        // opened; the case is refused.
+        // stops. Found by review. Mutations: refuse every `defined` after a
+        // `(`; take every object-like macro for a call's name; or never
+        // close what a macro opened; the case is refused. Or let
+        // `left_open` follow a macro again on its path; the case fails.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below
