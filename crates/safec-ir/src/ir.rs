@@ -946,11 +946,15 @@ pub enum StaticInit {
     /// writes the object (6.7.9 p14 and p21), so that a large array is not
     /// as large in the IR.
     Bytes(Vec<u8>),
-    /// A struct's members or an array's elements, in order, each its own
-    /// starting value, and zero for every one past the last given: a
-    /// constant shaped like its type. A union's is its first member's
-    /// alone. See ADR-0137.
-    Aggregate(Vec<StaticInit>),
+    /// A struct's members or an array's elements an initializer writes,
+    /// each by its index, in increasing order, which the backend lays them
+    /// out by, and zero for every one not listed: a constant shaped like
+    /// its type, and **sparse**, so that
+    /// `static int t[1 << 24] = {[(1 << 24) - 1] = 1};` is one entry and
+    /// not sixteen million (#1242). A union's is the one member its
+    /// initializer leaves it holding (`initializer::Shapes::resolve`). See
+    /// ADR-0137.
+    Aggregate(Vec<(u64, StaticInit)>),
     /// The address of the object `of` plus `offset` bytes: an address
     /// constant (C17 6.6 p9), which has no value until the program is
     /// linked.

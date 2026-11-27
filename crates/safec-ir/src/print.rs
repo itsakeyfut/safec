@@ -731,9 +731,12 @@ fn dump_static_init(
         crate::ir::StaticInit::Int(value) => {
             write!(out, " {value}").expect("writing to a string cannot fail");
         }
+        // Each entry its index and a `:`, so that a run of bytes inside one
+        // is told from the entries after it.
         crate::ir::StaticInit::Aggregate(entries) => {
             out.push_str(" [");
-            for entry in entries {
+            for (index, entry) in entries {
+                write!(out, " {index}:").expect("writing to a string cannot fail");
                 dump_static_init(unit, entry, out);
             }
             out.push_str(" ]");

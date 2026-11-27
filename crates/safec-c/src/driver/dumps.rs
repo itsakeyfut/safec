@@ -10,8 +10,8 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
-    Ast, Declaration, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator, Initializer, Item,
-    Parameters, Stmt, StmtId, Storage, Type, TypeId, spell_type,
+    Ast, Declaration, Designator, EnumeratorId, Expr, ExprId, ForStart, InitDeclarator,
+    Initializer, Item, Parameters, Stmt, StmtId, Storage, Type, TypeId, spell_type,
 };
 use crate::diagnostics::Diagnostic;
 use crate::token::Token;
@@ -520,6 +520,31 @@ fn dump_initializer(
             for item in items {
                 dump_initializer(sources, ast, item, depth + 1, out);
             }
+        }
+        // Each designator a line, `.name` quoted and `[i]` its expression
+        // under it, then what it initializes.
+        Initializer::Designated {
+            designation,
+            init,
+            span,
+        } => {
+            dump_node(sources, "Designated", *span, depth, out);
+            out.push('\n');
+            for designator in designation {
+                match designator {
+                    Designator::Member(name) => {
+                        dump_node(sources, "Member", *name, depth + 1, out);
+                        writeln!(out, " {:?}", quoted(sources, *name))
+                            .expect("writing to a string cannot fail");
+                    }
+                    Designator::Index(index) => {
+                        dump_node(sources, "Index", ast.expr(*index).span(), depth + 1, out);
+                        out.push('\n');
+                        dump_expr(sources, ast, *index, depth + 2, out);
+                    }
+                }
+            }
+            dump_initializer(sources, ast, init, depth + 1, out);
         }
     }
 }

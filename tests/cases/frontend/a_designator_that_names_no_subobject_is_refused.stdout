@@ -1,0 +1,50 @@
+Declaration a_designator_that_names_no_subobject_is_refused.c:1:1 "struct P"
+  Field a_designator_that_names_no_subobject_is_refused.c:2:5 "x" "int"
+  Field a_designator_that_names_no_subobject_is_refused.c:2:5 "y" "int"
+Declaration a_designator_that_names_no_subobject_is_refused.c:5:1 "n" "int"
+Declaration a_designator_that_names_no_subobject_is_refused.c:6:1 "no_member" "struct P"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:6:22
+    Designated a_designator_that_names_no_subobject_is_refused.c:6:23
+      Member a_designator_that_names_no_subobject_is_refused.c:6:24 "z"
+      Number a_designator_that_names_no_subobject_is_refused.c:6:28 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:7:1 "past" "int[3]"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:7:15
+    Designated a_designator_that_names_no_subobject_is_refused.c:7:16
+      Index a_designator_that_names_no_subobject_is_refused.c:7:17
+        Number a_designator_that_names_no_subobject_is_refused.c:7:17 "3"
+      Number a_designator_that_names_no_subobject_is_refused.c:7:22 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:8:1 "negative" "int[3]"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:8:19
+    Designated a_designator_that_names_no_subobject_is_refused.c:8:20
+      Index a_designator_that_names_no_subobject_is_refused.c:8:21
+        Unary a_designator_that_names_no_subobject_is_refused.c:8:21 "-"
+          Number a_designator_that_names_no_subobject_is_refused.c:8:22 "1"
+      Number a_designator_that_names_no_subobject_is_refused.c:8:27 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:9:1 "not_constant" "int[3]"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:9:23
+    Designated a_designator_that_names_no_subobject_is_refused.c:9:24
+      Index a_designator_that_names_no_subobject_is_refused.c:9:25
+        Identifier a_designator_that_names_no_subobject_is_refused.c:9:25 "n"
+      Number a_designator_that_names_no_subobject_is_refused.c:9:30 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:10:1 "index_of_a_struct" "struct P"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:10:30
+    Designated a_designator_that_names_no_subobject_is_refused.c:10:31
+      Index a_designator_that_names_no_subobject_is_refused.c:10:32
+        Number a_designator_that_names_no_subobject_is_refused.c:10:32 "0"
+      Number a_designator_that_names_no_subobject_is_refused.c:10:37 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:11:1 "member_of_an_array" "int[2]"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:11:29
+    Designated a_designator_that_names_no_subobject_is_refused.c:11:30
+      Member a_designator_that_names_no_subobject_is_refused.c:11:31 "x"
+      Number a_designator_that_names_no_subobject_is_refused.c:11:35 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:12:1 "scalar" "int"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:12:14
+    Designated a_designator_that_names_no_subobject_is_refused.c:12:15
+      Member a_designator_that_names_no_subobject_is_refused.c:12:16 "x"
+      Number a_designator_that_names_no_subobject_is_refused.c:12:20 "1"
+Declaration a_designator_that_names_no_subobject_is_refused.c:13:1 "scalar_then_more" "int"
+  InitializerList a_designator_that_names_no_subobject_is_refused.c:13:24
+    Designated a_designator_that_names_no_subobject_is_refused.c:13:25
+      Member a_designator_that_names_no_subobject_is_refused.c:13:26 "x"
+      Number a_designator_that_names_no_subobject_is_refused.c:13:30 "1"
+    Number a_designator_that_names_no_subobject_is_refused.c:13:33 "2"

@@ -1,0 +1,8 @@
+error[SC0207]: a designation without `=` is not read yet
+   ╭─[ a_designation_without_equals_is_not_read_yet.c:1:19 ]
+   │
+ 1 │ int gnu[4] = {[2] 3};
+   │                   ┬  
+   │                   ╰── a GNU designation
+───╯
+  = note: a gap in this compiler: `[i] value` is GNU's older spelling of `[i] = value`

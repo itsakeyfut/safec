@@ -127,7 +127,11 @@ const LOWERED_TO: [&str; 3] = ["memcpy", "memmove", "memset"];
 /// members of a packed struct `size` bytes long: each piece, and `[n x i8]
 /// zeroinitializer` for each gap before one and after the last. Its types,
 /// and its values.
-fn packed(mut pieces: Vec<(u64, u64, String, String)>, size: u64) -> (String, String) {
+///
+/// `None` where two pieces overlap, which a union holding two members would
+/// be: written one after the other they would move every member after them
+/// (#1242 review).
+fn packed(mut pieces: Vec<(u64, u64, String, String)>, size: u64) -> Option<(String, String)> {
     pieces.sort_by_key(|piece| piece.0);
     let mut types = Vec::new();
     let mut values = Vec::new();
@@ -139,13 +143,16 @@ fn packed(mut pieces: Vec<(u64, u64, String, String)>, size: u64) -> (String, St
         }
     };
     for (offset, length, ty, value) in pieces {
+        if offset < at {
+            return None;
+        }
         gap(at, offset, &mut types, &mut values);
         values.push(format!("{ty} {value}"));
         types.push(ty);
         at = offset + length;
     }
     gap(at, size, &mut types, &mut values);
-    (types.join(", "), values.join(", "))
+    Some((types.join(", "), values.join(", ")))
 }
 
 /// What a step of writing answers: what it wrote, or that it refused and said
@@ -719,9 +726,13 @@ impl Emitter<'_> {
                 match self.pieces(object.ty, &object.init, 0, &mut pieces) {
                     Ok(()) => {
                         let size = self.unit.size_of(object.ty).unwrap_or(0);
-                        let (types, values) = packed(pieces, size);
-                        spelled = format!("<{{ {types} }}>");
-                        Ok(format!("<{{ {values} }}>"))
+                        match packed(pieces, size) {
+                            Some((types, values)) => {
+                                spelled = format!("<{{ {types} }}>");
+                                Ok(format!("<{{ {values} }}>"))
+                            }
+                            None => self.refuse("two values for one byte of a static"),
+                        }
                     }
                     Err(refused) => Err(refused),
                 }
@@ -812,14 +823,20 @@ impl Emitter<'_> {
                         .iter()
                         .map(|member| (member.ty, member.offset))
                         .collect();
-                    for (entry, (member, offset)) in entries.iter().zip(members) {
+                    for (index, entry) in entries {
+                        let Some(&(member, offset)) = usize::try_from(*index)
+                            .ok()
+                            .and_then(|index| members.get(index))
+                        else {
+                            return self.refuse("an aggregate's member past the struct's last");
+                        };
                         self.pieces(member, entry, at + offset, pieces)?;
                     }
                 }
                 Ty::Array { element, .. } => {
                     let size = self.unit.size_of(element).unwrap_or(0);
-                    for (index, entry) in entries.iter().enumerate() {
-                        self.pieces(element, entry, at + index as u64 * size, pieces)?;
+                    for (index, entry) in entries {
+                        self.pieces(element, entry, at + index * size, pieces)?;
                     }
                 }
                 Ty::Integer { .. } | Ty::Pointer(_) | Ty::Void | Ty::Function(_) => {

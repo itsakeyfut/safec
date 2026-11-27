@@ -1,0 +1,21 @@
+error[SC0201]: expected `=` after the designation
+   ╭─[ a_malformed_designation_is_refused.c:4:26 ]
+   │
+ 4 │ struct P no_equals = {.y 1};
+   │                          ┬  
+   │                          ╰── `=` after the designation is missing here
+───╯
+error[SC0201]: expected `]` to close the designator
+   ╭─[ a_malformed_designation_is_refused.c:5:25 ]
+   │
+ 5 │ int no_bracket[3] = {[2 = 1};
+   │                         ┬  
+   │                         ╰── `]` to close the designator is missing here
+───╯
+error[SC0201]: expected a member's name after `.`
+   ╭─[ a_malformed_designation_is_refused.c:6:23 ]
+   │
+ 6 │ struct P no_name = {. = 1};
+   │                       ┬  
+   │                       ╰── a member's name after `.` is missing here
+───╯

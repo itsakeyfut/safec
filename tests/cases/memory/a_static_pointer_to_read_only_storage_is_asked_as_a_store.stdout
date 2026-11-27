@@ -4,8 +4,8 @@ Static "kept" "char *" external address ".str.1" 0
 Static "c" "int" internal 1
 Static "cast" "int *" external address "c" 0
 Static "read" "int *" external address "c" 0
-Static "table" "char *[2]" external [ address ".str.2" 0 address ".str.3" 0 ]
-Static "names" "char *[2]" external [ address ".str.4" 0 address ".str.5" 0 ]
+Static "table" "char *[2]" external [ 0: address ".str.2" 0 1: address ".str.3" 0 ]
+Static "names" "char *[2]" external [ 0: address ".str.4" 0 1: address ".str.5" 0 ]
 Static ".str.0" "char[3]" internal bytes 97 98 0
 Static ".str.1" "char[3]" internal bytes 97 98 0
 Static ".str.2" "char[2]" internal bytes 97 0

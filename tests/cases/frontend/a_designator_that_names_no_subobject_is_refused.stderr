@@ -1,0 +1,88 @@
+error[SC0310]: this designator names no subobject of `no_member`
+   ╭─[ a_designator_that_names_no_subobject_is_refused.c:6:23 ]
+   │
+ 6 │ struct P no_member = {.z = 1};
+   │          ────┬────    ───┬──  
+   │              ╰──────────────── declared as `struct P`
+   │                          │    
+   │                          ╰──── this designation
+───╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `past`
+   ╭─[ a_designator_that_names_no_subobject_is_refused.c:7:16 ]
+   │
+ 7 │ int past[3] = {[3] = 1};
+   │     ──┬─       ───┬───  
+   │       ╰───────────────── declared as `int[3]`
+   │                   │     
+   │                   ╰───── this designation
+───╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `negative`
+   ╭─[ a_designator_that_names_no_subobject_is_refused.c:8:20 ]
+   │
+ 8 │ int negative[3] = {[-1] = 1};
+   │     ────┬───       ────┬───  
+   │         ╰──────────────────── declared as `int[3]`
+   │                        │     
+   │                        ╰───── this designation
+───╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `not_constant`
+   ╭─[ a_designator_that_names_no_subobject_is_refused.c:9:24 ]
+   │
+ 9 │ int not_constant[3] = {[n] = 1};
+   │     ──────┬─────       ───┬───  
+   │           ╰───────────────────── declared as `int[3]`
+   │                           │     
+   │                           ╰───── this designation
+───╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `index_of_a_struct`
+    ╭─[ a_designator_that_names_no_subobject_is_refused.c:10:31 ]
+    │
+ 10 │ struct P index_of_a_struct = {[0] = 1};
+    │          ────────┬────────    ───┬───  
+    │                  ╰───────────────────── declared as `struct P`
+    │                                  │     
+    │                                  ╰───── this designation
+────╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `member_of_an_array`
+    ╭─[ a_designator_that_names_no_subobject_is_refused.c:11:30 ]
+    │
+ 11 │ int member_of_an_array[2] = {.x = 1};
+    │     ─────────┬────────       ───┬──  
+    │              ╰─────────────────────── declared as `int[2]`
+    │                                 │    
+    │                                 ╰──── this designation
+────╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `scalar`
+    ╭─[ a_designator_that_names_no_subobject_is_refused.c:12:15 ]
+    │
+ 12 │ int scalar = {.x = 1};
+    │     ───┬──    ───┬──  
+    │        ╰────────────── declared as `int`
+    │                  │    
+    │                  ╰──── this designation
+────╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0310]: this designator names no subobject of `scalar_then_more`
+    ╭─[ a_designator_that_names_no_subobject_is_refused.c:13:25 ]
+    │
+ 13 │ int scalar_then_more = {.x = 1, 2};
+    │     ────────┬───────    ───┬──  
+    │             ╰─────────────────── declared as `int`
+    │                            │    
+    │                            ╰──── this designation
+────╯
+  = note: C17 6.7.9 p6 and p7: a designator names a member of the struct or union it is in, other than a flexible array member (6.7.2.1 p18), or an element of the array it is in, by an integer constant within its bounds
+error[SC0317]: the initializer of `not_constant` is not a constant
+   ╭─[ a_designator_that_names_no_subobject_is_refused.c:9:25 ]
+   │
+ 9 │ int not_constant[3] = {[n] = 1};
+   │                         ┬  
+   │                         ╰── not a constant expression
+───╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)

@@ -27,9 +27,9 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, Attribute, BinOp, Declaration, Enumeration, Enumerator, EnumeratorId, Expr, ExprId,
-    ForStart, Function, InitDeclarator, Initializer, Item, Nullability, Parameters, Specifier,
-    Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
+    Ast, Attribute, BinOp, Declaration, Designator, Enumeration, Enumerator, EnumeratorId, Expr,
+    ExprId, ForStart, Function, InitDeclarator, Initializer, Item, Nullability, Parameters,
+    Specifier, Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -1418,7 +1418,7 @@ impl Parser<'_> {
     /// **A list gives it a length this stage cannot count** (#1241 review):
     /// how many elements its items fill turns on brace elision over the
     /// element (6.7.9 p20), on whether an item is a struct taken whole,
-    /// which only types say, and with #1242 on a designator's value. The
+    /// which only types say, and on a designator's value (#1242). The
     /// node is made here, after the items, and its value is set by the type
     /// check when it reaches it, after every item is typed and before
     /// anything that names the array (`Ast::set_length`).
@@ -1436,9 +1436,12 @@ impl Parser<'_> {
                 Expr::String { length, .. } if self.is_character(element) => *length,
                 _ => return ty,
             },
+            Some(Initializer::Designated { .. }) => {
+                unreachable!("only a list's item is designated")
+            }
             Some(Initializer::List { items, span }) => self.ast.push_expr(Expr::Length {
                 // The items' count until the type check sets it, which is
-                // what it is wherever no item elides braces.
+                // what it is wherever no item elides braces or designates.
                 value: items.len() as u64,
                 span: *span,
             }),
@@ -1540,10 +1543,13 @@ impl Parser<'_> {
     /// own, nested as deep as [`Parser::deeper`] allows. What the items
     /// initialize is the type check's to work out (p17 to p20).
     ///
-    /// **A designation is refused**, under [`UNREAD`], until #1242 reads
-    /// it: read as a position it would initialize the wrong member. `{}`
-    /// is read, and refused by the type check, since C17 has no empty list
-    /// and C23 gives it a meaning this compiler does not build yet.
+    /// An item may have a designation before it (6.7.9 p6, p7), read into
+    /// [`Initializer::Designated`]; what it names is the type check's to
+    /// find. **A GNU range, `[a ... b]`, is refused** under [`UNREAD`]
+    /// until #1197 reads it: read as `[a]` it would initialize one element
+    /// where the source asked for several. `{}` is read, and refused by the
+    /// type check, since C17 has no empty list and C23 gives it a meaning
+    /// this compiler does not build yet.
     fn initializer_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Initializer> {
         self.deeper(diagnostics, Self::initializer_items, |_, _| None)
     }
@@ -1556,22 +1562,22 @@ impl Parser<'_> {
             if self.check(TokenKind::Punct(Punct::RightBrace)) {
                 break;
             }
-            if self.check(TokenKind::Punct(Punct::Dot))
-                || self.check(TokenKind::Punct(Punct::LeftBracket))
-            {
-                self.report_noted(
-                    UNREAD,
-                    "a designated initializer is not read yet",
-                    "a designation",
-                    "a gap in this compiler: C17 6.7.9 p6 and p7 allow it",
-                    diagnostics,
-                );
-                return None;
-            }
+            let first = self.peek().span;
+            let designation = self.designation(diagnostics)?;
             let item = if self.check(TokenKind::Punct(Punct::LeftBrace)) {
                 self.initializer_list(diagnostics)?
             } else {
                 Initializer::Expr(self.assignment(diagnostics))
+            };
+            let item = if designation.is_empty() {
+                item
+            } else {
+                let end = self.previous().span;
+                Initializer::Designated {
+                    designation,
+                    init: Box::new(item),
+                    span: self.join(first, end, diagnostics),
+                }
             };
             items.push(item);
             // The `,` is eaten before the next item is read, so a round of
@@ -1587,6 +1593,68 @@ impl Parser<'_> {
         )?;
         let span = self.join(open, close, diagnostics);
         Some(Initializer::List { items, span })
+    }
+
+    /// C17 6.7.9's `designation`, `designator-list =`, or nothing where the
+    /// item has none. Each `[` holds a `constant-expression`, which is a
+    /// conditional one; whether it is an integer constant in range is the
+    /// type check's. `None` is a refusal already reported.
+    fn designation(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Vec<Designator>> {
+        let mut designation = Vec::new();
+        loop {
+            if self.eat(TokenKind::Punct(Punct::Dot)) {
+                let name = self.expect(
+                    TokenKind::Identifier,
+                    "a member's name after `.`",
+                    diagnostics,
+                )?;
+                designation.push(Designator::Member(name));
+            } else if self.eat(TokenKind::Punct(Punct::LeftBracket)) {
+                let index = self.infix_from(CONDITIONAL, diagnostics);
+                if self.check(TokenKind::Punct(Punct::Ellipsis)) {
+                    self.report_noted(
+                        UNREAD,
+                        "a range designator is not read yet",
+                        "a GNU range of elements",
+                        "a gap in this compiler: `[a ... b]` is a GNU extension",
+                        diagnostics,
+                    );
+                    return None;
+                }
+                self.expect(
+                    TokenKind::Punct(Punct::RightBracket),
+                    "`]` to close the designator",
+                    diagnostics,
+                )?;
+                designation.push(Designator::Index(index));
+            } else {
+                break;
+            }
+        }
+        // **`[i] value`, with no `=`, is GNU's older spelling**, which
+        // `clang` reads; refused as this compiler's gap rather than as no C
+        // (#1242 review). Any other designation without its `=` is a
+        // syntax error.
+        if let [Designator::Index(_)] = designation.as_slice() {
+            if !self.check(TokenKind::Punct(Punct::Equal)) {
+                self.report_noted(
+                    UNREAD,
+                    "a designation without `=` is not read yet",
+                    "a GNU designation",
+                    "a gap in this compiler: `[i] value` is GNU's older spelling of `[i] = value`",
+                    diagnostics,
+                );
+                return None;
+            }
+        }
+        if !designation.is_empty() {
+            self.expect(
+                TokenKind::Punct(Punct::Equal),
+                "`=` after the designation",
+                diagnostics,
+            )?;
+        }
+        Some(designation)
     }
 
     /// `__attribute__((name("argument")))`, the one shape of it this parser

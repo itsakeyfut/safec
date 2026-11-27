@@ -54,6 +54,13 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A designated item is stored where it names, `ps[2]`, and the
+        // scalars no item names are stored zero after it, which the IR here
+        // shows; one past a designated array's end is `SC0412` (#1242). The
+        // `SC0403` at `*ps[2]` is the check's older doubt of an element
+        // written beside others, #1418's. Mutation: write the item at the
+        // next position in `Shapes::designate`; the stores in the IR move.
+        a_designated_pointer_is_written_where_it_names: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local holding a pointer is initialized a store per scalar, the
         // ones the list does not name with zero, so `ps[1]` is read as
         // written and no `SC0413` says a `memset` wrote no pointer; one
@@ -8974,6 +8981,8 @@ cases! {
         a_braced_initializer_is_read: ["--emit", "ast"],
         // Each item is held to the subobject it initializes as an
         // initializer of it is (C17 6.5.16.1): `wrong`'s `1` for an `int *`,
+        // and `overridden`'s `5`, though a later item overrides it (#1242
+        // review; mutation: hold only the leaves `Shapes::resolve` keeps),
         // `two`'s both in order, a struct of another type, a literal for an
         // `int` row; too many items for an array, for a scalar member and
         // for a union, whose first member alone takes one (6.7.9 p2, p17);
@@ -8988,10 +8997,36 @@ cases! {
         // definition may wait (6.9.2 p2); mutation: drop `!initialized` in
         // `Checker::check_complete_objects`, and it is accepted.
         a_braced_initializer_is_held_to_each_subobject: ["--emit", "ast"],
-        // A designation is read with #1242, and refused until then rather
-        // than read as a position. Mutation: drop the refusal in
-        // `Parser::initializer_items`; `.y` is a syntax error instead.
-        a_designated_initializer_is_not_read_yet: ["--emit", "ast"],
+        // A designation is read before its item, `.m` and `[i]` and both
+        // chained, each designator a line (#1242). Mutation: read no
+        // designation in `Parser::designation`; `.y` is a syntax error.
+        a_designated_initializer_is_read: ["--emit", "ast"],
+        // A designation missing its `=`, its `]`, or its member's name is a
+        // syntax error, not an item read without it (#1242 review).
+        // Mutation: eat the `=` in `Parser::designation` rather than expect
+        // it; `no_equals` is read.
+        a_malformed_designation_is_refused: ["--emit", "ast"],
+        // A length a designator gives is held to the target's limit, as a
+        // written one is (#1242 review). Mutation: skip the check in
+        // `Checker::check_list`; this builds an array of 2^62 bytes.
+        a_designator_past_the_targets_limit_is_refused: ["--emit", "ast"],
+        // A designator names a member of the struct it is in or an element
+        // of the array it is in, by an integer constant within its bounds
+        // (C17 6.7.9 p6, p7); each other is `SC0310` (#1242). `not_constant`
+        // is also no constant initializer, `SC0317`. Mutation: drop the
+        // bound in `Shapes::designate`; `past` says "too many items" rather
+        // than naming its designator.
+        a_designator_that_names_no_subobject_is_refused: ["--emit", "ast"],
+        // A GNU range, `[a ... b]`, is this compiler's gap until #1197, not
+        // read as `[a]`, which would initialize one element of several.
+        // Mutation: drop the refusal in `Parser::designation`; this is a
+        // syntax error at `...`.
+        a_range_designator_is_not_read_yet: ["--emit", "ast"],
+        // `[i] value` is GNU's older spelling of `[i] = value`, which
+        // `clang` reads: this compiler's gap, not a syntax error (#1242
+        // review). Mutation: drop the refusal in `Parser::designation`; this
+        // is `SC0201` at `3`.
+        a_designation_without_equals_is_not_read_yet: ["--emit", "ast"],
         // C17 6.7.1 p2: one storage class per declaration. Mutation: let a
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
@@ -11417,8 +11452,12 @@ cases! {
         // through a cast, a member's at its offset, through `->`, an array
         // member's and a row's as they decay; one before its object is
         // refused, and a list of numbers and of a literal's bytes is an
-        // aggregate (#1241). Mutation: answer every member at offset zero in
-        // `Lowering::member_offset`; `y`'s offset is `0`.
+        // aggregate (#1241), sparse: `sparse` is the one entry its designator
+        // names, and `order`'s two are in increasing order whatever order
+        // they were written in (#1242). Mutations: answer every member at offset zero in
+        // `Lowering::member_offset`, and `y`'s offset is `0`; fill an
+        // aggregate's entries densely in `Lowering::static_init`, and
+        // `sparse` lists a hundred.
         an_address_initializes_a_static: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function's address is an address constant a static here cannot
         // hold yet, so it is refused rather than started as null. Mutation:

@@ -17,18 +17,20 @@ Static "arrow" "int *" external address "s" 4
 Static "m" "int[2][2]" external zero
 Static "row" "int *" external address "m" 8
 Static "before" "int *" external zero
-Static "t" "int[3]" external [ 1 2 ]
-Static "named" "struct #1" external [ bytes 120 121 0 3 ]
-Function an_address_initializes_a_static.c:27:5 "main"
+Static "t" "int[3]" external [ 0: 1 1: 2 ]
+Static "sparse" "int[100]" external [ 99: 1 ]
+Static "order" "int[8]" external [ 1: 2 5: 1 ]
+Static "named" "struct #1" external [ 0: bytes 120 121 0 1: 3 ]
+Function an_address_initializes_a_static.c:29:5 "main"
   Local "_0" "int" return
   Block "bb0" entry
-    Operation an_address_initializes_a_static.c:27:5 generated
+    Operation an_address_initializes_a_static.c:29:5 generated
       Destination "_0"
       Use
         Constant 0
-    Operation an_address_initializes_a_static.c:28:5 written
+    Operation an_address_initializes_a_static.c:30:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced an_address_initializes_a_static.c:28:12 generated
+    Sequenced an_address_initializes_a_static.c:30:12 generated
     Return
