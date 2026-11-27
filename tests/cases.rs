@@ -76,6 +76,15 @@ cases! {
         // in elements rather than bytes in `Lowering::store_string`; the
         // IR this shows changes.
         a_wide_literal_is_a_static_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A store through one member of a union is asked at the levels the
+        // least `const` of its members that read a pointer there keeps:
+        // `SC0417` where a `char *` reads back a literal a `const char *`
+        // stored, in a named union and an anonymous one, and nothing where
+        // every reader is `const` or the other member is an integer
+        // (#1432). Mutation: answer the written member's levels alone in
+        // `Lowering::member_levels`; `literal_read_as_writable` and
+        // `through_an_anonymous_union` go silent.
+        a_union_member_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A compound literal's items are no full expression (C17 6.8 p4),
         // so a write among them is unsequenced with the store around it
         // and with the other operands of a call: `SC0409` in each function

@@ -1,0 +1,30 @@
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:32:5 ]
+    │
+ 32 │     writable.b = "abc";
+    │     ─────────┬────────  
+    │              ╰────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0412]: this may reach outside the object it points at
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:45:5 ]
+    │
+ 45 │     anonymous.b = "abc";
+    │     ─────────┬─────────  
+    │              ╰─────────── this check cannot say this is inside its object
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: this check shows an access fits only through a pointer to the start of a local or of an allocation of constant size, with a constant length where a call takes one
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_union_member_is_asked_at_its_least_const_reader.c:45:5 ]
+    │
+ 45 │     anonymous.b = "abc";
+    │     ─────────┬─────────  
+    │              ╰─────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

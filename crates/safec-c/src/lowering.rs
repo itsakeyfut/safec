@@ -6582,7 +6582,7 @@ impl<'a> Lowering<'a> {
             [&Operand::Copy(Place::local(pointer))],
         ) & 1;
         if let Some(written) = self.types.of(id) {
-            levels |= self.pointing_at_levels(written);
+            levels |= self.member_levels(definition, &path, within, written);
         }
         builder.function.mark_const_levels(address, levels);
         builder.push(Operation {
@@ -7043,6 +7043,85 @@ impl<'a> Lowering<'a> {
             element,
             length: Length::Local(held),
         })))
+    }
+
+    /// The `const` levels of a pointer to the member `path` names in the
+    /// struct `definition`, written as type `written`: [`Self::pointing_at_levels`]
+    /// of it, and where its owner, laid out as `within`, is a union, the
+    /// levels every member of that union keeps that may read a pointer out
+    /// of the same bytes, ANDed in. A store through one member lands where
+    /// each of them reads it back (C17 6.5.2.3 p3, p6), so it is asked as
+    /// the least `const` of them keeps it: `u.b = "abc"; g(u.a);` through a
+    /// `const char *b` and a `char *a` let the literal leave writable
+    /// (#1432). A member that holds no pointer where the union starts reads
+    /// none of its levels, so an `int` beside a `const char *` takes
+    /// nothing away.
+    ///
+    /// Mutation: answer the written member's levels alone;
+    /// `a_union_member_is_asked_at_its_least_const_reader`'s `literal_read_as_writable`
+    /// goes silent.
+    fn member_levels(
+        &self,
+        definition: TypeId,
+        path: &[usize],
+        within: StructId,
+        written: TypeId,
+    ) -> u32 {
+        let own = self.pointing_at_levels(written);
+        let (last, through) = path.split_last().expect("a member's path is never empty");
+        // The type the last step is a member of: the definition, then each
+        // anonymous member on the way, as `Lowering::member` walks them.
+        let mut owner = definition;
+        for &index in through {
+            let Type::Struct {
+                members: Some(members),
+                ..
+            } = self.ast.ty(owner)
+            else {
+                return own;
+            };
+            owner = members[index].ty;
+        }
+        let Type::Struct {
+            union: true,
+            members: Some(members),
+            ..
+        } = self.ast.ty(owner)
+        else {
+            return own;
+        };
+        let laid = &self.unit.struct_layout(within).members;
+        members
+            .iter()
+            .zip(laid)
+            .enumerate()
+            .filter(|&(index, (_, laid))| index != *last && self.pointer_at_start(laid.ty))
+            .fold(own, |levels, (_, (member, _))| {
+                levels & self.pointing_at_levels(member.ty)
+            })
+    }
+
+    /// Whether an object of `ty` holds a pointer in its first bytes: it is
+    /// one, or an array, struct or union whose first element or member
+    /// (any member, for a union) does.
+    fn pointer_at_start(&self, ty: TyId) -> bool {
+        let mut work = vec![ty];
+        while let Some(ty) = work.pop() {
+            match self.unit.ty(ty) {
+                Ty::Pointer(_) => return true,
+                Ty::Array { element, .. } => work.push(element),
+                Ty::Struct(id) => work.extend(
+                    self.unit
+                        .struct_layout(id)
+                        .members
+                        .iter()
+                        .filter(|member| member.offset == 0)
+                        .map(|member| member.ty),
+                ),
+                Ty::Integer { .. } | Ty::Void | Ty::Function(_) => {}
+            }
+        }
+        false
     }
 
     /// The `const` levels of a pointer to an object of type `ty`: bit `0`
