@@ -354,6 +354,15 @@ pub(super) fn written_read_only(
     let Some(landing) = &store.landing else {
         return;
     };
+    // **A store that initializes is not asked**, as a call that
+    // initializes is not ([`handed_read_only`]): only the lowering makes
+    // one, into the object it initializes, a braced list's item (#1241).
+    // Mutation: ask it; `a_const_local_is_initialized_from_a_braced_list`
+    // says `SC0417`.
+    if matches!(element, Element::Assign(operation) if matches!(operation.origin, Origin::Initialized(_)))
+    {
+        return;
+    }
     if may_land_read_only(landing, &read_only_locals(function), known) {
         report_once(
             findings,
@@ -411,18 +420,16 @@ pub(super) fn handed_read_only(
     // argument is asked at its own and none is believed only read. See
     // ADR-0125.
     let called = callee.direct().map(|id| analysis.unit.function(id));
-    // **An initializer's call is not asked of the `const` locals**: it gives
-    // the object the value it starts with, which C17 6.7.3 p6 does not
-    // forbid, and only the lowering makes one, into the local it is
-    // initializing. A static or a literal it may reach is still asked, by
-    // its value's mark (#1244 review). Mutation: ask the locals too;
-    // `a_const_char_array_from_a_string_literal_is_not_a_write` says
-    // `SC0417`.
-    let read_only = if matches!(origin, Origin::Initialized(_)) {
-        Vec::new()
-    } else {
-        read_only_locals(function)
-    };
+    // **An initializer's call is not asked**: it gives the object the
+    // value it starts with, which C17 6.7.3 p6 does not forbid, and only
+    // the lowering makes one, into the object it is initializing, whose
+    // address carries that object's `const` mark (#1244 review, #1241).
+    // Mutation: ask it; `a_const_char_array_from_a_string_literal_is_not_a_write`
+    // says `SC0417`.
+    if matches!(origin, Origin::Initialized(_)) {
+        return;
+    }
+    let read_only = read_only_locals(function);
     let parameters: Vec<_> = called
         .map(|called| called.parameters().collect())
         .unwrap_or_default();
