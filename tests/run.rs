@@ -433,4 +433,12 @@ programs! {
     /// first member over another in `Lowering::store_list`, and this fails;
     /// the sparse aggregate is held by `an_address_initializes_a_static`.
     a_designated_initializer_names_its_subobject,
+    /// Compound literals: a struct's and an array's in a block, made again
+    /// each time a loop reaches one, a scalar's, one under `.` and `[]`,
+    /// one passed to a function and one under `sizeof`, and at file scope
+    /// an array's, a struct's address and a table of strings (C17 6.5.2.5,
+    /// #1243). Mutations: initialize a block's once, not where evaluated,
+    /// in `Lowering::compound`, and this exits 1; read no `{` after a type
+    /// name in `Parser::cast`, and it does not build.
+    a_compound_literal_is_an_unnamed_object,
 }

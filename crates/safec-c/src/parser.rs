@@ -3954,21 +3954,30 @@ impl Parser<'_> {
         Some(ty)
     }
 
-    /// The `)` closing a type name, and a refusal of the compound literal a
-    /// `{` after it would begin (C17 6.5.2.5), which is not read yet.
+    /// The `)` closing a type name.
     fn close_type_name(&mut self, diagnostics: &mut DiagnosticSink) -> Option<()> {
         self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
-        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            self.report_unread(
-                Unread {
-                    what: "a compound literal",
-                    clause: "6.5.2.5",
-                },
-                diagnostics,
-            );
-            return None;
-        }
         Some(())
+    }
+
+    /// A compound literal, `( type-name ) { initializer-list }` (C17
+    /// 6.5.2.5), the `{` next and `start` its `(`, with whatever postfix
+    /// operators follow it, since it is a postfix expression: `(struct
+    /// S){1}.a` and `(int[]){1, 2}[1]`. An array of unknown size is
+    /// completed by its list as a declarator's is (p4).
+    fn compound_literal(
+        &mut self,
+        start: Span,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> ExprId {
+        let Some(init) = self.initializer_list(diagnostics) else {
+            return self.ast.push_expr(Expr::Error { span: start });
+        };
+        let ty = self.completed(ty, Some(&init));
+        let span = self.join(start, self.previous().span, diagnostics);
+        let literal = self.ast.push_expr(Expr::Compound { ty, init, span });
+        self.postfix_from(literal, start, diagnostics)
     }
 
     /// `( type-name ) cast-expression`, with the `(` here. C17 6.5.4.
@@ -3979,6 +3988,9 @@ impl Parser<'_> {
         };
         if self.close_type_name(diagnostics).is_none() {
             return self.ast.push_expr(Expr::Error { span: start });
+        }
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            return self.compound_literal(start, ty, diagnostics);
         }
         self.deeper(
             diagnostics,
@@ -4004,6 +4016,13 @@ impl Parser<'_> {
             if self.close_type_name(diagnostics).is_none() {
                 return self.ast.push_expr(Expr::Error { span: start });
             }
+            // `sizeof (T){...}` is the size of a compound literal, an
+            // expression, not of the type name alone.
+            if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+                let operand = self.compound_literal(start, ty, diagnostics);
+                let span = self.join(start, self.previous().span, diagnostics);
+                return self.ast.push_expr(Expr::SizeofExpr { operand, span });
+            }
             let span = self.join(start, self.previous().span, diagnostics);
             return self.ast.push_expr(Expr::SizeofType { ty, span });
         }
@@ -4022,7 +4041,18 @@ impl Parser<'_> {
     fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         // The token the primary starts at, for the reason `climb` gives.
         let first = self.peek().span;
-        let mut base = self.primary(diagnostics);
+        let base = self.primary(diagnostics);
+        self.postfix_from(base, first, diagnostics)
+    }
+
+    /// The postfix operators after `base`, which starts at `first`.
+    fn postfix_from(
+        &mut self,
+        base: ExprId,
+        first: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> ExprId {
+        let mut base = base;
 
         while !self.failed {
             let TokenKind::Punct(punct) = self.peek().kind else {

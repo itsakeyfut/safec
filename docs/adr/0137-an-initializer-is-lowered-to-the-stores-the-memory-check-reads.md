@@ -52,6 +52,7 @@ The length an initializer gives an array of unknown size (6.7.9 p22) is counted 
 * A local with a pointer, initialized from a list that does not name every scalar, gets no `SC0413`: `a_local_holding_pointers_is_initialized_one_scalar_at_a_time`. The mutation that zeroes it with a `memset` brings `SC0413` back.
 * A static table of string pointers builds, and its program reads what C17 gives: `a_static_holds_addresses_of_statics`.
 * Past the bound, a local holding a pointer is refused: `a_large_local_holding_a_pointer_is_not_initialized_yet`.
+* A compound literal in a block is a local initialized as a declarator's is, and one outside a block a static: `a_compound_literal_is_an_unnamed_object` runs, and `a_compound_literal_is_a_local_the_memory_check_reads` shows the check reading it.
 * A static pointer that may write a literal or a `const` object is `SC0417`: `a_static_pointer_to_read_only_storage_is_asked_as_a_store`.
 * A static's aggregate is sparse: `an_address_initializes_a_static` prints one entry for a hundred elements with one designated; a static of a million elements with two designated reads what C17 gives: `a_designated_initializer_names_its_subobject`.
 * `E0004` at every reader of `StaticInit` holds the new variant: the printer, the interpreter and the backend.

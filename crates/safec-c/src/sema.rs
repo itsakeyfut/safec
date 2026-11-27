@@ -1497,8 +1497,11 @@ impl Resolver<'_> {
             // unwalked, `(struct S *)p` reached a comparison with a struct
             // bound to no tag and panicked. Mutation: walk no type name here;
             // `a_struct_pointer_cast_is_read` panics.
-            if let Expr::Cast { ty, .. } | Expr::SizeofType { ty, .. } | Expr::VaArg { ty, .. } =
-                *expr
+            // A compound literal's type name too (#1243).
+            if let Expr::Cast { ty, .. }
+            | Expr::SizeofType { ty, .. }
+            | Expr::VaArg { ty, .. }
+            | Expr::Compound { ty, .. } = *expr
             {
                 self.walk_type(ty, diagnostics);
             }

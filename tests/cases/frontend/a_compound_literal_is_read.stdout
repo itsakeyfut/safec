@@ -1,0 +1,17 @@
+Declaration a_compound_literal_is_read.c:1:1 "struct S"
+  Field a_compound_literal_is_read.c:2:5 "a" "int"
+  Field a_compound_literal_is_read.c:2:5 "b" "int"
+Declaration a_compound_literal_is_read.c:4:1 "g" "int *"
+  Compound a_compound_literal_is_read.c:4:10 "int[2]"
+    InitializerList a_compound_literal_is_read.c:4:17
+      Number a_compound_literal_is_read.c:4:18 "1"
+      Number a_compound_literal_is_read.c:4:21 "2"
+Function a_compound_literal_is_read.c:5:1 "f" "int (void)"
+  Compound a_compound_literal_is_read.c:5:13
+    Return a_compound_literal_is_read.c:6:5
+      Member a_compound_literal_is_read.c:6:12 "." "b"
+        Compound a_compound_literal_is_read.c:6:13 "struct S"
+          InitializerList a_compound_literal_is_read.c:6:23
+            Designated a_compound_literal_is_read.c:6:24
+              Member a_compound_literal_is_read.c:6:25 "b"
+              Number a_compound_literal_is_read.c:6:29 "1"

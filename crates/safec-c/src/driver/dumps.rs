@@ -632,7 +632,10 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
                 write!(out, " {:?}", ",").expect("writing to a string cannot fail");
             }
             // The type as this compiler spells it, as a declaration's is.
-            Expr::SizeofType { ty, .. } | Expr::Cast { ty, .. } | Expr::VaArg { ty, .. } => {
+            Expr::SizeofType { ty, .. }
+            | Expr::Cast { ty, .. }
+            | Expr::VaArg { ty, .. }
+            | Expr::Compound { ty, .. } => {
                 write!(out, " {:?}", spell_type(sources, ast, *ty))
                     .expect("writing to a string cannot fail");
             }
@@ -648,6 +651,11 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
         }
         out.push('\n');
 
+        // A compound literal's list as a list, not its expressions alone.
+        if let Expr::Compound { init, .. } = expr {
+            dump_initializer(sources, ast, init, depth + 1, out);
+            continue;
+        }
         children.clear();
         expr.extend_children(&mut children);
         for &child in children.iter().rev() {

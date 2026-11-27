@@ -54,6 +54,11 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A compound literal in a block is a local the memory check names
+        // as it names any: read within its two elements, and `SC0412` one
+        // past them (#1243). Mutation: give it no local of its own in
+        // `Lowering::compound`; this does not build.
+        a_compound_literal_is_a_local_the_memory_check_reads: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A designated item is stored where it names, `ps[2]`, and the
         // scalars no item names are stored zero after it, which the IR here
         // shows; one past a designated array's end is `SC0412` (#1242). The
@@ -9022,6 +9027,19 @@ cases! {
         // Mutation: drop the refusal in `Parser::designation`; this is a
         // syntax error at `...`.
         a_range_designator_is_not_read_yet: ["--emit", "ast"],
+        // A compound literal is read as an unnamed object of its type with
+        // its list under it, at file scope and in a block, an operand of
+        // the postfix operators after it (C17 6.5.2.5, #1243). Mutation:
+        // read no `{` after a type name in `Parser::cast`; this is a
+        // syntax error.
+        a_compound_literal_is_read: ["--emit", "ast"],
+        // A compound literal in a block has automatic storage, so its
+        // address is no constant for a block's `static`; one of type
+        // `void` initializes nothing; and its list is held to its type as a
+        // declarator's is (#1243). Mutation: answer every compound literal
+        // an address constant in `Checker::check_static_initializers`;
+        // `in_a_block` is accepted.
+        a_compound_literal_that_cannot_be_is_refused: ["--emit", "ast"],
         // `[i] value` is GNU's older spelling of `[i] = value`, which
         // `clang` reads: this compiler's gap, not a syntax error (#1242
         // review). Mutation: drop the refusal in `Parser::designation`; this
