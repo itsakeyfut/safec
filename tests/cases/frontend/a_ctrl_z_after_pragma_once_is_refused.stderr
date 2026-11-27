@@ -1,0 +1,16 @@
+error[SC0103]: a Ctrl-Z is not read
+   ╭─[ a_ctrl_z_after_pragma_once_is_refused.c:1:13 ]
+   │
+ 1 │ #pragma once?
+   │             ┬  
+   │             ╰── this Ctrl-Z
+───╯
+  = note: `clang` targeting MSVC reads it in code as the end of the file
+warning[SC0118]: `#pragma once` in the input is not read, and is ignored
+   ╭─[ a_ctrl_z_after_pragma_once_is_refused.c:1:1 ]
+   │
+ 1 │ #pragma once?
+   │ ┬  
+   │ ╰── written here
+───╯
+  = note: an `#include` of the input reads it again

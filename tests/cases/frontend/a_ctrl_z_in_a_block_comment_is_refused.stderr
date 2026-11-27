@@ -1,0 +1,8 @@
+error[SC0103]: a Ctrl-Z is not read
+   ╭─[ a_ctrl_z_in_a_block_comment_is_refused.c:1:13 ]
+   │
+ 1 │ /* a Ctrl-Z ? in a comment */
+   │             ┬  
+   │             ╰── this Ctrl-Z
+───╯
+  = note: `clang` targeting MSVC reads it in code as the end of the file

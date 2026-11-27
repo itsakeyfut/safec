@@ -209,69 +209,7 @@ const PLAIN_REFUSED: &[([&str; 4], &str)] = &[
     (["compiled", "*", "#(null)", "nothing"], "#1384"),
 ];
 
-const KNOWN: &[([&str; 4], &str)] = &[
-    // A Ctrl-Z ends the file for `clang` targeting MSVC, and this reads on.
-    (
-        ["compiled", "after the name", "#elif", "substitute"],
-        "#1383",
-    ),
-    (
-        ["compiled", "after the name", "#else", "substitute"],
-        "#1383",
-    ),
-    (
-        ["compiled", "after the name", "#pragma", "substitute"],
-        "#1383",
-    ),
-    (["compiled", "at the end", "#define", "substitute"], "#1383"),
-    (["compiled", "at the end", "#elif", "substitute"], "#1383"),
-    (["compiled", "at the end", "#ifdef", "substitute"], "#1383"),
-    (["compiled", "at the end", "#ifndef", "substitute"], "#1383"),
-    (["compiled", "at the end", "#pragma", "substitute"], "#1383"),
-    (["skipped", "after the name", "#4", "substitute"], "#1383"),
-    (
-        ["skipped", "after the name", "#define", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#else", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "after the name", "#if", "substitute"], "#1383"),
-    (
-        ["skipped", "after the name", "#ifdef", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#ifndef", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#include", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#line", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#pragma", "substitute"],
-        "#1383",
-    ),
-    (
-        ["skipped", "after the name", "#undef", "substitute"],
-        "#1383",
-    ),
-    (["skipped", "at the end", "#4", "substitute"], "#1383"),
-    (["skipped", "at the end", "#define", "substitute"], "#1383"),
-    (["skipped", "at the end", "#if", "substitute"], "#1383"),
-    (["skipped", "at the end", "#ifdef", "substitute"], "#1383"),
-    (["skipped", "at the end", "#ifndef", "substitute"], "#1383"),
-    (["skipped", "at the end", "#include", "substitute"], "#1383"),
-    (["skipped", "at the end", "#line", "substitute"], "#1383"),
-    (["skipped", "at the end", "#pragma", "substitute"], "#1383"),
-    (["skipped", "at the end", "#undef", "substitute"], "#1383"),
-];
+const KNOWN: &[([&str; 4], &str)] = &[];
 
 /// Whether `key`, a disagreement's `group / place / directive / character`,
 /// is the one `known` lists.
