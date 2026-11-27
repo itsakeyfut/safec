@@ -300,6 +300,25 @@ impl Line {
         }
     }
 
+    /// Whether the line is a null directive, a `#` or `%:` with nothing
+    /// after it but ASCII blanks and comments, which has no effect (C17
+    /// 6.10.7). Not with white space outside ASCII after it: `clang -E`
+    /// refuses that line, as it does `#` and such a space before a name,
+    /// and a skipped group refuses it too. Found by review.
+    pub(super) fn null(&self) -> bool {
+        let [only] = self.tokens.as_slice() else {
+            return false;
+        };
+        let end = self
+            .text
+            .strip_suffix('\r')
+            .map_or(self.text.len(), str::len);
+        only.kind == TokenKind::Punct(Punct::Hash)
+            && self.text[only.end..end]
+                .bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t' | 0x0b | 0x0c))
+    }
+
     /// Where the line's first `#` is, as a byte range of its text: at its
     /// start, or past the characters that made the lexer read the line as a
     /// directive, where [`Line::prefixed`] holds.

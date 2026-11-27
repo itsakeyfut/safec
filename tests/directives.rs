@@ -197,7 +197,7 @@ const GROUPS: &[&str] = &["compiled", "skipped", "nested"];
 /// same groups. A refusal agrees with `clang`, as ADR-0134 allows, so this
 /// is what says how much is read rather than refused: a change that refuses
 /// more, or reads more, moves it, and is stated by updating it.
-const BUILT_BY_BOTH: usize = 1040;
+const BUILT_BY_BOTH: usize = 1049;
 
 /// The plain spellings safec refuses though `clang` builds them, each with
 /// the issue that reads it.
@@ -205,8 +205,6 @@ const PLAIN_REFUSED: &[([&str; 4], &str)] = &[
     // C23's `#elifdef` and `#elifndef` are not read yet.
     (["*", "*", "#elifdef", "nothing"], "#1273"),
     (["*", "*", "#elifndef", "nothing"], "#1273"),
-    // A null directive is refused in a group that is compiled.
-    (["compiled", "*", "#(null)", "nothing"], "#1384"),
 ];
 
 const KNOWN: &[([&str; 4], &str)] = &[];
