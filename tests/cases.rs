@@ -10836,19 +10836,20 @@ cases! {
         // Then two lines that hold `left_open` to its bounds: `D0` names
         // `D1` twice and so on to `D40`, `F(`, answered once each; and `C0`
         // names `C1` and so on to `C300`, `0`, past the 256 macros it
-        // follows, so it answers one and refuses. Mutations: answer no
-        // macro from `known`; the run takes 2^40 visits and does not end.
-        // Or follow past `OPEN_DEPTH`; the last line is read.
+        // follows, so it answers `TOO_DEEP` and refuses. And a macro that
+        // names itself, where it stops too: refused, though `clang` reads
+        // it, since a stop never answers fewer than replacing would leave.
+        // Mutations: answer no macro from `known`; the run takes 2^40
+        // visits and does not end. Or follow past `OPEN_DEPTH`; the `C0`
+        // line is read. Or answer nothing at a stop; the last line is.
         defined_in_what_may_be_a_macro_s_argument_is_refused: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // The other side, read as `clang` reads it, compiling `d`, `f` and
         // `g`: a `defined` in parentheses no name opens, one after a call
-        // has closed, one after a macro that becomes `!` and no call, and
-        // one after the line has closed a `(` a macro opened, and one after
-        // a macro that names itself, which `left_open` follows once and
-        // stops. Found by review. Mutations: refuse every `defined` after a
-        // `(`; take every object-like macro for a call's name; or never
-        // close what a macro opened; the case is refused. Or let
-        // `left_open` follow a macro again on its path; the case fails.
+        // has closed, one after a macro that becomes `!` and no call,
+        // and one after the line has closed a `(` a macro opened. Found by
+        // review. Mutations: refuse every `defined` after a `(`; take every
+        // object-like macro for a call's name; or never close what a macro
+        // opened; the case is refused.
         defined_outside_any_macro_s_argument_is_read: ["--emit", "ast", "--target", "x86_64-pc-windows-msvc"],
         // A backslash with a form feed or a vertical tab before its newline
         // is a splice to `clang`, which warns of the space: the line below

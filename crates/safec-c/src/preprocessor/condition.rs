@@ -85,12 +85,12 @@ pub(super) fn evaluate(
                     }
                 }
                 _ if is_name(token) => {
-                    opened_by_macros += left_open(
+                    opened_by_macros = opened_by_macros.saturating_add(left_open(
                         sources.snippet(token.span),
                         reading,
                         &mut Vec::new(),
                         &mut known,
-                    );
+                    ));
                 }
                 _ => {}
             }
@@ -319,11 +319,15 @@ pub(super) fn evaluate(
 /// by review. A function-like macro's list is followed too, though its
 /// arguments are not, since an argument's own `(` and `)` balance.
 ///
-/// Each macro is answered once, in `known`, so a list naming one macro
-/// many times costs one visit, and a macro already on the path answers
-/// nothing, so a list naming itself ends. Past [`OPEN_DEPTH`] macros deep
-/// it answers one, which refuses the `defined` after it rather than
-/// following a chain no stack holds. Found by review. A `)` the list
+/// It never answers fewer than replacing would leave, since fewer reads a
+/// `defined` `clang` takes for an argument. Where it stops, at a macro
+/// already on the path or past [`OPEN_DEPTH`] macros deep, it answers
+/// [`TOO_DEEP`], more than a line closes, so every `defined` after it on
+/// the line is refused; and so does every macro whose list led there. That
+/// answer is the same from wherever the walk began, so each macro is
+/// answered once, in `known`, and a list naming one macro many times costs
+/// one visit. Found by review: a stop answered as nothing, and kept, said
+/// less than a walk from another macro would have. A `)` the list
 /// closes before any `(` closes nothing of its own; the line's reading of
 /// it is left to the refusal of a call that runs past an expansion.
 fn left_open<'a>(
@@ -338,19 +342,20 @@ fn left_open<'a>(
     if let Some(&open) = known.get(name) {
         return open;
     }
-    if seen.contains(&name) {
-        return 0;
-    }
-    if seen.len() >= OPEN_DEPTH {
-        return 1;
+    if seen.contains(&name) || seen.len() >= OPEN_DEPTH {
+        return TOO_DEEP;
     }
     seen.push(name);
     let mut open = 0usize;
     for (spelled, _) in &defined.tokens {
-        match spelled.as_str() {
-            "(" => open += 1,
-            ")" => open = open.saturating_sub(1),
-            spelled => open += left_open(spelled, reading, seen, known),
+        open = match spelled.as_str() {
+            "(" => open.saturating_add(1),
+            ")" => open.saturating_sub(1),
+            spelled => open.saturating_add(left_open(spelled, reading, seen, known)),
+        };
+        if open >= TOO_DEEP {
+            open = TOO_DEEP;
+            break;
         }
     }
     seen.pop();
@@ -358,9 +363,13 @@ fn left_open<'a>(
     open
 }
 
+/// What [`left_open`] answers where it stops following macros: more `(`
+/// than any line closes.
+const TOO_DEEP: usize = usize::MAX / 2;
+
 /// How deep [`left_open`] follows macros naming macros before it answers
-/// that one may be left open: far past any chain a header writes, and far
-/// short of what the stack holds.
+/// [`TOO_DEEP`]: far past any chain a header writes, and far short of what
+/// the stack holds.
 const OPEN_DEPTH: usize = 256;
 
 /// Whether `token`, spelled `spelled`, may stand for a function-like

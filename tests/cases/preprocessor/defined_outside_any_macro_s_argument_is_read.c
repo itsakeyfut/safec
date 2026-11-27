@@ -21,7 +21,3 @@ int f;
 #if OPEN 0) == 1 && defined X
 int g;
 #endif
-
-#if SELF + 1 && defined X
-int i;
-#endif

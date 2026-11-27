@@ -382,3 +382,7 @@ int k;
 #if C0 + defined X
 int l;
 #endif
+
+#if SELF + 1 && defined X
+int i;
+#endif
