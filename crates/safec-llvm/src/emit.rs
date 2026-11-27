@@ -123,6 +123,31 @@ use refused::Refused;
 /// `an_initializer_calls_no_memset_the_program_has` fails.
 const LOWERED_TO: [&str; 3] = ["memcpy", "memmove", "memset"];
 
+/// The pieces of a global, each `(offset, size, type, value)`, as the
+/// members of a packed struct `size` bytes long: each piece, and `[n x i8]
+/// zeroinitializer` for each gap before one and after the last. Its types,
+/// and its values.
+fn packed(mut pieces: Vec<(u64, u64, String, String)>, size: u64) -> (String, String) {
+    pieces.sort_by_key(|piece| piece.0);
+    let mut types = Vec::new();
+    let mut values = Vec::new();
+    let mut at = 0;
+    let gap = |from: u64, to: u64, types: &mut Vec<String>, values: &mut Vec<String>| {
+        if to > from {
+            types.push(format!("[{} x i8]", to - from));
+            values.push(format!("[{} x i8] zeroinitializer", to - from));
+        }
+    };
+    for (offset, length, ty, value) in pieces {
+        gap(at, offset, &mut types, &mut values);
+        values.push(format!("{ty} {value}"));
+        types.push(ty);
+        at = offset + length;
+    }
+    gap(at, size, &mut types, &mut values);
+    (types.join(", "), values.join(", "))
+}
+
 /// What a step of writing answers: what it wrote, or that it refused and said
 /// why.
 type Refuses<T> = Result<T, Refused>;
@@ -682,6 +707,25 @@ impl Emitter<'_> {
                     Ok(text)
                 }
             }
+            StaticInit::Address { of, offset, .. } => Ok(self.static_address(*of, *offset)),
+            // **Written as its pieces at their offsets**, a packed struct of
+            // each scalar and each run of bytes with zeros between, rather
+            // than as the type it has: a struct's LLVM type here is its
+            // bytes, which no address can be a part of. Every reader of the
+            // global reaches it through a `ptr`, which does not ask the
+            // global's own type.
+            StaticInit::Aggregate(_) => {
+                let mut pieces = Vec::new();
+                match self.pieces(object.ty, &object.init, 0, &mut pieces) {
+                    Ok(()) => {
+                        let size = self.unit.size_of(object.ty).unwrap_or(0);
+                        let (types, values) = packed(pieces, size);
+                        spelled = format!("<{{ {types} }}>");
+                        Ok(format!("<{{ {values} }}>"))
+                    }
+                    Err(refused) => Err(refused),
+                }
+            }
         };
         // **A `const` object is a `constant`**, as `clang` writes one, so it
         // lands in read-only memory and a write to it faults as it does in
@@ -700,8 +744,90 @@ impl Emitter<'_> {
                 format!("{name} = internal {kind} {spelled} {init}")
             }
         };
-        let line = format!("{line}{}", self.struct_align(object.ty));
+        // **A packed global is aligned as its type**, which `<{ ... }>` is
+        // not: LLVM takes a packed struct as aligned to 1, so an `int[3]`
+        // or a `long long` table written as one is given its type's own
+        // alignment, as every other global's comes from its type (#1241
+        // review).
+        let align = if spelled.starts_with("<{") {
+            self.unit
+                .align_of(object.ty)
+                .map_or_else(String::new, |align| format!(", align {align}"))
+        } else {
+            self.struct_align(object.ty)
+        };
+        let line = format!("{line}{align}");
         writeln!(out, "{line}").expect("writing to a string cannot fail");
+    }
+
+    /// The address of the global `of` plus `offset` bytes, as a constant.
+    fn static_address(&self, of: StaticId, offset: u64) -> String {
+        let name = self.global_name(of);
+        if offset == 0 {
+            name
+        } else {
+            format!("getelementptr inbounds (i8, ptr {name}, i64 {offset})")
+        }
+    }
+
+    /// Each scalar and each run of bytes `init` holds for an object of `ty`
+    /// at `at` bytes into the global, as its offset, its size, and its LLVM
+    /// type and value. A zero is none: the gaps are zero. A recursion,
+    /// bounded by how deep a type nests.
+    fn pieces(
+        &mut self,
+        ty: TyId,
+        init: &StaticInit,
+        at: u64,
+        pieces: &mut Vec<(u64, u64, String, String)>,
+    ) -> Refuses<()> {
+        match init {
+            StaticInit::Zero => {}
+            StaticInit::Int(value) => {
+                let size = self.unit.size_of(ty).unwrap_or(0);
+                let value = self.constant(*value, ty)?;
+                pieces.push((at, size, self.spell(ty), value));
+            }
+            StaticInit::Bytes(bytes) => pieces.push((
+                at,
+                bytes.len() as u64,
+                format!("[{} x i8]", bytes.len()),
+                format!("c\"{}\"", bytes_spelled(bytes)),
+            )),
+            StaticInit::Address { of, offset, .. } => {
+                let size = self.unit.size_of(ty).unwrap_or(8);
+                pieces.push((
+                    at,
+                    size,
+                    "ptr".to_owned(),
+                    self.static_address(*of, *offset),
+                ));
+            }
+            StaticInit::Aggregate(entries) => match self.unit.ty(ty) {
+                Ty::Struct(id) => {
+                    let members: Vec<(TyId, u64)> = self
+                        .unit
+                        .struct_layout(id)
+                        .members
+                        .iter()
+                        .map(|member| (member.ty, member.offset))
+                        .collect();
+                    for (entry, (member, offset)) in entries.iter().zip(members) {
+                        self.pieces(member, entry, at + offset, pieces)?;
+                    }
+                }
+                Ty::Array { element, .. } => {
+                    let size = self.unit.size_of(element).unwrap_or(0);
+                    for (index, entry) in entries.iter().enumerate() {
+                        self.pieces(element, entry, at + index as u64 * size, pieces)?;
+                    }
+                }
+                Ty::Integer { .. } | Ty::Pointer(_) | Ty::Void | Ty::Function(_) => {
+                    return self.refuse("an aggregate initializing a scalar");
+                }
+            },
+        }
+        Ok(())
     }
 
     /// Where a place is, as a `ptr`.

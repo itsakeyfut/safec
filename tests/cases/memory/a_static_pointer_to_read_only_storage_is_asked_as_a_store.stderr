@@ -1,0 +1,50 @@
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 ]
+   │
+ 1 │ char *literal = "ab";
+   │                 ──┬─  
+   │                   ╰─── a `const` object or a string literal is held by a pointer that may write it
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:13 ]
+   │
+ 4 │ int *cast = (int *)&c;
+   │             ────┬────  
+   │                 ╰────── a `const` object or a string literal is held by a pointer that may write it
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 ]
+   │
+ 6 │ char *table[2] = {"a", "b"};
+   │                        ─┬─  
+   │                         ╰─── a `const` object or a string literal is held by a pointer that may write it
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 ]
+   │
+ 6 │ char *table[2] = {"a", "b"};
+   │                   ─┬─  
+   │                    ╰─── a `const` object or a string literal is held by a pointer that may write it
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 ]
+    │
+ 12 │     static char *inner = "x";
+    │                          ─┬─  
+    │                           ╰─── a `const` object or a string literal is held by a pointer that may write it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

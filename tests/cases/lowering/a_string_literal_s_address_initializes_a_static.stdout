@@ -1,0 +1,16 @@
+Target "x86_64-pc-windows-msvc"
+Static "p" "char *" external address ".str.0" 0
+Static ".str.0" "char[3]" internal bytes 104 105 0
+Function a_string_literal_s_address_initializes_a_static.c:2:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_string_literal_s_address_initializes_a_static.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_string_literal_s_address_initializes_a_static.c:3:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_string_literal_s_address_initializes_a_static.c:3:12 generated
+    Return

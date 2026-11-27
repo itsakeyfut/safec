@@ -1,0 +1,16 @@
+error[SC0304]: cannot compile this initializer yet
+   ╭─[ a_static_initializer_this_compiler_cannot_write_is_refused.c:4:11 ]
+   │
+ 4 │ } bits = {1, 2};
+   │           ┬  
+   │           ╰── this initializes a bit-field, which a static's initializer does not write yet
+───╯
+  = note: a gap in this compiler: C17 6.7.9 allows it
+error[SC0304]: cannot compile this initializer yet
+   ╭─[ a_static_initializer_this_compiler_cannot_write_is_refused.c:9:18 ]
+   │
+ 9 │ } short_first = {1};
+   │                  ┬  
+   │                  ╰── this initializes a union's first member, which is not its largest
+───╯
+  = note: a gap in this compiler: C17 6.7.9 allows it

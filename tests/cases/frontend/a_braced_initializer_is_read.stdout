@@ -1,0 +1,18 @@
+Declaration a_braced_initializer_is_read.c:1:1 "x" "int"
+  InitializerList a_braced_initializer_is_read.c:1:9
+    Number a_braced_initializer_is_read.c:1:10 "1"
+Declaration a_braced_initializer_is_read.c:2:1 "a" "int[]"
+  InitializerList a_braced_initializer_is_read.c:2:11
+    Number a_braced_initializer_is_read.c:2:12 "1"
+    Number a_braced_initializer_is_read.c:2:15 "2"
+    Number a_braced_initializer_is_read.c:2:18 "3"
+Declaration a_braced_initializer_is_read.c:3:1 "grid" "struct P[2]"
+  InitializerList a_braced_initializer_is_read.c:5:13
+    InitializerList a_braced_initializer_is_read.c:5:14
+      Number a_braced_initializer_is_read.c:5:15 "1"
+      Number a_braced_initializer_is_read.c:5:18 "2"
+    InitializerList a_braced_initializer_is_read.c:5:22
+      Number a_braced_initializer_is_read.c:5:23 "3"
+      Number a_braced_initializer_is_read.c:5:26 "4"
+  Field a_braced_initializer_is_read.c:4:5 "x" "int"
+  Field a_braced_initializer_is_read.c:4:5 "y" "int"

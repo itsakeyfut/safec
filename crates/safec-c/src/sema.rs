@@ -846,8 +846,10 @@ impl Resolver<'_> {
     fn declarators(&mut self, declarators: &[InitDeclarator], diagnostics: &mut DiagnosticSink) {
         for declarator in declarators {
             self.declaration(&declarator.declaration, diagnostics);
-            if let Some(init) = declarator.init {
-                self.expr(init, diagnostics);
+            if let Some(init) = &declarator.init {
+                for value in init.exprs() {
+                    self.expr(value, diagnostics);
+                }
             }
         }
     }
@@ -909,7 +911,7 @@ impl Resolver<'_> {
     ) {
         for declarator in declarators {
             let declaration = &declarator.declaration;
-            let (Some(name), Some(_)) = (declaration.name, declarator.init) else {
+            let (Some(name), Some(_)) = (declaration.name, &declarator.init) else {
                 continue;
             };
             // A function with an initializer is the type checker's to refuse.

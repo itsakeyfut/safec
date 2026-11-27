@@ -1,0 +1,9 @@
+error[SC0412]: this reaches 20 bytes into an object of 16 bytes
+    ╭─[ a_local_holding_pointers_is_initialized_one_scalar_at_a_time.c:14:5 ]
+    │
+ 14 │     return a[4];
+    │     ──────┬─────  
+    │           ╰─────── wider than the object it reaches
+────╯
+  = note: this check belongs to safety level 1
+  = help: make the object at least as wide as this access, or reach less of it

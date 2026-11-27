@@ -547,17 +547,12 @@ fn nesting_is_bounded_and_the_bound_is_reported() {
 /// which range they come from and why a code outlives the wording beside
 /// it. `lexer.rs` holds the same test over the lexical five.
 ///
-/// Mutation: change `EXPECTED`, `TOO_DEEP` or `BRACED_INITIALIZER`. Each
+/// Mutation: change `EXPECTED`, `TOO_DEEP` or `TYPEDEF_INITIALIZED`. Each
 /// fails here. Before this test existed, `TOO_DEEP` could be renumbered
 /// with the whole suite still green: no corpus case nests deep enough to
 /// reach it, so the six that carry `SC0201` were guarding one of the
-/// parser's codes and nothing was guarding the other.
-///
-/// `BRACED_INITIALIZER` is the one case here that a corpus case also
-/// holds, because `a_braced_initializer_is_refused` compares the whole
-/// rendered diagnostic. It is listed anyway rather than left to that one,
-/// so that the row somebody adds for the parser's fourth code has three
-/// above it to copy rather than two.
+/// parser's codes and nothing was guarding the other. `SC0203` was a
+/// braced initializer's until #1241 read it, and is retired.
 #[test]
 fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
     let too_deep = format!(
@@ -569,7 +564,6 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
     for (source, code) in [
         ("int x\n", "SC0201"),
         (too_deep.as_str(), "SC0202"),
-        ("int x = {1};\n", "SC0203"),
         ("typedef int T = 1;\n", "SC0208"),
     ] {
         let parsed = parsed(source);

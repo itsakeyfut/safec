@@ -16,6 +16,7 @@ pub mod ast;
 pub mod cli;
 pub mod diagnostics;
 pub mod driver;
+pub mod initializer;
 pub mod lexer;
 pub mod literal;
 pub mod lowering;

@@ -1,0 +1,16 @@
+error[SC0304]: cannot initialize this object one scalar at a time
+    ╭─[ a_large_local_holding_a_pointer_is_not_initialized_yet.c:12:23 ]
+    │
+ 12 │     int *many[1025] = {0};
+    │                       ─┬─  
+    │                        ╰─── it holds a pointer and more than 1024 scalars
+────╯
+  = note: a gap in this compiler: an object holding a pointer is initialized a store per scalar, so the memory check reads what each holds
+error[SC0304]: cannot initialize this object one scalar at a time
+    ╭─[ a_large_local_holding_a_pointer_is_not_initialized_yet.c:17:21 ]
+    │
+ 17 │     union Short s = {1};
+    │                     ─┬─  
+    │                      ╰─── it holds a pointer and a union whose first member is not its largest
+────╯
+  = note: a gap in this compiler: the union's bytes past that member would not be written

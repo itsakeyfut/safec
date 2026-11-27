@@ -54,6 +54,28 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
+        // A local holding a pointer is initialized a store per scalar, the
+        // ones the list does not name with zero, so `ps[1]` is read as
+        // written and no `SC0413` says a `memset` wrote no pointer; one
+        // holding none is filled and then stored, and read past its end is
+        // `SC0412` (#1241, ADR-0137). Mutation: zero `ps` with the `memset`
+        // in `Lowering::store_list`; `pointers` says `SC0413`.
+        a_local_holding_pointers_is_initialized_one_scalar_at_a_time: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `const` local is given its starting value by its list's stores,
+        // fill, bit-field's unit and whole struct's copy, which are no write
+        // C17 6.7.3 p6 forbids; a write through a cast after it still is
+        // `SC0417` (#1241). Mutations: ask an initializing store in
+        // `read_only::written_read_only`, write a bit-field's unit back as
+        // `Generated`, or copy a struct item with `copy_struct`; each makes
+        // `initialized` say `SC0417`.
+        a_const_local_is_initialized_from_a_braced_list: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static's initializer giving a pointer that does not point at
+        // `const` a literal's or a `const` object's address is asked as the
+        // store it stands for is (ADR-0121): `literal`, `cast`, `table`'s
+        // two and `inner` are `SC0417` at their initializers; `kept`,
+        // `read` and `names` are not (#1241 review). Mutation: answer none
+        // in `memory::read_only_statics`; this goes silent.
+        a_static_pointer_to_read_only_storage_is_asked_as_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` array a string literal initializes has its own length,
         // the literal's or the one written, and no other: `terminator` and
         // `padded` read their last byte with no report, and `past` one byte
@@ -8945,7 +8967,31 @@ cases! {
         // whatever artifact the case asks for.
         a_block_declaration_carries_its_initializer: ["--emit", "ast"],
         a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
-        a_braced_initializer_is_refused: ["--emit", "ast"],
+        // A braced list, nested, with a trailing comma, at file scope, and
+        // a scalar's in braces (C17 6.7.9 p11), each an `InitializerList`
+        // (#1241). Mutation: refuse a `{` in `Parser::initializer`; nothing
+        // is read.
+        a_braced_initializer_is_read: ["--emit", "ast"],
+        // Each item is held to the subobject it initializes as an
+        // initializer of it is (C17 6.5.16.1): `wrong`'s `1` for an `int *`,
+        // `two`'s both in order, a struct of another type, a literal for an
+        // `int` row; too many items for an array, for a scalar member and
+        // for a union, whose first member alone takes one (6.7.9 p2, p17);
+        // a literal too long for a row, where one that fits exactly is
+        // read; a static's second item that is no constant (p4); and `{}`,
+        // this compiler's gap (#1241). Mutations: skip the leaves in
+        // `Checker::check_list`, and `wrong` is accepted; reach every member
+        // of a union in `Shapes::kind`, and `one_member` is; take any struct
+        // whole in `initializes_whole`, and `outer`'s `p` is held to `struct
+        // Q` rather than to its `int`. `later` is initialized before its
+        // struct is complete, which 6.7.9 p3 forbids though a tentative
+        // definition may wait (6.9.2 p2); mutation: drop `!initialized` in
+        // `Checker::check_complete_objects`, and it is accepted.
+        a_braced_initializer_is_held_to_each_subobject: ["--emit", "ast"],
+        // A designation is read with #1242, and refused until then rather
+        // than read as a position. Mutation: drop the refusal in
+        // `Parser::initializer_items`; `.y` is a syntax error instead.
+        a_designated_initializer_is_not_read_yet: ["--emit", "ast"],
         // C17 6.7.1 p2: one storage class per declaration. Mutation: let a
         // second replace the first in `Parser::eat_qualifiers_and_storage`;
         // nothing is reported.
@@ -8961,14 +9007,6 @@ cases! {
         // Mutation: count the terminating zero in `Checker::check_initialized`;
         // `fits` is refused too.
         a_string_literal_longer_than_its_array_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `{ "ab" }` for a struct, an array of pointers or an array of
-        // arrays initializes their first member or element (C17 6.7.9 p17,
-        // p20), so its braces are not the literal's own and the list waits
-        // for braced initializers (#1241): `SC0203`, not a constraint
-        // violation (#1244 review). Mutation: answer `true` in
-        // `Parser::takes_braced_literal`; each is refused under `SC0310` or
-        // `SC0302`.
-        a_braced_list_beginning_with_a_string_literal_is_not_read_yet: ["--emit", "ast"],
         // `char s[5]; char s[] = "ab";` is one `char[5]` by C17 6.2.7 p3,
         // which this compiler does not build, so it is its gap and not a
         // conflict; `t`, with no length before, is read (#1244 review).
@@ -11219,6 +11257,12 @@ cases! {
         // a literal was in `Emitter::global`; `wide` and `exact` are
         // constants and `wide` loses its tail.
         a_static_char_array_is_written_as_its_bytes_and_a_zeroed_tail: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static aggregate is a packed struct of its pieces at their
+        // offsets, zeros between: a literal's address, a `char` and a
+        // `long long` per entry, the third entry and the second's `size`
+        // left zero; and `&g` is `@g` (#1241). Mutation: put every piece at
+        // offset zero in `Emitter::pieces`; the struct is out of order.
+        llvm_ir_of_a_static_aggregate_and_an_address: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // A block ending in a call that does not return ends in `unreachable`,
         // and `tests/llvm.rs` hands it to `clang`. Mutation: have `emit.rs`'s
         // `call` write nothing for no continuation; this fails, and so does
@@ -11355,10 +11399,11 @@ cases! {
         // The `SC0412` at `s[1]` is an index into a static array, which the
         // bounds check doubts as it doubts one into a global array.
         a_string_literal_is_a_static_of_its_bytes_and_a_zero: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // An address constant, which a static here cannot start with yet.
-        // Mutation: drop the literal from `Checker::address_constant`; this is
-        // `SC0317`, which says C forbids it.
-        a_string_literal_is_no_static_initializer_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A literal's address starts a static pointer, as `address` of the
+        // literal's own static (#1241). Mutation: drop the literal from
+        // `Checker::address_constant`; this is `SC0317`, which says C
+        // forbids it.
+        a_string_literal_s_address_initializes_a_static: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every use of an object with static storage duration is `*t` after
         // `t = Static(..)`, and the statics are listed before the functions
         // with what they start with: a tentative definition and its
@@ -11367,11 +11412,35 @@ cases! {
         // internal linkage. See ADR-0115. Mutation: give a tentative
         // definition after a definition its own entry; `g` is listed twice.
         a_global_is_reached_through_its_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // C17 6.6 p9 allows an address constant, and a static here holds a
-        // number. Mutation: answer `StaticInit::Zero` where the initializer
-        // has no value in `Lowering::static_init`; `p` starts null and this
-        // builds.
-        an_address_is_no_initializer_for_a_static_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.6 p9's address constants start a static: `&g`, an
+        // element's, an array plus or minus a number on either side, `1[a]`,
+        // through a cast, a member's at its offset, through `->`, an array
+        // member's and a row's as they decay; one before its object is
+        // refused, and a list of numbers and of a literal's bytes is an
+        // aggregate (#1241). Mutation: answer every member at offset zero in
+        // `Lowering::member_offset`; `y`'s offset is `0`.
+        an_address_initializes_a_static: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function's address is an address constant a static here cannot
+        // hold yet, so it is refused rather than started as null. Mutation:
+        // answer `StaticInit::Zero` in `Lowering::static_value`; this builds.
+        a_function_s_address_is_no_static_initializer_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static's bit-field written other than zero, and a union whose
+        // first member is not its largest, are this compiler's gap: the
+        // second would leave the union's bytes past `c` unwritten where C
+        // makes them zero (#1241). Mutation: drop the refusal in
+        // `Lowering::static_init`; both build.
+        a_static_initializer_this_compiler_cannot_write_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local holding a pointer is written a store per scalar, so past
+        // `LEAVES` scalars it is refused rather than made a function of
+        // thousands of stores (ADR-0137): `fits` at the bound is read and
+        // `past` one over is refused. A union holding a pointer whose first
+        // member is not its largest is refused too, its bytes past the
+        // member being no store's (#1241 review). Mutations: compare with
+        // `>=` in `Shapes::scalars`, and `fits` is refused; drop the short
+        // union's refusal in `Lowering::store_list`, and `short_first`
+        // builds. At `--safety off`, since the lowering's refusal is what
+        // this is about.
+        a_large_local_holding_a_pointer_is_not_initialized_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
         // C17 6.2.7 p2 makes this undefined, and only the lowering sees both
         // declarations. Mutation: drop the type comparison in
         // `Lowering::block_static`; `g` is read as a `char`.

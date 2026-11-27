@@ -175,7 +175,6 @@ Five more are where the *parser* stopped, and belong here for the same reason.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
-| `int x = {1};` | `error[SC0203]` at the `{` | accepts | accepts |
 | `struct B { int x : 3; };` | `error[SC0207]` at the `:` | accepts | accepts |
 | `struct S { struct { int a; }; };` | `error[SC0207]` at the inner `struct` | accepts | accepts |
 | a header of `int a;` and `int`, included, then `b;` | `error[SC0207]` at the header's second `int` | accepts | accepts |
@@ -191,11 +190,8 @@ specifiers, which is this compiler's span and not C's, and #555 builds those
 from the construct instead. The macro is the same rule: `N * 4` reads `3 * 4`
 as one operand, so the multiplication holds part of `N`'s expansion, and
 ADR-0054 refuses a node that cuts one. C17 6.7.2.1 p9's bit-field and p13's
-anonymous member are read (#1206, #1207). 6.7.9 p11 lets a scalar's initializer be a
-single expression "optionally enclosed in braces", so it is valid with no
-designator and no nested list in it. Braced lists are read with #1241; until
-then the parser unwraps only `{ "ab" }`, where the declarator's type takes it
-as it takes `"ab"`: an array of character type (6.7.9 p14) or a pointer.
+anonymous member are read (#1206, #1207), and so is a braced initializer
+(#1241), whose designators are refused under `SC0207` until #1242 reads them.
 
 `SC0207` is the code for valid C the parser does not read yet, told apart
 from C it cannot parse where the parse failed. A compound literal, a prefixed
@@ -732,7 +728,7 @@ a declaration. They are gaps rather than decisions, and each one is a program
 |---|---|
 | `int a[n];`, an array whose length is no constant, or any function or struct type | the IR holds `int`, `char`, `void`, and pointers to them and arrays of them with a constant length (#621) |
 | `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
-| `int *p = &g;`, an object with static storage duration whose initializer is an address | what a static starts with is a number or a null pointer (ADR-0115) |
+| `void (*fp)(void) = f;`, an object with static storage duration whose initializer is a function's address | what a static starts with is a number, a null pointer, or an object's address plus a constant (ADR-0137) |
 | `extern char g;` in a block, where the file-scope `g` is an `int` | C17 6.2.7 p2 makes it undefined, and nothing before the lowering compares a block's `extern` with the file scope's declaration |
 | a file-scope object of a type the IR cannot hold, used inside a function | it is passed over where it is declared, so the use names nothing |
 

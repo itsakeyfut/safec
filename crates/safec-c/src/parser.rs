@@ -28,8 +28,8 @@
 
 use crate::ast::{
     Ast, Attribute, BinOp, Declaration, Enumeration, Enumerator, EnumeratorId, Expr, ExprId,
-    ForStart, Function, InitDeclarator, Item, Nullability, Parameters, Specifier, Stmt, StmtId,
-    Storage, Type, TypeId, UnOp, VaOp, spell_type,
+    ForStart, Function, InitDeclarator, Initializer, Item, Nullability, Parameters, Specifier,
+    Stmt, StmtId, Storage, Type, TypeId, UnOp, VaOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::preprocessor::Preprocessed;
@@ -53,23 +53,8 @@ const EXPECTED: Code = Code::new("SC0201");
 /// different thing to tell a reader and a different thing to search for.
 const TOO_DEEP: Code = Code::new("SC0202");
 
-/// An initializer written in braces, which C17 6.7.9 allows and this stage
-/// does not read.
-///
-/// Its own code for [`TOO_DEEP`]'s reason and one more: nothing is wrong with
-/// the program, so a reader has to be able to tell an unimplemented feature
-/// from a defect, and a number they can search for is how they do it.
-///
-/// `int x = {1};` is the case that makes this worth saying. 6.7.9 p11 lets a
-/// scalar's initializer be a single expression "optionally enclosed in
-/// braces", so that program is valid C with no designator and no nested list
-/// in it, and `clang -std=c17 -pedantic-errors` accepts it in silence. This
-/// refuses it all the same: braced lists are read with #1241, and until then
-/// the braces are unwrapped only from `{ "ab" }`, where the declarator's type
-/// takes it as it takes `"ab"` (`Parser::takes_braced_literal`).
-/// `docs/frontend.md` carries the row, which is where a reader looks to tell a
-/// gap from a decision.
-const BRACED_INITIALIZER: Code = Code::new("SC0203");
+// `SC0203` was a braced initializer, refused here until #1241 read it. The
+// number stays retired (`docs/diagnostics.md`).
 
 /// A nullability specifier or `__attribute__` written where it cannot apply.
 ///
@@ -127,10 +112,9 @@ const NOTHING_DECLARED: Code = Code::new("SC0206");
 /// to be able to tell a construct this compiler has not been taught from a
 /// defect in their file, and a code they can search for is how they do it.
 /// The parser's counterpart of the lexer's `SC0107`, and one code for every
-/// construct of this kind for the same reason [`EXPECTED`] is one code. Two
-/// other refusals of valid C keep codes of their own: a braced initializer
-/// the one it was given first, [`BRACED_INITIALIZER`], and an annotation
-/// this compiler does not read [`UNREAD_ANNOTATION`], which is about a word
+/// construct of this kind for the same reason [`EXPECTED`] is one code.
+/// Another refusal of valid C keeps a code of its own: an annotation this
+/// compiler does not read, [`UNREAD_ANNOTATION`], which is about a word
 /// rather than a construct.
 ///
 /// Which construct it is is decided where the parse failed, by
@@ -1374,7 +1358,7 @@ impl Parser<'_> {
             };
             self.declare_name(name, named, diagnostics)?;
             let init = self.initializer(ty, diagnostics)?;
-            let completed = self.completed(ty, init);
+            let completed = self.completed(ty, init.as_ref());
             if typedef && init.is_some() {
                 self.report_at(
                     declarator,
@@ -1430,23 +1414,41 @@ impl Parser<'_> {
     /// change a type in place, so that half is held by the compiler; the run
     /// case `a_char_array_takes_its_length_and_bytes_from_a_string_literal`
     /// shows two arrays of one typedef with two lengths.
-    fn completed(&mut self, ty: TypeId, init: Option<ExprId>) -> TypeId {
-        let length = match init.map(|init| self.ast.expr(init)) {
-            Some(Expr::String { length, .. }) => *length,
-            _ => return ty,
+    ///
+    /// **A list gives it a length this stage cannot count** (#1241 review):
+    /// how many elements its items fill turns on brace elision over the
+    /// element (6.7.9 p20), on whether an item is a struct taken whole,
+    /// which only types say, and with #1242 on a designator's value. The
+    /// node is made here, after the items, and its value is set by the type
+    /// check when it reaches it, after every item is typed and before
+    /// anything that names the array (`Ast::set_length`).
+    fn completed(&mut self, ty: TypeId, init: Option<&Initializer>) -> TypeId {
+        let Type::Array {
+            element,
+            length: None,
+            ..
+        } = *self.ast.ty(ty)
+        else {
+            return ty;
         };
-        match *self.ast.ty(ty) {
-            Type::Array {
-                element,
-                length: None,
-                ..
-            } if self.is_character(element) => self.ast.push_type(Type::Array {
-                element,
-                length: Some(length),
-                written: None,
+        let length = match init {
+            Some(Initializer::Expr(id)) => match self.ast.expr(*id) {
+                Expr::String { length, .. } if self.is_character(element) => *length,
+                _ => return ty,
+            },
+            Some(Initializer::List { items, span }) => self.ast.push_expr(Expr::Length {
+                // The items' count until the type check sets it, which is
+                // what it is wherever no item elides braces.
+                value: items.len() as u64,
+                span: *span,
             }),
-            _ => ty,
-        }
+            None => return ty,
+        };
+        self.ast.push_type(Type::Array {
+            element,
+            length: Some(length),
+            written: None,
+        })
     }
 
     /// Whether `ty` is a character type, `char`, `signed char` or `unsigned
@@ -1466,7 +1468,11 @@ impl Parser<'_> {
     /// in braces") and a pointer, a scalar, whose braces p11 drops. For
     /// any other type the braces are not the literal's own: a struct's or an
     /// array of pointers' list initializes its first member or element from
-    /// the literal (p17, p20), which waits for braced lists (#1241).
+    /// the literal (p17, p20), which `initializer::Shapes` works out.
+    ///
+    /// **Kept although the list reads `{ "ab" }` too**: an array of unknown
+    /// size takes the literal's length from the literal, which only the
+    /// literal read as itself gives here (`Parser::completed`).
     fn takes_braced_literal(&self, ty: TypeId) -> bool {
         match *self.ast.ty(self.ast.unqualified(ty)) {
             Type::Pointer(_) => true,
@@ -1475,10 +1481,11 @@ impl Parser<'_> {
         }
     }
 
-    /// C17 6.7.9's `initializer` for a declarator of type `ty`: its
-    /// `assignment-expression` form, and `{ "ab" }` where that means `"ab"`
-    /// ([`Parser::takes_braced_literal`]). Every other braced list is
-    /// refused, under [`BRACED_INITIALIZER`].
+    /// C17 6.7.9's `initializer` for a declarator of type `ty`: an
+    /// `assignment-expression`, or a braced list ([`Parser::initializer_list`]).
+    /// `{ "ab" }` where that means `"ab"` ([`Parser::takes_braced_literal`])
+    /// is read as the literal itself, so an array of character type and a
+    /// pointer are initialized from it as #1244 built them.
     ///
     /// [`Parser::assignment`] rather than [`Parser::expression`], which is the
     /// difference between the two and the whole of why both exist. An
@@ -1494,14 +1501,14 @@ impl Parser<'_> {
         &mut self,
         ty: TypeId,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<Option<ExprId>> {
+    ) -> Option<Option<Initializer>> {
         if !self.eat(TokenKind::Punct(Punct::Equal)) {
             return Some(None);
         }
 
         // `{ "ab" }`: one literal, or a run of adjacent ones, and an optional
-        // `,`, for a type it initializes as `"ab"` does. Every other list
-        // waits for the braced initializers that read it (#1241).
+        // `,`, for a type it initializes as `"ab"` does. Every other list is
+        // a list.
         if self.check(TokenKind::Punct(Punct::LeftBrace)) && self.takes_braced_literal(ty) {
             let mut ahead = 1;
             while self.peek_at(ahead).kind == TokenKind::String {
@@ -1518,24 +1525,68 @@ impl Parser<'_> {
                 // above, are what the literal left.
                 self.eat(TokenKind::Punct(Punct::Comma));
                 self.advance();
-                return Some(Some(string));
+                return Some(Some(Initializer::Expr(string)));
             }
         }
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            self.report_noted(
-                BRACED_INITIALIZER,
-                "a braced initializer is not read yet",
-                "this stage reads an expression here, and not a brace",
-                "C17 6.7.9 p11 makes `= { e }` and `= e` the same thing for a \
-                 scalar, so dropping the braces is exact wherever the type is \
-                 one. The form that needs designators and nested lists is for \
-                 an aggregate, and arrives with structs and arrays",
-                diagnostics,
-            );
-            return None;
+            return self.initializer_list(diagnostics).map(Some);
         }
 
-        Some(Some(self.assignment(diagnostics)))
+        Some(Some(Initializer::Expr(self.assignment(diagnostics))))
+    }
+
+    /// C17 6.7.9's `{ initializer-list }` and `{ initializer-list , }`, the
+    /// `{` next. Each item is an `assignment-expression` or a list of its
+    /// own, nested as deep as [`Parser::deeper`] allows. What the items
+    /// initialize is the type check's to work out (p17 to p20).
+    ///
+    /// **A designation is refused**, under [`UNREAD`], until #1242 reads
+    /// it: read as a position it would initialize the wrong member. `{}`
+    /// is read, and refused by the type check, since C17 has no empty list
+    /// and C23 gives it a meaning this compiler does not build yet.
+    fn initializer_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Initializer> {
+        self.deeper(diagnostics, Self::initializer_items, |_, _| None)
+    }
+
+    /// [`Parser::initializer_list`], one level in.
+    fn initializer_items(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Initializer> {
+        let open = self.advance().span;
+        let mut items = Vec::new();
+        loop {
+            if self.check(TokenKind::Punct(Punct::RightBrace)) {
+                break;
+            }
+            if self.check(TokenKind::Punct(Punct::Dot))
+                || self.check(TokenKind::Punct(Punct::LeftBracket))
+            {
+                self.report_noted(
+                    UNREAD,
+                    "a designated initializer is not read yet",
+                    "a designation",
+                    "a gap in this compiler: C17 6.7.9 p6 and p7 allow it",
+                    diagnostics,
+                );
+                return None;
+            }
+            let item = if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+                self.initializer_list(diagnostics)?
+            } else {
+                Initializer::Expr(self.assignment(diagnostics))
+            };
+            items.push(item);
+            // The `,` is eaten before the next item is read, so a round of
+            // this loop always consumes a token.
+            if !self.eat(TokenKind::Punct(Punct::Comma)) {
+                break;
+            }
+        }
+        let close = self.expect(
+            TokenKind::Punct(Punct::RightBrace),
+            "`}` to close the initializer",
+            diagnostics,
+        )?;
+        let span = self.join(open, close, diagnostics);
+        Some(Initializer::List { items, span })
     }
 
     /// `__attribute__((name("argument")))`, the one shape of it this parser

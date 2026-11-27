@@ -285,7 +285,9 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
             .map(|id| match &unit.static_object(id).init {
                 StaticInit::Zero => Some(Value::Int(0)),
                 StaticInit::Int(value) => Some(Value::Int(*value)),
-                StaticInit::Bytes(_) => None,
+                StaticInit::Bytes(_) | StaticInit::Aggregate(_) | StaticInit::Address { .. } => {
+                    None
+                }
             })
             .collect(),
     };

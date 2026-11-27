@@ -1,0 +1,5 @@
+Declaration a_designated_initializer_is_not_read_yet.c:1:1 "struct P"
+  Field a_designated_initializer_is_not_read_yet.c:2:5 "x" "int"
+  Field a_designated_initializer_is_not_read_yet.c:2:5 "y" "int"
+Error a_designated_initializer_is_not_read_yet.c:4:1
+Error a_designated_initializer_is_not_read_yet.c:5:1

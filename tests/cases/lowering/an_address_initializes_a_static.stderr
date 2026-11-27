@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile this initializer yet
+    ╭─[ an_address_initializes_a_static.c:21:15 ]
+    │
+ 21 │ int *before = a - 1;
+    │               ──┬──  
+    │                 ╰──── an address this compiler cannot write into a static
+────╯
+  = note: a gap in this compiler: a static holds a number, a null pointer, or an object's address plus a constant, and not a function's address or a number cast to a pointer yet

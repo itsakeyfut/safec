@@ -1,0 +1,63 @@
+Declaration a_braced_initializer_is_held_to_each_subobject.c:1:1 "struct P"
+  Field a_braced_initializer_is_held_to_each_subobject.c:2:5 "p" "int *"
+  Field a_braced_initializer_is_held_to_each_subobject.c:3:5 "n" "int"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:6:1 "struct Q"
+  Field a_braced_initializer_is_held_to_each_subobject.c:7:5 "a" "int"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:10:1 "union U"
+  Field a_braced_initializer_is_held_to_each_subobject.c:11:5 "i" "int"
+  Field a_braced_initializer_is_held_to_each_subobject.c:12:5 "c" "char"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:15:1 "x" "int"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:16:1 "p" "struct P"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:17:1 "wrong" "struct P"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:17:18
+    Number a_braced_initializer_is_held_to_each_subobject.c:17:19 "1"
+    Number a_braced_initializer_is_held_to_each_subobject.c:17:22 "2"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:18:1 "two" "int *[2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:18:15
+    Number a_braced_initializer_is_held_to_each_subobject.c:18:16 "1"
+    Number a_braced_initializer_is_held_to_each_subobject.c:18:19 "2"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:19:1 "too_many" "int[2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:19:19
+    Number a_braced_initializer_is_held_to_each_subobject.c:19:20 "1"
+    Number a_braced_initializer_is_held_to_each_subobject.c:19:23 "2"
+    Number a_braced_initializer_is_held_to_each_subobject.c:19:26 "3"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:20:1 "nested_too_many" "struct P"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:20:28
+    InitializerList a_braced_initializer_is_held_to_each_subobject.c:20:29
+      Unary a_braced_initializer_is_held_to_each_subobject.c:20:30 "&"
+        Identifier a_braced_initializer_is_held_to_each_subobject.c:20:31 "x"
+      Number a_braced_initializer_is_held_to_each_subobject.c:20:34 "1"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:21:1 "one_member" "union U"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:21:22
+    Number a_braced_initializer_is_held_to_each_subobject.c:21:23 "1"
+    Number a_braced_initializer_is_held_to_each_subobject.c:21:26 "2"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:22:1 "other" "struct Q"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:22:18
+    Identifier a_braced_initializer_is_held_to_each_subobject.c:22:19 "p"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:23:1 "outer" "struct Outer"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:26:11
+    Identifier a_braced_initializer_is_held_to_each_subobject.c:26:12 "p"
+    Number a_braced_initializer_is_held_to_each_subobject.c:26:15 "1"
+  Field a_braced_initializer_is_held_to_each_subobject.c:24:5 "q" "struct Q"
+  Field a_braced_initializer_is_held_to_each_subobject.c:25:5 "n" "int"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:27:1 "struct Later"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:28:1 "later" "struct Later"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:28:22
+    Number a_braced_initializer_is_held_to_each_subobject.c:28:23 "1"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:29:1 "struct Later"
+  Field a_braced_initializer_is_held_to_each_subobject.c:30:5 "a" "int"
+Declaration a_braced_initializer_is_held_to_each_subobject.c:32:1 "numbers" "int[2][2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:32:21
+    String a_braced_initializer_is_held_to_each_subobject.c:32:22 "\"ab\""
+Declaration a_braced_initializer_is_held_to_each_subobject.c:33:1 "empty" "int[2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:33:16
+Declaration a_braced_initializer_is_held_to_each_subobject.c:34:1 "short_name" "char[2][2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:34:25
+    String a_braced_initializer_is_held_to_each_subobject.c:34:26 "\"abc\""
+Declaration a_braced_initializer_is_held_to_each_subobject.c:35:1 "exact" "char[1][2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:35:20
+    String a_braced_initializer_is_held_to_each_subobject.c:35:21 "\"ab\""
+Declaration a_braced_initializer_is_held_to_each_subobject.c:36:1 "not_constant" "int[2]"
+  InitializerList a_braced_initializer_is_held_to_each_subobject.c:36:23
+    Number a_braced_initializer_is_held_to_each_subobject.c:36:24 "1"
+    Identifier a_braced_initializer_is_held_to_each_subobject.c:36:27 "x"

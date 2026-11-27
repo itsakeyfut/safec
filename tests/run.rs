@@ -389,4 +389,30 @@ programs! {
     /// `Lowering::library_own`, or leave the program's name alone in
     /// `Emitter::name`, and this fails.
     an_initializer_calls_no_memset_the_program_has,
+    /// Braced lists for arrays, structs, nested ones, a union, bit-fields
+    /// and a scalar, with brace elision, an unsized array, rows of string
+    /// literals, a struct taken whole, a `const` local, the rest zero over
+    /// a dirtied frame, at block and file scope and in a block's `static`
+    /// (#1241). `{ "q" }` for a struct is a list whose first member the
+    /// literal initializes, not the literal (#1244 review). Review of #1241
+    /// added: a union's bytes past its first member and a struct's padding
+    /// zeroed over a dirtied frame, an unnamed bit-field skipped, a
+    /// flexible array member past the list, unsized arrays whose items
+    /// elide braces or are whole structs, a row's literal in braces, and a
+    /// static's zero bit-field and literal inside a struct. Mutations:
+    /// refuse a `{` in `Parser::initializer`, or answer `true` in
+    /// `Parser::takes_braced_literal`, and this does not build; take an
+    /// expression whole for an aggregate subobject in `Shapes::fill`, or
+    /// put every member at index zero in `Lowering::static_init`, zero a
+    /// local without a `memset` where its scalars are all written in
+    /// `Lowering::store_list`, count every item as an element in
+    /// `Shapes::extent`, or drop the braced literal in `Shapes::object`,
+    /// and it fails.
+    a_braced_initializer_fills_arrays_and_structs,
+    /// Statics that start as addresses: string literals in a table, one
+    /// plus a number, `&g`, an element's, an array plus a number, a
+    /// member's, one declared later, and a struct table of both (#1241).
+    /// Mutation: answer every member at offset zero in
+    /// `Lowering::member_offset`; this fails.
+    a_static_holds_addresses_of_statics,
 }

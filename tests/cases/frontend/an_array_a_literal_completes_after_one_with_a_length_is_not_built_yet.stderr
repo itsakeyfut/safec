@@ -6,6 +6,6 @@ error[SC0304]: cannot complete `s` from its initializer where an earlier declara
    │      ╰── an earlier declaration
  2 │ char s[] = "ab";
    │      ┬  
-   │      ╰── its length is its string literal's
+   │      ╰── its length is its initializer's
 ───╯
   = note: a gap in this compiler: C17 6.2.7 p3 makes the two one type

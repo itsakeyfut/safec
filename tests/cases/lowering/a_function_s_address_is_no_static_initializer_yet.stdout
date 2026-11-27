@@ -1,0 +1,4 @@
+Target "x86_64-pc-windows-msvc"
+Static "callback" "void (*)(void)" external zero
+Function a_function_s_address_is_no_static_initializer_yet.c:1:6 "f" declared
+  Local "_0" "void" return

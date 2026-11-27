@@ -382,10 +382,58 @@ pub struct InitDeclarator {
     /// header and ends outside it. Nothing is made of it then, rather than a
     /// wider span that could hold another declarator's tokens.
     pub span: Option<Span>,
-    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
-    ///
-    /// A braced initializer is refused by the parser and never reaches here.
-    pub init: Option<ExprId>,
+    /// C17 6.7.9's `initializer`, if one was written.
+    pub init: Option<Initializer>,
+}
+
+/// C17 6.7.9's `initializer`: one expression, or a braced list of them.
+///
+/// A designation in a list is refused by the parser until #1242 reads it,
+/// so every item here stands where its position puts it (p17).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Initializer {
+    /// An `assignment-expression`.
+    Expr(ExprId),
+    /// `{ initializer-list }`, with a trailing `,` allowed and not kept.
+    List {
+        /// The items, in the order written.
+        items: Vec<Initializer>,
+        /// From the `{` through the `}`.
+        span: Span,
+    },
+}
+
+impl Initializer {
+    /// Where it is written.
+    pub fn span(&self, ast: &Ast) -> Span {
+        match self {
+            Self::Expr(id) => ast.expr(*id).span(),
+            Self::List { span, .. } => *span,
+        }
+    }
+
+    /// The expression it is, where it is one rather than a list.
+    pub fn expr(&self) -> Option<ExprId> {
+        match self {
+            Self::Expr(id) => Some(*id),
+            Self::List { .. } => None,
+        }
+    }
+
+    /// Every expression in it, in the order written, through every nested
+    /// list. A worklist, so that its depth costs no stack; the walks that
+    /// recurse over a list instead say what bounds them.
+    pub fn exprs(&self) -> Vec<ExprId> {
+        let mut found = Vec::new();
+        let mut work = vec![self];
+        while let Some(init) = work.pop() {
+            match init {
+                Self::Expr(id) => found.push(*id),
+                Self::List { items, .. } => work.extend(items.iter().rev()),
+            }
+        }
+        found
+    }
 }
 
 /// An operator with an operand on each side.
@@ -561,13 +609,15 @@ pub enum Expr {
     },
     /// A length this compiler counted rather than one the source wrote: a
     /// string literal's, which C17 6.4.5 p6 makes the bytes of the run and a
-    /// zero. A node of its own because an array type holds its length as an
-    /// expression, so that a literal's type is `char[N]` to every rule that
-    /// reads one. No walk reaches it: it is no operand of anything.
+    /// zero, or the elements a braced list gives an array of unknown size
+    /// (6.7.9 p22), which the type check sets ([`Ast::set_length`]). A node
+    /// of its own because an array type holds its length as an expression,
+    /// so that such an array's type is `T[N]` to every rule that reads one.
+    /// No walk reaches it: it is no operand of anything.
     Length {
         /// The count.
         value: u64,
-        /// The literal it counts.
+        /// The literal or the list it counts.
         span: Span,
     },
     /// An identifier standing for something. C17 6.5.1.
@@ -1356,6 +1406,23 @@ impl Ast {
         let mut types: Vec<TypeId> = self.enumeration_of.keys().copied().collect();
         types.sort_by_key(|ty| ty.0);
         types
+    }
+
+    /// Give the [`Expr::Length`] `id` the count the type check worked out:
+    /// the elements a braced list initializes, which only the type check
+    /// can count (`Parser::completed`). Every reader after it, the type's
+    /// spelling among them, reads the value set here. With
+    /// [`Ast::set_enumeration_sign`], the one other thing set after it was
+    /// pushed.
+    ///
+    /// # Panics
+    ///
+    /// If `id` is no counted length.
+    pub fn set_length(&mut self, id: ExprId, count: u64) {
+        match &mut self.exprs[id.index()] {
+            Expr::Length { value, .. } => *value = count,
+            _ => panic!("only a counted length is set late"),
+        }
     }
 
     /// Give the enumerated type `ty` its sign, C17 6.7.2.2 p4: the integer
