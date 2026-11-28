@@ -6,6 +6,7 @@ Static "two_levels_down" "union #1" external [ 0: address "p" 0 ]
 Static "inside_a_struct" "struct #2" external [ 0: 1 1: [ 0: address "p" 0 ] ]
 Static "beside_an_int" "union #4" external [ 0: address ".str.3" 0 ]
 Static "every_reader_const" "union #5" external [ 1: address ".str.4" 0 ]
+Static "a_struct_in_the_union" "union #6" external [ 0: [ 0: address "p" 0 1: 1 ] ]
 Static ".str.0" "char[4]" internal bytes 97 98 99 0
 Static ".str.1" "char[4]" internal bytes 97 98 99 0
 Static ".str.2" "char[2]" internal bytes 97 0
@@ -259,6 +260,39 @@ Function a_static_union_is_asked_at_its_least_const_reader.c:46:43 ".statics"
         Copy "_3"
     Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 initialized
       Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:55:50 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #6 *"
+  Local "_2" "struct #7 *"
+  Local "_3" "char ***"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_1"
+      Static "a_struct_in_the_union"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:51 generated
+      Destination "_4"
+      Static "p"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 initialized
+      Destination "_3"
         Deref
       Use
         Copy "_4"

@@ -44,3 +44,12 @@ union AllConst {
     const char *b;
 };
 union AllConst every_reader_const = {.b = "abc"};
+
+union OverAStruct {
+    struct {
+        const char *const *cp;
+        int n;
+    } s;
+    char **pp;
+};
+union OverAStruct a_struct_in_the_union = {.s = {&p, 1}};

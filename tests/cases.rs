@@ -162,10 +162,12 @@ cases! {
         // levels the least `const` of its readers keeps, as a store through
         // that member is (#1432): `SC0417` at the initializer where a
         // `char *` or a `char **` reads back what a `const` member was
-        // given, in a union of its own and one inside a struct; nothing
-        // where the other member is an integer or every reader is `const`
-        // (#1431). Mutation: mark the leaf with its own levels in
-        // `Lowering::subobject_place`; `handed` goes silent.
+        // given, in a union of its own, one inside a struct and one around
+        // a struct; nothing where the other member is an integer or every
+        // reader is `const` (#1431). Mutations: mark the leaf with its own
+        // levels in `Lowering::subobject_place`, and `handed` goes silent;
+        // ask only the innermost owner in `Lowering::readers_along`, and
+        // `a_struct_in_the_union` does.
         a_static_union_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` array a string literal initializes has its own length,
         // the literal's or the one written, and no other: `terminator` and
