@@ -1,0 +1,40 @@
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_union_is_asked_at_its_least_const_reader.c:7:38 ]
+   │
+ 7 │ static union Writable handed = {.b = "abc"};
+   │                                      ──┬──  
+   │                                        ╰──── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_union_is_asked_at_its_least_const_reader.c:14:33 ]
+    │
+ 14 │ union Writable returned = {.b = "abc"};
+    │                                 ──┬──  
+    │                                   ╰──── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_union_is_asked_at_its_least_const_reader.c:25:37 ]
+    │
+ 25 │ union Deep two_levels_down = {.cp = &p};
+    │                                     ─┬  
+    │                                      ╰── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_union_is_asked_at_its_least_const_reader.c:34:38 ]
+    │
+ 34 │ struct Around inside_a_struct = {1, {&p}};
+    │                                      ─┬  
+    │                                       ╰── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
