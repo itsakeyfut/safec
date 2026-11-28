@@ -158,6 +158,20 @@ cases! {
         // `SC0412`; give its stores `Origin::Written`, and
         // `a_const_static` is `SC0417`.
         a_static_initializer_is_asked_as_the_store_it_stands_for: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static union initialized through one member is asked at the
+        // levels the least `const` of its readers keeps, as a store through
+        // that member is (#1432): `SC0417` at the initializer where a
+        // `char *` or a `char **` reads back what a `const` member was
+        // given, in a union of its own, one inside a struct and one around
+        // a struct; nothing where the other member is an integer or every
+        // reader is `const` (#1431). Mutations: mark the leaf with its own
+        // levels in `Lowering::subobject_place`, and `handed` goes silent;
+        // ask only the innermost owner in `Lowering::readers_along`, and
+        // `a_struct_in_the_union` does; carry no member offset there, and
+        // `at_a_member_s_offset` does, or no element offset, and
+        // `at_an_element_s_offset` does; let `Lowering::pointers_at` read
+        // past its object, and `past_a_short_reader` is reported.
+        a_static_union_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` array a string literal initializes has its own length,
         // the literal's or the one written, and no other: `terminator` and
         // `padded` read their last byte with no report, and `past` one byte

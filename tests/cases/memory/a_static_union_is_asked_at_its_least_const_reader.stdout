@@ -1,0 +1,425 @@
+Target "x86_64-pc-windows-msvc"
+Static "handed" "union #0" internal [ 1: address ".str.0" 0 ]
+Static "returned" "union #0" external [ 1: address ".str.1" 0 ]
+Static "p" "char *" internal address ".str.2" 0
+Static "two_levels_down" "union #1" external [ 0: address "p" 0 ]
+Static "inside_a_struct" "struct #2" external [ 0: 1 1: [ 0: address "p" 0 ] ]
+Static "beside_an_int" "union #4" external [ 0: address ".str.3" 0 ]
+Static "every_reader_const" "union #5" external [ 1: address ".str.4" 0 ]
+Static "a_struct_in_the_union" "union #6" external [ 0: [ 0: address "p" 0 1: 1 ] ]
+Static "at_a_member_s_offset" "union #8" external [ 0: [ 0: 0 1: address ".str.5" 0 ] ]
+Static "at_an_element_s_offset" "union #11" external [ 0: [ 0: 0 1: address ".str.6" 0 ] ]
+Static "past_a_short_reader" "union #13" external [ 0: [ 0: 0 1: 0 2: 0 3: address ".str.7" 0 ] ]
+Static ".str.0" "char[4]" internal bytes 97 98 99 0
+Static ".str.1" "char[4]" internal bytes 97 98 99 0
+Static ".str.2" "char[2]" internal bytes 97 0
+Static ".str.3" "char[4]" internal bytes 97 98 99 0
+Static ".str.4" "char[4]" internal bytes 97 98 99 0
+Static ".str.5" "char[2]" internal bytes 120 0
+Static ".str.6" "char[2]" internal bytes 119 0
+Static ".str.7" "char[4]" internal bytes 97 98 99 0
+Function a_static_union_is_asked_at_its_least_const_reader.c:1:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_static_union_is_asked_at_its_least_const_reader.c:9:5 "handed_on"
+  Local "_0" "int" return
+  Local "_1" "union #0 *"
+  Local "_2" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:10:7 generated
+      Destination "_1"
+      Static "handed"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:10:7 written
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    ArgumentsEvaluated a_static_union_is_asked_at_its_least_const_reader.c:10:5 generated
+    Call a_static_union_is_asked_at_its_least_const_reader.c:10:5 written "g" "bb1"
+      Copy "_2"
+        Deref
+  Block "bb1"
+    Sequenced a_static_union_is_asked_at_its_least_const_reader.c:10:5 generated
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_static_union_is_asked_at_its_least_const_reader.c:11:12 generated
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:16:7 "returned_through_the_other"
+  Local "_0" "void *" return
+  Local "_1" "union #0 *"
+  Local "_2" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:17:12 generated
+      Destination "_1"
+      Static "returned"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:17:12 written
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_static_union_is_asked_at_its_least_const_reader.c:17:12 generated
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:7:38 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #0 *"
+  Local "_2" "char **"
+  Local "_3" "char (*)[4]"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:7:38 generated
+      Destination "_1"
+      Static "handed"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:7:38 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:7:38 generated
+      Destination "_3"
+      Static ".str.0"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:7:38 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:7:38 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:14:33 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #0 *"
+  Local "_2" "char **"
+  Local "_3" "char (*)[4]"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:14:33 generated
+      Destination "_1"
+      Static "returned"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:14:33 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:14:33 generated
+      Destination "_3"
+      Static ".str.1"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:14:33 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:14:33 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:20:24 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[2]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:20:24 generated
+      Destination "_1"
+      Static "p"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:20:24 generated
+      Destination "_2"
+      Static ".str.2"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:20:24 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:20:24 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:25:37 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #1 *"
+  Local "_2" "char ***"
+  Local "_3" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:25:37 generated
+      Destination "_1"
+      Static "two_levels_down"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:25:37 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:25:38 generated
+      Destination "_3"
+      Static "p"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:25:37 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:34:38 ".statics"
+  Local "_0" "void" return
+  Local "_1" "struct #2 *"
+  Local "_2" "union #3 *"
+  Local "_3" "char ***"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:34:38 generated
+      Destination "_1"
+      Static "inside_a_struct"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:34:38 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:34:38 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:34:39 generated
+      Destination "_4"
+      Static "p"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:34:38 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:40:41 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #4 *"
+  Local "_2" "char **"
+  Local "_3" "char (*)[4]"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:40:41 generated
+      Destination "_1"
+      Static "beside_an_int"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:40:41 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:40:41 generated
+      Destination "_3"
+      Static ".str.3"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:40:41 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:40:41 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:46:43 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #5 *"
+  Local "_2" "char **"
+  Local "_3" "char (*)[4]"
+  Local "_4" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 generated
+      Destination "_1"
+      Static "every_reader_const"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 generated
+      Destination "_3"
+      Static ".str.4"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:46:43 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:55:50 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #6 *"
+  Local "_2" "struct #7 *"
+  Local "_3" "char ***"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_1"
+      Static "a_struct_in_the_union"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:51 generated
+      Destination "_4"
+      Static "p"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:55:50 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:67:53 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #8 *"
+  Local "_2" "struct #9 *"
+  Local "_3" "char **"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 generated
+      Destination "_1"
+      Static "at_a_member_s_offset"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 generated
+      Destination "_4"
+      Static ".str.5"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:67:53 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:76:56 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #11 *"
+  Local "_2" "char *(*)[2]"
+  Local "_3" "char **"
+  Local "_4" "char **"
+  Local "_5" "char (*)[2]"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_1"
+      Static "at_an_element_s_offset"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_5"
+      Static ".str.6"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:76:56 initialized
+      Destination "_4"
+        Deref
+      Use
+        Copy "_6"
+    Return
+Function a_static_union_is_asked_at_its_least_const_reader.c:82:57 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #13 *"
+  Local "_2" "char *(*)[4]"
+  Local "_3" "char **"
+  Local "_4" "char **"
+  Local "_5" "char (*)[4]"
+  Local "_6" "char *"
+  Block "bb0" entry
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_1"
+      Static "past_a_short_reader"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 3
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_5"
+      Static ".str.7"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_static_union_is_asked_at_its_least_const_reader.c:82:57 initialized
+      Destination "_4"
+        Deref
+      Use
+        Copy "_6"
+    Return

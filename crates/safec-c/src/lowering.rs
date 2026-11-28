@@ -1999,11 +1999,20 @@ impl<'a> Lowering<'a> {
     ) -> Option<Place> {
         let mut place = place;
         let mut ast_ty = ty;
-        for &step in path {
+        // Each step with the subobject it is taken in, declared and laid
+        // out, and the address the last one made, for the union readers
+        // below.
+        let mut walked = Vec::new();
+        let mut last = None;
+        for (k, &step) in path.iter().enumerate() {
+            // The leaf's address is marked once, below, with every union
+            // reader's levels: a mark only adds levels (`Function::mark_const_levels`).
+            let leaf = k + 1 == path.len();
             let ir_ty = self
                 .unit
                 .place_ty(&builder.function, &place)
                 .expect("a place this lowering built has a type");
+            walked.push((ast_ty, ir_ty, step));
             let inner = self
                 .shapes(|shapes| shapes.subobject(ast_ty, step))
                 .expect("a path the walk made reaches a subobject");
@@ -2020,9 +2029,11 @@ impl<'a> Lowering<'a> {
                     let address = builder.function.push_local(pointer_ty);
                     // Its levels as `s.m`'s address has them (`Lowering::member`),
                     // which a static's store, leaving, is asked by (#1430 review).
-                    builder
-                        .function
-                        .mark_const_levels(address, self.pointing_at_levels(inner));
+                    if !leaf {
+                        builder
+                            .function
+                            .mark_const_levels(address, self.pointing_at_levels(inner));
+                    }
                     let field = u32::try_from(index).expect("fewer than 2^32 members");
                     builder.push(Operation {
                         place: Place::local(address),
@@ -2033,6 +2044,7 @@ impl<'a> Lowering<'a> {
                         origin: Origin::Generated(at),
                     });
                     place = Place::local(address).deref();
+                    last = Some(address);
                     if let Some(bits) = laid.bits {
                         let signed = match self.ast.ty(inner) {
                             Type::Integer { rank, sign } => {
@@ -2054,6 +2066,7 @@ impl<'a> Lowering<'a> {
                             },
                         );
                         place = Place::local(value);
+                        last = None;
                     }
                 }
                 Step::Element(index) => {
@@ -2063,9 +2076,11 @@ impl<'a> Lowering<'a> {
                     let first = self.decayed(builder, place, at);
                     let pointer_ty = self.unit.push_type(Ty::Pointer(element));
                     let address = builder.function.push_local(pointer_ty);
-                    builder
-                        .function
-                        .mark_const_levels(address, self.pointing_at_levels(inner));
+                    if !leaf {
+                        builder
+                            .function
+                            .mark_const_levels(address, self.pointing_at_levels(inner));
+                    }
                     builder.push(Operation {
                         place: Place::local(address),
                         value: Rvalue::Binary {
@@ -2076,9 +2091,26 @@ impl<'a> Lowering<'a> {
                         origin: Origin::Generated(at),
                     });
                     place = Place::local(address).deref();
+                    last = Some(address);
                 }
             }
             ast_ty = inner;
+        }
+        // **And every union around the leaf's bytes**, as a store through a
+        // member access asks (`Lowering::member_levels`): a static union
+        // initialized through its `const char *` member is read back
+        // through a `char *` one as storage the program may write (#1431).
+        // Mutation: mark the leaf with its own levels alone;
+        // `a_static_union_is_asked_at_its_least_const_reader`'s `handed`
+        // goes silent.
+        if let Some(address) = last {
+            let levels = self
+                .readers_along(&walked)
+                .into_iter()
+                .fold(self.pointing_at_levels(ast_ty), |levels, reader| {
+                    levels & self.pointing_at_levels(reader)
+                });
+            builder.function.mark_const_levels(address, levels);
         }
         Some(place)
     }
@@ -7241,6 +7273,44 @@ impl<'a> Lowering<'a> {
         })
     }
 
+    /// The pointers other members of a union hold over the bytes of the
+    /// subobject the steps `walked` reach, each with the subobject it is
+    /// taken in, declared and laid out: through every union on the way, the
+    /// subobject's offset carried outward as [`Lowering::member_levels`]
+    /// carries it through `.`.
+    fn readers_along(&self, walked: &[(TypeId, TyId, Step)]) -> Vec<TypeId> {
+        let mut readers = Vec::new();
+        let mut at = 0u64;
+        for &(_, laid, step) in walked.iter().rev() {
+            match (step, self.unit.ty(laid)) {
+                (Step::Member(index), Ty::Struct(id)) => {
+                    let members = &self.unit.struct_layout(id).members;
+                    at += members[index].offset;
+                    if let Some(Type::Struct {
+                        union: true,
+                        members: Some(declared),
+                        ..
+                    }) = self.laid_definition(id).map(|ty| self.ast.ty(ty))
+                    {
+                        for (other, (declaration, each)) in declared.iter().zip(members).enumerate()
+                        {
+                            if other != index {
+                                if let Some(within) = at.checked_sub(each.offset) {
+                                    self.pointers_at(declaration.ty, each.ty, within, &mut readers);
+                                }
+                            }
+                        }
+                    }
+                }
+                (Step::Element(index), Ty::Array { element, .. }) => {
+                    at += index * self.unit.size_of(element).unwrap_or(0);
+                }
+                _ => {}
+            }
+        }
+        readers
+    }
+
     /// Every object pointer an object of type `ty`, laid out as `laid`,
     /// holds starting `at` bytes into it, through its elements and members
     /// (all of a union's that cover the byte): what a reader of those bytes
@@ -7249,6 +7319,15 @@ impl<'a> Lowering<'a> {
     fn pointers_at(&self, ty: TypeId, laid: TyId, at: u64, readers: &mut Vec<TypeId>) {
         let mut work = vec![(ty, laid, at)];
         while let Some((ty, laid, at)) = work.pop() {
+            // **Only inside the object**: a reader shorter than the offset
+            // holds nothing there, and taken modulo its element, `char
+            // *a[1]` over a `const char *b[4]`'s last element was a reader
+            // of byte 24 (#1431 review). Mutation: skip this;
+            // `a_static_union_is_asked_at_its_least_const_reader`'s
+            // `past_a_short_reader` is reported.
+            if self.unit.size_of(laid).is_none_or(|size| at >= size) {
+                continue;
+            }
             match (self.ast.ty(self.ast.unqualified(ty)), self.unit.ty(laid)) {
                 (Type::Pointer(pointee), Ty::Pointer(_)) => {
                     let code = matches!(
@@ -7265,10 +7344,10 @@ impl<'a> Lowering<'a> {
                     }
                 }
                 (Type::Struct { .. }, Ty::Struct(id)) => {
-                    let Type::Struct {
+                    let Some(Type::Struct {
                         members: Some(members),
                         ..
-                    } = self.ast.ty(self.defined(ty))
+                    }) = self.laid_definition(id).map(|ty| self.ast.ty(ty))
                     else {
                         continue;
                     };
@@ -7301,10 +7380,21 @@ impl<'a> Lowering<'a> {
         ) {
             return unqualified;
         }
-        let tag = self
-            .resolution
-            .tag(self.resolution.bound(self.ast, unqualified));
+        // Bound as written, qualifiers and all, as `Lowering::struct_of`
+        // asks: the unqualified copy is a type the name resolution never
+        // saw, and asked of it, `const struct Bits b = {1};` panicked
+        // (#1431).
+        let tag = self.resolution.tag(self.resolution.bound(self.ast, ty));
         self.resolution.definition(tag).unwrap_or(unqualified)
+    }
+
+    /// The struct or union the IR struct `id` was laid out from, with its
+    /// members: asked of the type that first wrote it, which
+    /// [`Lowering::struct_of`] has resolved, and not of a type a walk of
+    /// subobjects reached, which the name resolution may never have bound
+    /// to its tag (#1431).
+    fn laid_definition(&self, id: StructId) -> Option<TypeId> {
+        self.written.get(&id).map(|&(_, ty)| self.defined(ty))
     }
 
     /// The layout the struct or union `ty` was given, where it was laid out.
