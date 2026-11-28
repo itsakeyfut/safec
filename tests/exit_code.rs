@@ -656,12 +656,13 @@ fn name_lookup_does_not_grow_with_how_far_back_the_name_was_declared() {
 /// the table's length, not with a power of it.
 ///
 /// Each address in a static's initializer is asked as a store made before
-/// `main` (ADR-0138). Two tables of one shape, 40 entries and 160, and what
-/// is asserted is the ratio of their times rather than a time: four times
-/// the entries take about four times as long, and the margin of sixteen is
-/// wide because it is a time. Held in one function, the stores made the
-/// check cubic in their number, so the longer took about sixty times the
-/// shorter, a 150-entry table eight seconds in a debug build (#1430 review).
+/// `main` (ADR-0138). Two tables of one shape, 40 entries and 240, and what
+/// is asserted is the ratio of their times rather than a time: six times
+/// the entries take at most about six times as long, and the margin of
+/// sixteen is wide because it is a time. Held in one function, the stores
+/// made the check cubic in their number: 160 entries already took eighteen
+/// times what 40 did in a debug build, and 240 takes far more (#1430
+/// review).
 ///
 /// Mutation: make one function for every store in
 /// `Lowering::initialize_statics`; the ratio goes far past sixteen and this
@@ -699,11 +700,11 @@ int main(void) {{ return 0; }}
     };
 
     let short = run(40, "safec_exit_code_table_short.c");
-    let long = run(160, "safec_exit_code_table_long.c");
+    let long = run(240, "safec_exit_code_table_long.c");
 
     assert!(
         long < short * 16,
-        "a table of 160 entries took {long:?} against {short:?} for 40, so checking it grows faster than its length"
+        "a table of 240 entries took {long:?} against {short:?} for 40, so checking it grows faster than its length"
     );
 }
 
