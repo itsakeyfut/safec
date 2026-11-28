@@ -43,3 +43,28 @@ int *a_narrow_member = (int *)&narrow.c;
 static int four[2];
 int *past_its_end = &four[2];
 int *moved_past = four + 5;
+
+union HoldsAnAddress {
+    char **w;
+    int i;
+};
+union HoldsAnAddress a_union_holding_it = {(char **)&p};
+
+struct Pair {
+    char **first;
+    char **second;
+};
+struct Pair a_second_member = {0, (char **)&p};
+
+struct Nested {
+    int n;
+    struct Pair in;
+};
+struct Nested two_members_deep = {1, {0, (char **)&p}};
+struct Pair an_element_s_member[2] = {{0}, {0, (char **)&p}};
+char **two_dimensions[2][2] = {{0}, {0, (char **)&p}};
+
+int in_a_block(void) {
+    static char **held_by_a_block = (char **)&p;
+    return held_by_a_block != 0;
+}

@@ -23,12 +23,38 @@ Static "a_narrow_member" "int *" external address "narrow" 0
 Static "four" "int[2]" internal zero
 Static "past_its_end" "int *" external address "four" 8
 Static "moved_past" "int *" external address "four" 20
+Static "a_union_holding_it" "union #4" external [ 0: address "p" 0 ]
+Static "a_second_member" "struct #5" external [ 0: 0 1: address "p" 0 ]
+Static "two_members_deep" "struct #6" external [ 0: 1 1: [ 0: 0 1: address "p" 0 ] ]
+Static "an_element_s_member" "struct #5[2]" external [ 0: [ 0: 0 ] 1: [ 0: 0 1: address "p" 0 ] ]
+Static "two_dimensions" "char **[2][2]" external [ 0: [ 0: 0 ] 1: [ 0: 0 1: address "p" 0 ] ]
 Static ".str.0" "char[2]" internal bytes 97 0
 Static ".compound.0" "char **" internal address "p" 0
 Static ".str.1" "char[2]" internal bytes 97 0
 Static ".str.2" "char[2]" internal bytes 98 0
 Static ".str.3" "char[2]" internal bytes 120 0
 Static ".str.4" "char[2]" internal bytes 120 0
+Static "in_a_block.held_by_a_block" "char **" internal address "p" 0
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:67:5 "in_a_block"
+  Local "_0" "int" return
+  Local "_1" "char ***"
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:69:12 generated
+      Destination "_1"
+      Static "in_a_block.held_by_a_block"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:69:12 written
+      Destination "_2"
+      Binary "Ne"
+        Copy "_1"
+          Deref
+        Constant 0
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:69:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_static_initializer_is_asked_as_the_store_it_stands_for.c:69:12 generated
+    Return
 Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 ".statics"
   Local "_0" "void" return
   Local "_1" "char **"
@@ -537,6 +563,189 @@ Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:45:19 ".stat
       Use
         Copy "_4"
     Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 ".statics"
+  Local "_0" "void" return
+  Local "_1" "union #4 *"
+  Local "_2" "char ***"
+  Local "_3" "char **"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 generated
+      Destination "_1"
+      Static "a_union_holding_it"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 0
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:54 generated
+      Destination "_3"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 ".statics"
+  Local "_0" "void" return
+  Local "_1" "struct #5 *"
+  Local "_2" "char ***"
+  Local "_3" "char **"
+  Local "_4" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 generated
+      Destination "_1"
+      Static "a_second_member"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:45 generated
+      Destination "_3"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 initialized
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 ".statics"
+  Local "_0" "void" return
+  Local "_1" "struct #6 *"
+  Local "_2" "struct #5 *"
+  Local "_3" "char ***"
+  Local "_4" "char **"
+  Local "_5" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 generated
+      Destination "_1"
+      Static "two_members_deep"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 generated
+      Destination "_2"
+      Address
+        Place "_1"
+          Deref
+            Field
+              Member 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 generated
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:52 generated
+      Destination "_4"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 ".statics"
+  Local "_0" "void" return
+  Local "_1" "struct #5 (*)[2]"
+  Local "_2" "struct #5 *"
+  Local "_3" "struct #5 *"
+  Local "_4" "char ***"
+  Local "_5" "char **"
+  Local "_6" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 generated
+      Destination "_1"
+      Static "an_element_s_member"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 generated
+      Destination "_4"
+      Address
+        Place "_3"
+          Deref
+            Field
+              Member 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:58 generated
+      Destination "_5"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 initialized
+      Destination "_4"
+        Deref
+      Use
+        Copy "_6"
+    Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **(*)[2][2]"
+  Local "_2" "char **(*)[2]"
+  Local "_3" "char **(*)[2]"
+  Local "_4" "char ***"
+  Local "_5" "char ***"
+  Local "_6" "char **"
+  Local "_7" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 generated
+      Destination "_1"
+      Static "two_dimensions"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 generated
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:51 generated
+      Destination "_6"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 initialized
+      Destination "_5"
+        Deref
+      Use
+        Copy "_7"
+    Return
 Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 ".statics"
   Local "_0" "void" return
   Local "_1" "char ***"
@@ -554,6 +763,28 @@ Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 ".stat
       Use
         Copy "_2"
     Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:37 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char ***"
+  Local "_2" "char **"
+  Local "_3" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:37 generated
+      Destination "_1"
+      Static "in_a_block.held_by_a_block"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:47 generated
+      Destination "_2"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:37 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:37 initialized
       Destination "_1"
         Deref
       Use

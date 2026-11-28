@@ -140,8 +140,10 @@ cases! {
         // assignment it stands for (ADR-0138): read-only storage below its
         // first level is `SC0417` at the initializer, through a cast, a
         // `void *`, a member, an element, an integer chain, a compound
-        // literal, and the address of a member or a union's member at
-        // offset zero, and an object narrower than the pointer's type, a
+        // literal, the address of a member or a union's member at offset
+        // zero, and an address held by a union, a second member, two
+        // members deep, an element's member, a row's element and a block's
+        // `static`; an object narrower than the pointer's type, a
         // narrow member, and an address past an array are `SC0413`;
         // nothing where every level is `const`, at a table of literals'
         // members, at a struct whose `const char *` member holds one, or

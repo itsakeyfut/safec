@@ -1739,9 +1739,7 @@ impl<'a> Lowering<'a> {
             };
             self.store_scalar(&mut builder, place, value, at);
             builder.end(Terminator::Return);
-            let mut function = builder.function;
-            function.thread_rebranches();
-            self.unit.push_function(function);
+            self.unit.push_function(builder.function);
         }
     }
 

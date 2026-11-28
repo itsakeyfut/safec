@@ -30,7 +30,7 @@ Each function is named by its initializer and spelled `.statics`, with a `.` so 
 
 ### Confirmation
 
-Lands with #1430 under #1196: a memory case of each program #1430 names, silent when the memory check skips the function; and a codegen case whose module holds no such function, which changes if the backend writes it.
+`a_static_initializer_is_asked_as_the_store_it_stands_for` holds each program #1430 names and goes silent when the lowering makes no such function, and is `SC0412` at `names` when its stores' places are asked whether they fit. `llvm_ir_of_a_static_aggregate_and_an_address` changes when the backend writes the function. `checking_a_static_table_grows_with_its_length_and_no_faster` fails when one function holds every store.
 
 ### Consequences
 
