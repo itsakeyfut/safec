@@ -1774,23 +1774,21 @@ impl<'a> Lowering<'a> {
                 });
                 (into, within, held) = (next, below, element);
             }
-            // What is written: `of`'s address, `offset` bytes on, carrying
-            // the levels an address of it carries.
+            // What is written: `of`'s address, `offset` bytes on, whose
+            // levels the memory check follows from the address as it
+            // follows an assignment's.
             let address = self.reach_static(&mut builder, of, at).local;
-            let carried = builder.function.held_levels(address);
             let mut value = address;
             if offset != 0 {
                 let bytes = self.unit.push_type(Ty::CHAR);
                 let bytes = self.unit.push_type(Ty::Pointer(bytes));
                 let start = builder.function.push_local(bytes);
-                builder.function.mark_carried_levels(start, carried);
                 builder.push(Operation {
                     place: Place::local(start),
                     value: Rvalue::Use(Operand::Copy(Place::local(address))),
                     origin: Origin::Generated(at),
                 });
                 let moved = builder.function.push_local(bytes);
-                builder.function.mark_carried_levels(moved, carried);
                 builder.push(Operation {
                     place: Place::local(moved),
                     value: Rvalue::Binary {
@@ -1803,7 +1801,6 @@ impl<'a> Lowering<'a> {
                 value = moved;
             }
             let held = builder.function.push_local(laid);
-            builder.function.mark_carried_levels(held, carried);
             builder.push(Operation {
                 place: Place::local(held),
                 value: Rvalue::Use(Operand::Copy(Place::local(value))),

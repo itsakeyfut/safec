@@ -1762,8 +1762,8 @@ impl Function {
 
     /// Say that this is the unit's function before `main`: a store per
     /// address a static's initializer holds, for the memory check to ask as
-    /// it asks any store, which the backend writes no code for and every
-    /// other analysis passes by. See ADR-0138.
+    /// it asks any store, which the backend writes no code for. See
+    /// ADR-0138.
     pub fn mark_initializes_statics(&mut self) {
         self.initializes_statics = true;
     }
