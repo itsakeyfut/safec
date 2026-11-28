@@ -34,3 +34,362 @@ Function an_address_initializes_a_static.c:29:5 "main"
         Constant 0
     Sequenced an_address_initializes_a_static.c:30:12 generated
     Return
+Function an_address_initializes_a_static.c:2:10 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "int (*)[4]"
+  Local "_6" "char *"
+  Local "_7" "char *"
+  Local "_8" "int *"
+  Local "_9" "int **"
+  Local "_10" "int (*)[4]"
+  Local "_11" "char *"
+  Local "_12" "char *"
+  Local "_13" "int *"
+  Local "_14" "int **"
+  Local "_15" "int (*)[4]"
+  Local "_16" "char *"
+  Local "_17" "char *"
+  Local "_18" "int *"
+  Local "_19" "int **"
+  Local "_20" "int (*)[4]"
+  Local "_21" "char *"
+  Local "_22" "char *"
+  Local "_23" "int *"
+  Local "_24" "int **"
+  Local "_25" "int (*)[4]"
+  Local "_26" "char *"
+  Local "_27" "char *"
+  Local "_28" "int *"
+  Local "_29" "char **"
+  Local "_30" "int (*)[4]"
+  Local "_31" "char *"
+  Local "_32" "char *"
+  Local "_33" "char *"
+  Local "_34" "int **"
+  Local "_35" "struct #0 *"
+  Local "_36" "char *"
+  Local "_37" "char *"
+  Local "_38" "int *"
+  Local "_39" "int **"
+  Local "_40" "struct #0 *"
+  Local "_41" "char *"
+  Local "_42" "char *"
+  Local "_43" "int *"
+  Local "_44" "int **"
+  Local "_45" "struct #0 *"
+  Local "_46" "char *"
+  Local "_47" "char *"
+  Local "_48" "int *"
+  Local "_49" "struct #0 **"
+  Local "_50" "struct #0 *"
+  Local "_51" "struct #0 *"
+  Local "_52" "int **"
+  Local "_53" "struct #0 *"
+  Local "_54" "char *"
+  Local "_55" "char *"
+  Local "_56" "int *"
+  Local "_57" "int **"
+  Local "_58" "int (*)[2][2]"
+  Local "_59" "char *"
+  Local "_60" "char *"
+  Local "_61" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:2:10 generated
+      Destination "_1"
+      Static "p"
+    Operation an_address_initializes_a_static.c:2:10 generated
+      Destination "_2"
+      Static "g"
+    Operation an_address_initializes_a_static.c:2:10 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:2:10 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_4"
+      Static "third"
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_5"
+      Static "a"
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_7"
+      Binary "Add"
+        Copy "_6"
+        Constant 8
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_8"
+      Use
+        Copy "_7"
+    Operation an_address_initializes_a_static.c:4:14 initialized
+      Destination "_4"
+        Deref
+      Use
+        Copy "_8"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_9"
+      Static "last"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_10"
+      Static "a"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_11"
+      Use
+        Copy "_10"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_12"
+      Binary "Add"
+        Copy "_11"
+        Constant 12
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_13"
+      Use
+        Copy "_12"
+    Operation an_address_initializes_a_static.c:5:13 initialized
+      Destination "_9"
+        Deref
+      Use
+        Copy "_13"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_14"
+      Static "back"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_15"
+      Static "a"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_16"
+      Use
+        Copy "_15"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_17"
+      Binary "Add"
+        Copy "_16"
+        Constant 8
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_18"
+      Use
+        Copy "_17"
+    Operation an_address_initializes_a_static.c:6:13 initialized
+      Destination "_14"
+        Deref
+      Use
+        Copy "_18"
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_19"
+      Static "ahead"
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_20"
+      Static "a"
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_21"
+      Use
+        Copy "_20"
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_22"
+      Binary "Add"
+        Copy "_21"
+        Constant 12
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_23"
+      Use
+        Copy "_22"
+    Operation an_address_initializes_a_static.c:7:14 initialized
+      Destination "_19"
+        Deref
+      Use
+        Copy "_23"
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_24"
+      Static "swapped"
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_25"
+      Static "a"
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_26"
+      Use
+        Copy "_25"
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_27"
+      Binary "Add"
+        Copy "_26"
+        Constant 4
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_28"
+      Use
+        Copy "_27"
+    Operation an_address_initializes_a_static.c:8:16 initialized
+      Destination "_24"
+        Deref
+      Use
+        Copy "_28"
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_29"
+      Static "bytes"
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_30"
+      Static "a"
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_31"
+      Use
+        Copy "_30"
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_32"
+      Binary "Add"
+        Copy "_31"
+        Constant 4
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_33"
+      Use
+        Copy "_32"
+    Operation an_address_initializes_a_static.c:9:15 initialized
+      Destination "_29"
+        Deref
+      Use
+        Copy "_33"
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_34"
+      Static "y"
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_35"
+      Static "s"
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_36"
+      Use
+        Copy "_35"
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_37"
+      Binary "Add"
+        Copy "_36"
+        Constant 4
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_38"
+      Use
+        Copy "_37"
+    Operation an_address_initializes_a_static.c:14:10 initialized
+      Destination "_34"
+        Deref
+      Use
+        Copy "_38"
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_39"
+      Static "member"
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_40"
+      Static "s"
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_41"
+      Use
+        Copy "_40"
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_42"
+      Binary "Add"
+        Copy "_41"
+        Constant 12
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_43"
+      Use
+        Copy "_42"
+    Operation an_address_initializes_a_static.c:15:15 initialized
+      Destination "_39"
+        Deref
+      Use
+        Copy "_43"
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_44"
+      Static "element"
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_45"
+      Static "s"
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_46"
+      Use
+        Copy "_45"
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_47"
+      Binary "Add"
+        Copy "_46"
+        Constant 12
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_48"
+      Use
+        Copy "_47"
+    Operation an_address_initializes_a_static.c:16:16 initialized
+      Destination "_44"
+        Deref
+      Use
+        Copy "_48"
+    Operation an_address_initializes_a_static.c:17:16 generated
+      Destination "_49"
+      Static "ps"
+    Operation an_address_initializes_a_static.c:17:16 generated
+      Destination "_50"
+      Static "s"
+    Operation an_address_initializes_a_static.c:17:16 generated
+      Destination "_51"
+      Use
+        Copy "_50"
+    Operation an_address_initializes_a_static.c:17:16 initialized
+      Destination "_49"
+        Deref
+      Use
+        Copy "_51"
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_52"
+      Static "arrow"
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_53"
+      Static "s"
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_54"
+      Use
+        Copy "_53"
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_55"
+      Binary "Add"
+        Copy "_54"
+        Constant 4
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_56"
+      Use
+        Copy "_55"
+    Operation an_address_initializes_a_static.c:18:14 initialized
+      Destination "_52"
+        Deref
+      Use
+        Copy "_56"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_57"
+      Static "row"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_58"
+      Static "m"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_59"
+      Use
+        Copy "_58"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_60"
+      Binary "Add"
+        Copy "_59"
+        Constant 8
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_61"
+      Use
+        Copy "_60"
+    Operation an_address_initializes_a_static.c:20:12 initialized
+      Destination "_57"
+        Deref
+      Use
+        Copy "_61"
+    Return

@@ -1,0 +1,317 @@
+Target "x86_64-pc-windows-msvc"
+Static "p" "char *" internal address ".str.0" 0
+Static "k" "int" internal 1
+Static "kp" "int *" internal address "k" 0
+Static "c" "char" internal zero
+Static "x" "int" internal zero
+Static "one_level_down" "char **" external address "p" 0
+Static "through_void" "void *" external address "p" 0
+Static "member" "struct #0" external [ 0: address "p" 0 ]
+Static "table" "char **[2]" external [ 0: 0 1: address "p" 0 ]
+Static "an_integer_chain" "int **" external address "kp" 0
+Static "a_compound_literal" "char ***" external address ".compound.0" 0
+Static "narrower" "int *" external address "c" 0
+Static "every_level_const" "char **" external address "p" 0
+Static "names" "char *[2]" internal [ 0: address ".str.1" 0 1: address ".str.2" 0 ]
+Static "a_const_static" "int *" external address "x" 0
+Static ".str.0" "char[2]" internal bytes 97 0
+Static ".compound.0" "char **" internal address "p" 0
+Static ".str.1" "char[2]" internal bytes 97 0
+Static ".str.2" "char[2]" internal bytes 98 0
+Function a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[2]"
+  Local "_3" "char *"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "char ***"
+  Local "_8" "char **"
+  Local "_9" "char **"
+  Local "_10" "void **"
+  Local "_11" "char **"
+  Local "_12" "void *"
+  Local "_13" "struct #0 *"
+  Local "_14" "char ***"
+  Local "_15" "char **"
+  Local "_16" "char **"
+  Local "_17" "char **(*)[2]"
+  Local "_18" "char ***"
+  Local "_19" "char ***"
+  Local "_20" "char **"
+  Local "_21" "char **"
+  Local "_22" "int ***"
+  Local "_23" "int **"
+  Local "_24" "int **"
+  Local "_25" "char ****"
+  Local "_26" "char ***"
+  Local "_27" "char ***"
+  Local "_28" "int **"
+  Local "_29" "char *"
+  Local "_30" "int *"
+  Local "_31" "char ***"
+  Local "_32" "char **"
+  Local "_33" "char **"
+  Local "_34" "char *(*)[2]"
+  Local "_35" "char **"
+  Local "_36" "char **"
+  Local "_37" "char (*)[2]"
+  Local "_38" "char *"
+  Local "_39" "char *(*)[2]"
+  Local "_40" "char **"
+  Local "_41" "char **"
+  Local "_42" "char (*)[2]"
+  Local "_43" "char *"
+  Local "_44" "int **"
+  Local "_45" "int *"
+  Local "_46" "int *"
+  Local "_47" "char ***"
+  Local "_48" "char **"
+  Local "_49" "char **"
+  Block "bb0" entry
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 generated
+      Destination "_1"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:1:24 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:3:24 generated
+      Destination "_4"
+      Static "kp"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:3:24 generated
+      Destination "_5"
+      Static "k"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:3:24 generated
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:3:24 initialized
+      Destination "_4"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:7:25 generated
+      Destination "_7"
+      Static "one_level_down"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:7:25 generated
+      Destination "_8"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:7:25 generated
+      Destination "_9"
+      Use
+        Copy "_8"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:7:25 initialized
+      Destination "_7"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:8:22 generated
+      Destination "_10"
+      Static "through_void"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:8:22 generated
+      Destination "_11"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:8:22 generated
+      Destination "_12"
+      Use
+        Copy "_11"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:8:22 initialized
+      Destination "_10"
+        Deref
+      Use
+        Copy "_12"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 generated
+      Destination "_13"
+      Static "member"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 generated
+      Destination "_14"
+      Address
+        Place "_13"
+          Deref
+            Field
+              Member 0
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 generated
+      Destination "_15"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 generated
+      Destination "_16"
+      Use
+        Copy "_15"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 initialized
+      Destination "_14"
+        Deref
+      Use
+        Copy "_16"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 generated
+      Destination "_17"
+      Static "table"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 generated
+      Destination "_18"
+      Use
+        Copy "_17"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 generated
+      Destination "_19"
+      Binary "Add"
+        Copy "_18"
+        Constant 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 generated
+      Destination "_20"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 generated
+      Destination "_21"
+      Use
+        Copy "_20"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 initialized
+      Destination "_19"
+        Deref
+      Use
+        Copy "_21"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:13:26 generated
+      Destination "_22"
+      Static "an_integer_chain"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:13:26 generated
+      Destination "_23"
+      Static "kp"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:13:26 generated
+      Destination "_24"
+      Use
+        Copy "_23"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:13:26 initialized
+      Destination "_22"
+        Deref
+      Use
+        Copy "_24"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:30 generated
+      Destination "_25"
+      Static "a_compound_literal"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:30 generated
+      Destination "_26"
+      Static ".compound.0"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:30 generated
+      Destination "_27"
+      Use
+        Copy "_26"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:30 initialized
+      Destination "_25"
+        Deref
+      Use
+        Copy "_27"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:16:17 generated
+      Destination "_28"
+      Static "narrower"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:16:17 generated
+      Destination "_29"
+      Static "c"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:16:17 generated
+      Destination "_30"
+      Use
+        Copy "_29"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:16:17 initialized
+      Destination "_28"
+        Deref
+      Use
+        Copy "_30"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:18:40 generated
+      Destination "_31"
+      Static "every_level_const"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:18:40 generated
+      Destination "_32"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:18:40 generated
+      Destination "_33"
+      Use
+        Copy "_32"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:18:40 initialized
+      Destination "_31"
+        Deref
+      Use
+        Copy "_33"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 generated
+      Destination "_34"
+      Static "names"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 generated
+      Destination "_35"
+      Use
+        Copy "_34"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 generated
+      Destination "_36"
+      Binary "Add"
+        Copy "_35"
+        Constant 1
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 generated
+      Destination "_37"
+      Static ".str.2"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 generated
+      Destination "_38"
+      Use
+        Copy "_37"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:37 initialized
+      Destination "_36"
+        Deref
+      Use
+        Copy "_38"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 generated
+      Destination "_39"
+      Static "names"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 generated
+      Destination "_40"
+      Use
+        Copy "_39"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 generated
+      Destination "_41"
+      Binary "Add"
+        Copy "_40"
+        Constant 0
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 generated
+      Destination "_42"
+      Static ".str.1"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 generated
+      Destination "_43"
+      Use
+        Copy "_42"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:19:32 initialized
+      Destination "_41"
+        Deref
+      Use
+        Copy "_43"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:20:29 generated
+      Destination "_44"
+      Static "a_const_static"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:20:29 generated
+      Destination "_45"
+      Static "x"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:20:29 generated
+      Destination "_46"
+      Use
+        Copy "_45"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:20:29 initialized
+      Destination "_44"
+        Deref
+      Use
+        Copy "_46"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 generated
+      Destination "_47"
+      Static ".compound.0"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 generated
+      Destination "_48"
+      Static "p"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 generated
+      Destination "_49"
+      Use
+        Copy "_48"
+    Operation a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 initialized
+      Destination "_47"
+        Deref
+      Use
+        Copy "_49"
+    Return

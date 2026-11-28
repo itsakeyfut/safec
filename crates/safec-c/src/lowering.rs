@@ -409,6 +409,7 @@ pub fn lower(
         memcpy: None,
         own: HashMap::new(),
         compounds: HashMap::new(),
+        static_types: HashMap::new(),
         vla_types: HashMap::new(),
         writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
@@ -430,6 +431,7 @@ pub fn lower(
     lowering.declare(diagnostics);
     lowering.define(diagnostics);
     lowering.lay_out_stepped(diagnostics);
+    lowering.initialize_statics();
     lowering.unit
 }
 
@@ -554,6 +556,9 @@ struct Lowering<'a> {
     /// The static each compound literal outside a block is, made once. See
     /// [`Lowering::compound_static`].
     compounds: HashMap<ExprId, StaticId>,
+    /// The type each static with an initializer was declared with, which
+    /// [`Lowering::initialize_statics`] walks its starting value by.
+    static_types: HashMap<StaticId, TypeId>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -1047,6 +1052,7 @@ impl<'a> Lowering<'a> {
         for (id, ty, (init, declared)) in pending {
             if let Some(init) = self.static_init(init, declared, ty, diagnostics) {
                 self.unit.set_static_init(id, init);
+                self.static_types.insert(id, declared);
             }
         }
     }
@@ -1129,7 +1135,6 @@ impl<'a> Lowering<'a> {
     fn static_value(
         &mut self,
         init: ExprId,
-        declared: TypeId,
         ty: TyId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
@@ -1171,14 +1176,12 @@ impl<'a> Lowering<'a> {
         // number of bytes (C17 6.6 p9), for a pointer.
         if matches!(self.unit.ty(ty), Ty::Pointer(_)) {
             if let Some((of, offset)) = self.static_address(init, diagnostics) {
-                // Whether what it points at is `const`, bit `0` of its
-                // levels, which the memory check asks a read-only `of` of.
-                let writable =
-                    (self.const_levels(declared) & 1 == 0).then(|| self.ast.expr(init).span());
+                // What it is asked as a store is the function before
+                // `main`'s (`Lowering::initialize_statics`, ADR-0138).
                 return Some(StaticInit::Address {
                     of,
                     offset,
-                    writable,
+                    at: self.ast.expr(init).span(),
                 });
             }
         }
@@ -1222,7 +1225,7 @@ impl<'a> Lowering<'a> {
     ) -> Option<StaticInit> {
         let list = match init {
             Initializer::Expr(value) => {
-                return self.static_value(*value, declared, ty, diagnostics);
+                return self.static_value(*value, ty, diagnostics);
             }
             Initializer::List { .. } => init,
             Initializer::Designated { .. } => unreachable!("only a list's item is designated"),
@@ -1298,7 +1301,7 @@ impl<'a> Lowering<'a> {
                     .shapes(|shapes| shapes.subobject(ast_ty, step))
                     .expect("a path the walk made reaches a subobject");
             }
-            *node = self.static_value(leaf.value, ast_ty, ir_ty, diagnostics)?;
+            *node = self.static_value(leaf.value, ir_ty, diagnostics)?;
         }
         Some(root)
     }
@@ -1647,6 +1650,177 @@ impl<'a> Lowering<'a> {
         Some(())
     }
 
+    /// The unit's function before `main`: a store per address a static's
+    /// initializer holds, into the static's own place, written as an
+    /// assignment of that address there would be, so the memory check asks
+    /// it what it asks any store that leaves, `SC0413` and `SC0417` among
+    /// them. Each is [`Origin::Initialized`], since giving a `const` static
+    /// its starting value is no write C forbids. None where no static holds
+    /// an address. See ADR-0138.
+    ///
+    /// Mutation: make no function; `a_static_initializer_is_asked_as_the_store_it_stands_for`
+    /// goes silent.
+    fn initialize_statics(&mut self) {
+        // Each store: the static, the steps to the pointer written, its
+        // laid out type, and what it holds.
+        let mut stores = Vec::new();
+        for id in self.unit.statics() {
+            let Some(&declared) = self.static_types.get(&id) else {
+                continue;
+            };
+            let object = self.unit.static_object(id);
+            let mut work = vec![(object.init.clone(), Vec::new(), declared, object.ty)];
+            while let Some((init, path, declared, laid)) = work.pop() {
+                match init {
+                    StaticInit::Aggregate(entries) => {
+                        for (index, entry) in entries {
+                            let (step, inner) = match self.unit.ty(laid) {
+                                Ty::Struct(within) => {
+                                    let member = usize::try_from(index).expect("a member's index");
+                                    (
+                                        Step::Member(member),
+                                        self.unit.struct_layout(within).members[member].ty,
+                                    )
+                                }
+                                Ty::Array { element, .. } => (Step::Element(index), element),
+                                _ => continue,
+                            };
+                            let Some(below) =
+                                self.shapes(|shapes| shapes.subobject(declared, step))
+                            else {
+                                continue;
+                            };
+                            let mut path = path.clone();
+                            path.push(step);
+                            work.push((entry, path, below, inner));
+                        }
+                    }
+                    StaticInit::Address { of, offset, at } => {
+                        stores.push((id, path, laid, of, offset, at));
+                    }
+                    StaticInit::Zero | StaticInit::Int(_) | StaticInit::Bytes(_) => {}
+                }
+            }
+        }
+        let Some(&(.., first)) = stores.first() else {
+            return;
+        };
+        let void = self.unit.push_type(Ty::Void);
+        let mut function = Function::new(first, void, []);
+        function.mark_initializes_statics();
+        let mut builder = Builder {
+            function,
+            block: None,
+            elements: Vec::new(),
+            bit_fields: HashMap::new(),
+        };
+        builder.open();
+        for (object, path, laid, of, offset, at) in stores {
+            // Where it is written: the static's place, through each member
+            // and element, its address marked as an assignment's would be.
+            // A pointer to where it is written, walked down from the
+            // static's address a step at a time as an assignment's place is:
+            // a member's address as `s.p = &x;` takes it (`Lowering::member`),
+            // and an element as `t[1] = &x;` reaches it, the array decayed
+            // and moved, each marked with the levels its type declares.
+            let mut into = self.reach_static(&mut builder, object, at).local;
+            let mut within = self.static_types[&object];
+            let mut held = self.unit.static_object(object).ty;
+            for &step in &path {
+                let below = self
+                    .shapes(|shapes| shapes.subobject(within, step))
+                    .expect("a path the walk made reaches a subobject");
+                let (value, element) = match (step, self.unit.ty(held)) {
+                    (Step::Member(index), Ty::Struct(id)) => (
+                        Rvalue::Address(Place::new(
+                            into,
+                            vec![
+                                Projection::Deref,
+                                Projection::Field(
+                                    u32::try_from(index).expect("fewer than 2^32 members"),
+                                ),
+                            ],
+                        )),
+                        self.unit.struct_layout(id).members[index].ty,
+                    ),
+                    (Step::Element(index), Ty::Array { element, .. }) => {
+                        let first = self.unit.push_type(Ty::Pointer(element));
+                        let decayed = builder.function.push_local(first);
+                        builder.push(Operation {
+                            place: Place::local(decayed),
+                            value: Rvalue::Use(Operand::Copy(Place::local(into))),
+                            origin: Origin::Generated(at),
+                        });
+                        (
+                            Rvalue::Binary {
+                                op: BinOp::Add,
+                                lhs: Operand::Copy(Place::local(decayed)),
+                                rhs: Operand::Constant(i128::from(index)),
+                            },
+                            element,
+                        )
+                    }
+                    _ => unreachable!("a path the walk made follows the type"),
+                };
+                let pointer = self.unit.push_type(Ty::Pointer(element));
+                let next = builder.function.push_local(pointer);
+                builder
+                    .function
+                    .mark_const_levels(next, self.pointing_at_levels(below));
+                builder.push(Operation {
+                    place: Place::local(next),
+                    value,
+                    origin: Origin::Generated(at),
+                });
+                (into, within, held) = (next, below, element);
+            }
+            // What is written: `of`'s address, `offset` bytes on, carrying
+            // the levels an address of it carries.
+            let address = self.reach_static(&mut builder, of, at).local;
+            let carried = builder.function.held_levels(address);
+            let mut value = address;
+            if offset != 0 {
+                let bytes = self.unit.push_type(Ty::CHAR);
+                let bytes = self.unit.push_type(Ty::Pointer(bytes));
+                let start = builder.function.push_local(bytes);
+                builder.function.mark_carried_levels(start, carried);
+                builder.push(Operation {
+                    place: Place::local(start),
+                    value: Rvalue::Use(Operand::Copy(Place::local(address))),
+                    origin: Origin::Generated(at),
+                });
+                let moved = builder.function.push_local(bytes);
+                builder.function.mark_carried_levels(moved, carried);
+                builder.push(Operation {
+                    place: Place::local(moved),
+                    value: Rvalue::Binary {
+                        op: BinOp::Add,
+                        lhs: Operand::Copy(Place::local(start)),
+                        rhs: Operand::Constant(i128::from(offset)),
+                    },
+                    origin: Origin::Generated(at),
+                });
+                value = moved;
+            }
+            let held = builder.function.push_local(laid);
+            builder.function.mark_carried_levels(held, carried);
+            builder.push(Operation {
+                place: Place::local(held),
+                value: Rvalue::Use(Operand::Copy(Place::local(value))),
+                origin: Origin::Generated(at),
+            });
+            builder.push(Operation {
+                place: Place::new(into, vec![Projection::Deref]),
+                value: Rvalue::Use(Operand::Copy(Place::local(held))),
+                origin: Origin::Initialized(at),
+            });
+        }
+        builder.end(Terminator::Return);
+        let mut function = builder.function;
+        function.thread_rebranches();
+        self.unit.push_function(function);
+    }
+
     /// The unnamed object of the compound literal `id` outside a block, an
     /// object with static storage duration (C17 6.5.2.5 p5) named with a
     /// `.`, which no C identifier holds, made once and starting as its list
@@ -1674,6 +1848,7 @@ impl<'a> Lowering<'a> {
             read_only: self.read_only(ty),
         });
         self.static_levels.insert(object, self.const_levels(ty));
+        self.static_types.insert(object, ty);
         self.compounds.insert(id, object);
         Some(object)
     }
@@ -2148,6 +2323,7 @@ impl<'a> Lowering<'a> {
                     init,
                     read_only: self.read_only(declaration.ty),
                 });
+                self.static_types.insert(id, declaration.ty);
                 self.static_levels
                     .insert(id, self.const_levels(declaration.ty));
                 id

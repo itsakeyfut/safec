@@ -203,8 +203,12 @@ pub fn functions(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) 
         emitter.global(id, out);
     }
 
+    // The function before `main` is the memory check's to read, and no
+    // code (ADR-0138).
     for id in unit.functions() {
-        emitter.function(id, out);
+        if !unit.function(id).initializes_statics() {
+            emitter.function(id, out);
+        }
     }
 
     // Once a variable length array has been made: the module holds one

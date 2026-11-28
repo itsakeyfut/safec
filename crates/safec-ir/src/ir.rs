@@ -963,12 +963,9 @@ pub enum StaticInit {
         of: StaticId,
         /// How far into it, in bytes.
         offset: u64,
-        /// The initializer's span where the pointer given this address does
-        /// not point at `const`, and so may be written through, which the
-        /// memory check asks of a read-only `of` as it asks a store of one
-        /// (`memory::read_only_statics`, ADR-0121); `None` where it points
-        /// at `const`.
-        writable: Option<Span>,
+        /// The initializer that wrote it, where a report about the store it
+        /// stands for points (ADR-0138).
+        at: Span,
     },
 }
 
@@ -1696,6 +1693,9 @@ pub struct Function {
     /// past its parameters, each after the default argument promotions
     /// (C17 6.5.2.2 p7). What [`Signature::variadic`] is made from (#1213).
     variadic: bool,
+    /// Whether this is the unit's function before `main`. See
+    /// [`Function::mark_initializes_statics`].
+    initializes_statics: bool,
     body: Body,
 }
 
@@ -1755,8 +1755,23 @@ impl Function {
             carried_levels: Vec::new(),
             prototyped: true,
             variadic: false,
+            initializes_statics: false,
             body: Body::Defined(Vec::new()),
         }
+    }
+
+    /// Say that this is the unit's function before `main`: a store per
+    /// address a static's initializer holds, for the memory check to ask as
+    /// it asks any store, which the backend writes no code for and every
+    /// other analysis passes by. See ADR-0138.
+    pub fn mark_initializes_statics(&mut self) {
+        self.initializes_statics = true;
+    }
+
+    /// Whether this is the unit's function before `main`. See
+    /// [`Function::mark_initializes_statics`].
+    pub fn initializes_statics(&self) -> bool {
+        self.initializes_statics
     }
 
     /// This function, declared with `, ...` after its parameters (#1213).
@@ -1899,6 +1914,11 @@ impl Function {
     /// otherwise. **Every reader of a function's name asks this**, so a
     /// declaration made with no source text behind it is named all the same.
     pub fn spelled<'s>(&self, sources: &'s SourceMap) -> &'s str {
+        // With a `.`, which no C identifier holds, so nothing the program
+        // names is spelled the same.
+        if self.initializes_statics {
+            return ".statics";
+        }
         match self.builtin {
             Some(library) => library,
             None => sources.snippet(self.name),

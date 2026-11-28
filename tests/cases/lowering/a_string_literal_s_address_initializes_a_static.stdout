@@ -14,3 +14,25 @@ Function a_string_literal_s_address_initializes_a_static.c:2:5 "main"
         Constant 0
     Sequenced a_string_literal_s_address_initializes_a_static.c:3:12 generated
     Return
+Function a_string_literal_s_address_initializes_a_static.c:1:11 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_string_literal_s_address_initializes_a_static.c:1:11 generated
+      Destination "_1"
+      Static "p"
+    Operation a_string_literal_s_address_initializes_a_static.c:1:11 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_string_literal_s_address_initializes_a_static.c:1:11 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_string_literal_s_address_initializes_a_static.c:1:11 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return

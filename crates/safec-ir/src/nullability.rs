@@ -1824,8 +1824,9 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     for func in unit.functions() {
         let function = unit.function(func);
         // A declaration has no blocks, and `Function::blocks` panics rather
-        // than answering for one.
-        if !function.is_defined() {
+        // than answering for one. The function before `main` is the memory
+        // check's alone (ADR-0138).
+        if !function.is_defined() || function.initializes_statics() {
             continue;
         }
 
