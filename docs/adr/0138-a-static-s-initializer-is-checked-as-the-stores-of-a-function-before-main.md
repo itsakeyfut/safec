@@ -18,15 +18,15 @@ Since #1196 a static can start holding addresses (`StaticInit::Address`, ADR-013
 
 ## Considered Options
 
-* **An analysis-only function, never emitted, whose body is one store per address in a static's initializer, which the memory check analyses as it does every function.**
+* **Analysis-only functions, never emitted, each holding the store of one address in a static's initializer, which the memory check analyses as it does every function.**
 * Mark each `StaticInit::Address` in the lowering with what the store route would conclude, the const levels it drops and whether what it names is narrower than its type, and report the marks.
 * Teach `read_only_statics` the other questions, walking each static's initializer with its type.
 
 ## Decision Outcome
 
-Chosen option: "an analysis-only function", because the store route's rules then answer the initializer as they answer an assignment, with no second copy to fall behind. The other two copy the width rule and the levels rule into a second place, which is the shape #1430 came from.
+Chosen option: "analysis-only functions", because the store route's rules then answer the initializer as they answer an assignment, with no second copy to fall behind. The other two copy the width rule and the levels rule into a second place, which is the shape #1430 came from.
 
-The function is the unit's, named with a `.` so no C identifier holds it, marked so that the backend writes no code for it. Each store writes the static's own place, reached through its members and elements as an assignment's place is, so the levels a reader of that place keeps are the ones an assignment's would be. Writing a `const` static there is its initialization, not a write C forbids (`Origin::Initialized`), while what the store carries is asked as any store's is. `read_only_statics` and `StaticInit::Address`'s `writable` go: what they asked is the store route's now. The one question the function's stores are not asked is whether the place they write fits its object, `SC0412`: each is a static's own place, built from its type, and the check, which follows no static (ADR-0115), would otherwise doubt every member and element of every table of pointers.
+Each function is named by its initializer and spelled `.statics`, with a `.` so no C identifier holds it, one per store because no store reads what another wrote and one function holding them all made the check cubic in a table's length; marked so that the backend writes no code for it. Each store writes the static's own place, reached through its members and elements as an assignment's place is, so the levels a reader of that place keeps are the ones an assignment's would be. Writing a `const` static there is its initialization, not a write C forbids (`Origin::Initialized`), while what the store carries is asked as any store's is. `read_only_statics` and `StaticInit::Address`'s `writable` go: what they asked is the store route's now. The one question the function's stores are not asked is whether the place they write fits its object, `SC0412`: each is a static's own place, built from its type, and the check, which follows no static (ADR-0115), would otherwise doubt every member and element of every table of pointers.
 
 ### Confirmation
 

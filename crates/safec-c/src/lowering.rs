@@ -1653,9 +1653,10 @@ impl<'a> Lowering<'a> {
         Some(())
     }
 
-    /// The unit's function before `main`: a store per address a static's
-    /// initializer holds, into the static's own place, written as an
-    /// assignment of that address there would be, so the memory check asks
+    /// The unit's functions before `main`: a store per address a static's
+    /// initializer holds, each a function of its own, into the static's own
+    /// place, written as an assignment of that address there would be, so
+    /// the memory check asks
     /// it what it asks any store that leaves, `SC0413` and `SC0417` among
     /// them. Each is [`Origin::Initialized`], since giving a `const` static
     /// its starting value is no write C forbids. None where no static holds
@@ -1702,23 +1703,28 @@ impl<'a> Lowering<'a> {
                 }
             }
         }
-        let Some(&(.., first)) = stores.first() else {
-            return;
-        };
-        let void = self.unit.push_type(Ty::Void);
-        let mut function = Function::new(first, void, []);
-        function.mark_initializes_statics();
-        let mut builder = Builder {
-            function,
-            block: None,
-            elements: Vec::new(),
-            bit_fields: HashMap::new(),
-        };
-        builder.open();
+        // **One function per store**, each named by its initializer, so a
+        // report about it points there, and the analysis of each is as
+        // small as one store: no store reads what another wrote, and one
+        // function holding them all made the check cubic in a table's
+        // length, a 150-entry table of strings eight seconds (#1430
+        // review). Mutation: one function for every store;
+        // `checking_a_static_table_grows_with_its_length_and_no_faster`
+        // fails.
         // Lowered a second time, as an assignment's value is: what it
         // reported was reported where the initializer was first read.
         let mut again = DiagnosticSink::new();
         for (object, declared, path, value, at) in stores {
+            let void = self.unit.push_type(Ty::Void);
+            let mut function = Function::new(at, void, []);
+            function.mark_initializes_statics();
+            let mut builder = Builder {
+                function,
+                block: None,
+                elements: Vec::new(),
+                bit_fields: HashMap::new(),
+            };
+            builder.open();
             // The place as a local's initializer reaches its subobject
             // (`Lowering::subobject_place`), from the static's own, and the
             // value as the expression written, its members and casts
@@ -1732,11 +1738,11 @@ impl<'a> Lowering<'a> {
                 continue;
             };
             self.store_scalar(&mut builder, place, value, at);
+            builder.end(Terminator::Return);
+            let mut function = builder.function;
+            function.thread_rebranches();
+            self.unit.push_function(function);
         }
-        builder.end(Terminator::Return);
-        let mut function = builder.function;
-        function.thread_rebranches();
-        self.unit.push_function(function);
     }
 
     /// The unnamed object of the compound literal `id` outside a block, an

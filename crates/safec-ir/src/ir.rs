@@ -1760,10 +1760,13 @@ impl Function {
         }
     }
 
-    /// Say that this is the unit's function before `main`: a store per
-    /// address a static's initializer holds, for the memory check to ask as
-    /// it asks any store, which the backend writes no code for. See
-    /// ADR-0138.
+    /// Say that this is one of the unit's functions before `main`: the store
+    /// of one address a static's initializer holds, for the memory check to
+    /// ask as it asks any store, which the backend writes no code for. **Its
+    /// stores' places are not asked whether they fit their object**
+    /// (`SC0412`): each is a static's own place, built by the lowering from
+    /// the static's type, and a frontend that puts any other store here has
+    /// to answer for that. See ADR-0138.
     pub fn mark_initializes_statics(&mut self) {
         self.initializes_statics = true;
     }
