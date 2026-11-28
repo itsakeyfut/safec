@@ -68,3 +68,53 @@ error[SC0413]: this lets a pointer leave that may not point at an object as wide
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:27:34 ]
+    │
+ 27 │ char **a_member_at_offset_zero = (char **)&first_const.s;
+    │                                  ───────────┬───────────  
+    │                                             ╰───────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:34:25 ]
+    │
+ 34 │ char **a_union_member = (char **)&pun.s;
+    │                         ───────┬───────  
+    │                                ╰───────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:41:24 ]
+    │
+ 41 │ int *a_narrow_member = (int *)&narrow.c;
+    │                        ────────┬───────  
+    │                                ╰───────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:44:21 ]
+    │
+ 44 │ int *past_its_end = &four[2];
+    │                     ────┬───  
+    │                         ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:45:19 ]
+    │
+ 45 │ int *moved_past = four + 5;
+    │                   ────┬───  
+    │                       ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

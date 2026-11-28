@@ -139,12 +139,19 @@ cases! {
         // A static's initializer holding an address is asked as the
         // assignment it stands for (ADR-0138): read-only storage below its
         // first level is `SC0417` at the initializer, through a cast, a
-        // `void *`, a member, an element, an integer chain and a compound
-        // literal, and an object narrower than the pointer's type is
-        // `SC0413`; nothing where every level is `const`, at a table of
-        // literals' members, or at a `const` static given its starting
-        // value (#1430). Mutations: make no function before `main` in
-        // `Lowering::initialize_statics`, and every report goes; ask the
+        // `void *`, a member, an element, an integer chain, a compound
+        // literal, and the address of a member or a union's member at
+        // offset zero, and an object narrower than the pointer's type, a
+        // narrow member, and an address past an array are `SC0413`;
+        // nothing where every level is `const`, at a table of literals'
+        // members, at a struct whose `const char *` member holds one, or
+        // at a `const` static given its starting value (#1430). Mutations:
+        // make no function before `main` in
+        // `Lowering::initialize_statics`, and every report goes; store the
+        // static's address in place of the expression written, and
+        // `a_member_at_offset_zero` goes silent; mark no levels on a
+        // member in `Lowering::subobject_place`, and `first_const` is
+        // `SC0417`; ask the
         // extent of its stores in the memory check, and `names` is
         // `SC0412`; give its stores `Origin::Written`, and
         // `a_const_static` is `SC0417`.
