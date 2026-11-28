@@ -7319,6 +7319,15 @@ impl<'a> Lowering<'a> {
     fn pointers_at(&self, ty: TypeId, laid: TyId, at: u64, readers: &mut Vec<TypeId>) {
         let mut work = vec![(ty, laid, at)];
         while let Some((ty, laid, at)) = work.pop() {
+            // **Only inside the object**: a reader shorter than the offset
+            // holds nothing there, and taken modulo its element, `char
+            // *a[1]` over a `const char *b[4]`'s last element was a reader
+            // of byte 24 (#1431 review). Mutation: skip this;
+            // `a_static_union_is_asked_at_its_least_const_reader`'s
+            // `past_a_short_reader` is reported.
+            if self.unit.size_of(laid).is_none_or(|size| at >= size) {
+                continue;
+            }
             match (self.ast.ty(self.ast.unqualified(ty)), self.unit.ty(laid)) {
                 (Type::Pointer(pointee), Ty::Pointer(_)) => {
                     let code = matches!(

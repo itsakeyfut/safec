@@ -53,3 +53,30 @@ union OverAStruct {
     char **pp;
 };
 union OverAStruct a_struct_in_the_union = {.s = {&p, 1}};
+
+union MemberOffset {
+    struct {
+        long long pad;
+        const char *p;
+    } s;
+    struct {
+        long long x;
+        char *a;
+    } t;
+};
+union MemberOffset at_a_member_s_offset = {.s = {0, "x"}};
+
+union ElementOffset {
+    const char *c[2];
+    struct {
+        long long pad;
+        char *p;
+    } s;
+};
+union ElementOffset at_an_element_s_offset = {.c = {0, "w"}};
+
+union ShortReader {
+    const char *b[4];
+    char *a[1];
+};
+union ShortReader past_a_short_reader = {.b = {0, 0, 0, "abc"}};

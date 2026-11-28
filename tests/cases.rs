@@ -167,7 +167,10 @@ cases! {
         // reader is `const` (#1431). Mutations: mark the leaf with its own
         // levels in `Lowering::subobject_place`, and `handed` goes silent;
         // ask only the innermost owner in `Lowering::readers_along`, and
-        // `a_struct_in_the_union` does.
+        // `a_struct_in_the_union` does; carry no member offset there, and
+        // `at_a_member_s_offset` does, or no element offset, and
+        // `at_an_element_s_offset` does; let `Lowering::pointers_at` read
+        // past its object, and `past_a_short_reader` is reported.
         a_static_union_is_asked_at_its_least_const_reader: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` array a string literal initializes has its own length,
         // the literal's or the one written, and no other: `terminator` and
