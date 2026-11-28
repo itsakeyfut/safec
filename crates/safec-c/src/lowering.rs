@@ -409,6 +409,8 @@ pub fn lower(
         memcpy: None,
         own: HashMap::new(),
         compounds: HashMap::new(),
+        static_types: HashMap::new(),
+        address_values: HashMap::new(),
         vla_types: HashMap::new(),
         writes_below: writes_below(ast),
         typedef_lengths: HashMap::new(),
@@ -430,6 +432,7 @@ pub fn lower(
     lowering.declare(diagnostics);
     lowering.define(diagnostics);
     lowering.lay_out_stepped(diagnostics);
+    lowering.initialize_statics();
     lowering.unit
 }
 
@@ -554,6 +557,13 @@ struct Lowering<'a> {
     /// The static each compound literal outside a block is, made once. See
     /// [`Lowering::compound_static`].
     compounds: HashMap<ExprId, StaticId>,
+    /// The type each static with an initializer was declared with, which
+    /// [`Lowering::initialize_statics`] walks its starting value by.
+    static_types: HashMap<StaticId, TypeId>,
+    /// The expression each `StaticInit::Address` was made from, by its
+    /// span, which [`Lowering::initialize_statics`] lowers again as the
+    /// value an assignment would store.
+    address_values: HashMap<Span, ExprId>,
     /// The copies made of the struct arguments of the calls being lowered, in
     /// the order they were made. A call takes its own off the top when it
     /// finishes, since every call nested in its arguments has finished and
@@ -1047,6 +1057,7 @@ impl<'a> Lowering<'a> {
         for (id, ty, (init, declared)) in pending {
             if let Some(init) = self.static_init(init, declared, ty, diagnostics) {
                 self.unit.set_static_init(id, init);
+                self.static_types.insert(id, declared);
             }
         }
     }
@@ -1129,7 +1140,6 @@ impl<'a> Lowering<'a> {
     fn static_value(
         &mut self,
         init: ExprId,
-        declared: TypeId,
         ty: TyId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<StaticInit> {
@@ -1171,15 +1181,11 @@ impl<'a> Lowering<'a> {
         // number of bytes (C17 6.6 p9), for a pointer.
         if matches!(self.unit.ty(ty), Ty::Pointer(_)) {
             if let Some((of, offset)) = self.static_address(init, diagnostics) {
-                // Whether what it points at is `const`, bit `0` of its
-                // levels, which the memory check asks a read-only `of` of.
-                let writable =
-                    (self.const_levels(declared) & 1 == 0).then(|| self.ast.expr(init).span());
-                return Some(StaticInit::Address {
-                    of,
-                    offset,
-                    writable,
-                });
+                // What it is asked as a store is the function before
+                // `main`'s (`Lowering::initialize_statics`, ADR-0138).
+                let at = self.ast.expr(init).span();
+                self.address_values.insert(at, init);
+                return Some(StaticInit::Address { of, offset, at });
             }
         }
         if !diagnostics.has_errors() {
@@ -1222,7 +1228,7 @@ impl<'a> Lowering<'a> {
     ) -> Option<StaticInit> {
         let list = match init {
             Initializer::Expr(value) => {
-                return self.static_value(*value, declared, ty, diagnostics);
+                return self.static_value(*value, ty, diagnostics);
             }
             Initializer::List { .. } => init,
             Initializer::Designated { .. } => unreachable!("only a list's item is designated"),
@@ -1298,7 +1304,7 @@ impl<'a> Lowering<'a> {
                     .shapes(|shapes| shapes.subobject(ast_ty, step))
                     .expect("a path the walk made reaches a subobject");
             }
-            *node = self.static_value(leaf.value, ast_ty, ir_ty, diagnostics)?;
+            *node = self.static_value(leaf.value, ir_ty, diagnostics)?;
         }
         Some(root)
     }
@@ -1647,6 +1653,96 @@ impl<'a> Lowering<'a> {
         Some(())
     }
 
+    /// The unit's functions before `main`: a store per address a static's
+    /// initializer holds, each a function of its own, into the static's own
+    /// place, written as an assignment of that address there would be, so
+    /// the memory check asks
+    /// it what it asks any store that leaves, `SC0413` and `SC0417` among
+    /// them. Each is [`Origin::Initialized`], since giving a `const` static
+    /// its starting value is no write C forbids. None where no static holds
+    /// an address. See ADR-0138.
+    ///
+    /// Mutation: make no function; `a_static_initializer_is_asked_as_the_store_it_stands_for`
+    /// goes silent.
+    fn initialize_statics(&mut self) {
+        // Each store: the static, the steps to the pointer written, and the
+        // initializer that holds the address.
+        let mut stores = Vec::new();
+        for id in self.unit.statics() {
+            let Some(&declared) = self.static_types.get(&id) else {
+                continue;
+            };
+            let object = self.unit.static_object(id);
+            let mut work = vec![(object.init.clone(), Vec::new(), object.ty)];
+            while let Some((init, path, laid)) = work.pop() {
+                match init {
+                    StaticInit::Aggregate(entries) => {
+                        for (index, entry) in entries {
+                            let (step, inner) = match self.unit.ty(laid) {
+                                Ty::Struct(within) => {
+                                    let member = usize::try_from(index).expect("a member's index");
+                                    (
+                                        Step::Member(member),
+                                        self.unit.struct_layout(within).members[member].ty,
+                                    )
+                                }
+                                Ty::Array { element, .. } => (Step::Element(index), element),
+                                _ => continue,
+                            };
+                            let mut path = path.clone();
+                            path.push(step);
+                            work.push((entry, path, inner));
+                        }
+                    }
+                    StaticInit::Address { at, .. } => {
+                        if let Some(&value) = self.address_values.get(&at) {
+                            stores.push((id, declared, path, value, at));
+                        }
+                    }
+                    StaticInit::Zero | StaticInit::Int(_) | StaticInit::Bytes(_) => {}
+                }
+            }
+        }
+        // **One function per store**, each named by its initializer, so a
+        // report about it points there, and the analysis of each is as
+        // small as one store: no store reads what another wrote, and one
+        // function holding them all made the check cubic in a table's
+        // length, a 150-entry table of strings eight seconds (#1430
+        // review). Mutation: one function for every store;
+        // `checking_a_static_table_grows_with_its_length_and_no_faster`
+        // fails.
+        // Lowered a second time, as an assignment's value is: what it
+        // reported was reported where the initializer was first read.
+        let mut again = DiagnosticSink::new();
+        for (object, declared, path, value, at) in stores {
+            let void = self.unit.push_type(Ty::Void);
+            let mut function = Function::new(at, void, []);
+            function.mark_initializes_statics();
+            let mut builder = Builder {
+                function,
+                block: None,
+                elements: Vec::new(),
+                bit_fields: HashMap::new(),
+            };
+            builder.open();
+            // The place as a local's initializer reaches its subobject
+            // (`Lowering::subobject_place`), from the static's own, and the
+            // value as the expression written, its members and casts
+            // lowered as an assignment's are: `&sv.s` is the member's
+            // address, with the member's levels, not `sv`'s (#1430 review).
+            let whole = self.reach_static(&mut builder, object, at);
+            let Some(place) = self.subobject_place(&mut builder, whole, declared, &path, at) else {
+                continue;
+            };
+            let Some(value) = self.value(&mut builder, value, &mut again) else {
+                continue;
+            };
+            self.store_scalar(&mut builder, place, value, at);
+            builder.end(Terminator::Return);
+            self.unit.push_function(builder.function);
+        }
+    }
+
     /// The unnamed object of the compound literal `id` outside a block, an
     /// object with static storage duration (C17 6.5.2.5 p5) named with a
     /// `.`, which no C identifier holds, made once and starting as its list
@@ -1674,6 +1770,7 @@ impl<'a> Lowering<'a> {
             read_only: self.read_only(ty),
         });
         self.static_levels.insert(object, self.const_levels(ty));
+        self.static_types.insert(object, ty);
         self.compounds.insert(id, object);
         Some(object)
     }
@@ -1921,6 +2018,11 @@ impl<'a> Lowering<'a> {
                     };
                     let pointer_ty = self.unit.push_type(Ty::Pointer(laid.ty));
                     let address = builder.function.push_local(pointer_ty);
+                    // Its levels as `s.m`'s address has them (`Lowering::member`),
+                    // which a static's store, leaving, is asked by (#1430 review).
+                    builder
+                        .function
+                        .mark_const_levels(address, self.pointing_at_levels(inner));
                     let field = u32::try_from(index).expect("fewer than 2^32 members");
                     builder.push(Operation {
                         place: Place::local(address),
@@ -1961,6 +2063,9 @@ impl<'a> Lowering<'a> {
                     let first = self.decayed(builder, place, at);
                     let pointer_ty = self.unit.push_type(Ty::Pointer(element));
                     let address = builder.function.push_local(pointer_ty);
+                    builder
+                        .function
+                        .mark_const_levels(address, self.pointing_at_levels(inner));
                     builder.push(Operation {
                         place: Place::local(address),
                         value: Rvalue::Binary {
@@ -2148,6 +2253,7 @@ impl<'a> Lowering<'a> {
                     init,
                     read_only: self.read_only(declaration.ty),
                 });
+                self.static_types.insert(id, declaration.ty);
                 self.static_levels
                     .insert(id, self.const_levels(declaration.ty));
                 id
@@ -5427,6 +5533,12 @@ impl<'a> Lowering<'a> {
             },
             // The unnamed object a compound literal is, made and initialized
             // where it is evaluated (C17 6.5.2.5 p5, p16).
+            // Outside a block, which the function before `main` stands
+            // for, the static it is (`Lowering::compound_static`).
+            Expr::Compound { span, .. } if builder.function.initializes_statics() => {
+                let (span, object) = (*span, self.compound_static(id, diagnostics)?);
+                places.push(self.reach_static(builder, object, span));
+            }
             Expr::Compound { .. } => places.push(self.compound(builder, id, diagnostics)?),
             // The array a literal is, through its address as any static is.
             Expr::String { span, .. } => {

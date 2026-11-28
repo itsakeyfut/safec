@@ -86,7 +86,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve_first_turn_within, solve_within};
 use crate::ir::{
     Between, BinOp, BlockId, Element, FuncId, Function, Length, LocalId, Operand, Operation, Place,
-    Rvalue, StaticId, StaticInit, Terminator, TranslationUnit, Ty, TyId,
+    Rvalue, StaticId, Terminator, TranslationUnit, Ty, TyId,
 };
 use crate::nullability::{self};
 use crate::reads::{
@@ -1254,41 +1254,6 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     findings_within(sources, unit, MAX_BYTES, MAX_WORK)
 }
 
-/// Where a static's initializer gives a pointer that does not point at
-/// `const` the address of storage the program may not modify: a string
-/// literal, or an object defined `const`. A store of that address is asked
-/// where it is made (ADR-0121, `read_only`), and an initializer is the same
-/// store made before the program begins, which no function holds, so it is
-/// asked here, of the unit. Each is a write the program may make through
-/// the pointer and this check does not follow, so it is unproven: `SC0417`
-/// at the initializer, as the store's is.
-///
-/// Mutation: answer none; `a_static_pointer_to_a_literal_is_asked_as_a_store`
-/// goes silent.
-pub fn read_only_statics(unit: &TranslationUnit) -> Vec<Span> {
-    let mut found = Vec::new();
-    for id in unit.statics() {
-        let mut work = vec![&unit.static_object(id).init];
-        while let Some(init) = work.pop() {
-            match init {
-                StaticInit::Aggregate(entries) => {
-                    work.extend(entries.iter().map(|(_, entry)| entry))
-                }
-                StaticInit::Address {
-                    of,
-                    writable: Some(at),
-                    ..
-                } if unit.static_object(*of).read_only => found.push(*at),
-                StaticInit::Address { .. }
-                | StaticInit::Zero
-                | StaticInit::Int(_)
-                | StaticInit::Bytes(_) => {}
-            }
-        }
-    }
-    found
-}
-
 /// The analysis of one function, as [`findings`] solves it.
 ///
 /// A function of its own so that a test can solve a function it built and
@@ -1535,14 +1500,24 @@ fn findings_within(
                     &|local| unit.ty(function.local(local)).is_pointer(),
                 );
                 // The same accesses, asked whether they fit. See ADR-0060.
-                may_not_fit(
-                    &mut findings,
-                    &mut asked,
-                    &analysis,
-                    function,
-                    dereferenced_in_element(element),
-                    &known,
-                );
+                // **Not in the function before `main`**, whose every store
+                // writes a static's own place, built from its type by the
+                // lowering, which this check, not following what a static
+                // is (ADR-0115), would doubt at every member and element
+                // of every table of pointers. What a store there carries
+                // is asked all the same (ADR-0138). Mutation: ask them;
+                // `a_static_initializer_is_asked_as_the_store_it_stands_for`'s
+                // `names` is `SC0412`.
+                if !function.initializes_statics() {
+                    may_not_fit(
+                        &mut findings,
+                        &mut asked,
+                        &analysis,
+                        function,
+                        dereferenced_in_element(element),
+                        &known,
+                    );
+                }
                 // After the dereferences in the element, as `handed` is after
                 // the ones at a call, so that `return *tab;` keeps a doubt
                 // about reading `*tab` over one about what it returns, as

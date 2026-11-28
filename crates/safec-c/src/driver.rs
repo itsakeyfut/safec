@@ -53,7 +53,7 @@ use safec_ir::target::Target;
 
 use backend::{Module, assembled, clang_failure, link_failure, linked, module};
 use dumps::{dump_ast, dump_hatches, dump_tokens};
-use words::{memory_finding, nullability_finding, static_read_only};
+use words::{memory_finding, nullability_finding};
 
 /// Everything one run of the compiler produced.
 ///
@@ -683,11 +683,6 @@ fn lowered(
                 };
                 route(&unit, concluded, &mut hatched, diagnostics);
             }
-        }
-        // A static's initializer, which no function holds, so no hatch
-        // either: reported as it is found.
-        for at in memory::read_only_statics(&unit) {
-            diagnostics.report(static_read_only(at));
         }
         // A second analysis rather than a second question for the first: one
         // walk over one lattice is what makes the double free and the use after

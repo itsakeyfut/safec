@@ -681,3 +681,25 @@ Function a_union_member_is_asked_at_its_least_const_reader.c:219:6 "through_two_
         Copy "_4"
     Sequenced a_union_member_is_asked_at_its_least_const_reader.c:220:5 generated
     Return
+Function a_union_member_is_asked_at_its_least_const_reader.c:193:30 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[4]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_union_member_is_asked_at_its_least_const_reader.c:193:30 generated
+      Destination "_1"
+      Static "literal"
+    Operation a_union_member_is_asked_at_its_least_const_reader.c:193:30 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_union_member_is_asked_at_its_least_const_reader.c:193:30 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_union_member_is_asked_at_its_least_const_reader.c:193:30 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return

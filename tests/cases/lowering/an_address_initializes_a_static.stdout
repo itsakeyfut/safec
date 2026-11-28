@@ -34,3 +34,371 @@ Function an_address_initializes_a_static.c:29:5 "main"
         Constant 0
     Sequenced an_address_initializes_a_static.c:30:12 generated
     Return
+Function an_address_initializes_a_static.c:2:10 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:2:10 generated
+      Destination "_1"
+      Static "p"
+    Operation an_address_initializes_a_static.c:2:11 generated
+      Destination "_2"
+      Static "g"
+    Operation an_address_initializes_a_static.c:2:10 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Return
+Function an_address_initializes_a_static.c:4:14 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:4:14 generated
+      Destination "_1"
+      Static "third"
+    Operation an_address_initializes_a_static.c:4:15 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:4:15 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:4:15 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 2
+    Operation an_address_initializes_a_static.c:4:14 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function an_address_initializes_a_static.c:5:13 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_1"
+      Static "last"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:5:13 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:5:13 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 3
+    Operation an_address_initializes_a_static.c:5:13 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function an_address_initializes_a_static.c:6:13 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_1"
+      Static "back"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:6:13 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:6:13 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 3
+    Operation an_address_initializes_a_static.c:6:13 written
+      Destination "_5"
+      Binary "Sub"
+        Copy "_4"
+        Constant 1
+    Operation an_address_initializes_a_static.c:6:13 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function an_address_initializes_a_static.c:7:14 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:7:14 generated
+      Destination "_1"
+      Static "ahead"
+    Operation an_address_initializes_a_static.c:7:18 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:7:18 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:7:14 written
+      Destination "_4"
+      Binary "Add"
+        Constant 3
+        Copy "_3"
+    Operation an_address_initializes_a_static.c:7:14 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function an_address_initializes_a_static.c:8:16 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:8:16 generated
+      Destination "_1"
+      Static "swapped"
+    Operation an_address_initializes_a_static.c:8:19 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:8:19 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:8:17 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation an_address_initializes_a_static.c:8:16 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Return
+Function an_address_initializes_a_static.c:9:15 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "int (*)[4]"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:9:15 generated
+      Destination "_1"
+      Static "bytes"
+    Operation an_address_initializes_a_static.c:9:24 generated
+      Destination "_2"
+      Static "a"
+    Operation an_address_initializes_a_static.c:9:24 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:9:24 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation an_address_initializes_a_static.c:9:15 written
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation an_address_initializes_a_static.c:9:15 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function an_address_initializes_a_static.c:14:10 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "struct #0 *"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:14:10 generated
+      Destination "_1"
+      Static "y"
+    Operation an_address_initializes_a_static.c:14:11 generated
+      Destination "_2"
+      Static "s"
+    Operation an_address_initializes_a_static.c:14:11 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation an_address_initializes_a_static.c:14:10 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function an_address_initializes_a_static.c:15:15 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "struct #0 *"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_1"
+      Static "member"
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_2"
+      Static "s"
+    Operation an_address_initializes_a_static.c:15:15 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 2
+    Operation an_address_initializes_a_static.c:15:15 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation an_address_initializes_a_static.c:15:15 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation an_address_initializes_a_static.c:15:15 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function an_address_initializes_a_static.c:16:16 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "struct #0 *"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:16:16 generated
+      Destination "_1"
+      Static "element"
+    Operation an_address_initializes_a_static.c:16:17 generated
+      Destination "_2"
+      Static "s"
+    Operation an_address_initializes_a_static.c:16:17 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 2
+    Operation an_address_initializes_a_static.c:16:17 generated
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation an_address_initializes_a_static.c:16:17 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation an_address_initializes_a_static.c:16:16 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function an_address_initializes_a_static.c:17:16 ".statics"
+  Local "_0" "void" return
+  Local "_1" "struct #0 **"
+  Local "_2" "struct #0 *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:17:16 generated
+      Destination "_1"
+      Static "ps"
+    Operation an_address_initializes_a_static.c:17:17 generated
+      Destination "_2"
+      Static "s"
+    Operation an_address_initializes_a_static.c:17:16 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Return
+Function an_address_initializes_a_static.c:18:14 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "struct #0 *"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:18:14 generated
+      Destination "_1"
+      Static "arrow"
+    Operation an_address_initializes_a_static.c:18:17 generated
+      Destination "_2"
+      Static "s"
+    Operation an_address_initializes_a_static.c:18:15 written
+      Destination "_3"
+      Address
+        Place "_2"
+          Deref
+            Field
+              Member 1
+    Operation an_address_initializes_a_static.c:18:14 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function an_address_initializes_a_static.c:20:12 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int (*)[2][2]"
+  Local "_3" "int (*)[2]"
+  Local "_4" "int (*)[2]"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_1"
+      Static "row"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_2"
+      Static "m"
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_address_initializes_a_static.c:20:12 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_3"
+        Constant 1
+    Operation an_address_initializes_a_static.c:20:12 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation an_address_initializes_a_static.c:20:12 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_5"
+    Return

@@ -1,0 +1,180 @@
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:7:25 ]
+   │
+ 7 │ char **one_level_down = (char **)&p;
+   │                         ─────┬─────  
+   │                              ╰─────── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+   ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:8:22 ]
+   │
+ 8 │ void *through_void = &p;
+   │                      ─┬  
+   │                       ╰── a `const` object or a string literal may be here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:11:13 ]
+    │
+ 11 │ } member = {(char **)&p};
+    │             ─────┬─────  
+    │                  ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:12:23 ]
+    │
+ 12 │ char **table[2] = {0, (char **)&p};
+    │                       ─────┬─────  
+    │                            ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:13:26 ]
+    │
+ 13 │ int **an_integer_chain = (int **)&kp;
+    │                          ─────┬─────  
+    │                               ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:14:41 ]
+    │
+ 14 │ char ***a_compound_literal = &(char **){(char **)&p};
+    │                                         ─────┬─────  
+    │                                              ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:16:17 ]
+    │
+ 16 │ int *narrower = (int *)&c;
+    │                 ────┬────  
+    │                     ╰────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:27:34 ]
+    │
+ 27 │ char **a_member_at_offset_zero = (char **)&first_const.s;
+    │                                  ───────────┬───────────  
+    │                                             ╰───────────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:34:25 ]
+    │
+ 34 │ char **a_union_member = (char **)&pun.s;
+    │                         ───────┬───────  
+    │                                ╰───────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:41:24 ]
+    │
+ 41 │ int *a_narrow_member = (int *)&narrow.c;
+    │                        ────────┬───────  
+    │                                ╰───────── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:44:21 ]
+    │
+ 44 │ int *past_its_end = &four[2];
+    │                     ────┬───  
+    │                         ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:45:19 ]
+    │
+ 45 │ int *moved_past = four + 5;
+    │                   ────┬───  
+    │                       ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:51:44 ]
+    │
+ 51 │ union HoldsAnAddress a_union_holding_it = {(char **)&p};
+    │                                            ─────┬─────  
+    │                                                 ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:57:35 ]
+    │
+ 57 │ struct Pair a_second_member = {0, (char **)&p};
+    │                                   ─────┬─────  
+    │                                        ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:63:42 ]
+    │
+ 63 │ struct Nested two_members_deep = {1, {0, (char **)&p}};
+    │                                          ─────┬─────  
+    │                                               ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:64:48 ]
+    │
+ 64 │ struct Pair an_element_s_member[2] = {{0}, {0, (char **)&p}};
+    │                                                ─────┬─────  
+    │                                                     ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:65:41 ]
+    │
+ 65 │ char **two_dimensions[2][2] = {{0}, {0, (char **)&p}};
+    │                                         ─────┬─────  
+    │                                              ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy
+error[SC0417]: this may write storage the program may not modify
+    ╭─[ a_static_initializer_is_asked_as_the_store_it_stands_for.c:68:37 ]
+    │
+ 68 │     static char **held_by_a_block = (char **)&p;
+    │                                     ─────┬─────  
+    │                                          ╰─────── a `const` object or a string literal may be here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: keep `const` on the pointer, or write to a copy

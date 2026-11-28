@@ -652,6 +652,62 @@ fn name_lookup_does_not_grow_with_how_far_back_the_name_was_declared() {
     );
 }
 
+/// The memory check's time on a static table of string literals grows with
+/// the table's length, not with a power of it.
+///
+/// Each address in a static's initializer is asked as a store made before
+/// `main` (ADR-0138). Two tables of one shape, 40 entries and 240, and what
+/// is asserted is the ratio of their times rather than a time: six times
+/// the entries take at most about six times as long, and the margin of
+/// sixteen is wide because it is a time. Held in one function, the stores
+/// made the check cubic in their number: 160 entries already took eighteen
+/// times what 40 did in a debug build, and 240 takes far more (#1430
+/// review).
+///
+/// Mutation: make one function for every store in
+/// `Lowering::initialize_statics`; the ratio goes far past sixteen and this
+/// fails by name.
+#[test]
+fn checking_a_static_table_grows_with_its_length_and_no_faster() {
+    let run = |entries: usize, name: &str| -> std::time::Duration {
+        let path = std::env::temp_dir().join(name);
+        let items: Vec<String> = (0..entries).map(|i| format!("\"k{i}\"")).collect();
+        let source = format!(
+            "static const char *const names[{entries}] = {{{}}};
+int main(void) {{ return 0; }}
+",
+            items.join(", ")
+        );
+        std::fs::write(&path, source).expect("the temporary directory is writable");
+
+        let started = std::time::Instant::now();
+        let output = safec(&[
+            "--color",
+            "never",
+            "--safety",
+            "memory",
+            "--target",
+            "x86_64-pc-windows-msvc",
+            "--emit",
+            "safety-ir",
+            &path.display().to_string(),
+        ]);
+        let took = started.elapsed();
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        took
+    };
+
+    let short = run(40, "safec_exit_code_table_short.c");
+    let long = run(240, "safec_exit_code_table_long.c");
+
+    assert!(
+        long < short * 16,
+        "a table of 240 entries took {long:?} against {short:?} for 40, so checking it grows faster than its length"
+    );
+}
+
 /// A long flat expression is read and printed, rather than ending the process.
 ///
 /// Not a corpus case, because the point is the exit code rather than the

@@ -6,3 +6,113 @@ error[SC0304]: cannot compile this initializer yet
     │                 ╰──── an address this compiler cannot write into a static
 ────╯
   = note: a gap in this compiler: a static holds a number, a null pointer, or an object's address plus a constant, and not a function's address or a number cast to a pointer yet
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:4:14 ]
+   │
+ 4 │ int *third = &a[2];
+   │              ──┬──  
+   │                ╰──── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:5:13 ]
+   │
+ 5 │ int *last = a + 3;
+   │             ──┬──  
+   │               ╰──── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:6:13 ]
+   │
+ 6 │ int *back = a + 3 - 1;
+   │             ────┬────  
+   │                 ╰────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:7:14 ]
+   │
+ 7 │ int *ahead = 3 + a;
+   │              ──┬──  
+   │                ╰──── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:8:16 ]
+   │
+ 8 │ int *swapped = &1[a];
+   │                ──┬──  
+   │                  ╰──── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+   ╭─[ an_address_initializes_a_static.c:9:15 ]
+   │
+ 9 │ char *bytes = (char *)&a[1];
+   │               ──────┬──────  
+   │                     ╰──────── stored here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ an_address_initializes_a_static.c:14:10 ]
+    │
+ 14 │ int *y = &s.y;
+    │          ──┬─  
+    │            ╰─── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ an_address_initializes_a_static.c:15:15 ]
+    │
+ 15 │ int *member = s.v + 1;
+    │               ───┬───  
+    │                  ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ an_address_initializes_a_static.c:16:16 ]
+    │
+ 16 │ int *element = &s.v[1];
+    │                ───┬───  
+    │                   ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ an_address_initializes_a_static.c:18:14 ]
+    │
+ 18 │ int *arrow = &(&s)->y;
+    │              ────┬───  
+    │                  ╰───── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as
+error[SC0413]: this lets a pointer leave that may not point at an object as wide as its type
+    ╭─[ an_address_initializes_a_static.c:20:12 ]
+    │
+ 20 │ int *row = m[1];
+    │            ──┬─  
+    │              ╰─── stored here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: let a pointer leave only at the start of a local or of an allocation of constant size, as wide as the type it leaves as

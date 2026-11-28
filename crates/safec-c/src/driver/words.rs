@@ -340,25 +340,6 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
     name.map_or_else(|| unnamed.to_owned(), named)
 }
 
-/// A static's initializer giving a pointer that does not point at `const`
-/// the address of storage the program may not modify
-/// (`memory::read_only_statics`): unproven, in the words of the store it
-/// stands for, so that `char *g = "ab";` and `g = "ab";` read alike.
-pub(super) fn static_read_only(at: Span) -> Diagnostic {
-    Diagnostic::concluded(
-        Conclusion::Unknown,
-        "this may write storage the program may not modify",
-        Remedy::new("keep `const` on the pointer, or write to a copy"),
-    )
-    .expect("an unproven conclusion is reported")
-    .with_code(WRITES_READ_ONLY)
-    .with_safety_level(SafetyLevel::Memory)
-    .with_label(Label::primary(
-        at,
-        "a `const` object or a string literal is held by a pointer that may write it",
-    ))
-}
-
 /// What a memory check concluded, as what a user reads.
 ///
 /// The check names a conclusion and never reads the policy, so this does not

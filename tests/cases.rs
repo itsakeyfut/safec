@@ -132,9 +132,32 @@ cases! {
         // `const` a literal's or a `const` object's address is asked as the
         // store it stands for is (ADR-0121): `literal`, `cast`, `table`'s
         // two and `inner` are `SC0417` at their initializers; `kept`,
-        // `read` and `names` are not (#1241 review). Mutation: answer none
-        // in `memory::read_only_statics`; this goes silent.
+        // `read` and `names` are not (#1241 review). Mutation: make no
+        // function before `main` in `Lowering::initialize_statics`; this
+        // goes silent (ADR-0138).
         a_static_pointer_to_read_only_storage_is_asked_as_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A static's initializer holding an address is asked as the
+        // assignment it stands for (ADR-0138): read-only storage below its
+        // first level is `SC0417` at the initializer, through a cast, a
+        // `void *`, a member, an element, an integer chain, a compound
+        // literal, the address of a member or a union's member at offset
+        // zero, and an address held by a union, a second member, two
+        // members deep, an element's member, a row's element and a block's
+        // `static`; an object narrower than the pointer's type, a
+        // narrow member, and an address past an array are `SC0413`;
+        // nothing where every level is `const`, at a table of literals'
+        // members, at a struct whose `const char *` member holds one, or
+        // at a `const` static given its starting value (#1430). Mutations:
+        // make no function before `main` in
+        // `Lowering::initialize_statics`, and every report goes; store the
+        // static's address in place of the expression written, and
+        // `a_member_at_offset_zero` goes silent; mark no levels on a
+        // member in `Lowering::subobject_place`, and `first_const` is
+        // `SC0417`; ask the
+        // extent of its stores in the memory check, and `names` is
+        // `SC0412`; give its stores `Origin::Written`, and
+        // `a_const_static` is `SC0417`.
+        a_static_initializer_is_asked_as_the_store_it_stands_for: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `char` array a string literal initializes has its own length,
         // the literal's or the one written, and no other: `terminator` and
         // `padded` read their last byte with no report, and `past` one byte
@@ -11582,7 +11605,10 @@ cases! {
         // they were written in (#1242). Mutations: answer every member at offset zero in
         // `Lowering::member_offset`, and `y`'s offset is `0`; fill an
         // aggregate's entries densely in `Lowering::static_init`, and
-        // `sparse` lists a hundred.
+        // `sparse` lists a hundred. Each address into a static at an
+        // offset is asked as the assignment it stands for and doubted,
+        // `SC0413`, as `third = &a[2];` is, since this check follows no
+        // static (ADR-0115, ADR-0138).
         an_address_initializes_a_static: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A function's address is an address constant a static here cannot
         // hold yet, so it is refused rather than started as null. Mutation:

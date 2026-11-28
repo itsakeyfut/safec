@@ -50,3 +50,240 @@ Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:11:5 "main"
         Constant 0
     Sequenced a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:15:12 generated
     Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 generated
+      Destination "_1"
+      Static "literal"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 generated
+      Destination "_2"
+      Static ".str.0"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:1:17 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:2:20 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[3]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:2:20 generated
+      Destination "_1"
+      Static "kept"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:2:20 generated
+      Destination "_2"
+      Static ".str.1"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:2:20 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:2:20 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:13 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:13 generated
+      Destination "_1"
+      Static "cast"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:21 generated
+      Destination "_2"
+      Static "c"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:13 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:4:13 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:5:19 ".statics"
+  Local "_0" "void" return
+  Local "_1" "int **"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:5:19 generated
+      Destination "_1"
+      Static "read"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:5:20 generated
+      Destination "_2"
+      Static "c"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:5:19 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char *(*)[2]"
+  Local "_2" "char **"
+  Local "_3" "char **"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 generated
+      Destination "_1"
+      Static "table"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 generated
+      Destination "_4"
+      Static ".str.3"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:24 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char *(*)[2]"
+  Local "_2" "char **"
+  Local "_3" "char **"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 generated
+      Destination "_1"
+      Static "table"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 0
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 generated
+      Destination "_4"
+      Static ".str.2"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:6:19 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char *(*)[2]"
+  Local "_2" "char **"
+  Local "_3" "char **"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 generated
+      Destination "_1"
+      Static "names"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 generated
+      Destination "_4"
+      Static ".str.5"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:30 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char *(*)[2]"
+  Local "_2" "char **"
+  Local "_3" "char **"
+  Local "_4" "char (*)[2]"
+  Local "_5" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 generated
+      Destination "_1"
+      Static "names"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 generated
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 generated
+      Destination "_3"
+      Binary "Add"
+        Copy "_2"
+        Constant 0
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 generated
+      Destination "_4"
+      Static ".str.4"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 generated
+      Destination "_5"
+      Use
+        Copy "_4"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:7:25 initialized
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Return
+Function a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 ".statics"
+  Local "_0" "void" return
+  Local "_1" "char **"
+  Local "_2" "char (*)[2]"
+  Local "_3" "char *"
+  Block "bb0" entry
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 generated
+      Destination "_1"
+      Static "main.inner"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 generated
+      Destination "_2"
+      Static ".str.6"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 generated
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_static_pointer_to_read_only_storage_is_asked_as_a_store.c:12:26 initialized
+      Destination "_1"
+        Deref
+      Use
+        Copy "_3"
+    Return

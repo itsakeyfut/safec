@@ -42,7 +42,7 @@ For a local, the initializer is first resolved, as 6.7.9 p17 to p21 say, into th
 
 Each copy and fill an initializer makes is to this compiler's own `memcpy` and `memset`, never the program's, which may be a `static` of another meaning (C17 7.1.3 p1), and is marked as initializing the object, which a `const` object may be given (6.7.3 p6), so the read-only check does not ask it of the local it initializes.
 
-For a static, `StaticInit` gains an aggregate: an entry per member or element that does not start as zero, each by its index and itself a `StaticInit`, sparse so that a designator's large index costs one entry (#1242), with a leaf for the address of a static plus a byte offset. A string literal used as a pointer's initial value is that leaf. A `char` array keeps `StaticInit::Bytes`. An address leaf given to a pointer that does not point at `const` carries the initializer's span, and the memory check asks it of a read-only object as it asks a store (`memory::read_only_statics`).
+For a static, `StaticInit` gains an aggregate: an entry per member or element that does not start as zero, each by its index and itself a `StaticInit`, sparse so that a designator's large index costs one entry (#1242), with a leaf for the address of a static plus a byte offset. A string literal used as a pointer's initial value is that leaf. A `char` array keeps `StaticInit::Bytes`. An address leaf carries the initializer's span, and the memory check asks it as the store it stands for (ADR-0138).
 
 The length an initializer gives an array of unknown size (6.7.9 p22) is counted by the type check, from the same resolution, once the items are typed: a struct item taken whole and brace elision decide it, and with designators a constant's value does.
 
